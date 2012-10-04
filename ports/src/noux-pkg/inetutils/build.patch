@@ -1,0 +1,127 @@
+diff -ru inetutils-1.9.1.orig/configure inetutils-1.9.1/configure
+--- inetutils-1.9.1.orig/configure	2012-01-06 15:11:41.000000000 +0100
++++ inetutils-1.9.1/configure	2012-05-20 11:49:26.704037307 +0200
+@@ -38332,13 +38332,13 @@
+ 
+ for ac_func in cfsetspeed cgetent dirfd fchdir flock \
+                fork fpathconf ftruncate \
+-	       getcwd getmsg getspnam initgroups initsetproctitle killpg \
++	       getcwd getmsg getspnam initgroups killpg \
+                mkstemp ptsname \
+                setegid seteuid setpgid \
+                setsid setregid setreuid setresgid setresuid setutent_r \
+                sigaction sigvec strchr setproctitle tcgetattr tzset utimes \
+                utime uname \
+-               updwtmp updwtmpx vhangup wait3 wait4 opendir2 \
++               updwtmp updwtmpx vhangup wait3 wait4 \
+ 	       __rcmd_errstr __check_rhosts_file
+ do :
+   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+diff -ru inetutils-1.9.1.orig/lib/argp-help.c inetutils-1.9.1/lib/argp-help.c
+--- inetutils-1.9.1.orig/lib/argp-help.c	2012-01-06 15:11:12.000000000 +0100
++++ inetutils-1.9.1/lib/argp-help.c	2012-05-20 11:49:26.707370622 +0200
+@@ -1419,6 +1419,16 @@
+   return levels;
+ }
+ 
++/* our libc does not provide strchrnul() */
++static char *
++__strchrnul (const char *s, int ch)
++{
++	while (*s && (*s != ch))
++		s++;
++
++	return (char *) s;
++}
++
+ /* Print all the non-option args documented in ARGP to STREAM.  Any output is
+    preceded by a space.  LEVELS is a pointer to a byte vector the length
+    returned by argp_args_levels; it should be initialized to zero, and
+diff -ru inetutils-1.9.1.orig/ping/libping.c inetutils-1.9.1/ping/libping.c
+--- inetutils-1.9.1.orig/ping/libping.c	2012-01-06 14:58:30.000000000 +0100
++++ inetutils-1.9.1/ping/libping.c	2012-05-20 12:14:30.185893222 +0200
+@@ -178,7 +178,7 @@
+   int dupflag;
+ 
+   n = recvfrom (p->ping_fd,
+-		(char *) p->ping_buffer, _PING_BUFLEN (p, USE_IPV6), 0,
++		(char *) p->ping_buffer, _PING_BUFLEN (p), 0,
+ 		(struct sockaddr *) &p->ping_from.ping_sockaddr, &fromlen);
+   if (n < 0)
+     return -1;
+diff -ru inetutils-1.9.1.orig/ping/ping6.c inetutils-1.9.1/ping/ping6.c
+--- inetutils-1.9.1.orig/ping/ping6.c	2012-01-06 14:58:30.000000000 +0100
++++ inetutils-1.9.1/ping/ping6.c	2012-05-20 12:14:56.139084978 +0200
+@@ -820,7 +820,7 @@
+   char cmsg_data[1024];
+ 
+   iov.iov_base = p->ping_buffer;
+-  iov.iov_len = _PING_BUFLEN (p, USE_IPV6);
++  iov.iov_len = _PING_BUFLEN (p);
+   msg.msg_name = &p->ping_from.ping_sockaddr6;
+   msg.msg_namelen = sizeof (p->ping_from.ping_sockaddr6);
+   msg.msg_iov = &iov;
+diff -ru inetutils-1.9.1.orig/ping/ping_common.c inetutils-1.9.1/ping/ping_common.c
+--- inetutils-1.9.1.orig/ping/ping_common.c	2012-01-06 14:58:30.000000000 +0100
++++ inetutils-1.9.1/ping/ping_common.c	2012-05-20 12:13:41.286155665 +0200
+@@ -144,7 +144,7 @@
+ {
+   if (!p->ping_buffer)
+     {
+-      p->ping_buffer = malloc (_PING_BUFLEN (p, use_ipv6));
++      p->ping_buffer = malloc (_PING_BUFLEN (p));
+       if (!p->ping_buffer)
+ 	return -1;
+     }
+diff -ru inetutils-1.9.1.orig/ping/ping_common.h inetutils-1.9.1/ping/ping_common.h
+--- inetutils-1.9.1.orig/ping/ping_common.h	2012-01-06 14:58:30.000000000 +0100
++++ inetutils-1.9.1/ping/ping_common.h	2012-05-20 12:16:14.135329104 +0200
+@@ -20,7 +20,9 @@
+ #include <netinet/in_systm.h>
+ #include <netinet/in.h>
+ #include <netinet/ip.h>
++#ifdef USE_IPV6
+ #include <netinet/icmp6.h>
++#endif
+ #include <icmp.h>
+ #include <error.h>
+ #include <progname.h>
+@@ -67,12 +69,17 @@
+ } while (0)
+ 
+ /* Not sure about this step*/
+-#define _PING_BUFLEN(p, USE_IPV6) ((USE_IPV6)? ((p)->ping_datalen + sizeof (struct icmp6_hdr)) : \
+-				   ((p)->ping_datalen + sizeof (icmphdr_t)))
++#ifdef USE_IPV6
++#define _PING_BUFLEN(p) ((p)->ping_datalen + sizeof (struct icmp6_hdr))
++#else
++#define _PING_BUFLEN(p) ((p)->ping_datalen + sizeof (icmphdr_t))
++#endif
+ 
++#ifdef USE_IPV6
+ typedef int (*ping_efp6) (int code, void *closure, struct sockaddr_in6 * dest,
+ 			  struct sockaddr_in6 * from, struct icmp6_hdr * icmp,
+ 			  int datalen);
++#endif
+ 
+ typedef int (*ping_efp) (int code,
+ 			 void *closure,
+@@ -81,13 +88,17 @@
+ 			 struct ip * ip, icmphdr_t * icmp, int datalen);
+ 
+ union event {
++#ifdef USE_IPV6
+   ping_efp6 handler6;
++#endif
+   ping_efp handler;
+ };
+ 
+ union ping_address {
+   struct sockaddr_in ping_sockaddr;
++#ifdef USE_IPV6
+   struct sockaddr_in6 ping_sockaddr6;
++#endif
+ };
+ 
+ typedef struct ping_data PING;
+Only in inetutils-1.9.1: .version
