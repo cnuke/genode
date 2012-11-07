@@ -20,6 +20,22 @@ help:
 	$(ECHO) "install    - copy tool chain to '$(INSTALL_LOCATION)'"
 	$(ECHO)
 
+
+#
+# Tools (use 'g'-prefixed GNU version on BSD)
+#
+BUILD_OS=$(shell uname)
+
+ifeq ($(BUILD_OS), Linux)
+GNU_SED = sed
+GNU_CP  = cp
+endif
+
+ifeq ($(BUILD_OS), FreeBSD)
+GNU_SED = gsed
+GNU_CP  = gcp
+endif
+
 #
 # User interface
 #
@@ -82,9 +98,15 @@ endif
 #
 
 SHELL       = bash
+ifneq ($(TERM), dumb)
 BRIGHT_COL  = \033[01;33m
 DEFAULT_COL = \033[0m
 ECHO        = @echo -e
+else
+BRIGHT_COL  =
+DEFAULT_COL =
+ECHO        = @echo
+endif
 VERBOSE     = @
 
 AUTOCONF_gcc_4.4.5 = autoconf2.59
@@ -107,8 +129,13 @@ endif
 #
 # Check if 'libncurses' is installed
 #
+# Note: limit this to GNU/Linux because it is not necessary on most BSDs
+# since they have ncurses in their base-system anyway.
+#
+ifeq ($(BUILD_OS), Linux)
 ifneq ($(shell $(LD) -lncurses -e0 -o /tmp/a.out && echo ok),ok)
 $(error Need to have 'libncurses' installed.)
+endif
 endif
 
 #
@@ -383,7 +410,7 @@ $(LOCAL_LIB_INSTALL_LOCATION)/lib/libmpc.a:  build/mpc/Makefile
 # rule to build libgmp, libmpfr, and libmpc
 $(LOCAL_LIB_INSTALL_LOCATION)/lib/lib%.a:
 	$(ECHO) "$(BRIGHT_COL)building lib$*...$(DEFAULT_COL)"
-	$(VERBOSE)make -C build/$* all install
+	$(VERBOSE)$(MAKE) -C build/$* all install
 
 build/gmp/Makefile: $(CONTRIB_DIR)/gmp-$(GMP_VERSION)/configure
 
@@ -482,5 +509,5 @@ cleanall: clean
 
 install: build_all
 	$(ECHO) "$(BRIGHT_COL)installing tool chain to '$(INSTALL_LOCATION)'...$(DEFAULT_COL)"
-	$(VERBOSE)sudo cp -a --remove-destination --no-target-directory $(LOCAL_INSTALL_LOCATION) $(INSTALL_LOCATION)
+	$(VERBOSE)sudo $(GNU_CP) -a --remove-destination --no-target-directory $(LOCAL_INSTALL_LOCATION) $(INSTALL_LOCATION)
 
