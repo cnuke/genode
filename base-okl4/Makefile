@@ -3,6 +3,10 @@
 # \author Stefan Kalkowski
 # \date   2011-05-02
 
+GENODE_DIR ?= ..
+
+include $(GENODE_DIR)/tool/builddir/gnu.mk
+
 DOWNLOAD_DIR  = download
 CONTRIB_DIR   = contrib/okl4
 
@@ -11,7 +15,7 @@ ECHO          = @echo
 OKL4_VERSION  = okl4_2.1.1-patch.9
 OKL4_ARCHIVE  = $(OKL4_VERSION).tar.gz
 OKL4_URI      = http://wiki.ok-labs.com/downloads/release-2.1.1-patch.9/$(OKL4_ARCHIVE)
-PATCHES       = $(shell find patches -name *.patch)
+PATCHES       = $(shell $(GNU_FIND) patches -name *.patch)
 SHELL         = bash
 
 #
@@ -20,8 +24,8 @@ SHELL         = bash
 check_tool = $(if $(shell which $(1)),,$(error Need to have '$(1)' installed.))
 
 $(call check_tool,wget)
-$(call check_tool,patch)
-$(call check_tool,sed)
+$(call check_tool,$(GNU_PATCH))
+$(call check_tool,$(GNU_SED))
 
 #
 # Determine python version to use for OKL4's elfweaver
@@ -59,8 +63,8 @@ $(CONTRIB_DIR): $(DOWNLOAD_DIR)/$(OKL4_ARCHIVE)
 	$(VERBOSE)tar xzf $<
 	$(VERBOSE)mv $(OKL4_VERSION) $@
 	$(ECHO) "applying patches to '$(CONTRIB_DIR)/'"
-	$(VERBOSE)for i in $(PATCHES); do patch -d $@ -p1 < $$i; done
-	$(VERBOSE)sed -i "s/env python/env $(PYTHON2)/" $(CONTRIB_DIR)/tools/pyelf/elfweaver
+	$(VERBOSE)for i in $(PATCHES); do $(GNU_PATCH) -d $@ -p1 < $$i; done
+	$(VERBOSE)$(GNU_SED) -i "s/env python/env $(PYTHON2)/" $(CONTRIB_DIR)/tools/pyelf/elfweaver
 
 prepare: $(CONTRIB_DIR)
 
