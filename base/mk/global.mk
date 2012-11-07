@@ -30,6 +30,8 @@ CUSTOM_STRIP   ?= $(CROSS_DEV_PREFIX)strip
 #
 TAC       ?= tac
 GNU_FIND  ?= find
+GNU_PATCH ?= patch
+GNU_SED   ?= sed
 GNU_XARGS ?= xargs
 ECHO      ?= echo -e
 
