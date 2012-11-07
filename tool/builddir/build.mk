@@ -147,7 +147,7 @@ $(dir $(LIB_DEP_FILE)):
 # Find all 'target.mk' files located within any of the specified subdirectories
 # ('DST_DIRS') and any repository. The 'sort' is used to remove duplicates.
 #
-TARGETS_TO_VISIT := $(shell find $(REPOSITORIES:=/src) -false \
+TARGETS_TO_VISIT := $(shell $(GNU_FIND) $(REPOSITORIES:=/src) -false \
                             $(foreach DST,$(DST_DIRS), \
                                       -or -path "*/src/$(DST)/**target.mk" \
                                           -printf " %P "))
@@ -279,7 +279,7 @@ clean_gen_files:
 	$(VERBOSE)rm -f $(LIB_DEP_FILE)
 
 clean_install_dir:
-	$(VERBOSE)(test -d $(INSTALL_DIR) && find $(INSTALL_DIR) -type l -not -readable -delete) || true
+	$(VERBOSE)(test -d $(INSTALL_DIR) && $(GNU_FIND) $(INSTALL_DIR) -type l -not -readable -delete) || true
 
 clean_empty_dirs: clean_targets clean_libcache clean_run clean_gen_files clean_install_dir
 	$(VERBOSE)$(GNU_FIND) . -depth -type d -empty -delete
