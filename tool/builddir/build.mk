@@ -242,6 +242,7 @@ run/%: $(call select_from_repositories,run/%.run) $(RUN_ENV)
 	                                 --specs "$(SPECS)" \
 	                                 --repositories "$(REPOSITORIES)" \
 	                                 --cross-dev-prefix "$(CROSS_DEV_PREFIX)" \
+	                                 --build-os "$(BUILD_OS)" \
 	                                 --qemu-args "$(QEMU_OPT)" \
 	                                 --include $(RUN_ENV) $(RUN_OPT) \
 	                                 --include $(RUN_SCRIPT)

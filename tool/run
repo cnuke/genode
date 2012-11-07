@@ -1,4 +1,4 @@
-#!/usr/bin/expect
+#!/usr/bin/env expect
 
 #
 # \brief  Framework for running automated tests
@@ -43,13 +43,14 @@ proc assert_spec {spec} {
 # the error code -4.
 #
 proc build {targets} {
+	global make
 
 	if {[get_cmd_switch --skip-build]} return
 
 	regsub -all {\s\s+} $targets " " targets
 	puts "building targets: $targets"
 	set timeout 10000
-	set pid [eval "spawn make $targets"]
+	set pid [eval "spawn $make $targets"]
 	expect { eof { } }
 	if {[lindex [wait $pid] end] != 0} {
 		puts "Error: Genode build failed"
@@ -264,6 +265,15 @@ set cross_dev_prefix [get_cmd_arg --cross-dev-prefix ""]
 set specs            [get_cmd_arg --specs            ""]
 set repositories     [get_cmd_arg --repositories     ""]
 set qemu_args        [get_cmd_arg --qemu-args        ""]
+set build_os         [get_cmd_arg --build-os         ""]
+
+
+if { [string compare $build_os "FreeBSD"] == 0 } {
+# FreeBSD prefixes GNU make
+set make gmake
+} else {
+set make make
+}
 
 #
 # Enable run scripts to extend 'qemu_arg' via 'append' without bothering
@@ -390,6 +400,7 @@ proc copy_and_strip_genode_binaries_to_run_dir { binaries } {
 # Create ISO image with the content of the run directory
 #
 proc create_iso_image_from_run_dir { } {
+	global make
 
 	puts "creating ISO image..."
 	exec rm -f "[run_dir].iso"
@@ -398,7 +409,7 @@ proc create_iso_image_from_run_dir { } {
 	# The 'create_iso' tool returns a non-zero return code even if
 	# successful. So we ignore the return code here.
 	#
-	catch { exec [genode_dir]/tool/create_iso iso ISO=[run_dir] }
+	catch { exec $make -f [genode_dir]/tool/create_iso iso ISO=[run_dir] }
 	if {![file exists "[run_dir].iso"]} {
 		puts stderr "Error: ISO image creation failed"
 		exit -5
