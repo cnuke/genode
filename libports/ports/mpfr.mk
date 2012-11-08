@@ -20,7 +20,7 @@ $(DOWNLOAD_DIR)/$(MPFR_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(MPFR_URL) && touch $@
 
 $(CONTRIB_DIR)/$(MPFR): $(DOWNLOAD_DIR)/$(MPFR_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 include/mpfr/mpfr.h:
 	$(VERBOSE)mkdir -p $(dir $@)

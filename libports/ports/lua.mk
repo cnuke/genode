@@ -20,7 +20,7 @@ $(DOWNLOAD_DIR)/$(LUA_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(LUA_URL) && touch $@
 
 $(CONTRIB_DIR)/$(LUA): $(DOWNLOAD_DIR)/$(LUA_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 LUA_INCLUDES = lua.h lauxlib.h luaconf.h lualib.h
 

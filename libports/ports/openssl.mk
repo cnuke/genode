@@ -1,7 +1,7 @@
 OPENSSL_VERSION = 1.0.1c
 OPENSSL         = openssl-$(OPENSSL_VERSION)
 OPENSSL_TGZ     = $(OPENSSL).tar.gz
-OPENSSL_URL     = https://www.openssl.org/source/$(OPENSSL_TGZ)
+OPENSSL_URL     = http://www.openssl.org/source/$(OPENSSL_TGZ)
 
 # local openssl src
 OPENSSL_SRC     = src/lib/openssl
@@ -22,7 +22,7 @@ $(DOWNLOAD_DIR)/$(OPENSSL_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(OPENSSL_URL) && touch $@
 
 $(CONTRIB_DIR)/$(OPENSSL): $(DOWNLOAD_DIR)/$(OPENSSL_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 #
 # Generate ASM codes

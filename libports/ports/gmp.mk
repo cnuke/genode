@@ -32,7 +32,7 @@ $(DOWNLOAD_DIR)/$(GMP_TBZ2):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(GMP_URL) && touch $@
 
 $(CONTRIB_DIR)/$(GMP): $(DOWNLOAD_DIR)/$(GMP_TBZ2)
-	$(VERBOSE)tar xfj $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfj $< -C $(CONTRIB_DIR) && touch $@
 
 include/gmp/gmp-impl.h:
 	$(VERBOSE)ln -sf ../../$(CONTRIB_DIR)/$(GMP)/gmp-impl.h $@

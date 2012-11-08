@@ -20,7 +20,7 @@ $(DOWNLOAD_DIR)/$(LIBDRM_TBZ2):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(LIBDRM_URL) && touch $@
 
 $(CONTRIB_DIR)/$(LIBDRM_DIR): $(DOWNLOAD_DIR)/$(LIBDRM_TBZ2)
-	$(VERBOSE)tar xfj $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfj $< -C $(CONTRIB_DIR) && touch $@
 
 clean-libdrm:
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(LIBDRM_DIR)

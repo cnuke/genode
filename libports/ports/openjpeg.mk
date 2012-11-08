@@ -18,7 +18,7 @@ $(DOWNLOAD_DIR)/$(OPENJPEG_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) -O $@ $(OPENJPEG_URL) && touch $@
 
 $(CONTRIB_DIR)/$(OPENJPEG): $(DOWNLOAD_DIR)/$(OPENJPEG_TGZ)
-	$(VERBOSE)tar xfz $< --transform "s/openjpeg_v1_4_sources_r697/$(OPENJPEG)/" -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< --transform "s/openjpeg_v1_4_sources_r697/$(OPENJPEG)/" -C $(CONTRIB_DIR) && touch $@
 
 include/openjpeg/openjpeg.h:
 	$(VERBOSE)mkdir -p $(dir $@)

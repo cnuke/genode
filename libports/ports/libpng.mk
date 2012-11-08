@@ -18,7 +18,7 @@ $(DOWNLOAD_DIR)/$(LIBPNG_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(LIBPNG_URL) && touch $@
 
 $(CONTRIB_DIR)/$(LIBPNG): $(DOWNLOAD_DIR)/$(LIBPNG_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 LIBPNG_INCLUDES = pngconf.h png.h pngpriv.h
 

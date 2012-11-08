@@ -25,18 +25,18 @@ $(DOWNLOAD_DIR)/$(MESA_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(MESA_URL) && touch $@
 
 $(CONTRIB_DIR)/$(MESA_DIR): $(DOWNLOAD_DIR)/$(MESA_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR)
-	$(VERBOSE)patch -N -p0 -d $(CONTRIB_DIR)/$(MESA_DIR) < src/lib/gallium/p_state_config.patch
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR)
+	$(VERBOSE)$(GNU_PATCH) -N -p0 -d $(CONTRIB_DIR)/$(MESA_DIR) < src/lib/gallium/p_state_config.patch
 	$(VERBOSE)touch $@
 
 tool/mesa/glsl:
-	$(VERBOSE)make -C tool/mesa
+	$(VERBOSE)$(MAKE) -C tool/mesa
 
 $(MESA_INCLUDE_SYMLINKS):
 	$(VERBOSE)ln -sf $(realpath $(CONTRIB_DIR)/$(MESA_DIR)/$@) $@ && touch $@
 
 clean_tool_mesa:
-	$(VERBOSE)make -C tool/mesa clean
+	$(VERBOSE)$(MAKE) -C tool/mesa clean
 
 clean_mesa_include_symlinks:
 	$(VERBOSE)rm -f $(MESA_INCLUDE_SYMLINKS)

@@ -18,7 +18,7 @@ $(DOWNLOAD_DIR)/$(JBIG2DEC_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(JBIG2DEC_URL) && touch $@
 
 $(CONTRIB_DIR)/$(JBIG2DEC): $(DOWNLOAD_DIR)/$(JBIG2DEC_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 include/jbig2dec/jbig2.h:
 	$(VERBOSE)mkdir -p $(dir $@)

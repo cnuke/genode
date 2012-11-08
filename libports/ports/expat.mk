@@ -19,7 +19,7 @@ $(DOWNLOAD_DIR)/$(EXPAT_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(EXPAT_URL) && touch $@
 
 $(CONTRIB_DIR)/$(EXPAT): $(DOWNLOAD_DIR)/$(EXPAT_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 clean-expat:
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(EXPAT)

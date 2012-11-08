@@ -24,18 +24,18 @@ $(DOWNLOAD_DIR)/$(LWIP_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(LWIP_URL) && touch $@
 
 $(CONTRIB_DIR)/$(LWIP): $(DOWNLOAD_DIR)/$(LWIP_TGZ)
-	$(VERBOSE)tar xvzf $< -C $(CONTRIB_DIR) && touch $@
-	$(VERBOSE)find ./src/lib/lwip/ -name "*.patch" |\
-		xargs -ixxx sh -c "patch -p0 -r - -N -d $(CONTRIB_DIR) < xxx" || true
+	$(VERBOSE)$(GNU_TAR) xvzf $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_FIND) ./src/lib/lwip/ -name "*.patch" |\
+		$(GNU_XARGS) -ixxx sh -c "$(GNU_PATCH) -p0 -r - -N -d $(CONTRIB_DIR) < xxx" || true
 
 include/lwip/lwip:
 	$(VERBOSE)mkdir -p $@
-	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/lwip/*.h)) -t $@
-	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/ipv4/lwip/*.h)) -t $@
+	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/lwip/*.h)) $@
+	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/ipv4/lwip/*.h)) $@
 
 include/lwip/netif:
 	$(VERBOSE)mkdir -p $@
-	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/netif/*.h)) -t $@
+	$(VERBOSE)ln -s $(addprefix ../../../, $(wildcard $(CONTRIB_DIR)/$(LWIP)/src/include/netif/*.h)) $@
 
 clean-lwip:
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(LWIP)

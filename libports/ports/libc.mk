@@ -573,8 +573,8 @@ include/libc/vm/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_vm/%.h
 	$(libc_gen_symlink_subsubsub)
 
 apply_patches-libc: checkout-libc
-	$(VERBOSE)find ./src/lib/libc/patches/ -name "*.patch" |\
-		xargs -ixxx sh -c "patch -p0 -r - -N -d $(CONTRIB_DIR)/$(LIBC) < xxx" || true
+	$(VERBOSE)$(GNU_FIND) ./src/lib/libc/patches/ -name "*.patch" |\
+		$(GNU_XARGS) -ixxx sh -c "$(GNU_PATCH) -p0 -r - -N -d $(CONTRIB_DIR)/$(LIBC) < xxx" || true
 
 #
 # Use new make instance for symlink creation. Otherwise the implicit rules
@@ -583,15 +583,15 @@ apply_patches-libc: checkout-libc
 # as side effect of the 'LIBC_DIRS_TO_CHECKOUT' out rule).
 #
 create_include_symlinks-libc: checkout-libc
-	$(VERBOSE)make $(LIBC_IMPORT_INCLUDES) VERBOSE=$(VERBOSE)
+	$(VERBOSE)$(MAKE) $(LIBC_IMPORT_INCLUDES) VERBOSE=$(VERBOSE)
 
 prepare-libc: apply_patches-libc libc_net_generate libc_rpc_generate create_include_symlinks-libc
 
 clean_include_symlinks-libc:
-	$(VERBOSE)find include -type l -delete
+	$(VERBOSE)$(GNU_FIND) include -type l -delete
 
 clean_include_subdirs-libc: clean_include_symlinks-libc
-	$(VERBOSE)find include -type d -empty -delete
+	$(VERBOSE)$(GNU_FIND) include -type d -empty -delete
 
 clean-libc: clean_include_subdirs-libc
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(LIBC)

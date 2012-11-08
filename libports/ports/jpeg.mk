@@ -18,7 +18,7 @@ $(DOWNLOAD_DIR)/$(JPEG_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(JPEG_URL) && touch $@
 
 $(CONTRIB_DIR)/$(JPEG): $(DOWNLOAD_DIR)/$(JPEG_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 clean-jpeg:
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(JPEG)

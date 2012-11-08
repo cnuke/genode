@@ -19,7 +19,7 @@ $(DOWNLOAD_DIR)/$(QOOST_TBZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(QOOST_URL) && touch $@
 
 $(CONTRIB_DIR)/$(QOOST): $(DOWNLOAD_DIR)/$(QOOST_TBZ)
-	$(VERBOSE)tar xfj $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfj $< -C $(CONTRIB_DIR) && touch $@
 
 include/qoost:
 	$(VERBOSE)mkdir -p $(dir $@)

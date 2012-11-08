@@ -18,7 +18,7 @@ $(DOWNLOAD_DIR)/$(FREETYPE_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(FREETYPE_URL) && touch $@
 
 $(CONTRIB_DIR)/$(FREETYPE): $(DOWNLOAD_DIR)/$(FREETYPE_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 include/freetype:
 	$(VERBOSE)ln -s ../$(CONTRIB_DIR)/$(FREETYPE)/include/freetype $@

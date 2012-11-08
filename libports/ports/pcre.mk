@@ -19,7 +19,7 @@ $(DOWNLOAD_DIR)/$(PCRE_TBZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(PCRE_URL) && touch $@
 
 $(CONTRIB_DIR)/$(PCRE): $(DOWNLOAD_DIR)/$(PCRE_TBZ)
-	$(VERBOSE)tar xfj $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfj $< -C $(CONTRIB_DIR) && touch $@
 
 include/pcre:
 	$(VERBOSE)mkdir -p $@

@@ -4,6 +4,10 @@
 # \date   2009-10-16
 #
 
+GENODE_DIR ?= ..
+
+include $(GENODE_DIR)/tool/builddir/gnu.mk
+
 #
 # Print help information by default
 #
@@ -28,7 +32,7 @@ prepare: $(DOWNLOAD_DIR) $(CONTRIB_DIR)
 check_tool = $(if $(shell which $(1)),,$(error Need to have '$(1)' installed.))
 
 $(call check_tool,wget)
-$(call check_tool,patch)
+$(call check_tool,$(GNU_PATCH))
 
 #
 # Include information about available ports

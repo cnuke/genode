@@ -18,12 +18,12 @@ $(DOWNLOAD_DIR)/$(PYTHON_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(PYTHON_URL) && touch $@
 
 $(CONTRIB_DIR)/$(PYTHON): $(DOWNLOAD_DIR)/$(PYTHON_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR)
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR)
 	@# rename Python subdirectory to lower case to be consistent
 	@# with the other libs
 	$(VERBOSE)mv $(CONTRIB_DIR)/Python-2.6.4 $@
 	$(VERBOSE)touch $@
-	$(VERBOSE)patch -p0 -i src/lib/python/posixmodule.patch
+	$(VERBOSE)$(GNU_PATCH) -p0 -i src/lib/python/posixmodule.patch
 
 include/python2.6:
 	$(VERBOSE)ln -s ../$(CONTRIB_DIR)/$(PYTHON)/Include $@

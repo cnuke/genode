@@ -20,7 +20,7 @@ $(DOWNLOAD_DIR)/$(READLINE_TGZ):
 READLINE_HEADERS := rlstdc.h rltypedefs.h keymaps.h tilde.h
 
 $(CONTRIB_DIR)/$(READLINE): $(DOWNLOAD_DIR)/$(READLINE_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 	@# create symbolic links for public headers from contrib dir
 	$(VERBOSE)for i in $(READLINE_HEADERS); do \
 	  ln -sf ../../$(CONTRIB_DIR)/$(READLINE)/$$i include/readline/; done

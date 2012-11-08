@@ -38,8 +38,8 @@ $(DOWNLOAD_DIR)/$(STDCXX_TBZ2):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) -O$@ $(STDCXX_URL) && touch $@
 
 $(CONTRIB_DIR)/$(STDCXX): $(DOWNLOAD_DIR)/$(STDCXX_TBZ2)
-	@#$(VERBOSE)tar xfj $< --transform "s/nova-userland/vancouver/" -C $(CONTRIB_DIR)
-	$(VERBOSE)tar xfj $< -C $(CONTRIB_DIR) gcc-$(STDCXX_VERSION)/libstdc++-v3 \
+	@#$(VERBOSE)$(GNU_TAR) xfj $< --transform "s/nova-userland/vancouver/" -C $(CONTRIB_DIR)
+	$(VERBOSE)$(GNU_TAR) xfj $< -C $(CONTRIB_DIR) gcc-$(STDCXX_VERSION)/libstdc++-v3 \
 	                     --transform "s/gcc-$(STDCXX_VERSION).libstdc++-v3/stdcxx-$(STDCXX_VERSION)/" && touch $@
 
 include/stdcxx:

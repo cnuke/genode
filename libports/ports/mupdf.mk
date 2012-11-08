@@ -19,7 +19,7 @@ $(DOWNLOAD_DIR)/$(MUPDF_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) -O $@ $(MUPDF_URL) && touch $@
 
 $(CONTRIB_DIR)/$(MUPDF): $(DOWNLOAD_DIR)/$(MUPDF_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 clean-mupdf: clean-mupdf_contrib
 clean-mupdf_contrib:

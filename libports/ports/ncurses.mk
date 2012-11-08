@@ -10,7 +10,7 @@ PORTS += $(NCURSES)
 #
 # Check for tools
 #
-$(call check_tool,sed)
+$(call check_tool,$(GNU_SED))
 $(call check_tool,mawk)
 
 NCURSES_SYMLINKED_INC := nc_alloc.h nc_panel.h nc_tparm.h term_entry.h \
@@ -40,7 +40,7 @@ $(DOWNLOAD_DIR)/$(NCURSES_TGZ):
 	$(VERBOSE)wget -c -P $(DOWNLOAD_DIR) $(NCURSES_URL) && touch $@
 
 $(CONTRIB_DIR)/$(NCURSES): $(DOWNLOAD_DIR)/$(NCURSES_TGZ)
-	$(VERBOSE)tar xfz $< -C $(CONTRIB_DIR) && touch $@
+	$(VERBOSE)$(GNU_TAR) xfz $< -C $(CONTRIB_DIR) && touch $@
 
 src/lib/ncurses:
 	$(VERBOSE)mkdir -p $@
@@ -102,7 +102,7 @@ NCURSES_INCLUDE_DIR := $(CONTRIB_DIR)/$(NCURSES)/include
 
 NCURSES_SRC_DIR := $(CONTRIB_DIR)/$(NCURSES)/ncurses
 
-apply_substitutions = $(VERBOSE)for i in $(NCURSES_SUBST); do sed -i "s/$$i/g" $(1); done
+apply_substitutions = $(VERBOSE)for i in $(NCURSES_SUBST); do $(GNU_SED) -i "s/$$i/g" $(1); done
 
 #
 # Generate files in 'include/ncurses/'
