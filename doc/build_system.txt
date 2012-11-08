@@ -463,4 +463,17 @@ successfully on each platform. If at least one run script failed, autopilot
 returns a non-zero exit code, which makes it straight forward to include
 autopilot into an automated build-and-test environment.
 
+Using the build-system on non-GNU systems
+=========================================
+
+The build-system heavily depends on GNU tools like coreutils, findutils and
+of course GNU make. These tools are normally available on most BSDs via the
+ports or package framework and are in most cases prefixed with a 'g'.
+Therefore the build-system uses variables instead of calling the needed tools
+by their name and sets the values of the variables according to the specified
+build OS. Currently this is only done for BSD in general and FreeBSD in
+particular. Since GNU make is indeed called 'gmake' and most scripts in tool/
+use 'make' in their 'magic line' one has to execute these scripts via
+'gmake -f'.
+
 
