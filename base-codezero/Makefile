@@ -4,12 +4,16 @@
 # \date   2011-08-05
 #
 
+GENODE_DIR ?= ..
+
+include $(GENODE_DIR)/tool/builddir/gnu.mk
+
 VERBOSE    ?= @
 ECHO        = @echo
 GIT_URL     = http://git.l4dev.org/codezero.git
 GIT_REV     = 6fa4884a5a1cf6207372f69ae01e5faa6d5a39c8
 CONTRIB_DIR = contrib
-PATCHES     = $(shell find patches -name *.patch)
+PATCHES     = $(shell $(GNU_FIND) patches -name '*.patch')
 
 #
 # Utility to check if a tool is installed
@@ -17,7 +21,7 @@ PATCHES     = $(shell find patches -name *.patch)
 check_tool = $(if $(shell which $(1)),,$(error Need to have '$(1)' installed.))
 
 $(call check_tool,git)
-$(call check_tool,patch)
+$(call check_tool,$(GNU_PATCH))
 
 #
 # Print help information by default
@@ -43,7 +47,7 @@ $(CONTRIB_DIR)/.git:
 $(CONTRIB_DIR): $(CONTRIB_DIR)/.git
 	$(VERBOSE)cd $(CONTRIB_DIR); git reset --hard $(GIT_REV)
 	$(ECHO) "applying patches to '$(CONTRIB_DIR)/'"
-	$(VERBOSE)for i in $(PATCHES); do patch -d $@ -p1 < $$i; done
+	$(VERBOSE)for i in $(PATCHES); do $(GNU_PATCH) -d $@ -p1 < $$i; done
 
 .PHONY: $(CONTRIB_DIR)
 

@@ -56,8 +56,8 @@ $(CODEZERO_BUILD_DIR): $(CODEZERO_DST_DIR) $(CODEZERO_CML)
 	@# the tool chain parameters according to the CROSS_DEV_PREFIX configured
 	@# for Genode.
 	@#
-	$(VERBOSE)sed -i "/TOOLCHAIN_USERSPACE/s/\".*\"/\"$(notdir $(CROSS_DEV_PREFIX))\"/" $(LOCAL_CONFIG_CML)
-	$(VERBOSE)sed -i "/TOOLCHAIN_KERNEL/s/\".*\"/\"$(notdir $(CROSS_DEV_PREFIX))\"/" $(LOCAL_CONFIG_CML)
+	$(VERBOSE)$(GNU_SED) -i "/TOOLCHAIN_USERSPACE/s/\".*\"/\"$(notdir $(CROSS_DEV_PREFIX))\"/" $(LOCAL_CONFIG_CML)
+	$(VERBOSE)$(GNU_SED) -i "/TOOLCHAIN_KERNEL/s/\".*\"/\"$(notdir $(CROSS_DEV_PREFIX))\"/" $(LOCAL_CONFIG_CML)
 	$(VERBOSE)cd $(CODEZERO_DST_DIR); $(BUILD_ENV) ./build.py -C -b -f $(LOCAL_CONFIG_CML) $(CODEZERO_STDOUT)
 
 clean cleanall: clean_codezero
