@@ -4,12 +4,25 @@
 # \date   2011-07-18
 #
 
+GENODE_DIR ?= ..
+
+include $(GENODE_DIR)/tool/builddir/gnu.mk
+
 VERBOSE       ?= @
 ECHO           = @echo
 DOWNLOAD_DIR   = download
 CONTRIB_DIR    = contrib
 FIASCO_ARCHIVE = 3rd_fiasco.tar.bz2
 FIASCO_URI     = http://downloads.sourceforge.net/project/genode/3rd/$(FIASCO_ARCHIVE)
+
+#
+# Utility to check if a tool is installed
+#
+check_tool = $(if $(shell which $(1)),,$(error Need to have '$(1)' installed.))
+
+$(call check_tool,wget)
+$(call check_tool,$(GNU_SED))
+$(call check_tool,$(GNU_TAR))
 
 #
 # Print help information by default
@@ -31,7 +44,7 @@ $(DOWNLOAD_DIR)/$(FIASCO_ARCHIVE):
 
 $(CONTRIB_DIR): $(DOWNLOAD_DIR)/$(FIASCO_ARCHIVE)
 	$(ECHO) "unpacking source code to '$(CONTRIB_DIR)/'"
-	$(VERBOSE)tar xjf $<
+	$(VERBOSE)$(GNU_TAR) xjf $<
 	$(VERBOSE)mv 3rd $@
 	$(VERBOSE)touch $@
 

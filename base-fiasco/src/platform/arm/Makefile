@@ -17,8 +17,8 @@ all:
 #
 genode.ld:
 	cp $(SRC) $@
-	sed -i "s/= 0x[0-9]\+;/= 0x00060000;/" $@
-	sed -i "54s/^.*$$/\t\tLONG(0xffffffff);/" $@
+	$(GNU_SED) -i "s/= 0x[0-9]\+;/= 0x00060000;/" $@
+	$(GNU_SED) -i "54s/^.*$$/\t\tLONG(0xffffffff);/" $@
 
 clean cleanall:
 	rm -f $(TARGET)
