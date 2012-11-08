@@ -93,6 +93,8 @@ export SPEC_FILES := $(foreach SPEC,$(SPECS),$(call select_from_repositories,mk/
 include $(SPEC_FILES)
 export SPECS
 
+-include $(GENODE_DIR)/tool/builddir/gnu.mk
+
 ##
 ## First stage: generate library dependencies
 ##
