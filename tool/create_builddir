@@ -72,14 +72,6 @@ $(BUILD_DIR)/etc/build.conf::
 	@echo 'BASE_DIR      = $$(GENODE_DIR)/base' >> $@
 
 #
-# Supply -no-kvm argument to Qemu for kernels that are incompatible with KVM
-#
-ifeq ($(filter-out foc_x86_32 foc_x86_64 okl4_x86 nova_x86_32 nova_x86_64 pistachio_x86,$(PLATFORM)),)
-$(BUILD_DIR)/etc/build.conf::
-	@cat $(BUILD_CONF).qemu_no_kvm >> $@
-endif
-
-#
 # Add 'base-<platform>' and generic repositories
 #
 $(BUILD_DIR)/etc/build.conf:: $(BUILD_CONF_PLATFORM)
