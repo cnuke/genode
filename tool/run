@@ -416,6 +416,21 @@ proc create_iso_image_from_run_dir { } {
 	}
 }
 
+##
+# Check if the needed qemu binary is present within $PATH
+#
+proc qemu_bin_exists { } {
+	global qemu
+	return [eval "exec sh -c \"$qemu --version > /dev/null 2>&1 && echo 1 || echo 0\"" ]
+}
+
+##
+# Check if qemu supports KVM
+#
+proc qemu_has_kvm { } {
+	global qemu
+	return [eval "exec sh -c \"$qemu --version | grep -q kvm && echo 1 || echo 0\"" ]
+}
 
 ##
 # Execute scenario using Qemu
@@ -443,6 +458,12 @@ proc spawn_qemu { wait_for_re timeout_value } {
 	# varient of Qemu when working with NOVA even when operating in 32bit.
 	#
 	if {[have_spec nova]} { set qemu "qemu-system-x86_64" }
+
+	if {![qemu_bin_exists]} {
+		puts stderr "run: cannot start '$qemu': file not found"
+		return 1 }
+
+	if {[qemu_has_kvm]} { append qemu_args " -no-kvm " }
 
 	#
 	# Redirect serial output to stdio, but only in graphics mode and no
