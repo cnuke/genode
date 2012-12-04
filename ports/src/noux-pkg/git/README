@@ -1,0 +1,14 @@
+These commands don't work because there is no Perl/Python in noux:
+
+git-add--interactive
+git-archimport
+git-cvsexportcommit
+git-cvsimport
+git-cvsserver
+git-difftool
+git-p4
+git-relink
+git-remote-testgit
+git-send-email
+git-svn
+

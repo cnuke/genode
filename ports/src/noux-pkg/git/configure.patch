@@ -1,0 +1,214 @@
+--- git-1.8.1.4/configure.orig	2012-12-06 16:14:46.368156520 +0100
++++ git-1.8.1.4/configure	2012-12-06 16:15:33.105078975 +0100
+@@ -5333,111 +5333,111 @@
+ #
+ # Define FREAD_READS_DIRECTORIES if your are on a system which succeeds
+ # when attempting to read from an fopen'ed directory.
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether system succeeds to read fopen'ed directory" >&5
+-$as_echo_n "checking whether system succeeds to read fopen'ed directory... " >&6; }
+-if test "${ac_cv_fread_reads_directories+set}" = set; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-if test "$cross_compiling" = yes; then :
+-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-as_fn_error $? "cannot run test program while cross compiling
+-See \`config.log' for more details" "$LINENO" 5 ; }
+-else
+-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-$ac_includes_default
+-int
+-main ()
+-{
+-char c;
+-		FILE *f = fopen(".", "r");
+-		return f && fread(&c, 1, 1, f)
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_run "$LINENO"; then :
+-  ac_cv_fread_reads_directories=no
+-else
+-  ac_cv_fread_reads_directories=yes
+-fi
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+-  conftest.$ac_objext conftest.beam conftest.$ac_ext
+-fi
+-
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_fread_reads_directories" >&5
+-$as_echo "$ac_cv_fread_reads_directories" >&6; }
+-if test $ac_cv_fread_reads_directories = yes; then
+-	FREAD_READS_DIRECTORIES=UnfortunatelyYes
+-else
+-	FREAD_READS_DIRECTORIES=
+-fi
+-
++#{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether system succeeds to read fopen'ed directory" >&5
++#$as_echo_n "checking whether system succeeds to read fopen'ed directory... " >&6; }
++#if test "${ac_cv_fread_reads_directories+set}" = set; then :
++#  $as_echo_n "(cached) " >&6
++#else
++#
++#if test "$cross_compiling" = yes; then :
++#  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#as_fn_error $? "cannot run test program while cross compiling
++#See \`config.log' for more details" "$LINENO" 5 ; }
++#else
++#  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++#/* end confdefs.h.  */
++#$ac_includes_default
++#int
++#main ()
++#{
++#char c;
++#		FILE *f = fopen(".", "r");
++#		return f && fread(&c, 1, 1, f)
++#  ;
++#  return 0;
++#}
++#_ACEOF
++#if ac_fn_c_try_run "$LINENO"; then :
++#  ac_cv_fread_reads_directories=no
++#else
++#  ac_cv_fread_reads_directories=yes
++#fi
++#rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
++#  conftest.$ac_objext conftest.beam conftest.$ac_ext
++#fi
++#
++#
++#fi
++#{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_fread_reads_directories" >&5
++#$as_echo "$ac_cv_fread_reads_directories" >&6; }
++#if test $ac_cv_fread_reads_directories = yes; then
++#	FREAD_READS_DIRECTORIES=UnfortunatelyYes
++#else
++#	FREAD_READS_DIRECTORIES=
++#fi
++#
+ config_appended_defs="$config_appended_defs${newline}FREAD_READS_DIRECTORIES=${FREAD_READS_DIRECTORIES}"
+ #
+ # Define SNPRINTF_RETURNS_BOGUS if your are on a system which snprintf()
+ # or vsnprintf() return -1 instead of number of characters which would
+ # have been written to the final string if enough space had been available.
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether snprintf() and/or vsnprintf() return bogus value" >&5
+-$as_echo_n "checking whether snprintf() and/or vsnprintf() return bogus value... " >&6; }
+-if test "${ac_cv_snprintf_returns_bogus+set}" = set; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-if test "$cross_compiling" = yes; then :
+-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+-as_fn_error $? "cannot run test program while cross compiling
+-See \`config.log' for more details" "$LINENO" 5 ; }
+-else
+-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-$ac_includes_default
+-		#include "stdarg.h"
+-
+-		int test_vsnprintf(char *str, size_t maxsize, const char *format, ...)
+-		{
+-		  int ret;
+-		  va_list ap;
+-		  va_start(ap, format);
+-		  ret = vsnprintf(str, maxsize, format, ap);
+-		  va_end(ap);
+-		  return ret;
+-		}
+-int
+-main ()
+-{
+-char buf[6];
+-		  if (test_vsnprintf(buf, 3, "%s", "12345") != 5
+-		      || strcmp(buf, "12")) return 1;
+-		  if (snprintf(buf, 3, "%s", "12345") != 5
+-		      || strcmp(buf, "12")) return 1
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_run "$LINENO"; then :
+-  ac_cv_snprintf_returns_bogus=no
+-else
+-  ac_cv_snprintf_returns_bogus=yes
+-fi
+-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+-  conftest.$ac_objext conftest.beam conftest.$ac_ext
+-fi
+-
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_snprintf_returns_bogus" >&5
+-$as_echo "$ac_cv_snprintf_returns_bogus" >&6; }
+-if test $ac_cv_snprintf_returns_bogus = yes; then
+-	SNPRINTF_RETURNS_BOGUS=UnfortunatelyYes
+-else
+-	SNPRINTF_RETURNS_BOGUS=
+-fi
++#{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether snprintf() and/or vsnprintf() return bogus value" >&5
++#$as_echo_n "checking whether snprintf() and/or vsnprintf() return bogus value... " >&6; }
++#if test "${ac_cv_snprintf_returns_bogus+set}" = set; then :
++#  $as_echo_n "(cached) " >&6
++#else
++#
++#if test "$cross_compiling" = yes; then :
++#  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
++#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
++#as_fn_error $? "cannot run test program while cross compiling
++#See \`config.log' for more details" "$LINENO" 5 ; }
++#else
++#  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++#/* end confdefs.h.  */
++#$ac_includes_default
++#		#include "stdarg.h"
++#
++#		int test_vsnprintf(char *str, size_t maxsize, const char *format, ...)
++#		{
++#		  int ret;
++#		  va_list ap;
++#		  va_start(ap, format);
++#		  ret = vsnprintf(str, maxsize, format, ap);
++#		  va_end(ap);
++#		  return ret;
++#		}
++#int
++#main ()
++#{
++#char buf[6];
++#		  if (test_vsnprintf(buf, 3, "%s", "12345") != 5
++#		      || strcmp(buf, "12")) return 1;
++#		  if (snprintf(buf, 3, "%s", "12345") != 5
++#		      || strcmp(buf, "12")) return 1
++#  ;
++#  return 0;
++#}
++#_ACEOF
++#if ac_fn_c_try_run "$LINENO"; then :
++#  ac_cv_snprintf_returns_bogus=no
++#else
++#  ac_cv_snprintf_returns_bogus=yes
++#fi
++#rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
++#  conftest.$ac_objext conftest.beam conftest.$ac_ext
++#fi
++#
++#
++#fi
++#{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_snprintf_returns_bogus" >&5
++#$as_echo "$ac_cv_snprintf_returns_bogus" >&6; }
++#if test $ac_cv_snprintf_returns_bogus = yes; then
++#	SNPRINTF_RETURNS_BOGUS=UnfortunatelyYes
++#else
++#	SNPRINTF_RETURNS_BOGUS=
++#fi
+ 
+ config_appended_defs="$config_appended_defs${newline}SNPRINTF_RETURNS_BOGUS=${SNPRINTF_RETURNS_BOGUS}"
+ 

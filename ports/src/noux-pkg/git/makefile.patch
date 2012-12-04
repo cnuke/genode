@@ -1,0 +1,13 @@
+libgcc.a is needed because -nostdlib is used
+
+--- git-1.8.1.4/Makefile.orig	2012-12-06 16:09:29.366417166 +0100
++++ git-1.8.1.4/Makefile	2012-12-06 15:56:20.765214728 +0100
+@@ -1997,7 +1997,7 @@
+ TCLTK_PATH_SQ = $(subst ','\'',$(TCLTK_PATH))
+ DIFF_SQ = $(subst ','\'',$(DIFF))
+ 
+-LIBS = $(GITLIBS) $(EXTLIBS)
++LIBS = $(GITLIBS) $(EXTLIBS) $(LIBGCC)
+ 
+ BASIC_CFLAGS += -DSHA1_HEADER='$(SHA1_HEADER_SQ)' \
+ 	$(COMPAT_CFLAGS)
