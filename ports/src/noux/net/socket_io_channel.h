@@ -204,6 +204,11 @@ namespace Noux {
 				if (wr)
 					return true;
 
+				if (rd && !ready) {
+					PDBG("HACK rd");
+					return true;
+				}
+
 				return false;
 			}
 
