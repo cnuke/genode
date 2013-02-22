@@ -59,7 +59,10 @@ namespace Noux {
 				_filename[0] = '\0';
 
 				try { config.attribute("name").value(_filename, sizeof(_filename)); }
-				catch (...) { }
+				catch (...) {
+					/* use standard name */
+					strncpy(_filename, "tty", 4);
+				}
 
 			}
 
