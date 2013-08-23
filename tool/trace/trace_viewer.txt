@@ -1,0 +1,10 @@
+# url: https://code.google.com/p/trace-viewer/
+
+# raw trace entry format:
+[a-zA-Z]*: 00000123456 [foo -> bar -> thread] EVENT 'arguments'
+
+# adjusted trace entry format for trace_viewer.gawk:
+0x00000123456 [label -> thread]] EVENT 'arguments'
+
+sed -e '/^TRACE .*$/d' -e 's/^TRACE: //' -e 's/\([0-9abcdef]*\)/0x\1/' trace.out | \
+	sort -nk 1 | gawk --non-decimal-data -F'\\]|\\[' -f trace_viewer.gawk > trace_foo.json
