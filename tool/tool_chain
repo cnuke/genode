@@ -15,6 +15,7 @@ help:
 	$(ECHO) "--- available commands ---"
 	$(ECHO) "x86        - create tool chain for x86"
 	$(ECHO) "arm        - create tool chain for arm"
+	$(ECHO) "powerpc    - create tool chain for powerpc"
 	$(ECHO) "clean      - clean everything except downloaded archives"
 	$(ECHO) "cleanall   - clean everything including downloaded archives"
 	$(ECHO) "install    - copy tool chain to '$(INSTALL_LOCATION)'"
@@ -24,7 +25,7 @@ help:
 # User interface
 #
 
-SUPPORTED_PLATFORMS := x86 microblaze arm
+SUPPORTED_PLATFORMS := x86 microblaze arm powerpc
 
 PLATFORM := $(firstword $(filter $(SUPPORTED_PLATFORMS),$(MAKECMDGOALS)))
 
@@ -185,6 +186,8 @@ LOCAL_LIB_INSTALL_LOCATION = $(shell pwd)/build/lib-install
 TARGET_NAME_x86        = x86_64-elf
 TARGET_NAME_microblaze = microblaze-elf
 TARGET_NAME_arm        = arm-elf-eabi
+TARGET_NAME_powerpc    = powerpc-elf
+GCC_CONFIG_powerpc     = --disable-multilib
 
 ifneq ($(VERBOSE),)
 CONFIG_QUIET = --quiet
@@ -288,6 +291,9 @@ $(LINK_SPEC_H_x86):
 	$(VERBOSE)echo "#define LINK_SPEC \"%{!m32:-m elf_x86_64} %{m32:-m elf_i386} %{shared:-shared} %{!static:--eh-frame-hdr}\"" > $@
 
 $(LINK_SPEC_H_arm):
+	$(VERBOSE)echo "#define LINK_SPEC \"%(shared:-shared) %{!static:--eh-frame-hdr}\"" > $@
+
+$(LINK_SPEC_H_powerpc):
 	$(VERBOSE)echo "#define LINK_SPEC \"%(shared:-shared) %{!static:--eh-frame-hdr}\"" > $@
 
 #

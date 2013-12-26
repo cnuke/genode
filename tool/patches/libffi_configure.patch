@@ -1,0 +1,12 @@
+--- contrib/gcc-4.7.2/libffi/configure.orig	2013-12-26 21:30:34.859425751 +0100
++++ contrib/gcc-4.7.2/libffi/configure	2013-12-26 21:25:08.438683289 +0100
+@@ -11413,6 +11413,9 @@
+   powerpc*-*-rtems*)
+ 	TARGET=POWERPC; TARGETDIR=powerpc
+ 	;;
++  powerpc-*-*)
++	TARGET=POWERPC; TARGETDIR=powerpc
++	;;
+ 
+   s390-*-* | s390x-*-*)
+ 	TARGET=S390; TARGETDIR=s390
