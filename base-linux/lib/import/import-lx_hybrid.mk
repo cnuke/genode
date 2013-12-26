@@ -100,7 +100,11 @@ else
 ifeq (arm,$(findstring arm,$(SPECS)))
 CXX_LINK_OPT += -Wl,--dynamic-linker=/lib/ld-linux.so.3
 else
+ifeq (powerpc,$(findstring powerpc,$(SPECS)))
+CXX_LINK_OPT += -Wl,--dynamic-linker=/lib/ld.so.1
+else
 CXX_LINK_OPT += -Wl,--dynamic-linker=/lib/ld-linux.so.2
+endif
 endif
 endif
 
