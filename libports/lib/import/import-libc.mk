@@ -26,6 +26,10 @@ ifeq ($(filter-out $(SPECS),arm),)
   LIBC_REP_INC_DIR = include/libc-arm
 endif # ARM
 
+ifeq ($(filter-out $(SPECS),powerpc),)
+  LIBC_REP_INC_DIR = include/libc-powerpc
+endif # PowerPC
+
 #
 # If we found no valid include path for the configured target platform,
 # we have to prevent the build system from building the target. This is

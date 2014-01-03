@@ -20,7 +20,7 @@ LIBC_SVN_BASE = http://svn.freebsd.org/base/release/8.2.0
 
 LIBC_CONTRIB_SUB_DIRS = libc libutil include sys_sys sys_netinet sys_netinet6 \
                         sys_net sys_bsm sys_rpc sys_vm sys_arm sys_i386 sys_amd64 \
-                        msun gdtoa
+                        sys_powerpc msun gdtoa
 
 LIBC_SVN_libc         = lib/libc
 LIBC_SVN_libutil      = lib/libutil
@@ -35,6 +35,7 @@ LIBC_SVN_sys_vm       = sys/vm
 LIBC_SVN_sys_arm      = sys/arm/include
 LIBC_SVN_sys_i386     = sys/i386/include
 LIBC_SVN_sys_amd64    = sys/amd64/include
+LIBC_SVN_sys_powerpc  = sys/powerpc/include
 LIBC_SVN_msun         = lib/msun
 LIBC_SVN_gdtoa        = contrib/gdtoa
 
@@ -329,6 +330,21 @@ LIBC_IMPORT_INCLUDES += include/libc-amd64/machine/_types.h \
                         include/libc-amd64/float.h
 
 #
+# Files coming from the sys/powerpc/include directory
+#
+LIBC_IMPORT_INCLUDES += include/libc-powerpc/machine/_types.h \
+                        include/libc-powerpc/machine/endian.h \
+                        include/libc-powerpc/machine/_limits.h \
+                        include/libc-powerpc/machine/signal.h \
+                        include/libc-powerpc/machine/trap.h \
+                        include/libc-powerpc/machine/_inttypes.h \
+                        include/libc-powerpc/machine/_stdint.h \
+                        include/libc-powerpc/machine/param.h \
+                        include/libc-powerpc/machine/vm.h \
+                        include/libc-powerpc/stdarg.h \
+                        include/libc-powerpc/float.h
+
+#
 # Files from sys/arm/include needed for stdlib and stdio
 #
 LIBC_IMPORT_INCLUDES += include/libc-arm/machine/cpufunc.h \
@@ -354,6 +370,15 @@ LIBC_IMPORT_INCLUDES += include/libc-amd64/machine/cpufunc.h \
                         include/libc-amd64/machine/atomic.h \
                         include/libc-amd64/arith.h \
                         include/libc-amd64/_fpmath.h \
+
+#
+# Files from sys/powerpc/include needed for stdlib and stdio
+#
+LIBC_IMPORT_INCLUDES += include/libc-powerpc/machine/cpufunc.h \
+                        include/libc-powerpc/machine/vmparam.h \
+                        include/libc-powerpc/machine/atomic.h \
+                        include/libc-powerpc/arith.h \
+                        include/libc-powerpc/_fpmath.h \
 
 #
 # Files from sys/arm/include needed for gen lib
@@ -397,6 +422,19 @@ LIBC_IMPORT_INCLUDES += include/libc-amd64/machine/elf.h \
                         include/libc-amd64/SYS.h
 
 #
+# Files from sys/powerpc/include needed for gen lib
+#
+LIBC_IMPORT_INCLUDES += include/libc-powerpc/machine/elf.h \
+                        include/libc-powerpc/machine/exec.h \
+                        include/libc-powerpc/machine/reloc.h \
+                        include/libc-powerpc/machine/pmap.h \
+                        include/libc-powerpc/machine/ucontext.h \
+                        include/libc-powerpc/machine/setjmp.h \
+                        include/libc-powerpc/machine/asm.h \
+                        include/libc-powerpc/machine/ieeefp.h \
+                        include/libc-powerpc/SYS.h
+
+#
 # Files needed for math lib
 #
 LIBC_IMPORT_INCLUDES += include/libc/complex.h
@@ -412,9 +450,14 @@ LIBC_IMPORT_INCLUDES += include/libc-arm/gd_qnan.h
 LIBC_IMPORT_INCLUDES += include/libc-i386/gd_qnan.h
 
 #
-# Files from libc/amd64 needed for gdtoa lib
+# files from libc/amd64 needed for gdtoa lib
 #
-LIBC_IMPORT_INCLUDES += include/libc-amd64/gd_qnan.h
+libc_import_includes += include/libc-amd64/gd_qnan.h
+
+#
+# files from libc/powerpc needed for gdtoa lib
+#
+libc_import_includes += include/libc-powerpc/gd_qnan.h
 
 #
 # Files from msun/arm needed for gdtoa lib
@@ -430,6 +473,11 @@ LIBC_IMPORT_INCLUDES += include/libc-i386/fenv.h
 # Files from msun/amd64 needed for gdtoa lib
 #
 LIBC_IMPORT_INCLUDES += include/libc-amd64/fenv.h
+
+#
+# Files from msun/powerpc needed for gdtoa lib
+#
+LIBC_IMPORT_INCLUDES += include/libc-powerpc/fenv.h
 
 #
 # Files from sys/bsm for gen lib
@@ -534,6 +582,9 @@ include/libc-i386/%.h: $(CONTRIB_DIR)/$(LIBC)/msun/i387/%.h
 include/libc-amd64/%.h: $(CONTRIB_DIR)/$(LIBC)/msun/amd64/%.h
 	$(libc_gen_symlink_subsub)
 
+include/libc-powerpc/%.h: $(CONTRIB_DIR)/$(LIBC)/msun/powerpc/%.h
+	$(libc_gen_symlink_subsub)
+
 include/libc/sys/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_sys/%.h
 	$(libc_gen_symlink_subsubsub)
 
@@ -549,6 +600,9 @@ include/libc-i386/machine/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_i386/%.h
 include/libc-amd64/machine/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_amd64/%.h
 	$(libc_gen_symlink_subsubsub)
 
+include/libc-powerpc/machine/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_powerpc/%.h
+	$(libc_gen_symlink_subsubsub)
+
 include/libc-arm/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_arm/%.h
 	$(libc_gen_symlink_subsub)
 
@@ -558,6 +612,9 @@ include/libc-i386/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_i386/%.h
 include/libc-amd64/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_amd64/%.h
 	$(libc_gen_symlink_subsub)
 
+include/libc-powerpc/%.h: $(CONTRIB_DIR)/$(LIBC)/sys_powerpc/%.h
+	$(libc_gen_symlink_subsub)
+
 include/libc-arm/%.h: $(CONTRIB_DIR)/$(LIBC)/libc/arm/%.h
 	$(libc_gen_symlink_subsub)
 
@@ -565,6 +622,9 @@ include/libc-i386/%.h: $(CONTRIB_DIR)/$(LIBC)/libc/i386/%.h
 	$(libc_gen_symlink_subsub)
 
 include/libc-amd64/%.h: $(CONTRIB_DIR)/$(LIBC)/libc/amd64/%.h
+	$(libc_gen_symlink_subsub)
+
+include/libc-powerpc/%.h: $(CONTRIB_DIR)/$(LIBC)/libc/powerpc/%.h
 	$(libc_gen_symlink_subsub)
 
 include/libc/bsm/audit.h: $(CONTRIB_DIR)/$(LIBC)/sys_bsm/audit.h
@@ -589,10 +649,12 @@ create_include_symlinks-libc: checkout-libc
 prepare-libc: apply_patches-libc libc_net_generate libc_rpc_generate create_include_symlinks-libc
 
 clean_include_symlinks-libc:
-	$(VERBOSE)-find include/libc{,-amd64,-arm,-i386} -type l -delete 2>/dev/null
+	$(VERBOSE)-find include/libc{,-amd64,-arm,-i386,-powerpc} \
+			-type l -delete 2>/dev/null
 
 clean_include_subdirs-libc: clean_include_symlinks-libc
-	$(VERBOSE)-find include/libc{,-amd64,-arm,-i386} -type d -empty -delete 2>/dev/null
+	$(VERBOSE)-find include/libc{,-amd64,-arm,-i386,-powerpc} \
+			-type d -empty -delete 2>/dev/null
 
 clean-libc: clean_include_subdirs-libc
 	$(VERBOSE)rm -rf $(CONTRIB_DIR)/$(LIBC)
