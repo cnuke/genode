@@ -1,0 +1,10 @@
+#ifndef _32BIT__PLATFORM_SIZEOF_H_
+#define _32BIT__PLATFORM_SIZEOF_H_
+
+#define SIZEOF_CHAR_P 4
+#define SIZEOF_LONG 4
+#define SIZEOF_OFF_T 4
+#define SIZEOF_SIZE_T 4
+#define SIZEOF_UNSIGNED_LONG 4
+
+#endif /* _32BIT__PLATFORM_SIZEOF_H_ */

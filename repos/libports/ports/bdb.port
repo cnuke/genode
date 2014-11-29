@@ -1,0 +1,7 @@
+LICENSE   := AGPLv3
+VERSION   := 6.1.19
+DOWNLOADS := bdb.archive
+
+URL(bdb) := http://download.oracle.com/berkeley-db/db-6.1.19.tar.gz
+SHA(bdb) := e266f8ab73f4f1ea276d203ce85426e5a6831501
+DIR(bdb) := src/lib/bdb

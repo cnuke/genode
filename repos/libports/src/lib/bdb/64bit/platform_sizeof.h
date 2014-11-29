@@ -1,0 +1,10 @@
+#ifndef _64BIT__PLATFORM_SIZEOF_H_
+#define _64BIT__PLATFORM_SIZEOF_H_
+
+#define SIZEOF_CHAR_P 8
+#define SIZEOF_LONG 8
+#define SIZEOF_OFF_T 8
+#define SIZEOF_SIZE_T 8
+#define SIZEOF_UNSIGNED_LONG 8
+
+#endif /* _64BIT__PLATFORM_SIZEOF_H_ */
