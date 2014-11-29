@@ -1,0 +1,12 @@
+LICENSE   := GPLv2
+VERSION   := 1.1.1
+DOWNLOADS := isync.archive
+
+URL(isync) := http://downloads.sourceforge.net/project/isync/isync/1.1.1/isync-1.1.1.tar.gz
+SHA(isync) := be759ff7e7e141b91fc242284ddeb256d54a5567
+SIG(isync) := ${URL(isync)}
+KEY(isync) := GNU
+DIR(isync) := src/noux-pkg/isync
+
+PATCHES   := ${DIR(isync)}/bdb.patch
+PATCH_OPT := -N -p1 -d ${DIR(isync)}

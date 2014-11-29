@@ -1,0 +1,54 @@
+Our FreeBSD libc contains an old version of the Berkeley DB and
+hence the db.h.
+diff --git a/configure b/configure
+index 295b3e7..0ae6510 100755
+--- a/configure
++++ b/configure
+@@ -4630,7 +4630,7 @@ else
+   ac_cv_berkdb4=no
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+-#include <db.h>
++#include <bdb/db.h>
+ int
+ main ()
+ {
+diff --git a/src/compat/convert.c b/src/compat/convert.c
+index ba18da0..28804c9 100644
+--- a/src/compat/convert.c
++++ b/src/compat/convert.c
+@@ -29,7 +29,7 @@
+ #include <sys/stat.h>
+ #include <time.h>
+ 
+-#include <db.h>
++#include <bdb/db.h>
+ 
+ static const char *subdirs[] = { "cur", "new", "tmp" };
+ 
+diff --git a/src/drv_maildir.c b/src/drv_maildir.c
+index 0f58318..43e8592 100644
+--- a/src/drv_maildir.c
++++ b/src/drv_maildir.c
+@@ -48,7 +48,7 @@
+ #endif
+ 
+ #ifdef USE_DB
+-#include <db.h>
++#include <bdb/db.h>
+ #endif /* USE_DB */
+ 
+ typedef struct maildir_store_conf {
+diff --git a/src/mdconvert.c b/src/mdconvert.c
+index ec2a558..baff227 100644
+--- a/src/mdconvert.c
++++ b/src/mdconvert.c
+@@ -30,7 +30,7 @@
+ #include <string.h>
+ #include <ctype.h>
+ 
+-#include <db.h>
++#include <bdb/db.h>
+ 
+ #define EXE "mdconvert"
+ 
