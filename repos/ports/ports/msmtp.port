@@ -1,0 +1,9 @@
+LICENSE   := GPLv3
+VERSION   := 1.4.23
+DOWNLOADS := msmtp.archive
+
+URL(msmtp) := http://downloads.sourceforge.net/project/msmtp/msmtp/1.4.32/msmtp-1.4.32.tar.bz2
+SHA(msmtp) := 03186a70035dbbf7a31272a20676b96936599704
+SIG(msmtp) := ${URL(msmtp)}
+KEY(msmtp) := GNU
+DIR(msmtp) := src/noux-pkg/msmtp
