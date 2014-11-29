@@ -1,0 +1,12 @@
+LICENSE   := GPLv2
+VERSION   := 1.5.23
+DOWNLOADS := mutt.archive
+
+URL(mutt) := https://bitbucket.org/mutt/mutt/downloads/mutt-1.5.23.tar.gz
+SHA(mutt) := 8ac821d8b1e25504a31bf5fda9c08d93a4acc862
+SIG(mutt) := ${URL(mutt)}
+KEY(mutt) := GNU
+DIR(mutt) := src/noux-pkg/mutt
+
+PATCHES := ${DIR(mutt)}/makefile.patch
+PATCH_OPT := -N -p1 -d ${DIR(mutt)}
