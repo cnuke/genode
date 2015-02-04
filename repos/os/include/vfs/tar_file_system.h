@@ -516,7 +516,14 @@ class Vfs::Tar_file_system : public File_system
 			return DIRENT_OK;
 		}
 
-		Unlink_result unlink(char const *) override { return UNLINK_ERR_NO_PERM; }
+		Unlink_result unlink(char const *path) override
+		{
+			Node *node = _root_node.lookup(path);
+			if (!node)
+				return UNLINK_ERR_NO_ENTRY;
+
+			return UNLINK_ERR_NO_PERM;
+		}
 
 		Readlink_result readlink(char const *path, char *buf, file_size buf_size,
 		                         file_size &out_len) override
@@ -536,13 +543,25 @@ class Vfs::Tar_file_system : public File_system
 			return READLINK_OK;
 		}
 
-		Rename_result rename(char const *, char const *) override
+		Rename_result rename(char const *from_path, char const *to_path) override
 		{
+			Node *from = _root_node.lookup(from_path);
+			Node *to   = _root_node.lookup(from_path);
+			if (!from || !to)
+				return RENAME_ERR_NO_ENTRY;
+
 			return RENAME_ERR_NO_PERM;
 		}
 
-		Mkdir_result mkdir(char const *, unsigned) override
+		Mkdir_result mkdir(char const *path, unsigned) override
 		{
+			Absolute_path parent_dir(path);
+			parent_dir.strip_last_element();
+
+			Node *node = _root_node.lookup(parent_dir.base());
+			if (!node)
+				return MKDIR_ERR_NO_ENTRY;
+
 			return MKDIR_ERR_NO_PERM;
 		}
 
