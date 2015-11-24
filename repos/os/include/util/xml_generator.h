@@ -205,18 +205,41 @@ class Genode::Xml_generator
 					_out_buffer.advance(content_buffer.used());
 				}
 
+
+				/**
+				 * Get length of encoded value
+				 */
+				size_t _encoded_length(char const *value)
+				{
+					size_t length = 0;
+					for (; *value; value++) {
+						switch (*value) {
+						case 0:    length += 5; /* &#x00; */ break;
+						case '>':  length += 3; /* &gt; */   break;
+						case '<':  length += 3; /* &lt; */   break;
+						case '&':  length += 4; /* &amp; */  break;
+						case '"':  length += 6; /* &quot; */ break;
+						case '\'': length += 6; /* &apos; */ break;
+						default:   length += 1; break;
+						}
+					}
+					return length;
+				}
+
 			public:
 
 				void insert_attribute(char const *name, char const *value)
 				{
-					/* ' ' + name + '=' + '"' + value + '"' */
-					size_t const gap = 1 + strlen(name) + 1 + 1 + strlen(value) + 1;
+					size_t const encoded_len = _encoded_length(value);
+
+					/* ' ' + name + '=' + '"' + encoded value + '"' */
+					size_t const gap = 1 + strlen(name) + 1 + 1 + encoded_len + 1;
 
 					Out_buffer dst = _out_buffer.insert_gap(_attr_offset, gap);
 					dst.append(' ');
 					dst.append(name);
 					dst.append("=\"");
-					dst.append(value, strlen(value));
+					dst.append_sanitized(value, strlen(value));
 					dst.append("\"");
 
 					_attr_offset += gap;

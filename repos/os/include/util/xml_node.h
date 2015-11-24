@@ -24,6 +24,72 @@ namespace Genode {
 }
 
 
+namespace {
+
+typedef Genode::size_t size_t;
+
+/**
+ * Helper class to decode XML character entities
+ */
+struct Decoded_character
+{
+	char   character   = 0;
+	size_t encoded_len = 1;
+
+	struct Translation
+	{
+		char        character;
+		char const *seq;
+		size_t      seq_len;
+	};
+
+	static Translation translate(char const *src, size_t src_len)
+	{
+		enum { NUM = 6 };
+		static Translation translations[NUM] = {
+			{ '>',  "&gt;",   4 },
+			{ '<',  "&lt;",   4 },
+			{ '&',  "&amp;",  5 },
+			{ '"',  "&quot;", 6 },
+			{ '\'', "&apos;", 6 },
+			{ 0,    "&#x00;", 6 }
+		};
+
+		if (src_len == 0)
+			return { 0, nullptr, 0 };
+
+		for (unsigned i = 0; i < NUM; i++) {
+
+			Translation const &translation = translations[i];
+
+			if (src_len < translation.seq_len
+			 || Genode::memcmp(src, translation.seq, translation.seq_len))
+				continue;
+
+			/* translation matches */
+			return translation;
+		}
+
+		/* sequence is not known, pass single character as is */
+		return { *src, nullptr, 1 };
+	}
+
+	Decoded_character(char const *src, size_t src_len)
+	{
+		if (*src != '&' || src_len == 0) {
+			character = *src;
+			return;
+		}
+
+		Translation const translation = translate(src, src_len);
+
+		character   = translation.character;
+		encoded_len = translation.seq_len;
+	}
+};
+} /* anonymous namespace */
+
+
 /**
  * Representation of an XML-node attribute
  *
@@ -130,7 +196,22 @@ class Genode::Xml_attribute
 			 * character.
 			 */
 			max_len = min(max_len, _value.len() - 2 + 1);
-			strncpy(dst, _value.start() + 1, max_len);
+
+			size_t  src_len = _value.len() - 2;
+			char const *src = _value.start() + 1;
+
+			for (; max_len > 1 && src_len;) {
+
+				Decoded_character const decoded_character(src, max_len);
+
+				*dst++ = decoded_character.character;
+
+				src     += decoded_character.encoded_len;
+				src_len -= decoded_character.encoded_len;
+				max_len--;
+			}
+
+			*dst++ = '\0';
 		}
 
 		/**
@@ -394,66 +475,6 @@ class Genode::Xml_node
 				 * Return token after the closing comment delimiter
 				 */
 				Token next_token() const { return _next; }
-		};
-
-		/**
-		 * Helper class to decode XML character entities
-		 */
-		struct Decoded_character
-		{
-			char   character   = 0;
-			size_t encoded_len = 1;
-
-			struct Translation
-			{
-				char        character;
-				char const *seq;
-				size_t      seq_len;
-			};
-
-			static Translation translate(char const *src, size_t src_len)
-			{
-				enum { NUM = 6 };
-				static Translation translations[NUM] = {
-					{ '>',  "&gt;",   4 },
-					{ '<',  "&lt;",   4 },
-					{ '&',  "&amp;",  5 },
-					{ '"',  "&quot;", 6 },
-					{ '\'', "&apos;", 6 },
-					{ 0,    "&#x00;", 6 }
-				};
-
-				if (src_len == 0)
-					return { 0, nullptr, 0 };
-
-				for (unsigned i = 0; i < NUM; i++) {
-
-					Translation const &translation = translations[i];
-
-					if (src_len < translation.seq_len
-					 || memcmp(src, translation.seq, translation.seq_len))
-						continue;
-
-					/* translation matches */
-					return translation;
-				}
-
-				/* sequence is not known, pass single character as is */
-				return { *src, nullptr, 1 };
-			}
-
-			Decoded_character(char const *src, size_t src_len)
-			{
-				if (*src != '&' || src_len == 0) {
-					character = *src;
-					return;
-				}
-
-				Translation const translation = translate(src, src_len);
-
-				character   = translation.character;
-				encoded_len = translation.seq_len;
-			}
 		};
 
 		const char *_addr;          /* first character of XML data      */
