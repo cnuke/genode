@@ -9,6 +9,10 @@ SRC_C = $(filter-out $(FILTER_OUT), $(ALL_SDL_MIXER_SRC_C))
 
 LIBS += libc libm sdl
 
+# enable mod support
+CC_OPT += -DMOD_MUSIC
+LIBS   += libmikmod
+
 # suppress warnings of 3rd-party code
 CC_OPT_music      = -Wno-unused-label -Wno-unused-function
 CC_OPT_load_aiff  = -Wno-unused-but-set-variable
