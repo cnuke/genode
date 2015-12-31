@@ -1,0 +1,12 @@
+LICENSE   := LGPLv2
+VERSION   := 3.3.8
+DOWNLOADS := libmikmod.archive
+
+BASE_URL := http://sf.net/projects/mikmod/files/libmikmod
+
+URL(libmikmod) := $(BASE_URL)/$(VERSION)/libmikmod-$(VERSION).tar.gz
+SHA(libmikmod) := bc4962588fac5b828127bf3b1a365b44f57f143d
+DIR(libmikmod) := src/lib/libmikmod
+
+DIRS := include/
+DIR_CONTENT(include/) := src/lib/libmikmod/include/*.h
