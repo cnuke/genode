@@ -1,0 +1,161 @@
+#
+# Check used commands
+#
+set dd [check_installed dd]
+
+#
+# Build
+#
+set build_components {
+	core init
+	drivers/timer
+	server/ram_blk
+	server/block_block
+	server/part_blk
+	test/blk/bench
+}
+
+build $build_components
+
+#
+# Build EXT2-file-system image
+#
+catch { exec $dd if=/dev/zero of=bin/block.raw bs=1M count=128 }
+
+create_boot_directory
+
+#
+# Generate config
+#
+append config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL" />
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+	<start name="ram_blk">
+		<resource name="RAM" quantum="132M"/>
+		<provides><service name="Block"/></provides>
+		<config file="block.raw" block_size="512"/>
+	</start>
+<!--
+	<start name="part_blk">
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<any-service><child name="ram_blk"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="test-block_block" partition="0"/>
+		</config>
+	</start>
+	<start name="part_blk2">
+		<binary name="part_blk"/>
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<any-service><child name="part_blk"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="test-block_block" partition="0"/>
+		</config>
+	</start>
+	<start name="part_blk3">
+		<binary name="part_blk"/>
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<any-service><child name="part_blk2"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="test-block_block" partition="0"/>
+		</config>
+	</start>
+	<start name="part_blk4">
+		<binary name="part_blk"/>
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<any-service><child name="part_blk3"/> <parent/><any-child/></any-service>
+		</route>
+		<config>
+			<policy label="test-block_block" partition="0"/>
+		</config>
+	</start>
+-->
+	<start name="block_block0">
+		<binary name="block_block"/>
+		<resource name="RAM" quantum="8M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<service name="Block"> <child name="ram_blk"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="block_block1">
+		<binary name="block_block"/>
+		<resource name="RAM" quantum="8M"/>
+		<provides><service name="Block"/></provides>
+		<route>
+			<service name="Block"> <child name="block_block0"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="test-block_block">
+		<binary name="test-blk-bench"/>
+		<resource name="RAM" quantum="5M" />
+		<config>
+			<libc stdout="/dev/log">
+				<vfs>
+					<dir name="dev"> <log/> </dir>
+				</vfs>
+			</libc>
+		</config>
+		<route>
+			<service name="Block"><child name="block_block1"/></service>
+<!--
+			<service name="Block"><child name="ram_blk"/></service>
+			<service name="Block"><child name="part_blk"/></service>
+			<service name="Block"><child name="block_block0"/></service>
+-->
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer ram_blk part_blk
+	ld.lib.so libc.lib.so test-blk-bench
+	block_block block.raw
+}
+
+build_boot_image $boot_modules
+
+append qemu_args " -m 256 -nographic"
+
+run_genode_until {Done\n} 360
+
+exec rm -f bin/block.raw
