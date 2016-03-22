@@ -20,53 +20,15 @@
 
 /* Linux emulation environment includes */
 #include <lx_emul.h>
-#include <lx_emul/impl/internal/scheduler.h>
-#include <lx_emul/impl/internal/timer.h>
-#include <lx_emul/impl/internal/irq.h>
-#include <lx_emul/impl/internal/pci_dev_registry.h>
-#include <lx_emul/impl/internal/pci_backend_alloc.h>
+#include <lx_kit/scheduler.h>
+#include <lx_kit/timer.h>
+#include <lx_kit/irq.h>
+#include <lx_kit/pci_dev_registry.h>
+#include <lx_kit/backend_alloc.h>
+#include <lx_kit/work.h>
 
 
 namespace Server { struct Main; }
-
-
-Lx::Scheduler & Lx::scheduler()
-{
-	static Lx::Scheduler inst;
-	return inst;
-}
-
-
-Lx::Timer & Lx::timer(Server::Entrypoint *ep, unsigned long *jiffies)
-{
-	return _timer_impl(ep, jiffies);
-}
-
-
-Lx::Irq & Lx::Irq::irq(Server::Entrypoint *ep)
-{
-	static Lx::Irq irq(*ep);
-	return irq;
-}
-
-
-Platform::Connection *Lx::pci()
-{
-	static Platform::Connection _pci;
-	return &_pci;
-}
-
-
-Lx::Pci_dev_registry *Lx::pci_dev_registry()
-{
-	static Lx::Pci_dev_registry _pci_dev_registry;
-	return &_pci_dev_registry;
-}
-
-
-namespace Lx {
-	Genode::Object_pool<Memory_object_base> memory_pool;
-};
 
 
 Framebuffer::Root * Framebuffer::root = nullptr;
@@ -102,7 +64,10 @@ struct Server::Main
 	Lx::Timer &timer = Lx::timer(&ep, &jiffies);
 
 	/* init singleton Lx::Irq */
-	Lx::Irq &irq = Lx::Irq::irq(&ep);
+	Lx::Irq &irq = Lx::Irq::irq(&ep, Genode::env()->heap());
+
+	/* init singleton Lx::Work */
+	Lx::Work &work = Lx::Work::work_queue(Genode::env()->heap());
 
 	/* Linux task that handles the initialization */
 	Lx::Task linux { run_linux, reinterpret_cast<void*>(this), "linux",

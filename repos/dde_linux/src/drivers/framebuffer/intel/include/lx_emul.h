@@ -1631,6 +1631,23 @@ void update_genode_report();
 #define trace_i915_reg_rw(...)
 #define trace_i915_gem_request_complete(...)
 
+
+/**********************
+ ** linux/inerrupt.h **
+ **********************/
+
+struct tasklet_struct
+{
+	void (*func)(unsigned long);
+	unsigned long data;
+};
+
+void tasklet_schedule(struct tasklet_struct *t);
+void tasklet_hi_schedule(struct tasklet_struct *t);
+void tasklet_kill(struct tasklet_struct *);
+void tasklet_init(struct tasklet_struct *t, void (*)(unsigned long), unsigned long);
+
+
 #include <lx_emul/extern_c_end.h>
 
 #endif /* _LX_EMUL_H_ */

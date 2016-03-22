@@ -528,12 +528,6 @@ int bus_for_each_drv(struct bus_type *bus, struct device_driver *start,
 
 struct workqueue_struct *system_wq;
 
-/** needed by workqueue backend implementation **/
-struct tasklet_struct {
-	void (*func)(unsigned long);
-	unsigned long data;
-};
-
 #include <lx_emul/impl/work.h>
 
 struct workqueue_struct *create_singlethread_workqueue(char const *)
@@ -608,7 +602,7 @@ unsigned long round_jiffies_up_relative(unsigned long j)
  ** DRM implementation **
  ************************/
 
-#include <lx_emul/impl/internal/irq.h>
+#include <lx_kit/irq.h>
 
 unsigned int drm_debug = 1;
 
