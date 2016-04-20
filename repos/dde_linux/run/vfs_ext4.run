@@ -1,0 +1,106 @@
+set mke4fs [check_installed mkfs.ext4]
+set dd     [check_installed dd]
+
+
+#
+# Build
+#
+
+set build_components {
+	core init
+	drivers/timer
+	drivers/rtc
+	server/ram_blk
+	server/ext4_fs
+}
+
+lappend_if [have_spec gpio]             build_components drivers/gpio
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+#catch { exec $dd if=/dev/zero of=bin/ext4.raw bs=1M count=128 }
+#catch { exec $mke4fs -F bin/ext4.raw }
+
+create_boot_directory
+
+#
+# Generate config
+#
+
+set config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+	<start name="rtc_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Rtc"/> </provides>
+	</start>
+	<start name="ram_blk">
+		<resource name="RAM" quantum="256M"/>
+		<provides><service name="Block"/></provides>
+		<config file="ext4.raw" block_size="512"/>
+	</start>
+	<start name="ext4_fs">
+		<resource name="RAM" quantum="32M"/>
+		<provides><service name="ROM"/></provides>
+		<config ld_verbose="yes"/>
+	</start>}
+
+append_platform_drv_config
+
+append_if [have_spec gpio] config {
+	<start name="gpio_drv">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Gpio"/></provides>
+		<config/>
+	</start>}
+
+append config {
+</config>
+}
+
+install_config $config
+
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer rtc_drv ram_blk
+	ld.lib.so
+	ext4_fs lx_ext4.lib.so
+	ext4.raw
+}
+
+lappend_if [have_spec gpio] boot_modules gpio_drv
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+run_genode_until forever
+
+# vi: set ft=tcl :

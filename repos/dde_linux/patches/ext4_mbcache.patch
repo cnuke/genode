@@ -1,0 +1,15 @@
+Define struct hlist_bl_head fields.
+
+diff --git a/include/linux/mbcache.h b/include/linux/mbcache.h
+index 6a392e7..185490d 100644
+--- a/include/linux/mbcache.h
++++ b/include/linux/mbcache.h
+@@ -3,6 +3,8 @@
+ 
+   (C) 2001 by Andreas Gruenbacher, <a.gruenbacher@computer.org>
+ */
++#include <linux/list_bl.h>
++
+ struct mb_cache_entry {
+ 	struct list_head		e_lru_list;
+ 	struct mb_cache			*e_cache;

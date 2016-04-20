@@ -175,6 +175,11 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size, size_t align
 
 void * kmem_cache_alloc(struct kmem_cache *cache, gfp_t flags)
 {
+	if (!cache) {
+		PERR("cache is zero from: %p", __builtin_return_address(0));
+		return nullptr;
+	}
+
 	void *addr = (void *)cache->alloc();
 	if (addr && cache->ctor) { cache->ctor(addr); }
 	return addr;
