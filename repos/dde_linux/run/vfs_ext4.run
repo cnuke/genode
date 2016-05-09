@@ -12,6 +12,7 @@ set build_components {
 	drivers/rtc
 	server/ram_blk
 	server/ext4_fs
+	test/ext4_fs
 }
 
 lappend_if [have_spec gpio]             build_components drivers/gpio
@@ -62,8 +63,12 @@ set config {
 		<config file="ext4.raw" block_size="512"/>
 	</start>
 	<start name="ext4_fs">
-		<resource name="RAM" quantum="32M"/>
-		<provides><service name="ROM"/></provides>
+		<resource name="RAM" quantum="20M"/>
+		<provides><service name="File_system"/></provides>
+		<config ld_verbose="yes"/>
+	</start>
+	<start name="test-ext4_fs">
+		<resource name="RAM" quantum="8M"/>
 		<config ld_verbose="yes"/>
 	</start>}
 
@@ -93,6 +98,7 @@ set boot_modules {
 	ld.lib.so
 	ext4_fs lx_ext4.lib.so
 	ext4.raw
+	test-ext4_fs
 }
 
 lappend_if [have_spec gpio] boot_modules gpio_drv

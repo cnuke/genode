@@ -33,6 +33,16 @@
 #endif
 
 
+/************************
+ ** Linux global state **
+ ************************/
+
+unsigned long jiffies;
+static struct task_struct _current;
+struct task_struct *current = &_current;
+struct workqueue_struct *system_wq;
+
+
 /*********************************
  ** Lx::Backend_alloc interface **
  *********************************/
@@ -466,7 +476,7 @@ bool dir_emit(struct dir_context *ctx,
 	Directory_entry *de = reinterpret_cast<Directory_entry*>(ctx->lx_buffer + ctx->lx_count);
 	namelen += 1; /* NUL */
 	if (namelen > sizeof(de->name)) {
-		PWRN("Truncation of entry '%s' to %zu bytes", sizeof(de->name));
+		PWRN("Truncation of name to %zu bytes", sizeof(de->name));
 		namelen = sizeof(de->name);
 	}
 
@@ -820,7 +830,7 @@ blk_qc_t submit_bio(int rw, struct bio *bio)
 	sector_t const block             = bio->bi_iter.bi_sector / 2;
 	unsigned const size              = bio->bi_iter.bi_size;
 	struct page * const page         = bio->bi_io_vec[0].bv_page;
-	char * const data                = page->addr;
+	char * const data                = (char*)page->addr;
 	unsigned const count             = size / sb->s_blocksize;
 
 	PERR("bio: %p bdev: %p block: %llu size: %u data: %p count: %u",
@@ -890,7 +900,7 @@ struct dentry *d_make_root(struct inode *root_inode)
 
 	res->d_inode = root_inode;
 
-	res->d_name.name = "/";
+	res->d_name.name = (unsigned char const*)"/";
 	res->d_name.len  = 1;
 
 	return res;
@@ -904,7 +914,7 @@ struct dentry *d_make_root(struct inode *root_inode)
 void zero_user_segment(struct page *page, unsigned start, unsigned end)
 {
 	if (end > PAGE_SIZE) {
-		PERR("end: %u larger than PAGE_SIZE: %u", end, PAGE_SIZE);
+		PERR("end: %u larger than PAGE_SIZE: %lu", end, PAGE_SIZE);
 		Genode::sleep_forever();
 	}
 

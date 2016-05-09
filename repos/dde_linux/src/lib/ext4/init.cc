@@ -30,36 +30,113 @@
 # include <uapi/linux/stat.h>
 #include <lx_emul/extern_c_end.h>
 
+/* Ext4 frontend includes */
+#include <ext4/ext4.h>
+#include <ext4/directory.h>
+#include <ext4/file.h>
+
 
 extern "C" void module_journal_init();
 extern "C" void module_ext4_init_fs();
 
 
-static Genode::Signal_transmitter *_sender;
+/*************
+ ** Request **
+ *************/
+
+struct Request
+{
+	struct inode *inode;
+
+	uint64_t      offset;
+	size_t        data_len;
+	void         *data;
+
+	int (*func)(Request *);
+	Ext4::Completion *completion;
+};
 
 
-struct workqueue_struct *system_wq;
+static int request_read_directory(Request *request)
+{
+	struct inode *inode = request->inode;
+	uint64_t     offset = request->offset;
+	char           *dst = (char*)request->data;
+	size_t          len = request->data_len;
+
+	PDBG("inode: %p offset: %llu dst: %p len: %zu", inode, offset, dst, len);
+
+	int err = inode->i_fop->open(inode, nullptr);
+	if (err) {
+		PERR("Could not open directory: %p", inode);
+		return -1;
+	}
+
+	struct file file;
+	::memset(&file, 0, sizeof(struct file));
+
+	file.f_inode   = inode;
+	file.f_version = inode->i_version;
+	file.f_pos     = offset;
+
+	struct dir_context *ctx = (struct dir_context*)kzalloc(sizeof(struct dir_context), 0);
+	ctx->pos = file.f_pos;
+
+	ctx->lx_buffer = dst;
+	ctx->lx_max    = len;
+	ctx->lx_count  = 0;
+	ctx->lx_error  = 0;
+
+	err = inode->i_fop->iterate(&file, ctx);
+	if (err) {
+		PERR("Could not iterate dir, err: %d", err);
+		return -1;
+	}
+
+	if (ctx->lx_error) {
+		PERR("Iterating dir failed, err: %d", ctx->lx_error);
+		return -1;
+	}
+
+	int res = ctx->lx_count;
+	kfree(ctx);
+	return res;
+}
+
+
+static int request_open_file(Request *request)
+{
+	struct inode *inode = request->inode;
+	char const    *name = (char const*)request->data;
+
+	struct dentry *dentry = (struct dentry*)kzalloc(sizeof(struct dentry), 0);
+	dentry->d_name.name = (unsigned char const*)name;
+	dentry->d_name.len  = ::strlen(name); /* important */
+
+	inode->i_op->lookup(inode, dentry, 0);
+	if (!dentry->d_inode) {
+		PERR("Could not look up '%s'", name);
+		kfree(dentry);
+	}
+
+	return 666;
+}
+
+
+/* XXX move to linux_task ctx */
+static struct dentry *_root_dir;
+static Request current_request;
+static Genode::Signal_transmitter *_fs_ready;
 
 
 struct file_system_type *Lx::fs_list[Lx::MAX_FS_LIST];
 
 
-struct dentry *_root_dir;
-
-
-static char const *type(File_system::Directory_entry::Type t)
-{
-	switch (t) {
-	case File_system::Directory_entry::Type::TYPE_FILE:      return "f";
-	case File_system::Directory_entry::Type::TYPE_DIRECTORY: return "d";
-	case File_system::Directory_entry::Type::TYPE_SYMLINK:   return "s";
-	}
-	return "-";
-}
-
-
 static void run_linux(void *)
 {
+	/*
+	 * Initialize lx emul env and create ext4fs instance
+	 */
 	system_wq = alloc_workqueue("system_wq", 0, 0);
 
 	module_journal_init();
@@ -69,66 +146,19 @@ static void run_linux(void *)
 	if (!ext4_fs) { PERR("BUG"); return ; }
 
 	int const flags = MS_RDONLY; /* XXX check Block_backend */
-	_root_dir = ext4_fs->mount(ext4_fs, flags, "blockdevice", "noatime");
+	_root_dir = ext4_fs->mount(ext4_fs, flags, "blockdevice", (void*)"noatime");
 
-	_sender->submit(1);
-
+	_fs_ready->submit(1);
 
 	struct inode *inode = _root_dir->d_inode;
 
 	/*
-	 * iterate root_dir
-	 */
-	{
-		int err = inode->i_fop->open(inode, nullptr);
-		if (!err) {
-			struct file file;
-			file.f_inode   = inode;
-			file.f_version = inode->i_version;
-			file.f_pos     = 0L;
-
-			struct dir_context *ctx = kzalloc(sizeof(struct dir_context), 0);
-			ctx->pos = file.f_pos;
-
-			enum { MAX_BUFFER_LEN = 16384 };
-			ctx->lx_buffer = kzalloc(MAX_BUFFER_LEN, 0);
-			ctx->lx_max    = MAX_BUFFER_LEN;
-			ctx->lx_count  = 0;
-			ctx->lx_error  = 0;
-
-			err = inode->i_fop->iterate(&file, ctx);
-			if (err) {
-				PERR("Could not iterate dir, err: %d", err);
-				throw -1;
-			}
-
-			if (ctx->lx_error) {
-				PERR("Iterating dir failed, err: %d", ctx->lx_error);
-				throw -1;
-			}
-
-			using namespace File_system;
-
-			Directory_entry *de = reinterpret_cast<Directory_entry*>(ctx->lx_buffer);
-			size_t const entries = ctx->lx_count / sizeof(Directory_entry);
-			for (size_t i = 0; i < entries; i++) {
-				PLOG("%s '%s'", type(de[i].type), de[i].name);
-			}
-
-			file.f_pos = ctx->pos;
-
-			kfree(ctx->lx_buffer);
-			kfree(ctx);
-		} else { PERR("Could not open root directory"); }
-	}
-
-	/*
 	 * open file in root dir
 	 */
-	{
+	if (0) {
 		char const *file_name = "UnixEditionZero.txt";
-		struct dentry *dentry = kzalloc(sizeof(struct dentry), 0);
-		dentry->d_name.name = file_name;
+		struct dentry *dentry = (struct dentry*)kzalloc(sizeof(struct dentry), 0);
+		dentry->d_name.name = (unsigned char const*)file_name;
 		dentry->d_name.len  = strlen(file_name); /* important */
 
 		inode->i_op->lookup(inode, dentry, 0);
@@ -152,7 +182,7 @@ static void run_linux(void *)
 				stat.mode = File_system::Status::MODE_FILE;
 			}
 
-			PINF("stat inode: %lu size: %zu mode: %u", stat.inode, stat.size, stat.mode);
+			PINF("stat inode: %lu size: %llu mode: %u", stat.inode, stat.size, stat.mode);
 
 			/*
 			 * Read file by directly using address_space ops
@@ -161,7 +191,7 @@ static void run_linux(void *)
 			while (file_offset < stat.size) {
 				char buf[PAGE_SIZE+1];
 
-				struct page *page = kzalloc(sizeof(struct page), 0);
+				struct page *page = (struct page*)kzalloc(sizeof(struct page), 0);
 				if (!page) {
 					PERR("Could not allocate page struct");
 					throw -1;
@@ -189,8 +219,6 @@ static void run_linux(void *)
 					kfree(page->addr);
 
 					file_offset += PAGE_SIZE;
-
-					// PLOG("dump:\n %s", buf);
 				} else {
 					PERR("Reading page not successfull");
 					throw -1;
@@ -206,6 +234,17 @@ static void run_linux(void *)
 
 	while (1) {
 		Lx::scheduler().current()->block_and_schedule();
+		PDBG("Handle request");
+		if (!current_request.inode) { continue; }
+		PDBG("inode: %p", inode);
+		int res = current_request.func(&current_request);
+		if (res < 0) {
+			PERR("error: %d", res);
+			res = 0;
+		}
+
+		current_request.completion->complete(current_request.completion, res);
+		current_request.inode = nullptr;
 	}
 }
 
@@ -308,6 +347,8 @@ struct Block_backend
 			reset_request(r);
 		}
 
+		PERR("handle_packets unblock");
+
 		task.unblock();
 		Lx::scheduler().schedule();
 	}
@@ -352,7 +393,7 @@ struct Block_backend
 static Block_backend *_block_client;
 
 
-bool block_init(Server::Entrypoint &ep, Genode::Allocator &alloc)
+static bool block_init(Server::Entrypoint &ep, Genode::Allocator &alloc)
 {
 	static Block_backend inst(ep, alloc, linux_task);
 	Lx::block_device->lx_block = &inst;
@@ -374,7 +415,7 @@ int Lx::read_block(struct super_block *s, sector_t nr, unsigned count, char *dst
 	r->number = nr * (s->s_blocksize / Lx::block_device->bd_block_size);
 	r->count  = (count * s->s_blocksize) / Lx::block_device->bd_block_size;
 
-	PDBG("nr: %llu count: %u r->nr: %llu r->count: %u", nr, count, r->number, r->count);
+	PDBG("nr: %llu count: %u r->nr: %llu r->count: %zu", nr, count, r->number, r->count);
 
 	r->data   = dst;
 	r->read   = true;
@@ -391,24 +432,67 @@ int Lx::read_block(struct super_block *s, sector_t nr, unsigned count, char *dst
 }
 
 
-/**********************************
- ** File system session frontend **
- **********************************/
+/*******************************
+ ** Ext4 file system frontend **
+ *******************************/
 
-unsigned long jiffies;
-static struct task_struct _current;
-struct task_struct *current = &_current;
-
-bool fs_init(Server::Entrypoint &ep, Genode::Signal_transmitter &sender)
+File_system::Directory *Ext4::root_dir()
 {
-	_sender = &sender;
+	static File_system::Directory inst(*Genode::env()->heap(), _root_dir);
+	return &inst;
+}
+
+
+void Ext4::free_dentry(struct dentry *dentry)
+{
+	PERR("%s: not implented, leaking memory", __func__);
+}
+
+
+void Ext4::read_directory(Completion *completion, struct inode *inode,
+                          uint64_t offset, char *dst, size_t len)
+{
+	current_request.inode      = inode;
+	current_request.offset     = offset;
+	current_request.data       = dst;
+	current_request.data_len   = len;
+	current_request.func       = request_read_directory;
+	current_request.completion = completion;
+}
+
+
+void Ext4::open_file(Completion *completion, struct inode *inode,
+                     char const *name, unsigned mode, bool create)
+{
+	current_request.inode      = inode;
+	current_request.data       = (void*)name;
+	current_request.func       = request_open_file;
+	current_request.completion = completion;
+}
+
+
+void Ext4::schedule_task()
+{
+	linux_task.unblock();
+	Lx::scheduler().schedule();
+}
+
+
+bool Ext4::init(Server::Entrypoint &ep,
+                Allocator          &alloc,
+                Signal_transmitter &sig_trans)
+{
+	if (!block_init(ep, alloc)) {
+		PERR("Could not open block session");
+		return false;
+	}
+
+	_fs_ready = &sig_trans;
 
 	Lx::scheduler();
-
 	Lx::timer(&ep, &jiffies);
 
 	/* kick-off the first round before returning */
 	Lx::scheduler().schedule();
-
 	return true;
 }
