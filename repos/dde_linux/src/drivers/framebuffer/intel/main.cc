@@ -1,6 +1,7 @@
 /*
  * \brief  Intel framebuffer driver
  * \author Norman Feske
+ * \author Stefan Kalkowski
  * \date   2015-08-19
  */
 
@@ -16,6 +17,7 @@
 #include <os/server.h>
 #include <os/config.h>
 
+/* Server related local includes */
 #include <component.h>
 
 /* Linux emulation environment includes */
@@ -27,17 +29,12 @@
 #include <lx_kit/backend_alloc.h>
 #include <lx_kit/work.h>
 
-
-namespace Server { struct Main; }
-
-
-Framebuffer::Root * Framebuffer::root = nullptr;
-
-
+/* Linux module functions */
 extern "C" int postcore_i2c_init(); /* i2c-core.c */
 extern "C" int module_i915_init();  /* i915_drv.c */
-extern "C" void update_framebuffer_config();
 
+
+namespace Server { struct Main; }
 
 static void run_linux(void * m);
 
@@ -77,11 +74,12 @@ struct Server::Main
 	{
 		Genode::printf("--- intel framebuffer driver ---\n");
 
-		Framebuffer::root = &root_component;
-
 		/* give all task a first kick before returning */
 		Lx::scheduler().schedule();
 	}
+
+	void announce() {
+		Genode::env()->parent()->announce(ep.manage(root_component)); }
 };
 
 
@@ -107,17 +105,18 @@ static void run_linux(void * m)
 
 	postcore_i2c_init();
 	module_i915_init();
-
-	Genode::env()->parent()->announce(main->ep.manage(*Framebuffer::root));
+	main->root_component.session.driver().finish_initialization();
+	main->announce();
 
 	static Policy_agent pa(*main);
 	Genode::config()->sigh(pa.sd);
 
 	while (1) {
 		Lx::scheduler().current()->block_and_schedule();
-		update_framebuffer_config();
+		main->root_component.session.config_changed();
 	}
 }
+
 
 namespace Server {
 
@@ -125,8 +124,5 @@ namespace Server {
 
 	size_t stack_size() { return 8*1024*sizeof(long); }
 
-	void construct(Entrypoint &ep)
-	{
-		static Main main(ep);
-	}
+	void construct(Entrypoint &ep) { static Main m(ep); }
 }
