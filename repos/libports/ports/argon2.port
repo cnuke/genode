@@ -1,0 +1,10 @@
+LICENSE   := CC0
+VERSION   := 20160406
+DOWNLOADS := argon2.archive
+
+URL(argon2) := https://github.com/P-H-C/phc-winner-argon2/archive/$(VERSION).tar.gz
+SHA(argon2) := 5552052e53fcd7fe40c558866c9cd51027c17322
+DIR(argon2) := src/lib/argon2
+
+DIRS := include
+DIR_CONTENT(include) := src/lib/argon2/include/argon2.h

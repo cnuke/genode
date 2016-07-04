@@ -1,0 +1,58 @@
+#
+# Build
+#
+
+build { core init drivers/timer test/argon2 }
+
+create_boot_directory
+
+#
+# Generate config
+#
+
+install_config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+	<start name="test-argon2">
+		<resource name="RAM" quantum="16M"/>
+		<config ld_verbose="yes">
+			<libc stdout="/dev/log" stderr="/dev/log">
+				<vfs>
+					<dir name="dev"> <log/> </dir>
+				</vfs>
+			</libc>
+		</config>
+	</start>
+</config>}
+
+#
+# Boot modules
+#
+
+build_boot_image {
+	core init timer
+	ld.lib.so libc.lib.so pthread.lib.so
+	argon2.lib.so test-argon2
+}
+
+#
+# Execute test case
+#
+
+append qemu_args " -nographic -m 64"
+
+run_genode_until {.*child "test-argon2" exited with exit value 0.*} 60
