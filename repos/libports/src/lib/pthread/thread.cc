@@ -113,7 +113,10 @@ extern "C" {
 
 	void pthread_exit(void *value_ptr)
 	{
-		pthread_cancel(pthread_self());
+		pthread_t thread = pthread_self();
+		thread->unlock_join();
+
+		pthread_cancel(thread);
 		sleep_forever();
 	}
 
@@ -159,6 +162,13 @@ extern "C" {
 		                              struct pthread(*myself, &main_thread_attr);
 
 		return main;
+	}
+
+	int pthread_join(pthread_t thread, void **retval)
+	{
+		thread->join();
+		if (retval) { *retval = (void*)0; }
+		return 0;
 	}
 
 

@@ -38,6 +38,8 @@ extern "C" {
 		void *(*_start_routine) (void *);
 		void *_arg;
 
+		Genode::Lock _join_lock { Genode::Lock::LOCKED };
+
 		enum { WEIGHT = Genode::Cpu_session::Weight::DEFAULT_WEIGHT };
 
 		pthread(pthread_attr_t attr, void *(*start_routine) (void *),
@@ -67,8 +69,13 @@ extern "C" {
 		void entry()
 		{
 			void *exit_status = _start_routine(_arg);
+
+			_join_lock.unlock();
 			pthread_exit(exit_status);
 		}
+
+		void join() { _join_lock.lock(); }
+		void unlock_join() { _join_lock.unlock(); }
 	};
 
 	void pthread_cleanup();
