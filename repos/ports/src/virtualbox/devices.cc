@@ -59,6 +59,7 @@ extern "C" int VBoxDevicesRegister(PPDMDEVREGCB pCallbacks, uint32_t u32Version)
 	REGISTER(DeviceICH6_HDA);
 
 	REGISTER(DeviceXHCI);
+	REGISTER(DeviceGPU);
 
 	return VINF_SUCCESS;
 }

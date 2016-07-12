@@ -54,6 +54,7 @@ SRC_CC += Devices/Input/UsbKbd.cpp
 SRC_CC += Devices/build/VBoxDD.cpp
 
 SRC_CC += devxhci.cc
+SRC_CC += devgpu.cc
 
 INC_DIR += $(VBOX_DIR)/Devices/build
 INC_DIR += $(VBOX_DIR)/Devices/Bus
