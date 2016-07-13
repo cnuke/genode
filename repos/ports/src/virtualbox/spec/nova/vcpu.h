@@ -294,7 +294,7 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 
 				Crd crd  = Mem_crd(flexpage.addr >> 12, flexpage.log2_order - 12,
 				                   permission);
-				res = utcb->append_item(crd, flexpage.hotspot, USER_PD, GUEST_PGT);
+				res = utcb->append_item(crd, flexpage.hotspot, USER_PD, GUEST_PGT, false, true);
 
 				if (debug_map_memory)
 					Vmm::log("map guest mem ", Genode::Hex(flexpage.addr),
