@@ -808,6 +808,22 @@ namespace Platform {
 				}
 			}
 
+			Genode::Io_mem_dataspace_capability config_extended(Device_capability device_cap)
+			{
+				using namespace Genode;
+
+				Device_component * device = nullptr;
+				auto lambda = [&] (Device_component *d)
+				{
+					device = d;
+					if (!device) { return; }
+				};
+
+				_ep->apply(device_cap, lambda);
+
+				return device ? device->get_config_space() : Io_mem_dataspace_capability();
+			}
+
 			/**
 			 * De-/Allocation of dma capable dataspaces
 			 */
