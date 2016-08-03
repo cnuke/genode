@@ -47,7 +47,7 @@
 
 #include <VBox/vmm/rem.h>
 
-static bool debug_map_memory = false;
+static bool debug_map_memory = true;
 
 /*
  * VirtualBox stores segment attributes in Intel format using a 32-bit
@@ -316,9 +316,6 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 				Genode::error("could not register handler ",
 				              Genode::Hex(exc_base + EV));
 		}
-
-
-		Vmm::Vcpu_other_pd &vcpu() { return _vcpu; }
 
 
 		inline bool vbox_to_utcb(Nova::Utcb * utcb, VM *pVM, PVMCPU pVCpu)
@@ -851,6 +848,8 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 			return vm_exit_requires_instruction_emulation() ? VINF_EM_RAW_EMULATE_INSTR
 			                                                : VINF_SUCCESS;
 		}
+
+		Vmm::Vcpu_other_pd &vcpu() { return _vcpu; }
 };
 
 #endif /* _VIRTUALBOX__SPEC__NOVA__VCPU_H_ */

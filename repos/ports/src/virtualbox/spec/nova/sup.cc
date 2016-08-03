@@ -62,6 +62,15 @@ static Vcpu_handler *lookup_vcpu_handler(unsigned int cpu_id)
 }
 
 
+bool vcpu_assign_pci(unsigned int cpu_id, Genode::addr_t pci_config_memory, uint16_t bdf)
+{
+	Vcpu_handler *handler = lookup_vcpu_handler(cpu_id);
+	if (!handler) { return false; }
+
+	return handler->vcpu().assign_pci(pci_config_memory, bdf);
+}
+
+
 /* Genode specific function */
 
 static Genode::Attached_rom_dataspace hip_rom("hypervisor_info_page");

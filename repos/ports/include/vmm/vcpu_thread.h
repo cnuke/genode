@@ -103,6 +103,11 @@ class Vmm::Vcpu_other_pd : public Vmm::Vcpu_thread
 		}
 
 		Genode::addr_t exc_base() { return _exc_pt_sel; }
+
+		bool assign_pci(Genode::addr_t pci_config_memory, uint16_t bdf)
+		{
+			return _pd_session.assign_pci(pci_config_memory, bdf);
+		}
 };
 
 
