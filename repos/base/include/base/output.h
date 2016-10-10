@@ -140,6 +140,46 @@ namespace Genode {
 	void print(Output &output, double);
 
 	/**
+	 * Helper for the binary output of integer values
+	 *
+	 * To output an integer value as hexadecimal number, the value can be
+	 * wrapped into an 'Binary' object, thereby selecting the corresponding
+	 * overloaded 'print' function below.
+	 */
+	class Binary
+	{
+		public:
+
+			enum Prefix { PREFIX, OMIT_PREFIX };
+			enum Pad    { PAD,    NO_PAD };
+
+		private:
+
+			unsigned long long const _value;
+			size_t             const _digits;
+			Prefix             const _prefix;
+			Pad                const _pad;
+
+		public:
+
+			/**
+			 * Constructor
+			 *
+			 * \param prefix  by default, the value is prepended with the prefix
+			 *                '0y'. The prefix can be suppressed by specifying
+			 *                'OMIT_PREFIX' as argument.
+			 * \param pad     by default, leading zeros are stripped from the
+			 *                output. If set to 'PAD', the leading zeros will be
+			 *                printed.
+			 */
+			template <typename T>
+			explicit Binary(T value, Prefix prefix = PREFIX, Pad pad = NO_PAD)
+			: _value(value), _digits(8*sizeof(T)), _prefix(prefix), _pad(pad) { }
+
+			void print(Output &output) const;
+	};
+
+	/**
 	 * Helper for the hexadecimal output of integer values
 	 *
 	 * To output an integer value as hexadecimal number, the value can be
