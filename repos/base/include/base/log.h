@@ -40,7 +40,7 @@ class Genode::Log
 		/**
 		 * Type of message
 		 */
-		enum Type { LOG, WARNING, ERROR };
+		enum Type { LOG, INFO, WARNING, ERROR };
 
 	private:
 
@@ -106,6 +106,12 @@ namespace Genode {
 	 */
 	template <typename... ARGS>
 	void log(ARGS &&... args) { Log::log().output(Log::LOG, args...); }
+
+	/**
+	 * Write 'args' as an info message to the log
+	 */
+	template <typename... ARGS>
+	void info(ARGS &&... args) { Log::log().output(Log::INFO, args...); }
 
 
 	/**

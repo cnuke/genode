@@ -26,6 +26,7 @@ void Log::_acquire(Type type)
 	 */
 	switch (type) {
 	case LOG:                                              break;
+	case INFO:    _output.out_string("\033[36mInfo: ");    break;
 	case WARNING: _output.out_string("\033[34mWarning: "); break;
 	case ERROR:   _output.out_string("\033[31mError: ");   break;
 	};
