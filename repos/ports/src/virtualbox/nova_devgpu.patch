@@ -1,0 +1,149 @@
+diff --git a/include/dmar.hpp b/include/dmar.hpp
+index 039a419..52194c4 100644
+--- a/include/dmar.hpp
++++ b/include/dmar.hpp
+@@ -256,7 +256,7 @@ class Dmar : public List<Dmar>
+         ALWAYS_INLINE
+         static bool ire() { return gcmd & GCMD_IRE; }
+ 
+-        void assign (unsigned long, Pd *);
++        void assign (unsigned long, Pd *, bool show = false);
+ 
+         REGPARM (1)
+         static void vector (unsigned) asm ("msi_vector");
+diff --git a/src/dmar.cpp b/src/dmar.cpp
+index f81162f..8aa7d03 100644
+--- a/src/dmar.cpp
++++ b/src/dmar.cpp
+@@ -65,8 +65,11 @@ Dmar::Dmar (Paddr p) : List<Dmar> (list), reg_base ((hwdev_addr -= PAGE_SIZE) |
+     }
+ }
+ 
+-void Dmar::assign (unsigned long rid, Pd *p)
++void Dmar::assign (unsigned long rid, Pd *p, bool show)
+ {
++	if (show)
++		trace (TRACE_IOMMU, "rid: %lx did: %lx p: %p dmar: %p", rid, p->did, p, this);
++
+     mword lev = bit_scan_reverse (read<mword>(REG_CAP) >> 8 & 0x1f);
+ 
+     Dmar_ctx *r = ctx + (rid >> 8);
+@@ -88,15 +91,15 @@ void Dmar::fault_handler()
+ 
+         if (fsts & 0x2) {
+             uint64 hi, lo;
+-            for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % nfr())
+-                trace (TRACE_IOMMU, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
+-                       this,
+-                       frr,
+-                       static_cast<uint32>(hi >> 32) & 0xff,
+-                       static_cast<uint32>(hi >> 8) & 0xff,
+-                       static_cast<uint32>(hi >> 3) & 0x1f,
+-                       static_cast<uint32>(hi) & 0x7,
+-                       lo);
++            for (unsigned frr = fsts >> 8 & 0xff; read (frr, hi, lo), hi & 1ull << 63; frr = (frr + 1) % nfr()) ;
++                // trace (TRACE_IOMMU, "DMAR:%p FRR:%u FR:%#x BDF:%x:%x:%x FI:%#010llx",
++                //        this,
++                //        frr,
++                //        static_cast<uint32>(hi >> 32) & 0xff,
++                //        static_cast<uint32>(hi >> 8) & 0xff,
++                //        static_cast<uint32>(hi >> 3) & 0x1f,
++                //        static_cast<uint32>(hi) & 0x7,
++                //        lo);
+         }
+ 
+         write<uint32>(REG_FSTS, 0x7d);
+diff --git a/src/pd.cpp b/src/pd.cpp
+index 60fcd80..109dd3f 100644
+--- a/src/pd.cpp
++++ b/src/pd.cpp
+@@ -119,6 +119,14 @@ bool Pd::delegate (Pd *snd, mword const snd_base, mword const rcv_base, mword co
+                 Rcu::call (node);
+             return s;
+         }
++		// else {
++		// 	if (node->node_sub & 1) {
++		// 		trace (0, "map DMA   %s - node - PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx SUB:%lx addr:%lx", deltype, snd, this, snd_base, rcv_base, ord, attr, sub, addr);
++		// 	}
++		// 	if (node->node_sub & 2) {
++		// 		trace (0, "map GUEST %s - node - PD:%p->%p SB:%#010lx RB:%#010lx O:%#04lx A:%#lx SUB:%lx addr:%lx", deltype, snd, this, snd_base, rcv_base, ord, attr, sub, addr);
++		// 	}
++		// }
+     }
+ 
+     if (!qg.check(0))
+diff --git a/src/space_mem.cpp b/src/space_mem.cpp
+index 77a2604..1f8e046 100644
+--- a/src/space_mem.cpp
++++ b/src/space_mem.cpp
+@@ -57,9 +57,13 @@ bool Space_mem::update (Quota_guard &quota, Mdb *mdb, mword r)
+         for (unsigned long i = 0; i < 1UL << (o - ord); i++) {
+             if (!r && !dpt.check(quota, ord)) {
+                 Cpu::hazard |= HZD_OOM;
++                if (s&2)
++					// trace (0, "OOM dpt b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (Dpt::ord + PAGE_BITS)));
+                 return false;
+             }
+ 
++			// if (s&2)
++			// 	trace (0, "dpt b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (Dpt::ord + PAGE_BITS)));
+             dpt.update (quota, b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (Dpt::ord + PAGE_BITS)), a, r ? Dpt::TYPE_DN : Dpt::TYPE_UP);
+         }
+     }
+@@ -70,19 +74,23 @@ bool Space_mem::update (Quota_guard &quota, Mdb *mdb, mword r)
+             for (unsigned long i = 0; i < 1UL << (o - ord); i++) {
+                 if (!r && !npt.check(quota, ord)) {
+                     Cpu::hazard |= HZD_OOM;
++            	// trace (0, "OOM npt b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (ord + PAGE_BITS)));
+                     return false;
+                 }
+ 
++            	// trace (0, "npt b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (ord + PAGE_BITS)));
+                 npt.update (quota, b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Hpt::hw_attr (a), r ? Hpt::TYPE_DN : Hpt::TYPE_UP);
+             }
+         } else {
+-            mword ord = min (o, Ept::ord);
++            mword ord = min (min (o, Ept::ord), Dpt::ord);
+             for (unsigned long i = 0; i < 1UL << (o - ord); i++) {
+                 if (!r && !ept.check(quota, ord)) {
+                     Cpu::hazard |= HZD_OOM;
++            	// trace (0, "OOM ept b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (ord + PAGE_BITS)));
+                     return false;
+                 }
+ 
++            	// trace (0, "ept b: %lx p: %lx", b + i * (1UL << (ord + PAGE_BITS)), p + i * (1UL << (ord + PAGE_BITS)));
+                 ept.update (quota, b + i * (1UL << (ord + PAGE_BITS)), ord, p + i * (1UL << (ord + PAGE_BITS)), Ept::hw_attr (a, mdb->node_type), r ? Ept::TYPE_DN : Ept::TYPE_UP);
+             }
+         }
+diff --git a/src/syscall.cpp b/src/syscall.cpp
+index 60e66de..2295481 100644
+--- a/src/syscall.cpp
++++ b/src/syscall.cpp
+@@ -825,11 +825,11 @@ void Ec::sys_assign_pci()
+         sys_finish<Sys_regs::QUO_OOM>();
+     }
+ 
+-    Paddr phys; unsigned rid;
+-    if (EXPECT_FALSE (!pd->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
+-        trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
+-        sys_finish<Sys_regs::BAD_DEV>();
+-    }
++    // Paddr phys; unsigned rid;
++    // if (EXPECT_FALSE (!pd->Space_mem::lookup (r->dev(), phys) || (rid = Pci::phys_to_rid (phys)) == ~0U)) {
++    //     trace (TRACE_ERROR, "%s: Non-DEV CAP (%#lx)", __func__, r->dev());
++    //     sys_finish<Sys_regs::BAD_DEV>();
++    // }
+ 
+     Dmar *dmar = Pci::find_dmar (r->hnt());
+     if (EXPECT_FALSE (!dmar)) {
+@@ -837,7 +837,9 @@ void Ec::sys_assign_pci()
+         sys_finish<Sys_regs::BAD_DEV>();
+     }
+ 
+-    dmar->assign (rid, static_cast<Pd *>(obj));
++	trace (TRACE_IOMMU, "IOMMU DMAR:%p", dmar);
++
++    dmar->assign (r->hnt(), static_cast<Pd *>(obj), true);
+ 
+     sys_finish<Sys_regs::SUCCESS>();
+ }
