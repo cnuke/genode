@@ -32,6 +32,8 @@
 #include <util/list.h>
 #include <os/attached_ram_dataspace.h>
 
+#include <vmm/printf.h>
+
 /* VirtualBox includes */
 #include <VBox/vmm/pgm.h>
 #include <VBox/vmm/iom.h>
@@ -117,7 +119,7 @@ class Guest_memory
 
 			void dump() const
 			{
-				Genode::log("phys ", Genode::Hex_range<RTGCPHYS>(_GCPhys, _cb),
+				Vmm::log("phys ", Genode::Hex_range<RTGCPHYS>(_GCPhys, _cb),
 				            " -> virt ", Genode::Hex_range<Genode::addr_t>((Genode::addr_t)_pv, _cb),
 				            " (dev='", _pDevIns && _pDevIns->pReg ? _pDevIns->pReg->szName : 0, "'");
 			}
@@ -275,11 +277,19 @@ class Guest_memory
 		                      PFNIOMMMIOFILL  pfnFillCallback,
 		                      uint32_t        fFlags)
 		{
+			RTHCPTR vaddr = 0;
+			if (GCPhys == 0xa0000) {
+				vaddr = pvUser;
+				Vmm::log("use vaddr: ", vaddr);
+			}
+
+			Vmm::log(__func__, ": GCPhys: ", Genode::Hex(GCPhys), " pvUser: ", pvUser);
+
 			/*
 			 * XXX check for overlapping regions
 			 */
 			_mmio_regions.insert(new (Genode::env()->heap())
-			                     Region(GCPhys, cb, 0,
+			                     Region(GCPhys, cb, vaddr,
 			                            pDevIns, pvUser, pfnWriteCallback,
 			                            pfnReadCallback, pfnFillCallback, fFlags));
 		}
@@ -299,15 +309,15 @@ class Guest_memory
 
 		void dump() const
 		{
-			Genode::log("guest-physical to VMM-local RAM mappings:");
+			Vmm::log("guest-physical to VMM-local RAM mappings:");
 			for (Region const *r = _ram_regions.first(); r; r = r->next())
 				r->dump();
 
-			Genode::log("guest-physical to VMM-local ROM mappings:");
+			Vmm::log("guest-physical to VMM-local ROM mappings:");
 			for (Region const *r = _rom_regions.first(); r; r = r->next())
 				r->dump();
 
-			Genode::log("guest-physical MMIO regions:");
+			Vmm::log("guest-physical MMIO regions:");
 			for (Region const *r = _mmio_regions.first(); r; r = r->next())
 				r->dump();
 		}
@@ -346,6 +356,20 @@ class Guest_memory
 			void * vmm_local = lookup_ram(GCPhys & ~(size * 2UL - 1), size * 2UL, it);
 			if (vmm_local)
 				return vmm_local;
+
+			it = Genode::Flexpage_iterator((addr_t)r->pv_at_offset(GCPhys - r->GCPhys()), size, GCPhys, size, GCPhys);
+
+			return r->pv_at_offset(GCPhys - r->GCPhys());
+		}
+
+		/**
+		 * \return looked-up VMM-local address if Guest address is MMIO
+		 */
+		void *lookup_mmio(RTGCPHYS const GCPhys, size_t size,
+		                  Genode::Flexpage_iterator &it)
+		{
+			Region *r = _lookup(GCPhys, _mmio_regions, size);
+			if (!r) { return 0; }
 
 			it = Genode::Flexpage_iterator((addr_t)r->pv_at_offset(GCPhys - r->GCPhys()), size, GCPhys, size, GCPhys);
 

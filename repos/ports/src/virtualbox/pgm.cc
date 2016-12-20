@@ -536,8 +536,15 @@ int PGMHandlerPhysicalReset(PVM, RTGCPHYS GCPhys)
 }
 
 
+void guest_memory_dump()
+{
+	guest_memory()->dump();
+}
+
+
 extern Genode::addr_t _dma_addr;
 extern Genode::size_t _dma_size;
+extern Genode::addr_t _vga_buffer_addr;
 
 
 extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
@@ -549,7 +556,9 @@ extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
 
 	static bool bdsm_dma_mapped = false;
 	if (!bdsm_dma_mapped && _dma_addr != (addr_t)0UL) {
-		Vmm::log("BDSM_DMA_MAP _dma_addr: ", _dma_addr, " hijack GCPhys: ", GCPhys);
+		Vmm::log("BDSM_DMA_MAP _dma_addr: ", Genode::Hex(_dma_addr),
+				 " _dma_size: ", Genode::Hex(_dma_size),
+		         " hijack GCPhys: ", Genode::Hex(GCPhys));
 		fli = Flexpage_iterator((addr_t)_dma_addr, _dma_size, _dma_addr, _dma_size, _dma_addr);
 		*ppv = (void*)_dma_addr;
 
@@ -564,14 +573,22 @@ extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
 
 	void * pv = vmm_memory()->lookup(GCPhys, cbWrite, &pfnHandlerR3, &pvUserR3);
 
-	if (!pv)
-		return VERR_PGM_PHYS_TLB_UNASSIGNED;
+	if (!pv) {
+		// Vmm::log("lookup mmio: ", Genode::Hex(GCPhys), " cbWrite: ", cbWrite);
+		pv = guest_memory()->lookup_mmio(GCPhys, cbWrite, fli);
+		if (!pv) { return VERR_PGM_PHYS_TLB_UNASSIGNED; }
+
+		*ppv = pv;
+		// Vmm::log("yay");
+		return VINF_SUCCESS;
+	}
 
 	fli = Flexpage_iterator((addr_t)pv, cbWrite, GCPhys, cbWrite, GCPhys);
 
 	if (!pfnHandlerR3 && !pvUserR3) {
 		*ppv = pv;
 		/* you may map it */
+		Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
 		return VINF_SUCCESS;
 	}
 
@@ -582,8 +599,10 @@ extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
 		if (rc == VINF_PGM_HANDLER_DO_DEFAULT) {
 			*ppv = pv;
 			/* you may map it */
+			Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
 			return VINF_SUCCESS;
 		}
+		Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
 		return rc;
 	}
 
@@ -602,6 +621,7 @@ extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
 
 	writeable = false;
 
+	Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
 	return VINF_SUCCESS;
 }
 

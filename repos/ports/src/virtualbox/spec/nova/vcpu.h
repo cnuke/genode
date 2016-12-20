@@ -299,8 +299,10 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 				if (debug_map_memory)
 					Vmm::log("map guest mem ", Genode::Hex(flexpage.addr),
 					         "+", 1UL << flexpage.log2_order, " -> ", 
-					         Genode::Hex(flexpage.hotspot), " reason=", reason);
+					         Genode::Hex(flexpage.hotspot), " reason=", Genode::Hex(reason));
 			} while (res);
+
+			Vmm::log(__func__, ": done");
 
 			Nova::reply(_stack_reply);
 		}
