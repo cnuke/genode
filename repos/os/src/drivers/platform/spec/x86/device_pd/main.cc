@@ -164,13 +164,15 @@ void Platform::Device_pd_component::assign_pci(Genode::Io_mem_dataspace_capabili
 		}
 	};
 
-	/* try to assign pci device to this protection domain */
-	if (!env()->pd_session()->assign_pci(page, rid))
-		Genode::error("assignment of PCI device ", Rid(rid), " failed ",
-		              "phys=", Genode::Hex(ds_client.phys_addr()), " "
-		              "virt=", Genode::Hex(page));
-	else
-		Genode::log("assignment of ", rid, " succeeded");
+	if (rid != 16) {
+		/* try to assign pci device to this protection domain */
+		if (!env()->pd_session()->assign_pci(page, rid))
+			Genode::error("assignment of PCI device ", Rid(rid), " failed ",
+						  "phys=", Genode::Hex(ds_client.phys_addr()), " "
+						  "virt=", Genode::Hex(page));
+		else
+			Genode::log("assignment of ", Rid(rid), " succeeded");
+	}
 
 	/* we don't need the mapping anymore */
 	address_space().detach(page);
