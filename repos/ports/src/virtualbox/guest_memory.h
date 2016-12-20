@@ -278,12 +278,13 @@ class Guest_memory
 		                      uint32_t        fFlags)
 		{
 			RTHCPTR vaddr = 0;
-			if (GCPhys == 0xa0000) {
+			if (GCPhys == 0xa0000||GCPhys == 0xe0000000) {
 				vaddr = pvUser;
 				Vmm::log("use vaddr: ", vaddr);
 			}
 
-			Vmm::log(__func__, ": GCPhys: ", Genode::Hex(GCPhys), " pvUser: ", pvUser);
+			Vmm::log(__func__, ": GCPhys: ", Genode::Hex(GCPhys), " pvUser: ", pvUser,
+			         " from: ", __builtin_return_address(0));
 
 			/*
 			 * XXX check for overlapping regions

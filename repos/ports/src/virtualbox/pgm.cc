@@ -188,6 +188,7 @@ int PGMR3PhysMMIO2Register(PVM pVM, PPDMDEVINS pDevIns, uint32_t iRegion,
                            *pszDesc)
 {
 	*ppv = vmm_memory()->alloc((size_t)cb, pDevIns, iRegion);
+	Genode::error(__func__, ": *ppv: ", *ppv);
 
 	return VINF_SUCCESS;
 }
@@ -209,6 +210,10 @@ int PGMR3PhysMMIO2Map(PVM pVM, PPDMDEVINS pDevIns, uint32_t iRegion,
 		              iRegion, " failed");
 		Assert(cb);
 	}
+
+	Genode::error(__func__, ": for pDevIns=", pDevIns, " iRegion=",
+	              iRegion, " GCPhys=", Genode::Hex(GCPhys));
+
 
 #ifdef VBOX_WITH_REM
 	REMR3NotifyPhysRamRegister(pVM, GCPhys, cb, REM_NOTIFY_PHYS_RAM_FLAGS_MMIO2);
@@ -243,7 +248,15 @@ bool PGMR3PhysMMIO2IsBase(PVM pVM, PPDMDEVINS pDevIns, RTGCPHYS GCPhys)
 	return vmm_memory()->lookup(GCPhys, 1);
 }
 
-	
+
+void vmm_alloc_mmio(PPDMDEVINS pDevIns, RTGCPHYS GCPhys, RTGCPHYS base, size_t size, uint32_t iRegion)
+{
+	vmm_memory()->alloc_mmio(GCPhys, base, size, pDevIns, iRegion);
+}
+
+
+
+
 int PGMR3HandlerPhysicalRegister(PVM pVM, PGMPHYSHANDLERTYPE enmType,
                                  RTGCPHYS GCPhys, RTGCPHYS GCPhysLast,
                                  PFNPGMR3PHYSHANDLER pfnHandlerR3,
@@ -599,7 +612,7 @@ extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
 		if (rc == VINF_PGM_HANDLER_DO_DEFAULT) {
 			*ppv = pv;
 			/* you may map it */
-			Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
+			// Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));
 			return VINF_SUCCESS;
 		}
 		Vmm::log(__func__, ":", __LINE__, " GCPhys: ", Genode::Hex(GCPhys));

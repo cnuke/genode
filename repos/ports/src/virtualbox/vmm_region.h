@@ -66,6 +66,16 @@ struct Mem_region : public  Genode::List<Mem_region>::Element,
 		} while (rest_size);
 	}
 
+	Mem_region(Genode::addr_t vm_phys, Genode::addr_t base, size_t size, PPDMDEVINS pDevIns, unsigned iRegion)
+	:
+		Region_map_client(Rm_connection::create(4096 /* dummy */)),
+		pDevIns(pDevIns),
+		iRegion(iRegion),
+		vm_phys(vm_phys), pfnHandlerR3(0), pvUserR3(0),
+		_base(base),
+		_size(size)
+	{ }
+
 	size_t size() { return _size; }
 
 	template <typename T>

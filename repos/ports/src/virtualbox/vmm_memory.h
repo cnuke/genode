@@ -115,6 +115,20 @@ class Vmm_memory
 			return alloc(cb, 0, ~0U);
 		}
 
+		void alloc_mmio(RTGCPHYS GCPhys, RTGCPHYS base, size_t size, PPDMDEVINS pDevIns,
+		                 unsigned iRegion)
+		{
+			Genode::error(__func__, ": GCPhys=", Genode::Hex(GCPhys),
+			              " size=", size, " iRegion=", iRegion);
+			try {
+				Mem_region *r = new (Genode::env()->heap())
+				                Mem_region(GCPhys, base, size, pDevIns, iRegion);
+				_regions.insert(r);
+			} catch (...) {
+				throw;
+			}
+		}
+
 		bool add_handler(RTGCPHYS vm_phys, size_t size,
 		                 PFNPGMR3PHYSHANDLER pfnHandlerR3, void *pvUserR3,
 		                 PGMPHYSHANDLERTYPE enmType = PGMPHYSHANDLERTYPE_PHYSICAL_ALL)
