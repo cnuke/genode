@@ -297,7 +297,18 @@ int IOMR3IOPortDeregister(PVM pVM, PPDMDEVINS pDevIns, RTIOPORT PortStart,
 		            Genode::Hex(PortStart), "-",
 		            Genode::Hex(PortStart + cPorts - 1));
 
-	return guest_ioports()->remove_range(pDevIns, PortStart, cPorts);
+	/*
+	 * 0xd000 was mapped at its original address of 0x3000 by us
+	 * b/c of the vBIOS but vbox does not know that...
+	 */
+	if (PortStart == 0xd000) {
+		Genode::log(__func__, ": override 0xd000 with 0x3000");
+		PortStart = 0x3000;
+	}
+
+	int rc = guest_ioports()->remove_range(pDevIns, PortStart, cPorts);
+
+	return rc == VERR_GENERAL_FAILURE && PortStart == 0x3000 ? VINF_SUCCESS : rc;
 }
 
 
