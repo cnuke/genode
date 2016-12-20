@@ -30,6 +30,8 @@
 #include "vmm_memory.h"
 #include "guest_memory.h"
 
+#include <vmm/printf.h>
+
 using Genode::Ram_session;
 using Genode::Rm_session;
 
@@ -97,6 +99,8 @@ int PGMR3PhysRomRegister(PVM pVM, PPDMDEVINS pDevIns, RTGCPHYS GCPhys,
 	catch (Guest_memory::Region_conflict) { return VERR_PGM_MAPPING_CONFLICT; }
 	catch (Ram_session::Alloc_failed) { return VERR_PGM_MAPPING_CONFLICT; }
 	catch (Rm_session::Attach_failed) { return VERR_PGM_MAPPING_CONFLICT; }
+
+	guest_memory()->dump();
 
 	return VINF_SUCCESS;
 }
@@ -532,12 +536,26 @@ int PGMHandlerPhysicalReset(PVM, RTGCPHYS GCPhys)
 }
 
 
+extern Genode::addr_t _dma_addr;
+extern Genode::size_t _dma_size;
+
+
 extern "C" int MMIO2_MAPPED_SYNC(PVM pVM, RTGCPHYS GCPhys, size_t cbWrite,
                                  void **ppv, Genode::Flexpage_iterator &fli,
                                  bool &writeable)
 {
 	using Genode::Flexpage_iterator;
 	using Genode::addr_t;
+
+	static bool bdsm_dma_mapped = false;
+	if (!bdsm_dma_mapped && _dma_addr != (addr_t)0UL) {
+		Vmm::log("BDSM_DMA_MAP _dma_addr: ", _dma_addr, " hijack GCPhys: ", GCPhys);
+		fli = Flexpage_iterator((addr_t)_dma_addr, _dma_size, _dma_addr, _dma_size, _dma_addr);
+		*ppv = (void*)_dma_addr;
+
+		bdsm_dma_mapped = true;
+		return VINF_SUCCESS;
+	}
 
 	/* DON'T USE normal printf in this function - corrupts unsaved UTCB !!! */
 
