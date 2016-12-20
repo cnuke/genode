@@ -47,7 +47,7 @@
 
 #include <VBox/vmm/rem.h>
 
-static bool debug_map_memory = true;
+static bool debug_map_memory = false;
 
 /*
  * VirtualBox stores segment attributes in Intel format using a 32-bit
@@ -228,7 +228,7 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 			Assert(utcb->actv_state == ACTIVITY_STATE_ACTIVE);
 
 			if (unmap) {
-				Vmm::log("error: unmap not implemented");
+				// Vmm::log("error: unmap not implemented");
 				Nova::reply(_stack_reply);
 			}
 
@@ -236,7 +236,16 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 
 			bool writeable = true;
 			Flexpage_iterator fli;
-			void *pv = guest_memory()->lookup_ram(reason, MAP_SIZE, fli);
+
+			static bool foobar = false;
+			void *pv = nullptr;
+			if (!foobar) {
+				pv = guest_memory()->lookup_ram(0x1740000, MAP_SIZE, fli);
+				foobar = true;
+				Vmm::log("FOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOBAR: pv: ", pv);
+			} else {
+				pv = guest_memory()->lookup_ram(reason, MAP_SIZE, fli);
+			}
 
 			if (!pv) {
 				/**
@@ -299,10 +308,10 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<pthread>,
 				if (debug_map_memory)
 					Vmm::log("map guest mem ", Genode::Hex(flexpage.addr),
 					         "+", 1UL << flexpage.log2_order, " -> ", 
-					         Genode::Hex(flexpage.hotspot), " reason=", Genode::Hex(reason));
+					         Genode::Hex(flexpage.hotspot), " (GPA) reason=", Genode::Hex(reason));
 			} while (res);
 
-			Vmm::log(__func__, ": done");
+			// Vmm::log(__func__, ": done");
 
 			Nova::reply(_stack_reply);
 		}
