@@ -31,6 +31,7 @@
 
 #define BUG() do { \
 	lx_printf("BUG: failure at %s:%d/%s()!\n", __FILE__, __LINE__, __func__); \
+	genode_backtrace(); \
 	while (1); \
 } while (0)
 

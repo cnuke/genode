@@ -142,8 +142,9 @@ void *dev_get_drvdata(const struct device *dev)
 
 int device_for_each_child(struct device *dev, void *data, int (*fn)(struct device *dev, void *data))
 {
-	TRACE_AND_STOP;
-	return -1;
+	// TRACE_AND_STOP;
+	TRACE;
+	return 0;
 }
 
 int device_init_wakeup(struct device *dev, bool val)
@@ -154,7 +155,8 @@ int device_init_wakeup(struct device *dev, bool val)
 
 void device_unregister(struct device *dev)
 {
-	TRACE_AND_STOP;
+	// TRACE_AND_STOP;
+	TRACE;
 }
 
 const char *dev_name(const struct device *dev)
@@ -1227,8 +1229,9 @@ void *vzalloc(unsigned long size)
 
 int __wait_completion(struct completion *work, unsigned long to)
 {
-	TRACE_AND_STOP;
-	return -1;
+	// TRACE_AND_STOP;
+	TRACE;
+	return 0;
 }
 
 int wake_up_process(struct task_struct *tsk)

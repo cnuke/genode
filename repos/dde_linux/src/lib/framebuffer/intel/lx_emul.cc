@@ -422,6 +422,18 @@ int oops_in_progress;
  ** linux/string.h **
  ********************/
 
+char *strcpy(char *dst, const char *src)
+{
+	char *p = dst;
+
+	while ((*dst = *src)) {
+		++src;
+		++dst;
+	}
+
+	return p;
+}
+
 char *strncpy(char *dst, const char* src, size_t n)
 {
 	return Genode::strncpy(dst, src, n);
@@ -468,18 +480,6 @@ size_t strlcpy(char *dest, const char *src, size_t size)
 		dest[len] = '\0';
 	}
 	return ret;
-}
-
-char *strcpy(char *dst, const char *src)
-{
-	char *p = dst;
-
-	while ((*dst = *src)) {
-	++src;
-	++dst;
-	}
-
-	return p;
 }
 
 
@@ -1411,13 +1411,17 @@ dma_addr_t sg_page_iter_dma_address(struct sg_page_iter *piter)
 struct page *sg_page_iter_page(struct sg_page_iter *piter)
 {
 	if (piter->sg_pgoffset) {
-		Genode::error("SG offset %x", piter->sg_pgoffset);
-		while (1);
+		if ((piter->sg_pgoffset * PAGE_SIZE) > piter->sg->length) {
+			Genode::error("SG offset too large");
+			genode_backtrace();
+			while (1);
+		}
 	}
+
 	//PWRN("sg_page_iter_page: page %p",(page*)(PAGE_SIZE * (page_to_pfn((sg_page(piter->sg))) + (piter->sg_pgoffset))));
 
 	//return (page*)(PAGE_SIZE * (page_to_pfn((sg_page(piter->sg))) + (piter->sg_pgoffset)));
-	return sg_page(piter->sg);
+	return sg_page(piter->sg) + (piter->sg_pgoffset * PAGE_SIZE);
 }
 
 
