@@ -1123,7 +1123,8 @@ struct page *shmem_read_mapping_page( struct address_space *mapping, pgoff_t ind
 
 void shmem_truncate_range(struct inode *inode, loff_t start, loff_t end)
 {
-	TRACE_AND_STOP;
+	// TRACE_AND_STOP;
+	TRACE;
 }
 
 int signal_pending(struct task_struct *p)
