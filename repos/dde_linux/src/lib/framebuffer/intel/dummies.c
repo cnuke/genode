@@ -485,12 +485,6 @@ int drm_legacy_sg_free(struct drm_device *dev, void *data,
 	return -1;
 }
 
-void *drm_malloc_ab(size_t nmemb, size_t size)
-{
-	TRACE_AND_STOP;
-	return NULL;
-}
-
 int drm_open(struct inode *inode, struct file *filp)
 {
 	TRACE_AND_STOP;
@@ -693,7 +687,7 @@ void gpio_set_value(unsigned int gpio, int value)
 
 void ips_link_to_i915_driver(void)
 {
-	TRACE_AND_STOP;
+	TRACE;
 }
 
 void i915_audio_component_cleanup(struct drm_i915_private *dev_priv)

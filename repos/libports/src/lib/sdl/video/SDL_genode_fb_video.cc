@@ -78,6 +78,7 @@ extern "C" {
 	static EGLDisplay display;
 	static EGLSurface screen_surf;
 	static EGLNativeWindowType native_window;
+	static Genode::Constructible<Window> _window;
 
 	/**
 	 *
@@ -287,8 +288,18 @@ extern "C" {
 
 		width = 1920;
 		height = 1080;
+		// width = 1280;
+		// height = 720;
+		// width = 640;
+		// height = 480;
 
-		native_window = new (Genode::env()->heap()) Window(genode_env(), width, height);
+		if (_window.constructed()) {
+			Genode::error("Window already constructed");
+			throw -1;
+		}
+		_window.construct(genode_env(), width, height);
+
+		native_window = &*_window;
 
 		screen_surf = eglCreateWindowSurface(display, config, native_window, NULL);
 		if (screen_surf == EGL_NO_SURFACE) {
@@ -489,7 +500,7 @@ extern "C" {
 
 	void* Genode_Fb_GL_GetProcAddress(SDL_VideoDevice *t, const char *proc)
 	{
-		PDBG("get proc %s", proc);
+		PDBG("get proc ", proc);
 		return dlsym(load_mesa(), proc);
 	}
 

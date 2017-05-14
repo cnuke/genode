@@ -2038,6 +2038,10 @@ size_t copy_to_user(void *dst, void const *src, size_t len)
 
 size_t copy_from_user(void *to, void const *from, size_t len)
 {
+	if (to == 0) {
+		lx_printf("to: %p from: %p\n", to, __builtin_return_address(0));
+		return 0;
+	}
 	Genode::memcpy(to, from, len);
 	return 0;
 }
@@ -2128,6 +2132,12 @@ int fault_in_multipages_readable(const char __user *uaddr, int size)
 void drm_free_large(void *ptr)
 {
 	kfree(ptr);
+}
+
+
+void *drm_malloc_ab(size_t nmemb, size_t size)
+{
+	return kmalloc(nmemb * size, 0);
 }
 
 

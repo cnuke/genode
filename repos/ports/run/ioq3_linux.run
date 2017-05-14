@@ -4,7 +4,12 @@ set build_components {
 	app/ioq3
 	lib/mesa/swrast
 	drivers/framebuffer
+	drivers/input
+	drivers/audio
 }
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
 
 build $build_components
 
@@ -26,20 +31,48 @@ set config {
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
-}
 
-append config {
 	<start name="timer">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
-	</start>
+	</start>}
+
+append_platform_drv_config
+
+append_if [have_spec sdl] config {
 	<start name="fb_sdl">
 		<resource name="RAM" quantum="4M"/>
 		<provides>
 			<service name="Input"/>
 			<service name="Framebuffer"/>
 		</provides>
+		<config width="640" height="480"/>
+	</start>}
+
+append_if [expr ![have_spec sdl]] config {
+	<start name="intel_fb_drv">
+		<resource name="RAM" quantum="1G"/>
+		<provides><service name="Framebuffer"/><service name="Drm"/></provides>
+		<route>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
 	</start>
+	<start name="audio_drv">
+		<resource name="RAM" quantum="8M"/>
+		<provides> <service name="Audio_out"/> </provides>
+		<config>
+			<mixer field="outputs.master" value="255,255"/>
+		</config>
+	</start>
+}
+
+append_if [have_spec ps2] config {
+	<start name="ps2_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Input"/></provides>
+	</start>}
+
+append config {
 	<start name="ioq3">
 		<resource name="RAM" quantum="2G" />
 		<config ld_verbose="true">
@@ -64,9 +97,18 @@ set boot_modules {
 	libc.lib.so libm.lib.so pthread.lib.so
 	egl.lib.so mesa-11.lib.so stdcxx.lib.so
 	expat.lib.so glapi.lib.so swrast.lib.so
-	drm.lib.so intel_fb.lib.so fb_sdl
+	drm.lib.so
 	i965.lib.so sdl.lib.so assets.tar
+	libc_resolv.lib.so
 }
+
+lappend_if [have_spec sdl] boot_modules fb_sdl
+lappend_if [expr ![have_spec sdl]] boot_modules audio_drv
+lappend_if [have_spec x86] boot_modules intel_fb_drv
+lappend_if [have_spec ps2]   boot_modules ps2_drv
+
+# platform-specific modules
+append_platform_drv_boot_modules
 
 build_boot_image $boot_modules
 

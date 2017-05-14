@@ -124,7 +124,8 @@ namespace Libc {
 	char const *config_socket()
 	{
 		static Config_attr socket("socket", "");
-		return socket.string();
+		Genode::error("socket: ", socket.string());
+		return "/socket";
 	}
 }
 

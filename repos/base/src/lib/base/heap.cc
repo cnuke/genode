@@ -77,6 +77,7 @@ int Heap::quota_limit(size_t new_quota_limit)
 	return 0;
 }
 
+#include <os/backtrace.h>
 
 Heap::Dataspace *Heap::_allocate_dataspace(size_t size, bool enforce_separate_metadata)
 {
@@ -93,6 +94,7 @@ Heap::Dataspace *Heap::_allocate_dataspace(size_t size, bool enforce_separate_me
 		return 0;
 	} catch (Region_map::Attach_failed) {
 		warning("could not attach dataspace");
+		Genode::backtrace();
 		_ds_pool.ram_session->free(new_ds_cap);
 		return 0;
 	}
