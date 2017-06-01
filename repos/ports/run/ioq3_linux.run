@@ -6,6 +6,9 @@ set build_components {
 	drivers/framebuffer
 	drivers/input
 	drivers/audio
+	server/input_filter
+	drivers/usb
+	drivers/nic
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -57,6 +60,14 @@ append_if [expr ![have_spec sdl]] config {
 			<any-service> <parent/> <any-child /> </any-service>
 		</route>
 	</start>
+	<start name="usb_drv">
+		<resource name="RAM" quantum="20M"/>
+		<config xhci="yes"><storage/><hid/></config>
+		<provides>
+			<service name="Block" />
+			<service name="Input" />
+		</provides>
+	</start>
 	<start name="audio_drv">
 		<resource name="RAM" quantum="8M"/>
 		<provides> <service name="Audio_out"/> </provides>
@@ -64,7 +75,35 @@ append_if [expr ![have_spec sdl]] config {
 			<mixer field="outputs.master" value="255,255"/>
 		</config>
 	</start>
-}
+	<start name="nic_drv">
+		<resource name="RAM" quantum="10M" />
+		<provides><service name="Nic" /></provides>
+	</start>
+	<start name="input_filter">
+		<resource name="RAM" quantum="2M" />
+		<provides> <service name="Input" /> </provides>
+		<config>
+			<input label="ps2"/>
+			<input label="usb"/>
+			<output>
+				<merge>
+					<input name="ps2" />
+					<input name="usb" />
+				</merge>
+			</output>
+		</config>
+		<route>
+			<service name="LOG"> <parent/> </service>
+			<service name="RAM"> <parent/> </service>
+			<service name="CPU"> <parent/> </service>
+			<service name="ROM"> <parent/> </service>
+			<service name="PD">  <parent/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Input" label="ps2"> <child name="ps2_drv" /> </service>
+			<service name="Input" label="usb"> <child name="usb_drv" /> </service>
+			<route><any-service> <parent /> <any-child/> </any-service></route>
+		</route>
+	</start>}
 
 append_if [have_spec ps2] config {
 	<start name="ps2_drv">
@@ -76,13 +115,23 @@ append config {
 	<start name="ioq3">
 		<resource name="RAM" quantum="2G" />
 		<config ld_verbose="true">
-			<libc stdin="/dev/log" stdout="/dev/log" stderr="/dev/log" />
+			<libc stdin="/dev/log" stdout="/dev/log" stderr="/dev/log"/>
+			<!--
+			<libc tx_buf_size="2M" rx_buf_size="2M" ip_addr=\"$lx_ip_addr\" netmask=\"255.255.255.0\" gateway=\"10.0.2.1\""
+			-->
+
 			<vfs>
 				<dir name="dev"> <log/> </dir>
 				<tar name="assets.tar"/>
+				<!--
+				<dir name="socket">
+					<lxip ip_addr="10.0.0.51" netmask="255.255.255.0" gateway="10.0.0.1" nameserver="8.8.8.8"/>
+				</dir>
+				-->
 			</vfs>
 		</config>
 		<route>
+			<service name="Input"> <child name="input_filter" /> </service>
 			<any-service> <parent /> <any-child/> </any-service>
 		</route>
 	</start>
@@ -100,6 +149,9 @@ set boot_modules {
 	drm.lib.so
 	i965.lib.so sdl.lib.so assets.tar
 	libc_resolv.lib.so
+	lwip.lib.so
+	nic_drv usb_drv
+	input_filter
 }
 
 lappend_if [have_spec sdl] boot_modules fb_sdl

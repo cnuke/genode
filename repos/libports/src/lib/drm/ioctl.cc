@@ -103,7 +103,7 @@ class Drm_call
 		Genode::Env          &_env;
 		Genode::Heap          _heap { _env.ram(), _env.rm() };
 		Genode::Allocator_avl _drm_alloc { &_heap };
-		Drm::Connection       _drm_session { _env, &_drm_alloc };
+		Drm::Connection       _drm_session { _env, &_drm_alloc, 1024*1024 };
 
 		bool _fixup_packet(unsigned long request, void *arg, void *content)
 		{
