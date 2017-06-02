@@ -9,6 +9,7 @@ set build_components {
 	drivers/usb
 	lib/mesa/swrast
 	server/input_filter
+	server/rump_fs
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -68,6 +69,11 @@ append_if [expr ![have_spec sdl]] config {
 			<service name="Input" />
 		</provides>
 	</start>
+	<start name="rump_fs">
+		<resource name="RAM" quantum="32M"/>
+		<provides><service name="File_system"/></provides>
+		<config fs="ext2fs"><policy label_prefix="ioq3" root="/" writeable="yes"/></config>
+	</start>
 	<start name="audio_drv">
 		<resource name="RAM" quantum="8M"/>
 		<provides> <service name="Audio_out"/> </provides>
@@ -118,11 +124,12 @@ append config {
 			<libc stdin="/dev/log" stdout="/dev/log" stderr="/dev/log"/>
 			<vfs>
 				<dir name="dev"> <log/> </dir>
-				<tar name="assets.tar"/>
+				<fs/>
 			</vfs>
 		</config>
 		<route>
 			<service name="Input"> <child name="input_filter" /> </service>
+			<service name="File_system"> <child name="rump_fs" /> </service>
 			<any-service> <parent /> <any-child/> </any-service>
 		</route>
 	</start>
@@ -138,11 +145,12 @@ set boot_modules {
 	egl.lib.so mesa-11.lib.so stdcxx.lib.so
 	expat.lib.so glapi.lib.so swrast.lib.so
 	drm.lib.so
-	i965.lib.so sdl.lib.so assets.tar
+	i965.lib.so sdl.lib.so
 	libc_resolv.lib.so
 	lwip.lib.so
 	nic_drv usb_drv
 	input_filter
+	rump_fs rump.lib.so rump_fs.lib.so
 }
 
 lappend_if [have_spec sdl] boot_modules fb_sdl
