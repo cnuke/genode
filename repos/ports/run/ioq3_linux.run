@@ -1,14 +1,14 @@
 set build_components {
 	core init
-	drivers/timer
 	app/ioq3
-	lib/mesa/swrast
+	drivers/audio
 	drivers/framebuffer
 	drivers/input
-	drivers/audio
-	server/input_filter
-	drivers/usb
 	drivers/nic
+	drivers/timer
+	drivers/usb
+	lib/mesa/swrast
+	server/input_filter
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -72,7 +72,7 @@ append_if [expr ![have_spec sdl]] config {
 		<resource name="RAM" quantum="8M"/>
 		<provides> <service name="Audio_out"/> </provides>
 		<config>
-			<mixer field="outputs.master" value="255,255"/>
+			<mixer field="outputs.master" value="128,128"/>
 		</config>
 	</start>
 	<start name="nic_drv">
@@ -116,18 +116,9 @@ append config {
 		<resource name="RAM" quantum="2G" />
 		<config ld_verbose="true">
 			<libc stdin="/dev/log" stdout="/dev/log" stderr="/dev/log"/>
-			<!--
-			<libc tx_buf_size="2M" rx_buf_size="2M" ip_addr=\"$lx_ip_addr\" netmask=\"255.255.255.0\" gateway=\"10.0.2.1\""
-			-->
-
 			<vfs>
 				<dir name="dev"> <log/> </dir>
 				<tar name="assets.tar"/>
-				<!--
-				<dir name="socket">
-					<lxip ip_addr="10.0.0.51" netmask="255.255.255.0" gateway="10.0.0.1" nameserver="8.8.8.8"/>
-				</dir>
-				-->
 			</vfs>
 		</config>
 		<route>
