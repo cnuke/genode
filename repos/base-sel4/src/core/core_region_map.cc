@@ -59,6 +59,9 @@ Core_region_map::attach(Dataspace_capability ds_cap, size_t size,
 		size_t num_pages = page_rounded_size >> get_page_size_log2();
 		map_local(ds->phys_addr(), (addr_t)virt_addr, num_pages);
 
+		/* assign core local address to remember where to unmap from */
+		ds->assign_core_local_addr(virt_addr);
+
 		return virt_addr;
 	};
 
@@ -70,4 +73,6 @@ void Core_region_map::detach(Local_addr core_local_addr)
 {
 	size_t size = platform_specific()->region_alloc_size_at(core_local_addr);
 	unmap_local(core_local_addr, size >> get_page_size_log2());
+
+	platform()->region_alloc()->free(core_local_addr);
 }

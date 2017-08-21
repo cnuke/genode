@@ -26,12 +26,21 @@ void Ram_dataspace_factory::_export_ram_ds(Dataspace_component *ds)
 	size_t const num_pages = page_rounded_size >> get_page_size_log2();
 
 	Untyped_memory::convert_to_page_frames(ds->phys_addr(), num_pages);
+
+	/* dataspace has no virtual address within core */
+	ds->assign_core_local_addr(nullptr);
 }
 
 
 void Ram_dataspace_factory::_revoke_ram_ds(Dataspace_component *ds)
 {
 	size_t const page_rounded_size = (ds->size() + get_page_size() - 1) & get_page_mask();
+
+	/* in case of core local mapping in core, unmap before cap gets invalid */
+	if (ds->core_local_addr()) {
+		unmap_local(ds->core_local_addr(), page_rounded_size / get_page_size());
+		ds->assign_core_local_addr(nullptr);
+	}
 
 	Untyped_memory::convert_to_untyped_frames(ds->phys_addr(), page_rounded_size);
 }
