@@ -1,0 +1,177 @@
+set build_components {
+	core init
+	drivers/audio
+	drivers/gpu/intel
+	drivers/input
+	drivers/nic
+	drivers/timer
+	drivers/usb
+	drivers/framebuffer/vesa
+	server/input_filter
+	lib/mesa/swrast
+	lib/mesa/i965
+	app/ioq3
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+set config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>}
+
+append_platform_drv_config
+
+append_if [have_spec sdl] config {
+	<start name="fb_sdl">
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Input"/>
+			<service name="Framebuffer"/>
+		</provides>
+		<config width="640" height="480"/>
+	</start>}
+
+append_if [expr ![have_spec sdl]] config {
+	<start name="usb_drv">
+		<resource name="RAM" quantum="20M"/>
+		<config xhci="yes"><storage/><hid/></config>
+		<provides>
+			<service name="Block" />
+			<service name="Input" />
+		</provides>
+	</start>
+	<start name="audio_drv">
+		<resource name="RAM" quantum="8M"/>
+		<provides> <service name="Audio_out"/> </provides>
+		<config>
+			<mixer field="outputs.master" value="64"/>
+		</config>
+	</start>
+	<start name="nic_drv">
+		<resource name="RAM" quantum="10M" />
+		<provides><service name="Nic" /></provides>
+	</start>
+	<start name="input_filter">
+		<resource name="RAM" quantum="2M" />
+		<provides> <service name="Input" /> </provides>
+		<config>
+			<input label="ps2"/>
+			<input label="usb"/>
+			<output>
+				<merge>
+					<input name="ps2" />
+					<input name="usb" />
+				</merge>
+			</output>
+		</config>
+		<route>
+			<service name="LOG"> <parent/> </service>
+			<service name="RAM"> <parent/> </service>
+			<service name="CPU"> <parent/> </service>
+			<service name="ROM"> <parent/> </service>
+			<service name="PD">  <parent/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Input" label="ps2"> <child name="ps2_drv" /> </service>
+			<service name="Input" label="usb"> <child name="usb_drv" /> </service>
+			<route><any-service> <parent /> <any-child/> </any-service></route>
+		</route>
+	</start>}
+
+append_if [have_spec ps2] config {
+	<start name="ps2_drv">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Input"/></provides>
+	</start>}
+
+append config {
+	<start name="fb_drv">
+		<resource name="RAM" quantum="10M"/>
+		<provides>
+			<service name="Framebuffer"/>
+		</provides>
+		<route><any-service> <parent /> <any-child/> </any-service> </route>
+	</start>
+	<start name="intel_fb_drv" caps="500">
+		<binary name="intel_gpu_drv"/>
+		<resource name="RAM" quantum="40M"/>
+		<provides> <service name="Gpu"/> </provides>
+		<route>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="ioq3" caps="1000">
+		<resource name="RAM" quantum="2G"/>
+		<config ld_verbose="true">
+			<libc stdin="/dev/log" stdout="/dev/log" stderr="/dev/log"/>
+			<vfs>
+				<dir name="dev"> <log/> </dir>
+				<tar name="assets.tar"/>
+				<ram/>
+			</vfs>
+		</config>
+		<route>
+			<service name="ROM" label="egl_drv.lib.so"> <parent label="egl_i965.lib.so"/> </service>
+			<service name="Input"> <child name="input_filter" /> </service>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+</config>
+}
+
+install_config $config
+
+set boot_modules {
+	core init ld.lib.so timer intel_gpu_drv fb_drv
+	nic_drv usb_drv input_filter
+
+	libc.lib.so libm.lib.so pthread.lib.so
+	egl.lib.so mesa.lib.so stdcxx.lib.so
+	expat.lib.so glapi.lib.so egl_swrast.lib.so egl_i965.lib.so
+	drm.lib.so
+
+	sdl.lib.so assets.tar ioq3
+	libc_resolv.lib.so lwip.lib.so
+}
+
+lappend_if [have_spec sdl] boot_modules fb_sdl
+lappend_if [expr ![have_spec sdl]] boot_modules audio_drv
+lappend_if [have_spec ps2]   boot_modules ps2_drv
+
+# platform-specific modules
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+append qemu_args " -m 768 -nographic"
+append qemu_args " -net user -redir tcp:5555::5555"
+append_if [have_spec x86] qemu_args " -net nic,model=e1000 "
+append_if [have_spec lan9118] qemu_args " -net nic,model=lan9118 "
+
+run_genode_until forever
+
+# vi: set ft=tcl :
