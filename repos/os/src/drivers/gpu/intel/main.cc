@@ -632,7 +632,7 @@ struct Igd::Device
 	{
 		enum {
 			APERTURE_SIZE = 32u << 20,
-			MAX_FENCES    = 4,
+			MAX_FENCES    = 32,
 		};
 
 		uint32_t active_fences { 0 };
