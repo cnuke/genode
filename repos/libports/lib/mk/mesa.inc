@@ -458,6 +458,8 @@ CC_OPT += -DPACKAGE_VERSION=\"11.2.2\" \
           -DMAPI_ABI_HEADER=\"glapi/glapi_mapi_tmp.h\" \
           -DMAPI_MODE_BRIDGE
 
+CC_OPT += -DDEBUG
+
 #XXX: for debugging
 CC_OPT += -gdwarf-2
 
