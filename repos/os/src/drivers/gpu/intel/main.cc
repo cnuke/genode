@@ -772,7 +772,7 @@ struct Igd::Device
 			if (1)
 			{
 				enum { CMD_NUM = 8, HWS_DATA = 0xc0, };
-				Genode::uint32_t cmd[8] = {};
+				Genode::uint32_t cmd[CMD_NUM] = {};
 				Igd::Pipe_control pc(6);
 				cmd[0] = pc.value;
 				Genode::uint32_t tmp = 0;
@@ -784,6 +784,7 @@ struct Igd::Device
 				cmd[3] = 0; /* upper addr 0 */
 				cmd[4] = _current_seqno & 0xffffffff;
 				cmd[5] = _current_seqno >> 32;
+
 				Igd::Mi_user_interrupt ui;
 				cmd[6] = ui.value;
 				cmd[7] = 0; /* MI_NOOP */
@@ -802,7 +803,25 @@ struct Igd::Device
 				}
 			}
 
-			addr_t const offset = (((tail + advance) * sizeof(uint32_t)) >> 3) - 1;
+			// if (1)
+			// {
+			// 	enum { CMD_NUM = 2, };
+			// 	for (size_t i = 0; i < CMD_NUM; i++) {
+			// 		advance += el.ring_append(0);
+			// 	}
+			// }
+
+			if ((advance * sizeof(uint32_t)) & 0x3) {
+				Genode::error("PANIC");
+				do { continue; } while (1);
+			}
+
+			addr_t const offset = (((tail + advance) * sizeof(uint32_t)) >> 3);
+
+			Genode::error("tail: ", Genode::Hex(tail), " advance: ", Genode::Hex(advance),
+			              " offset: ", Genode::Hex(offset)
+			);
+
 			rcs.context->tail_offset(offset % ((4*4096)>>3));
 		}
 
@@ -1447,6 +1466,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 		void upgrade_ram_quota(Genode::size_t quota)
 		{
+			Genode::error(__func__, ": quota: ", quota);
 			_guard.upgrade(quota);
 		}
 
@@ -1508,20 +1528,26 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			Genode::size_t const avail = _guard.quota() - _guard.consumed();
 			if (need > avail) { throw Gpu::Session_component::Out_of_ram(); }
 
+			Genode::log(__func__, ":", __LINE__);
+
 			try {
 				Genode::Dataspace_capability cap = _device.alloc_buffer(_guard, size);
+				Genode::log(__func__, ":", __LINE__);
 
 				try {
 					new (&_guard) Genode::Registered<Buffer>(_buffer_registry, cap);
 				} catch(...) {
+			Genode::log(__func__, ":", __LINE__);
 					_device.free_buffer(_guard, cap);
 					throw Gpu::Session_component::Out_of_ram();
 				}
 				return cap;
 			} catch (Igd::Device::Out_of_ram) {
+			Genode::log(__func__, ":", __LINE__);
 				throw Gpu::Session_component::Out_of_ram();
 			}
 
+			Genode::log(__func__, ":", __LINE__);
 			return Genode::Dataspace_capability();
 		}
 
