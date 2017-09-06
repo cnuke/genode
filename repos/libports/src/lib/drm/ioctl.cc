@@ -26,6 +26,8 @@ extern "C" {
 #include <i915_drm.h>
 
 #define DRM_NUMBER(req) ((req) & 0xff)
+
+void usleep(int);
 }
 
 
@@ -194,11 +196,16 @@ class Drm_call
 
 			Genode::size_t donate = size;
 			Genode::Dataspace_capability cap = Genode::retry<Gpu::Session::Out_of_ram>(
-			[&] () { return _gpu_session.alloc_buffer(size); },
 			[&] () {
+				Genode::info("FNORD ", size);
+				return _gpu_session.alloc_buffer(size); },
+			[&] () {
+				Genode::info("SNAFU ", donate);
 				_gpu_session.upgrade_ram(donate);
 				donate /= 4;
 			});
+
+			if (!cap.valid()) { return INVALID_HANDLE; }
 
 			/*
 			 * Every buffer always is mapped into the PPGTT. To make things
@@ -360,7 +367,11 @@ class Drm_call
 		 ** execbuffer completion **
 		 ***************************/
 
-		void _handle_completion() { _completion_lock.unlock(); }
+		void _handle_completion()
+		{
+			Genode::error(__func__);
+			_completion_lock.unlock();
+		}
 
 		Genode::Io_signal_handler<Drm_call> _completion_sigh {
 			_env.ep(), *this, &Drm_call::_handle_completion };
@@ -738,6 +749,13 @@ class Drm_call
 			return 0;
 		}
 
+		int _device_gem_throttle(void *arg)
+		{
+			Genode::error(__func__, ": sleeping 10 ms");
+			usleep(10000);
+			return 0;
+		}
+
 		int _device_ioctl(unsigned cmd, void *arg)
 		{
 			switch (cmd) {
@@ -754,6 +772,7 @@ class Drm_call
 			case DRM_I915_GEM_EXECBUFFER2:    return _device_gem_execbuffer2(arg);
 			case DRM_I915_GEM_BUSY:           return _device_gem_busy(arg);
 			case DRM_I915_GEM_MADVISE:        return _device_gem_madvise(arg);
+			case DRM_I915_GEM_THROTTLE:       return _device_gem_throttle(arg);
 			default:
 				Genode::error("Unhandled device specific ioctl:", Genode::Hex(cmd));
 				break;
@@ -879,8 +898,8 @@ extern "C" int drm_munmap(void *addr, size_t length)
 
 extern "C" int genode_ioctl(int fd, unsigned long request, void *arg)
 {
-	if (verbose_ioctl) { dump_ioctl(request); }
+	/*if (verbose_ioctl) */{ dump_ioctl(request); }
 	int const ret = _call->ioctl(request, arg);
-	if (verbose_ioctl) { Genode::log("returned ", ret); }
+	/*if (verbose_ioctl) */{ Genode::log("returned ", ret); }
 	return ret;
 }
