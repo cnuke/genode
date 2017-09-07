@@ -196,16 +196,16 @@ class Drm_call
 
 			Genode::size_t donate = size;
 			Genode::Dataspace_capability cap = Genode::retry<Gpu::Session::Out_of_ram>(
+			[&] () { return _gpu_session.alloc_buffer(size); },
 			[&] () {
-				Genode::info("FNORD ", size);
-				return _gpu_session.alloc_buffer(size); },
-			[&] () {
-				Genode::info("SNAFU ", donate);
 				_gpu_session.upgrade_ram(donate);
-				donate /= 4;
-			});
+				donate /= 2;
+			}, 4);
 
-			if (!cap.valid()) { return INVALID_HANDLE; }
+			if (!cap.valid()) {
+				Genode::error("could not allocate buffer size: ", size);
+				return INVALID_HANDLE;
+			}
 
 			/*
 			 * Every buffer always is mapped into the PPGTT. To make things
