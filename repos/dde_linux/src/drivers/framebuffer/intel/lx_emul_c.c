@@ -41,6 +41,14 @@ void lx_c_allocate_framebuffer(struct drm_device * dev,
 
 	mutex_lock(&dev->struct_mutex);
 
+	int const uneven = c->width % 16;
+	if (uneven) {
+		int const width = c->width + (16 - uneven);
+		lx_printf("Requested with %d is not a multiple of 16, roundup to %d\n",
+		          c->with, with);
+		c->width = width;
+	}
+
 	/* for linear buffers the pitch needs to be 64 byte aligned */
 	c->pitch = roundup(c->width * c->bpp, 64);
 	c->size  = roundup(c->pitch * c->height, PAGE_SIZE);
