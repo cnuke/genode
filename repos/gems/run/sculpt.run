@@ -84,6 +84,8 @@ install_config {
 				<rom name="vimrc"/>
 				<rom name="leitzentrale.config"/>
 				<rom name="wlan.config"/>
+				<rom name="dashboard.config"/>
+				<rom name="rtc_drv.config"/>
 				<dir name="runtime">
 					<rom name="empty_runtime.config"  as="config"/>
 					<rom name="empty_runtime.config"  as="empty.config" />
@@ -268,6 +270,21 @@ install_config {
 		</route>
 	</start>
 
+	<start name="dashboard" caps="1000" priority="-2">
+		<binary name="init"/>
+		<resource name="RAM" quantum="128M"/>
+		<route>
+			<!--
+			<service name="LOG"> <child name="log"/> </service>
+			-->
+			<service name="ROM" label="config"> <child name="config_rom" label="dashboard.config"/> </service>
+			<service name="Nitpicker"> <child name="nitpicker"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Rtc"> <child name="rtc_drv"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
 	<start name="leitzentrale" caps="2000" priority="-2">
 		<binary name="init"/>
 		<resource name="RAM" quantum="128M"/>
@@ -291,6 +308,7 @@ install_config {
 				<child name="drivers"   label="ro"/> </service>
 			<service name="File_system" label="log_noux -> report">
 				<child name="report_fs" label="ro"/> </service>
+			<service name="Rtc"> <child name="rtc_drv"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
@@ -298,6 +316,12 @@ install_config {
 	<start name="rtc_drv" priority="-1">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Rtc"/> </provides>
+		<configfile name="rtc_drv.config"/>
+		<route>
+			<service name="ROM" label="rtc_drv.config">
+				<child name="config_rom"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
 	</start>
 
 	<start name="runtime" caps="50000" priority="-3">
@@ -362,7 +386,12 @@ file copy -force [genode_dir]/repos/os/recipes/raw/drivers_interactive-pc/input_
 # XXX remove
 #
 
-build { noux-pkg/bash drivers/wifi lib/vfs/jitterentropy }
+	drivers/rtc
+	noux-pkg/bash drivers/wifi lib/vfs/jitterentropy
+	app/menu_view
+	app/clock
+	app/rtc_clock
+}
 
 append boot_modules { bash.tar }
 
@@ -370,14 +399,15 @@ append boot_modules {
 	iwlwifi-6000-4.ucode
 	iwlwifi-6000g2a-6.ucode
 	iwlwifi-6000g2b-6.ucode
-	iwlwifi-7260-16.ucode
-	iwlwifi-7265-16.ucode
-	iwlwifi-7265D-16.ucode
-	iwlwifi-8000C-16.ucode
 	wpa_driver_nl80211.lib.so wpa_supplicant.lib.so
 	wifi.lib.so wifi_drv
 	vfs_jitterentropy.lib.so
 	libcrypto.lib.so libssl.lib.so
+
+	rtc_drv
+	menu_view_styles.tar
+	menu_view libpng.lib.so zlib.lib.so
+	rtc_clock clock
 }
 
 build_boot_image $boot_modules
