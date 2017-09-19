@@ -1,0 +1,16 @@
+This directory contains a clock view component. It generates
+a menu_view configuration from a timestamp, which is update
+in the given interval.
+
+
+Configuration
+~~~~~~~~~~~~~
+
+A typical example configuration looks as follows.
+
+! <config utc_offset="2" offset="1505917828" interval="5" date="yes"/>
+
+In this example, the menu_view configuration is updated every 5 seconds
+and will show the date (YYYYMMDD) along side the current time. The 'offset'
+denotes the base time, e.g. read from an RTC, in seconds from the UNIX epoch
+and is incremented at the intervals pace.
