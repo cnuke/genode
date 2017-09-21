@@ -1,0 +1,2 @@
+This directory contains a RTC clock component. It generates
+a clock configuration from a Rtc session timestamp.
