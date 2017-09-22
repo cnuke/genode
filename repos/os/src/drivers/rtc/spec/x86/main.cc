@@ -12,6 +12,7 @@
  */
 
 /* Genode */
+#include <base/attached_rom_dataspace.h>
 #include <base/component.h>
 #include <base/heap.h>
 #include <root/component.h>
@@ -73,11 +74,69 @@ struct Rtc::Main
 {
 	Env &env;
 
+	Attached_rom_dataspace config_rom { env, "config" };
+
+	void handle_config_update()
+	{
+		config_rom.update();
+
+		if (!config_rom.valid()) { return; }
+
+		try {
+			Xml_node const node = config_rom.xml().sub_node("time");
+
+			Timestamp const curr = Rtc::get_time(env);
+			Timestamp ts;
+
+			ts.second = node.attribute_value("second", curr.second);
+			if (ts.second > 59) {
+				Genode::error("second invalid");
+				return;
+			}
+
+			ts.minute = node.attribute_value("minute", curr.minute);
+			if (ts.minute > 59) {
+				Genode::error("minute invalid");
+				return;
+			}
+
+			ts.hour = node.attribute_value("hour", curr.hour);
+			if (ts.hour > 23) {
+				Genode::error("hour invalid");
+				return;
+			}
+
+			ts.day = node.attribute_value("day", curr.day);
+			if (ts.day > 31 || ts.day == 0) {
+				Genode::error("day invalid");
+				return;
+			}
+
+			ts.month = node.attribute_value("month", curr.month);
+			if (ts.month > 12 || ts.month == 0) {
+				Genode::error("month invalid");
+				return;
+			}
+
+			ts.year = node.attribute_value("year", curr.year);
+
+			Rtc::set_time(env, ts);
+		} catch (Xml_node::Nonexistent_sub_node) { }
+	}
+
+	Signal_handler<Main> config_sigh {
+		env.ep(), *this, &Main::handle_config_update };
+
 	Sliced_heap sliced_heap { env.ram(), env.rm() };
 
 	Root root { env, sliced_heap };
 
-	Main(Env &env) : env(env) { env.parent().announce(env.ep().manage(root)); }
+	Main(Env &env) : env(env)
+	{
+		config_rom.sigh(config_sigh);
+
+		env.parent().announce(env.ep().manage(root));
+	}
 };
 
 
