@@ -98,8 +98,8 @@ message:
 # updated whenever its rule is run.  This implies that all targets
 # depending on this one will always have their commands run.
 #
-FORCE:
-$(SRC_ADA:.adb=.o): FORCE
+# FORCE:
+# $(SRC_ADA:.adb=.o): FORCE
 
 #
 # Use CXX for linking
