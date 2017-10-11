@@ -190,6 +190,23 @@ $(LIB).rlib: $(SRC_RS:.rs=.rlib)
 	$(VERBOSE)ln -s $< $@
 
 #
+# Ada support
+#
+ifneq ($(SRC_ADA),)
+ifneq ($(ADA_BIND),)
+$(LIB_A) : b__$(LIB).adb
+
+SRC_ALI := $(SRC_ADA:.adb=.ali)
+SRC_ALI := $(SRC_ALI:.ads=.ali)
+OBJECTS += b__$(LIB).o
+b__$(LIB).adb: $(SRC_ALI)
+	$(MSG_BIND)$@
+	$(VERBOSE)$(GNATBIND) -a -n -L$(LIB)_ada $(addprefix -I,$(ADA_INC_DIR)) -o $@ $^
+	$(VERBOSE)$(CC) -c $(CC_ADA_OPT) $(addprefix -I,$(ADA_INC_DIR)) $@ -o $(@:.adb=.o)
+endif
+endif
+
+#
 # Rule to build the <libname>.lib.a file
 #
 # Use $(OBJECTS) instead of $^ for specifying the list of objects to include
