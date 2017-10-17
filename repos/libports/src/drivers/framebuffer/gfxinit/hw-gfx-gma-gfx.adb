@@ -80,27 +80,27 @@ is
 
    package Screen is new MMIO_Range (0, Word32, Screen_Index, Screen_Type);
 
-   Screen_Backup : Screen_Type;
+   --  Screen_Backup : Screen_Type;
 
-   procedure Backup_Screen (FB : Framebuffer_Type)
-   is
-      First : constant Screen_Index := Natural (FB.Offset) / 4;
-      Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
-   begin
-      for Idx in Screen_Index range First .. Last loop
-         Screen.Read (Screen_Backup (Idx), Idx);
-      end loop;
-   end Backup_Screen;
+   --  procedure Backup_Screen (FB : Framebuffer_Type)
+   --  is
+   --     First : constant Screen_Index := Natural (FB.Offset) / 4;
+   --     Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
+   --  begin
+   --     for Idx in Screen_Index range First .. Last loop
+   --        Screen.Read (Screen_Backup (Idx), Idx);
+   --     end loop;
+   --  end Backup_Screen;
 
-   procedure Restore_Screen (FB : Framebuffer_Type)
-   is
-      First : constant Screen_Index := Natural (FB.Offset) / 4;
-      Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
-   begin
-      for Idx in Screen_Index range First .. Last loop
-         Screen.Write (Idx, Screen_Backup (Idx));
-      end loop;
-   end Restore_Screen;
+   --  procedure Restore_Screen (FB : Framebuffer_Type)
+   --  is
+   --     First : constant Screen_Index := Natural (FB.Offset) / 4;
+   --     Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
+   --  begin
+   --     for Idx in Screen_Index range First .. Last loop
+   --        Screen.Write (Idx, Screen_Backup (Idx));
+   --     end loop;
+   --  end Restore_Screen;
 
    function Fill
      (X, Y        : Natural;
@@ -253,6 +253,8 @@ is
       end if;
       Screen.Set_Base_Address (Res_Addr);
 
+      Debug.Put_Line ("Before GMA.Initialize");
+
       GMA.Initialize
         (Clean_State => True,
          Success     => Initialized);
@@ -266,7 +268,7 @@ is
 
          for Pipe in GMA.Pipe_Index loop
             if Pipes (Pipe).Port /= GMA.Disabled then
-               Backup_Screen (Pipes (Pipe).Framebuffer);
+               --  Backup_Screen (Pipes (Pipe).Framebuffer);
                Test_Screen
                  (Framebuffer => Pipes (Pipe).Framebuffer,
                   Pipe        => Pipe);
@@ -277,11 +279,13 @@ is
 
          for Pipe in GMA.Pipe_Index loop
             if Pipes (Pipe).Port /= GMA.Disabled then
-               Restore_Screen (Pipes (Pipe).Framebuffer);
+               --  Restore_Screen (Pipes (Pipe).Framebuffer);
+               null;
             end if;
          end loop;
          Restore_GTT;
       end if;
+      Debug.Put_Line ("Bye bye");
    end Main;
 
 end HW.GFX.GMA.GFX;

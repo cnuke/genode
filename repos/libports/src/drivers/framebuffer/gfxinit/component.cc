@@ -34,6 +34,9 @@ extern "C" void hw__gfx__gma__gfx__main();
 
 void Component::construct(Genode::Env &env)
 {
+	/* FIXME */
+	env.exec_static_constructors();
+
 	Libhwbase::init(env);
 
 	hw__gfx__gma__gfx__main();
