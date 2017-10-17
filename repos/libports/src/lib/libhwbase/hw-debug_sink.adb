@@ -12,21 +12,32 @@
 -- GNU General Public License for more details.
 --
 
---  with Interfaces.C.Strings; use Interfaces.C.Strings;
+with Interfaces.C; use Interfaces.C;
 
 package body HW.Debug_Sink is
 
-   --  procedure Genode_Put (Str : chars_ptr);
-   --  pragma Import (C, Genode_Put, "genode_put");
+   procedure Genode_Put (C : Integer);
+   pragma Import (C, Genode_Put, "genode_put");
 
    procedure Put (Item : String) is
    begin
-     --  Genode_Put (New_String(Item));
-     null;
+     for I in Item'Range loop
+        declare
+           C : Character := Item (i);
+        begin
+           Genode_Put (Character'Pos(C));
+        end;
+     end loop;
    end Put;
 
-   procedure Put_Char (Item : Character) is null;
+   procedure Put_Char (Item : Character) is
+   begin
+     Genode_Put (Character'Pos(Item));
+   end Put_Char;
 
-   procedure New_Line is null;
+   procedure New_Line is
+   begin
+     Genode_Put (16#0a#);
+   end New_Line;
 
 end HW.Debug_Sink;

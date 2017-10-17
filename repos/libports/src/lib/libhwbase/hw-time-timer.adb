@@ -38,7 +38,7 @@ is
    function Hz return T
    is
    begin
-      return 1_000_000_000;
+      return 1_000;
    end Hz;
 
 end HW.Time.Timer;
