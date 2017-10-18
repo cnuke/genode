@@ -24,6 +24,19 @@ extern "C" void __gnat_eh_personality()
 	Genode::warning(__func__, " not implemented");
 }
 
+
+extern "C" void __gnat_last_chance_handler(char *source_location, int line)
+{
+	Genode::warning(__func__, " not implemented");
+}
+
+
+extern "C" void __gnat_rcheck_CE_Invalid_Data(char *source_location, int line)
+{
+	Genode::warning(__func__, " not implemented");
+}
+
+
 namespace Libhwbase {
 	void init(Genode::Env&);
 }
