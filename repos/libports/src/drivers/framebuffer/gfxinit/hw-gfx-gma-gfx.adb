@@ -30,24 +30,6 @@ is
       Index_T     => GTT_Range,
       Array_T     => GTT_Registers_Type);
 
-   GTT_Backup : GTT_Registers_Type;
-
-   procedure Backup_GTT
-   is
-   begin
-      for Idx in GTT_Range loop
-         GTT.Read (GTT_Backup (Idx), Idx);
-      end loop;
-   end Backup_GTT;
-
-   procedure Restore_GTT
-   is
-   begin
-      for Idx in GTT_Range loop
-         GTT.Write (Idx, GTT_Backup (Idx));
-      end loop;
-   end Restore_GTT;
-
    type Pixel_Type is record
       Red   : Byte;
       Green : Byte;
@@ -79,28 +61,6 @@ is
    type Screen_Type is array (Screen_Index) of Word32;
 
    package Screen is new MMIO_Range (0, Word32, Screen_Index, Screen_Type);
-
-   --  Screen_Backup : Screen_Type;
-
-   --  procedure Backup_Screen (FB : Framebuffer_Type)
-   --  is
-   --     First : constant Screen_Index := Natural (FB.Offset) / 4;
-   --     Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
-   --  begin
-   --     for Idx in Screen_Index range First .. Last loop
-   --        Screen.Read (Screen_Backup (Idx), Idx);
-   --     end loop;
-   --  end Backup_Screen;
-
-   --  procedure Restore_Screen (FB : Framebuffer_Type)
-   --  is
-   --     First : constant Screen_Index := Natural (FB.Offset) / 4;
-   --     Last  : constant Screen_Index := First + Natural (FB_Size (FB)) / 4 - 1;
-   --  begin
-   --     for Idx in Screen_Index range First .. Last loop
-   --        Screen.Write (Idx, Screen_Backup (Idx));
-   --     end loop;
-   --  end Restore_Screen;
 
    function Fill
      (X, Y        : Natural;
@@ -197,15 +157,7 @@ is
       GMA.Dump_Configs (Pipes);
    end Prepare_Configs;
 
-   --  procedure Print_Usage
-   --  is
-   --  begin
-   --     Debug.Put_Line
-   --       ("Usage: " & Ada.Command_Line.Command_Name & " <delay seconds>");
-   --     Debug.New_Line;
-   --  end Print_Usage;
-
-   procedure Main
+   function Initialize return Integer
    is
       use type HW.GFX.GMA.Port_Type;
       use type HW.Word64;
@@ -213,45 +165,29 @@ is
 
       Res_Addr : Word64;
 
-      Delay_S : Natural;
-
       Dev_Init,
       Initialized : Boolean;
-
-      --  function iopl (level : Interfaces.C.int) return Interfaces.C.int;
-      --  pragma Import (C, iopl, "iopl");
    begin
-      --  if Ada.Command_Line.Argument_Count /= 1 then
-      --     Print_Usage;
-      --     return;
-      --  end if;
-
-      Delay_S := 10; -- Natural'Value (Ada.Command_Line.Argument (1));
-
-      --  if iopl (3) /= 0 then
-      --     Debug.Put_Line ("Failed to change i/o privilege level.");
-      --     return;
-      --  end if;
 
       Dev.Initialize (Dev_Init);
       if not Dev_Init then
          Debug.Put_Line ("Failed to map PCI config.");
-         return;
+         return 1;
       end if;
 
       Dev.Map (Res_Addr, PCI.Res0, Offset => Config.GTT_Offset);
       if Res_Addr = 0 then
          Debug.Put_Line ("Failed to map PCI resource0.");
-         return;
+         return 1;
       end if;
       GTT.Set_Base_Address (Res_Addr);
 
-      Dev.Map (Res_Addr, PCI.Res2, WC => True);
-      if Res_Addr = 0 then
-         Debug.Put_Line ("Failed to map PCI resource2.");
-         return;
-      end if;
-      Screen.Set_Base_Address (Res_Addr);
+      --  Dev.Map (Res_Addr, PCI.Res2, WC => True);
+      --  if Res_Addr = 0 then
+      --     Debug.Put_Line ("Failed to map PCI resource2.");
+      --     return 1;
+      --  end if;
+      --  Screen.Set_Base_Address (Res_Addr);
 
       Debug.Put_Line ("Before GMA.Initialize");
 
@@ -259,33 +195,25 @@ is
         (Clean_State => True,
          Success     => Initialized);
 
-      if Initialized then
-         Backup_GTT;
-
-         Prepare_Configs;
-
-         GMA.Update_Outputs (Pipes);
-
-         for Pipe in GMA.Pipe_Index loop
-            if Pipes (Pipe).Port /= GMA.Disabled then
-               --  Backup_Screen (Pipes (Pipe).Framebuffer);
-               Test_Screen
-                 (Framebuffer => Pipes (Pipe).Framebuffer,
-                  Pipe        => Pipe);
-            end if;
-         end loop;
-
-         Time.M_Delay (Delay_S * 1_000);
-
-         for Pipe in GMA.Pipe_Index loop
-            if Pipes (Pipe).Port /= GMA.Disabled then
-               --  Restore_Screen (Pipes (Pipe).Framebuffer);
-               null;
-            end if;
-         end loop;
-         Restore_GTT;
+      if not Initialized then
+         Debug.Put_Line ("Could not initialize GPU");
+         return 1;
       end if;
+
+      Prepare_Configs;
+
+      GMA.Update_Outputs (Pipes);
+
+      for Pipe in GMA.Pipe_Index loop
+         if Pipes (Pipe).Port /= GMA.Disabled then
+            --  Test_Screen
+            --     (Framebuffer => Pipes (Pipe).Framebuffer,
+            --      Pipe        => Pipe);
+			null;
+         end if;
+      end loop;
       Debug.Put_Line ("Bye bye");
-   end Main;
+      return 0;
+   end Initialize;
 
 end HW.GFX.GMA.GFX;
