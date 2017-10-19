@@ -19,6 +19,8 @@
 
 namespace Libhwbase {
 	void init(Genode::Env &env);
+	bool handle_io_port(unsigned short, unsigned int);
+	Platform::Device_capability pci_dev_cap();
 }
 
 #endif /* _LIBHWBASE__GLUE_H_ */

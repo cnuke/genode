@@ -15,6 +15,7 @@
 #include <base/log.h>
 #include <base/component.h>
 #include <io_mem_session/connection.h>
+#include <io_port_session/connection.h>
 #include <platform_session/connection.h>
 #include <platform_device/client.h>
 #include <timer_session/connection.h>
@@ -49,6 +50,35 @@ struct Io_memory
 	Genode::addr_t vaddr() const { return _vaddr; }
 };
 
+struct Io_port
+{
+	Genode::Io_port_connection _io_port;
+	unsigned short             _base;
+
+	Io_port(Genode::Env &env, unsigned short base, unsigned size)
+	: _io_port(env, base, size), _base(base) { }
+
+	unsigned short base() const { return _base; }
+
+	template <typename T> void in(T *val)
+	{
+		switch (sizeof(*val)) {
+		case 1:  *val = _io_port.inb(_base);
+		case 2:  *val = _io_port.inw(_base);
+		default: *val = _io_port.inl(_base);
+		}
+	}
+
+	template <typename T> void out(T val)
+	{
+		switch (sizeof(val)) {
+		case 1:  _io_port.outb(_base, val);
+		case 2:  _io_port.outw(_base, val);
+		default: _io_port.outl(_base, val);
+		}
+	}
+};
+
 }
 
 
@@ -66,13 +96,79 @@ struct Glue
 
 	enum { MAX_PCI_RESOURCES = 6, };
 	Genode::Constructible<Io_memory> _pci_io_mem[MAX_PCI_RESOURCES];
+	enum { MAX_IO_PORTS = 2, /* arbitrary value */ };
+	Genode::Constructible<Io_port> _io_port[MAX_IO_PORTS];
+
+	Io_port *_lookup_io_port(unsigned short port)
+	{
+		for (Genode::Constructible<Io_port> &io : _io_port) {
+			if (io->base() == port) {
+				return &*io;
+			}
+		}
+		return nullptr;
+	}
 
 	Glue(Genode::Env &env) : _env(env) { }
+
+	/***********
+	 ** Timer **
+	 ***********/
 
 	unsigned long timer_now() const
 	{
 		return (unsigned long)_timer.elapsed_ms();
 	}
+
+	unsigned long timer_hz() const
+	{
+		return 1000UL;
+	}
+
+	/***************
+	 ** I/O Ports **
+	 ***************/
+
+	bool handle_io_port(unsigned short port, unsigned int size)
+	{
+		for (unsigned i = 0; i < MAX_IO_PORTS; i++) {
+			if (_io_port[i].constructed()) { continue; }
+
+			try {
+				_io_port[i].construct(_env, port, size);
+				return true;
+			} catch (...) { }
+		}
+
+		return false;
+	}
+
+	template <typename T>
+	void io_port_in(unsigned short port, T *val)
+	{
+		Io_port *io = _lookup_io_port(port);
+		if (!io) {
+			*val = 0;
+			return;
+		}
+
+		io->in(val);
+	}
+
+	template <typename T>
+	void io_port_out(unsigned short port, T val)
+	{
+		Io_port *io = _lookup_io_port(port);
+		if (!io) { return; }
+
+		io->out(val);
+	}
+
+	/*********
+	 ** PCI **
+	 *********/
+
+	Platform::Device_capability pci_dev_cap() { return _pci_dev_cap; }
 
 	template <typename T>
 	Platform::Device::Access_size _access_size(T t)
@@ -137,17 +233,24 @@ struct Glue
 		return 1;
 	}
 
-	unsigned long long pci_map_resource(int r, int wc)
+	bool _pci_access_ok(int const r)
 	{
 		if (r < 0 || r > 6) {
 			Genode::error("invalid PCI resource");
-			return 0;
+			return false;
 		}
 
 		if (!_pci_dev_cap.valid()) {
 			Genode::error("invalid PCI device");
-			return 0;
+			return false;
 		}
+
+		return true;
+	}
+
+	unsigned long long pci_map_resource(int r, int wc)
+	{
+		if (!_pci_access_ok(r)) { return 0; }
 
 		unsigned long long addr = 0;
 		try {
@@ -177,6 +280,8 @@ struct Glue
 
 	unsigned long long pci_resource_size(int r)
 	{
+		if (!_pci_access_ok(r)) { return 0; }
+
 		try {
 			Platform::Device_client device(_pci_dev_cap);
 			Platform::Device::Resource res = device.resource(r);
@@ -193,9 +298,30 @@ struct Glue
 static Genode::Constructible<Glue> _glue;
 
 
+/*************************
+ ** Libhwbase interface **
+ *************************/
+
 void Libhwbase::init(Genode::Env &env)
 {
 	_glue.construct(env);
+}
+
+
+Platform::Device_capability Libhwbase::pci_dev_cap()
+{
+	if (!_glue.constructed()) { throw -1; }
+
+	return _glue->pci_dev_cap();
+}
+
+
+bool Libhwbase::handle_io_port(unsigned short port,
+                               unsigned int   size)
+{
+	if (!_glue.constructed()) { throw -1; }
+
+	return _glue->handle_io_port(port, size);
 }
 
 
@@ -274,6 +400,72 @@ extern "C" void genode_pci_write32(uint32_t reg, uint32_t val)
 
 
 /**
+ * HW.Port_IO.InB backend implementation
+ */
+extern "C" uint8_t genode_inb(unsigned short port)
+{
+	if (!_glue.constructed()) { return 0; }
+	uint8_t val = 0;
+	_glue->io_port_in(port, &val);
+	return val;
+}
+
+
+/**
+ * HW.Port_IO.InW backend implementation
+ */
+extern "C" uint16_t genode_inw(unsigned short port)
+{
+	if (!_glue.constructed()) { return 0; }
+	uint16_t val = 0;
+	_glue->io_port_in(port, &val);
+	return val;
+}
+
+
+/**
+ * HW.Port_IO.InW backend implementation
+ */
+extern "C" uint32_t genode_inl(unsigned short port)
+{
+	if (!_glue.constructed()) { return 0; }
+	uint32_t val = 0;
+	_glue->io_port_in(port, &val);
+	return val;
+}
+
+
+/**
+ * HW.Port_IO.OutB backend implementation
+ */
+extern "C" void genode_outb(unsigned short port, uint8_t val)
+{
+	if (!_glue.constructed()) { return; }
+	_glue->io_port_out(port, val);
+}
+
+
+/**
+ * HW.Port_IO.OutW backend implementation
+ */
+extern "C" void genode_outw(unsigned short port, uint16_t val)
+{
+	if (!_glue.constructed()) { return; }
+	_glue->io_port_out(port, val);
+}
+
+
+/**
+ * HW.Port_IO.OutL backend implementation
+ */
+extern "C" void genode_outl(unsigned short port, uint32_t val)
+{
+	if (!_glue.constructed()) { return; }
+	_glue->io_port_out(port, val);
+}
+
+
+/**
  * HW.PCI.Dev.Initialize backend implementation
  */
 extern "C" int genode_open_pci(unsigned bus, unsigned dev, unsigned func)
@@ -304,13 +496,22 @@ extern "C" unsigned long long genode_resource_size(int res)
 
 
 /**
- * HW.Time.Timer backend implementation
+ * HW.Time.Timer.Raw_Value_Min backend implementation
  */
 extern "C" unsigned long genode_timer_now()
 {
 	if (!_glue.constructed()) { return 0; }
-	unsigned long const now = _glue->timer_now();
-	return now;
+	return _glue->timer_now();
+}
+
+
+/**
+ * HW.Time.Timer.HZ backend implementation
+ */
+extern "C" unsigned long genode_timer_hz()
+{
+	if (!_glue.constructed()) { return 0; }
+	return _glue->timer_hz();
 }
 
 

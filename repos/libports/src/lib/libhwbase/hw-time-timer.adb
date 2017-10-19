@@ -35,10 +35,13 @@ is
       return Raw_Value_Min + 1;
    end Raw_Value_Max;
 
+   function Genode_Timer_HZ return Interfaces.C.unsigned_long;
+   pragma Import (C, Genode_Timer_HZ, "genode_timer_hz");
+
    function Hz return T
    is
    begin
-      return 1_000;
+      return T (Genode_Timer_HZ);
    end Hz;
 
 end HW.Time.Timer;
