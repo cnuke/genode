@@ -386,6 +386,7 @@ file copy -force [genode_dir]/repos/os/recipes/raw/drivers_interactive-pc/input_
 # XXX remove
 #
 
+build {
 	drivers/rtc
 	noux-pkg/bash drivers/wifi lib/vfs/jitterentropy
 	app/menu_view
