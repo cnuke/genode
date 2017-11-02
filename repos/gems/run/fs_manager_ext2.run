@@ -1,0 +1,148 @@
+if {[have_spec arm]} {
+   assert_spec arm_v7
+}
+
+#
+# Check used commands
+#
+set mke2fs [check_installed mke2fs]
+set dd     [check_installed dd]
+
+#
+# Build
+#
+set build_components {
+	core init
+	drivers/timer
+	server/lx_block
+	server/ram_blk
+	server/report_rom
+	server/rump_fs
+	app/fs_manager
+	app/e2fsck
+	test/libc_vfs
+
+}
+
+build $build_components
+
+#
+# Build EXT2-file-system image
+#
+catch { exec $dd if=/dev/zero of=bin/ext2.raw bs=1M count=16 }
+catch { exec $mke2fs -F bin/ext2.raw }
+
+create_boot_directory
+
+#
+# Generate config
+#
+append config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>}
+
+append_if [have_spec linux] config {
+	<start name="block">
+		<binary name="lx_block"/>
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Block"/></provides>
+		<config file="ext2.raw" block_size="512" writeable="yes"/>
+	</start>}
+
+append_if [expr ![have_spec linux]] config {
+	<start name="block">
+		<binary name="ram_blk"/>
+		<resource name="RAM" quantum="20M"/>
+		<provides><service name="Block"/></provides>
+		<config file="ext2.raw" block_size="512" writeable="yes"/>
+	</start>}
+
+append config {
+	<start name="report_rom">
+		<resource name="RAM" quantum="2M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes">
+			<policy label="fs -> fs.config" report="fs_manager -> init.config"/>
+			<policy label="fs_manager -> state" report="fs -> state"/>
+		</config>
+	</start>
+
+	<start name="fs_manager">
+		<resource name="RAM" quantum="2M"/>
+		<config/>
+		<route>
+			<service name="ROM" label="state"> <child name="report_rom"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="fs" caps="1000">
+		<binary name="init"/>
+		<resource name="RAM" quantum="32M"/>
+		<provides> <service name="File_system"/> </provides>
+		<configfile name="fs.config"/>
+		<route>
+			<service name="ROM" label="fs.config"> <child name="report_rom"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Block"> <child name="block"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="test-libc_vfs">
+		<resource name="RAM" quantum="8M"/>
+		<config>
+			<vfs>
+				<dir name="dev"> <log/> </dir>
+				<fs/>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log"/>
+		</config>
+		<route>
+			<service name="File_system"> <child name="fs"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core ld.lib.so init timer report_rom ram_blk lx_block fs_manager
+	rump.lib.so rump_fs.lib.so rump_fs
+	libc.lib.so libm.lib.so posix.lib.so e2fsck
+	test-libc_vfs
+	ext2.raw
+}
+
+build_boot_image $boot_modules
+
+append qemu_args "  -nographic"
+
+run_genode_until forever
+
+exec rm -f bin/ext2.raw
