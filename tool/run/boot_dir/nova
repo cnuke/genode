@@ -75,7 +75,7 @@ proc run_boot_dir {binaries} {
 			puts $fh "default 0"
 			puts $fh "\ntitle Genode on NOVA"
 			puts $fh " kernel /boot/bender"
-			puts $fh " module /hypervisor iommu serial novpid novga"
+			puts $fh " module /hypervisor serial novpid novga"
 			puts $fh " module /image.elf.gz"
 			close $fh
 		}
@@ -95,7 +95,7 @@ proc run_boot_dir {binaries} {
 		puts $fh "set timeout=0"
 		puts $fh "menuentry 'Genode on NOVA' {"
 		puts $fh " multiboot2 /boot/bender serial_fallback"
-		puts $fh " module2 /hypervisor hypervisor iommu serial novpid novga"
+		puts $fh " module2 /hypervisor hypervisor serial novpid novga"
 		puts $fh " module2 /image.elf.gz image.elf"
 		puts $fh "}"
 		close $fh
@@ -117,7 +117,7 @@ proc run_boot_dir {binaries} {
 		#
 		set fh [open "[run_dir]/config-52-54-00-12-34-56" "WRONLY CREAT TRUNC"]
 		puts $fh " exec /boot/bender"
-		puts $fh " load /hypervisor iommu serial novpid novga"
+		puts $fh " load /hypervisor serial novpid novga"
 		puts $fh " load /image.elf"
 		close $fh
 
