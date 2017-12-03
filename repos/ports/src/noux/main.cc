@@ -222,6 +222,7 @@ struct Noux::Main
 
 		void handle_io_response(Vfs::Vfs_handle::Context *context) override
 		{
+			Genode::log(__func__);
 			if (context) {
 				Vfs_handle_context *vfs_handle_context = static_cast<Vfs_handle_context*>(context);
 				vfs_handle_context->vfs_io_waiter.wakeup();
@@ -246,7 +247,7 @@ struct Noux::Main
 
 	Timeout_scheduler _timeout_scheduler { _env };
 
-	User_info _user_info { _config.xml() };
+	User_info _user_info { _config.xml().sub_node("user") };
 
 	bool _network_initialized = (init_network(), true);
 

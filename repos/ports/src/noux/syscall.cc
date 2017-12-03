@@ -82,8 +82,11 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 			{
 				Shared_pointer<Io_channel> io = _lookup_channel(_sysio.read_in.fd);
 
-				if (!io->nonblocking())
+				if (!io->nonblocking()) {
+					Genode::log("SYSCALL_READ fd: ", _sysio.read_in.fd);
 					_block_for_io_channel(io, true, false, false);
+					Genode::log("SYSCALL_READ fd: ", _sysio.read_in.fd, " DONE");
+				}
 
 				if (io->check_unblock(true, false, false))
 					result = io->read(_sysio);

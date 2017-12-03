@@ -46,6 +46,8 @@ struct Noux::Terminal_io_channel : Io_channel
 		_read_avail_handler(ep, *this, &Terminal_io_channel::_handle_read_avail),
 		type(type)
 	{
+		Genode::log(__func__);
+
 		/*
 		 * Enable wake up STDIN channel on the presence of new input
 		 *
@@ -58,6 +60,7 @@ struct Noux::Terminal_io_channel : Io_channel
 		 * blocking system calls such as 'select'.
 		 */
 		if (type == STDIN) {
+			Genode::log(__func__, ": STDIN");
 			terminal.read_avail_sigh(_read_avail_handler);
 		}
 	}
@@ -202,6 +205,8 @@ struct Noux::Terminal_io_channel : Io_channel
 
 	void _handle_read_avail()
 	{
+		Genode::log(__func__);
+
 		while ((read_buffer.avail_capacity() > 0) &&
 		       _terminal.avail()) {
 

@@ -57,6 +57,7 @@ struct Noux::Vfs_io_channel : Io_channel
 
 	void _handle_read_avail()
 	{
+		Genode::log(__func__, " ", _path);
 		Io_channel::invoke_all_notifiers();
 	}
 
@@ -80,6 +81,8 @@ struct Noux::Vfs_io_channel : Io_channel
 		_vfs_io_waiter_registry(vfs_io_waiter_registry),
 		_path(path), _leaf_path(leaf_path)
 	{
+		Genode::log(__func__, " ", _path);
+
 		_fh->context = &_context;
 		_fh->fs().register_read_ready_sigh(_fh, _read_avail_handler);
 	}
@@ -319,6 +322,7 @@ struct Noux::Vfs_io_channel : Io_channel
 
 	bool check_unblock(bool rd, bool wr, bool ex) const override
 	{
+		Genode::log(__func__, " ", _path);
 		return _fh->fs().check_unblock(_fh, rd, wr, ex);
 	}
 

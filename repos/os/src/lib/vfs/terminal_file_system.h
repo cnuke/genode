@@ -29,6 +29,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 {
 	private:
 
+		typedef Genode::String<32> Name;
 		typedef Genode::String<64> Label;
 		Label _label;
 
@@ -79,6 +80,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 
 		void _handle_read_avail()
 		{
+			Genode::log(__func__);
 			_handle_registry.for_each([this] (Registered_handle &h) {
 				_post_signal_hook.arm(h.context);
 			});
@@ -102,7 +104,9 @@ class Vfs::Terminal_file_system : public Single_file_system
 		                     Genode::Xml_node config,
 		                     Io_response_handler &io_handler)
 		:
-			Single_file_system(NODE_TYPE_CHAR_DEVICE, name(), config),
+			Single_file_system(NODE_TYPE_CHAR_DEVICE,
+			                   "terminal",
+			                   config),
 			_label(config.attribute_value("label", Label())),
 			_env(env), _io_handler(io_handler)
 		{
@@ -123,6 +127,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 			*out_handle = new (alloc)
 				Registered_handle(_handle_registry, *this, *this, alloc, 0);
 
+			Genode::log(__func__, ": ", path);
 			return OPEN_OK;
 		}
 
@@ -134,6 +139,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 		                   file_size &out_count) override
 		{
 			out_count = _terminal.write(buf, buf_size);
+			Genode::log(__func__, ": ", buf_size);
 			return WRITE_OK;
 		}
 
@@ -145,6 +151,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 
 		bool read_ready(Vfs_handle *) override
 		{
+			Genode::log(__func__);
 			return _terminal.avail();
 		}
 
@@ -155,8 +162,11 @@ class Vfs::Terminal_file_system : public Single_file_system
 
 		bool check_unblock(Vfs_handle *vfs_handle, bool rd, bool wr, bool ex) override
 		{
-			if (rd && (_terminal.avail() > 0))
+			Genode::log("Terminal_file_system ", __func__, " ", rd, " ", wr, " ", ex);
+			if (rd && (_terminal.avail() > 0)) {
+				Genode::log("Terminal_file_system avail");
 				return true;
+			}
 
 			if (wr)
 				return true;
@@ -167,6 +177,7 @@ class Vfs::Terminal_file_system : public Single_file_system
 		void register_read_ready_sigh(Vfs_handle *vfs_handle,
 		                              Signal_context_capability sigh) override
 		{
+			Genode::log("Terminal_file_system ", __func__);
 			_terminal.read_avail_sigh(sigh);
 		}
 };

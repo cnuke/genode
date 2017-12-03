@@ -49,8 +49,10 @@ class Terminal::Read_buffer : public Genode::Ring_buffer<unsigned char, READ_BUF
 		{
 			Genode::Ring_buffer<unsigned char, READ_BUFFER_SIZE>::add(c);
 
-			if (_sigh_cap.valid())
+			if (_sigh_cap.valid()) {
+				Genode::log(__func__, ": ", c);
 				Genode::Signal_transmitter(_sigh_cap).submit();
+			}
 		}
 
 		void add(char const *str)

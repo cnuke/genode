@@ -262,20 +262,32 @@ class Noux::Child : public Rpc_object<Session>,
 		void _block_for_io_channel(Shared_pointer<Io_channel> &io,
 		                           bool rd, bool wr, bool ex)
 		{
+			char tmp[128];
+			if (io->path(tmp, sizeof(tmp))) {
+				Genode::log(__func__, " ", (char const*)tmp, " ", rd, " ", wr, " ", ex);
+			}
+
 			/* reset the blocker lock to the 'locked' state */
 			_blocker.unlock();
 			_blocker.lock();
 
 			Wake_up_notifier notifier(&_blocker);
+			Genode::log(__func__, ": ", "register_wake_up_notifier: ", &notifier);
 			io->register_wake_up_notifier(&notifier);
 
 			for (;;) {
 				if (io->check_unblock(rd, wr, ex) ||
-				    !_pending_signals.empty())
+				    !_pending_signals.empty()) {
+					Genode::log(__func__, " break");
 					break;
+				}
 
 				/* block (unless the lock got unlocked in the meantime) */
 				_blocker.lock();
+			}
+
+			if (io->path(tmp, sizeof(tmp))) {
+				Genode::log(__func__, " ", (char const*)tmp, " ", rd, " ", wr, " ", ex, " unregister_wake_up_notifier");
 			}
 
 			io->unregister_wake_up_notifier(&notifier);

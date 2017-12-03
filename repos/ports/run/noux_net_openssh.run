@@ -1,0 +1,215 @@
+set use_usb_driver   [expr [have_spec omap4] || [have_spec arndale] || [have_spec rpi]]
+set use_nic_driver   [expr !$use_usb_driver && ![have_spec imx53] && ![have_spec linux] && ![have_spec odroid_xu] && ![have_spec wand_quad]]
+
+if {[expr !$use_usb_driver && !$use_nic_driver || [expr [have_include "power_on/qemu"] && [have_spec zynq]]]} {
+	puts "\n Run script is not supported on this platform. \n"; exit 0 }
+
+
+set bridge_mac "02:02:02:02:02:00"
+
+# autopilot: configure disjoint mac-address ranges for x86_32, x86_64, and others
+if {[get_cmd_switch --autopilot]} {
+       if {[have_spec x86_32]} { set bridge_mac "02:02:02:02:32:00" }
+       if {[have_spec x86_64]} { set bridge_mac "02:02:02:02:64:00" }
+}
+
+set build_components {
+	core init
+	drivers/timer
+	drivers/framebuffer
+	drivers/input
+	drivers/rtc
+	server/terminal
+	server/nic_bridge
+	noux
+	lib/libc_noux
+	noux-pkg/bash
+	noux-pkg/openssh
+	lib/vfs/jitterentropy
+}
+
+proc gpio_drv { } { if {[have_spec rpi] && [have_spec hw]}  { return hw_gpio_drv }
+                    if {[have_spec rpi] && [have_spec foc]} { return foc_gpio_drv }
+                    return gpio_drv }
+
+lappend_if $use_usb_driver                build_components drivers/usb
+lappend_if $use_nic_driver                build_components drivers/nic
+lappend_if [have_spec gpio]               build_components drivers/gpio
+lappend_if [have_include "power_on/qemu"] build_components drivers/uart
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+#
+# The '<build-dir>/bin/etc/' directory is expected to contain the
+# files 'services', 'protocols', 'hosts', and 'resolv.conf'.
+# Download these files from the FreeBSD source tree is possible.
+#
+exec mkdir -p bin/etc
+set freebsd_url "http://svn.freebsd.org/base/release/8.2.0/etc"
+foreach etc_file { services protocols hosts } {
+	if {![file exists bin/etc/$etc_file]} {
+		catch { exec wget -c -P bin/etc $freebsd_url/$etc_file } } }
+exec touch bin/etc/resolv.conf
+
+exec tar rfv bin/openssh.tar -h -C bin/ etc
+
+create_boot_directory
+
+append config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="LOG"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="PD"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>}
+
+if {![have_include "power_on/qemu"]} {
+append config {
+	<start name="nic_bridge" caps="200">
+		<resource name="RAM" quantum="6M"/>
+		<provides><service name="Nic"/></provides>
+		<config mac="} $bridge_mac {"/>
+		<route>}
+append_if $use_nic_driver config {
+			<service name="Nic"> <child name="nic_drv"/></service>}
+append_if $use_usb_driver config {
+			<service name="Nic"> <child name="usb_drv"/></service>}
+append config {
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>}
+}
+
+append_if $use_nic_driver config {
+	<start name="nic_drv">
+		<resource name="RAM" quantum="8M"/>
+		<provides> <service name="Nic"/> </provides>
+	</start>}
+
+append_if [have_spec gpio] config "
+	<start name=\"[gpio_drv]\">
+		<resource name=\"RAM\" quantum=\"4M\"/>
+		<provides><service name=\"Gpio\"/></provides>
+		<config/>
+	</start>"
+
+append_if $use_usb_driver config {
+	<start name="usb_drv" caps="120">
+		<resource name="RAM" quantum="14M"/>
+		<provides>
+			<service name="Nic"/>
+			<service name="Input"/>
+		</provides>
+		<config uhci="no" ehci="yes" xhci="no">
+			<nic mac="02:00:00:00:01:01"/>
+		</config>
+	</start>}
+
+append_if [expr [have_spec ps2] && !$use_usb_driver] config {
+	<start name="ps2_drv">
+		<resource name="RAM" quantum="2M"/>
+		<provides> <service name="Input"/> </provides>
+	</start>}
+
+append_platform_drv_config
+
+append config {
+	<start name="rtc_drv">
+		<resource name="RAM" quantum="2M"/>
+		<provides> <service name="Rtc"/> </provides>
+	</start>
+
+	<start name="fb_drv">
+		<resource name="RAM" quantum="16M"/>
+		<provides> <service name="Framebuffer"/> </provides>
+		<config width="1024" height="768"/>
+	</start>
+
+	<start name="terminal">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<keyboard layout="us"/>
+			<font size="12" />
+		</config>
+	</start>
+
+	<start name="noux_net" caps="500">
+		<resource name="RAM" quantum="1G"/>
+		<config stdin="/dev/tty" stdout="/dev/tty" stderr="/dev/tty">
+			<user name="openssh_user" uid="3" gid="3">
+				<shell name="/bin/bash"/>
+				<home name="/home"/>
+			</user>
+			<fstab>
+				<tar name="bash.tar"/>
+				<tar name="openssh.tar"/>
+				<dir name="home"> <ram/> </dir>
+				<dir name="tmp"> <ram/> </dir>
+				<dir name="dev">
+					<rtc/>
+					<terminal name="tty"/>
+					<zero/> <null/> <jitterentropy name="random"/>
+				</dir>
+			</fstab>
+			<start name="/bin/bash">
+				<env name="TERM" value="linux" />
+				<env name="HOME" value="/home" />
+			</start>
+		</config>}
+
+append_if [expr ![have_include "power_on/qemu"]] config {
+		<route>
+			<service name="Nic"> <child name="nic_bridge"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>}
+
+append config {
+	</start>
+</config>
+}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer tcp_terminal nic_bridge rtc_drv fb_drv terminal
+	ld.lib.so noux noux_net libc.lib.so libm.lib.so libc_pipe.lib.so pthread.lib.so
+	libc_noux.lib.so lwip.lib.so posix.lib.so
+	bash.tar openssh.tar libcrypto.lib.so libssl.lib.so zlib.lib.so
+	vfs_jitterentropy.lib.so
+}
+
+# platform-specific modules
+lappend_if $use_nic_driver                boot_modules nic_drv
+lappend_if $use_usb_driver                boot_modules usb_drv
+lappend_if [have_spec ps2]                boot_modules ps2_drv
+lappend_if [have_include "power_on/qemu"] boot_modules uart_drv
+lappend_if [have_spec gpio]               boot_modules [gpio_drv]
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+run_genode_until forever

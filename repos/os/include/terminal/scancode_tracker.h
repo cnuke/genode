@@ -185,6 +185,7 @@ class Terminal::Scancode_tracker
 		 */
 		void emit_current_character(Read_buffer &read_buffer)
 		{
+			Genode::log(__func__);
 			if (_last_character)
 				read_buffer.add(_last_character);
 

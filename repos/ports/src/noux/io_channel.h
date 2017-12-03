@@ -110,6 +110,7 @@ class Noux::Io_channel : public Reference_counter
 		{
 			Lock::Guard guard(_notifiers_lock);
 
+			Genode::log(__func__, ": _notifiers: ", &_notifiers, " ", notifier);
 			_notifiers.insert(notifier);
 		}
 
@@ -138,8 +139,11 @@ class Noux::Io_channel : public Reference_counter
 		{
 			Lock::Guard guard(_notifiers_lock);
 
-			for (Wake_up_notifier *n = _notifiers.first(); n; n = n->next())
+			Genode::log(__func__, " _notifiers: ", &_notifiers, " first: ", _notifiers.first());
+			for (Wake_up_notifier *n = _notifiers.first(); n; n = n->next()) {
+				Genode::log(__func__, " ", n);
 				n->wake_up();
+			}
 		}
 
 		/**
