@@ -78,6 +78,7 @@
 #define HAVE_VSNPRINTF
 
 #define HAVE_STDIO_H 1
+#define HAVE_STDLIB_H 1
 
 /* #define SDL_malloc	malloc */
 /* #define SDL_calloc	calloc */
