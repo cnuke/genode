@@ -1,0 +1,2 @@
+This directory contains the Ada runtime used on Genode. It mainly
+consists of copies from the vanilla GNAT rts-zfp runtime.
