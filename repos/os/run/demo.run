@@ -29,6 +29,19 @@ lappend_if [have_spec gpio] build_components drivers/gpio
 
 append_platform_drv_build_components
 
+
+proc platform_drv_policy {} {
+
+	if ([have_spec x86]) {
+		return {
+			<policy label_prefix="ps2_drv"> <device name="PS2"/> </policy>
+			<policy label_prefix="gfxinit_fb_drv" irq_mode="nomsi"> <pci class="VGA"/> </policy>}
+	} else {
+		return {}
+	}
+}
+
+
 build $build_components
 
 create_boot_directory
@@ -66,8 +79,8 @@ append_if [have_spec sdl] config {
 append_platform_drv_config
 
 append_if [have_spec framebuffer] config {
-	<start name="fb_drv">
-		<resource name="RAM" quantum="4M"/>
+	<start name="gfxinit_fb_drv">
+		<resource name="RAM" quantum="8M"/>
 		<provides><service name="Framebuffer"/></provides>
 	</start>}
 
@@ -283,7 +296,7 @@ set boot_modules {
 # platform-specific modules
 lappend_if [have_spec linux]       boot_modules fb_sdl
 lappend_if [have_spec ps2]         boot_modules ps2_drv
-lappend_if [have_spec framebuffer] boot_modules fb_drv
+lappend_if [have_spec framebuffer] boot_modules gfxinit_fb_drv
 lappend_if [need_usb_hid]          boot_modules usb_drv
 lappend_if [have_spec gpio]        boot_modules [gpio_drv]
 lappend_if [have_spec imx53]       boot_modules input_drv
