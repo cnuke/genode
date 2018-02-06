@@ -1,0 +1,10 @@
+LICENSE   := GPLv2+
+VERSION   := git
+DOWNLOADS := libgfxinit.git
+
+URL(libgfxinit) := https://review.coreboot.org/p/libgfxinit.git
+REV(libgfxinit) := 5fd9a319684f71fa6f4dcb77ce8bc9337f5695b7
+DIR(libgfxinit) := src/lib/libgfxinit
+
+PATCHES   := src/lib/libgfxinit/patches/*.patch
+PATCH_OPT := -p1 -d src/lib/libgfxinit

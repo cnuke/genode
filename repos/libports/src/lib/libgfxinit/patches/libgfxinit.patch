@@ -1,0 +1,186 @@
+diff --git a/common/hw-gfx-gma-pipe_setup.adb b/common/hw-gfx-gma-pipe_setup.adb
+index 256c7f5..764177b 100644
+--- a/common/hw-gfx-gma-pipe_setup.adb
++++ b/common/hw-gfx-gma-pipe_setup.adb
+@@ -28,7 +28,7 @@ package body HW.GFX.GMA.Pipe_Setup is
+    DSPCNTR_ENABLE                      : constant :=  1 * 2 ** 31;
+    DSPCNTR_GAMMA_CORRECTION            : constant :=  1 * 2 ** 30;
+    DSPCNTR_DISABLE_TRICKLE_FEED        : constant :=  1 * 2 ** 14;
+-   DSPCNTR_FORMAT_MASK                 : constant := 15 * 2 ** 26;
++   DSPCNTR_FORMAT_MASK                 : constant :=  5 * 2 ** 26;
+ 
+    DSPCNTR_MASK : constant Word32 :=
+       DSPCNTR_ENABLE or
+@@ -37,7 +37,7 @@ package body HW.GFX.GMA.Pipe_Setup is
+       DSPCNTR_DISABLE_TRICKLE_FEED;
+ 
+    PLANE_CTL_PLANE_ENABLE              : constant := 1 * 2 ** 31;
+-   PLANE_CTL_SRC_PIX_FMT_RGB_32B_8888  : constant := 4 * 2 ** 24;
++   PLANE_CTL_SRC_PIX_FMT_RGB_565       : constant := 14 * 2 ** 24;
+    PLANE_CTL_PLANE_GAMMA_DISABLE       : constant := 1 * 2 ** 13;
+ 
+    PLANE_WM_ENABLE                     : constant :=        1 * 2 ** 31;
+@@ -142,15 +142,16 @@ package body HW.GFX.GMA.Pipe_Setup is
+                Framebuffer))
+    is
+       -- FIXME: setup correct format, based on framebuffer RGB format
+-      Format : constant Word32 := 6 * 2 ** 26;
+-      PRI : Word32 := DSPCNTR_ENABLE or Format;
++      Format_RGB_565 : constant Word32 := 5 * 2 ** 26;
++      RGB_565_BPP    : constant Word32 := 2;
++      PRI : Word32 := DSPCNTR_ENABLE or Format_RGB_565;
+ 
+       function To_Bytes (Pixels : Width_Type) return Word32
+       with
+          Pre => (Pos64 (Pixels) <= Pos64 (Word32'Last) / 4 / BPC_Type'Last * 8)
+       is
+       begin
+-         return Word32 (Pos64 (Pixels) * 4 * Framebuffer.BPC / 8);
++         return Word32 (Pos64 (Pixels) * Pos64(RGB_565_BPP) * Framebuffer.BPC / 8);
+       end To_Bytes;
+    begin
+       pragma Debug (Debug.Put_Line (GNAT.Source_Info.Enclosing_Entity));
+@@ -159,7 +160,7 @@ package body HW.GFX.GMA.Pipe_Setup is
+          Registers.Write
+            (Register    => Controller.PLANE_CTL,
+             Value       => PLANE_CTL_PLANE_ENABLE or
+-                           PLANE_CTL_SRC_PIX_FMT_RGB_32B_8888 or
++                           PLANE_CTL_SRC_PIX_FMT_RGB_565 or
+                            PLANE_CTL_PLANE_GAMMA_DISABLE);
+          Registers.Write (Controller.PLANE_OFFSET, 16#0000_0000#);
+          Registers.Write
+diff --git a/common/hw-gfx-gma-registers.adb b/common/hw-gfx-gma-registers.adb
+index 4a22564..8ab34fe 100644
+--- a/common/hw-gfx-gma-registers.adb
++++ b/common/hw-gfx-gma-registers.adb
+@@ -105,8 +105,6 @@ is
+ 
+    package body Rep is
+       function Index (Reg : Registers_Index) return Registers_Range
+-      with
+-         SPARK_Mode => Off
+       is
+       begin
+          return Reg'Enum_Rep;
+@@ -127,7 +125,7 @@ is
+       pragma Debug (Verbose, Debug.Put (" <- "));
+       pragma Debug (Verbose, Debug.Put_Word32 (Register'Enum_Rep * Register_Width));
+       pragma Debug (Verbose, Debug.Put (":"));
+-      pragma Debug (Verbose, Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Verbose, Debug.Put_Line (Registers_Index'Image (Register)));
+    end Read;
+ 
+    ----------------------------------------------------------------------------
+@@ -158,7 +156,7 @@ is
+       pragma Debug (Debug.Put (" -> "));
+       pragma Debug (Debug.Put_Word32 (Register'Enum_Rep * Register_Width));
+       pragma Debug (Debug.Put (":"));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Regs.Write (Rep.Index (Register), Value);
+       pragma Debug (Debug.Register_Write_Wait);
+@@ -175,7 +173,7 @@ is
+       Value : Word32;
+    begin
+       pragma Debug (Debug.Put (GNAT.Source_Info.Enclosing_Entity & ": "));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Read (Register, Value);
+       Result := (Value and Mask) = Mask;
+@@ -204,7 +202,7 @@ is
+       pragma Debug (Debug.Put (" & "));
+       pragma Debug (Debug.Put_Word32 (Register'Enum_Rep * Register_Width));
+       pragma Debug (Debug.Put (":"));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Timeout := Time.MS_From_Now (TOut_MS);
+       loop
+@@ -259,7 +257,7 @@ is
+       pragma Debug (Debug.Put (GNAT.Source_Info.Enclosing_Entity & ": "));
+       pragma Debug (Debug.Put_Word32 (Mask));
+       pragma Debug (Debug.Put (" .S "));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Read (Register, Value);
+       Value := Value or Mask;
+@@ -278,7 +276,7 @@ is
+       pragma Debug (Debug.Put (GNAT.Source_Info.Enclosing_Entity & ": "));
+       pragma Debug (Debug.Put_Word32 (Mask));
+       pragma Debug (Debug.Put (" !S "));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Read (Register, Value);
+       Value := Value and not Mask;
+@@ -296,7 +294,7 @@ is
+       Value : Word32;
+    begin
+       pragma Debug (Debug.Put (GNAT.Source_Info.Enclosing_Entity & ": "));
+-      pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
++      --  pragma Debug (Debug.Put_Line (Registers_Index'Image (Register)));
+ 
+       Read (Register, Value);
+       Value := (Value and not Mask_Unset) or Mask_Set;
+diff --git a/gfxtest/hw-gfx-gma-gfx_test.adb b/gfxtest/hw-gfx-gma-gfx_test.adb
+index d870401..78ee725 100644
+--- a/gfxtest/hw-gfx-gma-gfx_test.adb
++++ b/gfxtest/hw-gfx-gma-gfx_test.adb
+@@ -1,5 +1,5 @@
+ with Ada.Unchecked_Conversion;
+-with Ada.Command_Line;
++--  with Ada.Command_Line;
+ with Interfaces.C;
+ 
+ with HW.Time;
+@@ -10,6 +10,8 @@ with HW.GFX.GMA;
+ with HW.GFX.GMA.Config;
+ with HW.GFX.GMA.Display_Probing;
+ 
++pragma Elaborate_All (HW.PCI.Dev, HW.MMIO_Range);
++
+ package body HW.GFX.GMA.GFX_Test
+ is
+    pragma Disable_Atomic_Synchronization;
+@@ -191,13 +193,13 @@ is
+       GMA.Dump_Configs (Pipes);
+    end Prepare_Configs;
+ 
+-   procedure Print_Usage
+-   is
+-   begin
+-      Debug.Put_Line
+-        ("Usage: " & Ada.Command_Line.Command_Name & " <delay seconds>");
+-      Debug.New_Line;
+-   end Print_Usage;
++   --  procedure Print_Usage
++   --  is
++   --  begin
++   --     Debug.Put_Line
++   --       ("Usage: " & Ada.Command_Line.Command_Name & " <delay seconds>");
++   --     Debug.New_Line;
++   --  end Print_Usage;
+ 
+    procedure Main
+    is
+@@ -215,12 +217,12 @@ is
+       function iopl (level : Interfaces.C.int) return Interfaces.C.int;
+       pragma Import (C, iopl, "iopl");
+    begin
+-      if Ada.Command_Line.Argument_Count /= 1 then
+-         Print_Usage;
+-         return;
+-      end if;
++      --  if Ada.Command_Line.Argument_Count /= 1 then
++      --     Print_Usage;
++      --     return;
++      --  end if;
+ 
+-      Delay_S := Natural'Value (Ada.Command_Line.Argument (1));
++      Delay_S := 10; -- Natural'Value (Ada.Command_Line.Argument (1));
+ 
+       if iopl (3) /= 0 then
+          Debug.Put_Line ("Failed to change i/o privilege level.");
