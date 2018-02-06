@@ -1,0 +1,10 @@
+LICENSE   := GPLv2+
+VERSION   := git
+DOWNLOADS := libhwbase.git
+
+URL(libhwbase) := https://review.coreboot.org/p/libhwbase.git
+REV(libhwbase) := 66859712e4817288591908d737dbf41ddea31c3a
+DIR(libhwbase) := src/lib/libhwbase
+
+PATCHES   := src/lib/libhwbase/patches/*.patch
+PATCH_OPT := -p1 -d src/lib/libhwbase
