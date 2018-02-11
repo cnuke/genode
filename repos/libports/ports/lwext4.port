@@ -1,0 +1,10 @@
+LICENSE   := GPL2
+VERSION   := git
+DOWNLOADS := lwext4.git
+
+URL(lwext4) := https://github.com/gkostka/lwext4.git
+REV(lwext4) := 2d9c5b5d776dcaa543b4a37f738617dfca64fff1
+DIR(lwext4) := src/lib/lwext4
+
+DIRS := include
+DIR_CONTENT(include) := src/lib/lwext4/include/*
