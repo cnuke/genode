@@ -236,10 +236,10 @@ class Block::Root :
 {
 	private:
 
-		Genode::Env            &_env;
-		Genode::Xml_node        _config;
-		Block::Driver          &_driver;
-		Block::Partition_table &_table;
+		Genode::Env                    &_env;
+		Genode::Attached_rom_dataspace &_config;
+		Block::Driver                  &_driver;
+		Block::Partition_table         &_table;
 
 	protected:
 
@@ -255,13 +255,20 @@ class Block::Root :
 		 */
 		Session_component *_create_session(const char *args) override
 		{
+			if (!_config.valid()) {
+				Genode::error("config invalid");
+				throw Service_denied();
+			}
+
+			Genode::Xml_node config_node = _config.xml();
+
 			long num = -1;
 			bool writeable = false;
 
 			Session_label const label = label_from_args(args);
 			char const *label_str = label.string();
 			try {
-				Session_policy policy(label, _config);
+				Session_policy policy(label, config_node);
 
 				/* read partition attribute */
 				policy.attribute("partition").value(&num);
@@ -326,8 +333,9 @@ class Block::Root :
 
 	public:
 
-		Root(Genode::Env &env, Genode::Xml_node config, Genode::Heap &heap,
-		     Block::Driver &driver, Block::Partition_table &table)
+		Root(Genode::Env &env, Genode::Attached_rom_dataspace &config,
+		     Genode::Heap &heap, Block::Driver &driver,
+		     Block::Partition_table &table)
 		: Root_component(env.ep(), heap), _env(env), _config(config),
 		  _driver(driver), _table(table) { }
 };

@@ -36,12 +36,17 @@ class Main
 
 		Genode::Attached_rom_dataspace _config { _env, "config" };
 
+		Genode::Signal_handler<Main> _config_sigh {
+			_env.ep(), *this, &Main::_handle_config_update };
+
+		void _handle_config_update() { _config.update(); }
+
 		Genode::Heap        _heap     { _env.ram(), _env.rm() };
 		Block::Driver       _driver   { _env, _heap      };
 		Genode::Reporter    _reporter { _env, "partitions" };
 		Mbr_partition_table _mbr      { _heap, _driver, _reporter };
 		Gpt                 _gpt      { _heap, _driver, _reporter };
-		Block::Root         _root     { _env, _config.xml(), _heap, _driver, _table() };
+		Block::Root         _root     { _env, _config, _heap, _driver, _table() };
 
 	public:
 
@@ -51,6 +56,9 @@ class Main
 
 		Main(Genode::Env &env) : _env(env)
 		{
+			_config.sigh(_config_sigh);
+			_handle_config_update();
+
 			/*
 			 * we read all partition information,
 			 * now it's safe to turn in asynchronous mode
