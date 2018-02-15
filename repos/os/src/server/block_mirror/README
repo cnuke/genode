@@ -1,0 +1,74 @@
+Todo
+====
+
+- fix !sequential block_tester tests
+
+
+Brief
+=====
+
+This component implements Block session mirroring. It can be used to provide
+RAID1-like functionality. The number of mirror Block sessions is limited to 8
+at most. The component stays operational as long as at least one mirror Block
+session is available. During operation a statistics report can be generated at
+regular intervals and in case a Block session becomes unavailable a unregular
+report will be generated. In its current implementation the component will
+transmit a write request to all configured mirror Block session and will wait
+until all sessions have acknowledge the request. In case an error has occured
+the corresponding session will be marked as faulty. To satisfy read requests
+the component will select one mirror Block session in a round-robin fashion. In
+case an error has occured the corresponding session will be marked as faulty
+and another session will be selected. In any case, the component stays
+operational as long as at least one mirror Block session is operational.
+
+
+Configuration
+=============
+
+The main part of the configuration consists of the 'mirror' and 'block' nodes.
+The 'mirror' configures the front end Block session. The size must be set by
+the 'block_size' and 'block_count' attributes. The 'timeout' attribute
+specifies in milliseconds the time how long a I/O request maybe in-flight
+before it will be treated as failed. A 'mirror' node must have at least one
+'block' sub node. Each 'block' node configures the back end Block session. In
+addition to the 'block_size' and 'block_count' there is also the 'label' as
+well as the 'writeable' attribute. Note, that it is allowed to use different
+block sizes in the front and the back end as long as the size in the front end
+is larger and a multiple of the back ends block size, e.g., 4096 and 512 bytes.
+In this case one should take care to adapt the 'block_count' so that the total
+size in the front and back end is same. It is also allowed to announce a
+smaller total size than the back end is able to provide.
+
+The following config snippets illustrates how the component can be configured:
+
+! <config check_only="no">
+!   <mirror block_size="4096" block_count="8388608" timeout="3000">
+!     <block label="mirror0" block_size="512" block_count="67108864" writeable="yes"/>
+!     <block label="mirror1" writeable="yes"/>
+!   </mirror>
+!   <policy label="mirror" writeable="yes"/>
+!   <report interval="1000" total="yes" individual="yes"/>
+! </config>
+
+The 'policy' and 'report' settings can be changed at run time. The 'mirror'
+setting, however, is only initial read and cannot be changed at run time.
+
+
+Reporting
+=========
+
+A normal statistics report contains information about the current state of
+the component and how many blocks were read and written. The following report
+shows a examplary report:
+
+! <mirror rx="1049" tx="4" healthy="true">
+!   <block label="mirror0" rx="524" tx="4" healthy="true"/>
+!   <block label="mirror1" rx="525" tx="4" healthy="true"/>
+! </mirror>
+
+This one shows a faulty mirror:
+
+! <mirror rx="3256" tx="16384" healthy="false">
+!   <block label="mirror0" rx="1824" tx="16384" healthy="true"/>
+!   <block label="mirror1" rx="1432" tx="16356" healthy="false" io_error="true"/>
+! </mirror>

@@ -1,0 +1,138 @@
+set use_linux [have_spec linux]
+
+#
+# Build
+#
+set build_components {
+	core init
+	drivers/timer
+	server/block_mirror
+	server/ram_blk
+	server/lx_block
+	server/report_rom
+	test/blk/bench
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+catch { exec dd if=/dev/zero of=bin/mirror0.img bs=1M count=64 }
+catch { exec dd if=/dev/zero of=bin/mirror1.img bs=1M count=64 }
+
+create_boot_directory
+
+#
+# Generate config
+#
+set config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="TRACE"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes"/>
+	</start>}
+
+append_platform_drv_config
+
+append config {
+	<start name="mirror0">}
+append_if $use_linux config {
+		<binary name="lx_block"/>
+		<resource name="RAM" quantum="8M"/>}
+append_if [expr !$use_linux] config {
+		<binary name="ram_blk"/>
+		<resource name="RAM" quantum="128M"/>}
+append config {
+		<provides><service name="Block" /></provides>
+		<config file="mirror0.img" block_size="512" writeable="yes"/>
+	</start>}
+
+append config {
+	<start name="mirror1">}
+append_if $use_linux config {
+		<binary name="lx_block"/>
+		<resource name="RAM" quantum="8M"/>}
+append_if [expr !$use_linux] config {
+		<binary name="ram_blk"/>
+		<resource name="RAM" quantum="128M"/>}
+append config {
+		<provides><service name="Block" /></provides>
+		<config file="mirror1.img" block_size="512" writeable="yes"/>
+	</start>}
+
+append config {
+	<start name="block_mirror">
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block" /></provides>
+		<config>
+			<mirror block_size="512" block_count="65536" writeable="yes">
+				<block label="mirror0" writeable="yes"/>
+				<block label="mirror1" writeable="yes"/>
+			</mirror>
+			<report interval="1000" total="yes" individual="yes"/>
+		</config>
+		<route>
+			<service name="Block" label="mirror0"> <child name="mirror0"/> </service>
+			<service name="Block" label="mirror1"> <child name="mirror1"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <child/> </any-service>
+		</route>
+	</start>
+
+	<start name="test-blk-bench">
+		<resource name="RAM" quantum="256M"/>
+		<route>
+			<service name="Block"> <child name="block_mirror"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<any-service> <parent/> <child/> </any-service>
+		</route>
+	</start>
+</config> }
+
+install_config $config
+
+#
+# Boot modules
+#
+
+set boot_modules {
+	core ld.lib.so init timer report_rom
+	lx_block ram_blk block_mirror
+	test-blk-bench
+	mirror0.img mirror1.img
+}
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+append qemu_args " -m 1024 -nographic  "
+# append _qemu_args " -drive id=disk,file=bin/ext2.raw,format=raw,if=none -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0 -boot d"
+# append _qemu_args " -drive id=cd,file=[run_dir]/../ahci_bench.iso,if=none,media=cdrom -device ide-cd,drive=cd,bus=ahci.1"
+
+run_genode_until forever
