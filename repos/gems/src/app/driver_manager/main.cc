@@ -427,8 +427,8 @@ void Driver_manager::Main::_handle_pci_devices_update()
 		if (class_code == CLASS_VGA)
 			has_vga = true;
 
-		if (vendor_id == VENDOR_INTEL && class_code == CLASS_VGA)
-			has_intel_graphics = true;
+		// if (vendor_id == VENDOR_INTEL && class_code == CLASS_VGA)
+		// 	has_intel_graphics = true;
 
 		if (vendor_id == VENDOR_INTEL && class_code == CLASS_AHCI)
 			has_ahci = true;
@@ -437,12 +437,12 @@ void Driver_manager::Main::_handle_pci_devices_update()
 			has_nvme = true;
 	});
 
-	if (!_intel_fb_driver.constructed() && has_intel_graphics) {
-		_intel_fb_driver.construct();
-		_vesa_fb_driver.destruct();
-		_boot_fb_driver.destruct();
-		_generate_init_config(_init_config);
-	}
+	// if (!_intel_fb_driver.constructed() && has_intel_graphics) {
+	// 	_intel_fb_driver.construct();
+	// 	_vesa_fb_driver.destruct();
+	// 	_boot_fb_driver.destruct();
+	// 	_generate_init_config(_init_config);
+	// }
 
 	if (!_boot_fb_driver.constructed() && boot_fb_mode.valid() && !has_intel_graphics) {
 		_intel_fb_driver.destruct();
@@ -451,13 +451,13 @@ void Driver_manager::Main::_handle_pci_devices_update()
 		_generate_init_config(_init_config);
 	}
 
-	if (!_vesa_fb_driver.constructed() && has_vga && !has_intel_graphics &&
-	    !boot_fb_mode.valid()) {
-		_intel_fb_driver.destruct();
-		_boot_fb_driver.destruct();
-		_vesa_fb_driver.construct();
-		_generate_init_config(_init_config);
-	}
+	// if (!_vesa_fb_driver.constructed() && has_vga && !has_intel_graphics &&
+	//     !boot_fb_mode.valid()) {
+	// 	_intel_fb_driver.destruct();
+	// 	_boot_fb_driver.destruct();
+	// 	_vesa_fb_driver.construct();
+	// 	_generate_init_config(_init_config);
+	// }
 
 	if (!_ahci_driver.constructed() && has_ahci) {
 		_ahci_driver.construct();
