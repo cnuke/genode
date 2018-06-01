@@ -1,0 +1,25 @@
+<runtime ram="128M" caps="3000" binary="init" config="init.config">
+
+	<requires> <timer/> <nitpicker/> <filsystem/> </requires>
+
+	<content>
+		<rom label="init"/>
+		<rom label="init.config"/>
+		<rom label="avplay"/>
+		<rom label="nit_fb"/>
+		<rom label="ld.lib.so"/>
+		<rom label="libc.lib.so"/>
+		<rom label="libm.lib.so"/>
+		<rom label="sdl.lib.so"/>
+		<rom label="pthread.lib.so"/>
+		<rom label="zlib.lib.so"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="avcodec.lib.so"/>
+		<rom label="avfilter.lib.so"/>
+		<rom label="avformat.lib.so"/>
+		<rom label="avresample.lib.so"/>
+		<rom label="avutil.lib.so"/>
+		<rom label="swscale.lib.so"/>
+	</content>
+
+</runtime>
