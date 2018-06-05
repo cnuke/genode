@@ -7,7 +7,7 @@
 #define EDNS_COOKIE_ROLLOVER_TIME (24 * 60 * 60)
 #define EDNS_PADDING_OPCODE 12
 #define GETDNS_FN_HOSTS "/etc/hosts"
-#define GETDNS_FN_RESOLVCONF "/etc/resolv.conf"
+#define GETDNS_FN_RESOLVCONF "/socket/nameserver"
 #define HAVE_ARPA_INET_H 1
 #define HAVE_ATTR_FORMAT 1
 #define HAVE_ATTR_UNUSED 1
