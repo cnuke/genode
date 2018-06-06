@@ -1,0 +1,15 @@
+_/pkg/audio_player
+_/pkg/avplay
+_/pkg/bsd_audio_drv_with_config
+_/pkg/cmus
+_/pkg/download_debian
+_/pkg/fs_rom
+_/pkg/glmark2
+_/pkg/gui_mixer_qt
+_/pkg/mixer_with_config
+_/pkg/mesa_gears
+_/pkg/pdf_view
+_/pkg/ssh_client
+_/pkg/user_shell
+_/pkg/vbox6-block
+_/pkg/vfs_lwext4_fs
