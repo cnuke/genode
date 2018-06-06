@@ -1,0 +1,15 @@
+_/pkg/audio_player
+_/pkg/avplay
+_/pkg/bsd_audio_drv
+_/pkg/chocolate-doom
+_/pkg/cmus
+_/pkg/fs_rom
+_/pkg/fs_log
+_/pkg/lwext4_fs
+_/pkg/mixer
+_/pkg/pdf_view
+_/pkg/rump_fs
+_/pkg/ssh_client
+_/pkg/terminal_log
+_/pkg/user_shell
+_/pkg/vbox5-nova-block
