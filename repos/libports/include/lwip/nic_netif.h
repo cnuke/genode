@@ -51,6 +51,7 @@ extern "C" {
 		static err_t nic_netif_init(struct netif *netif);
 		static err_t nic_netif_linkoutput(struct netif *netif, struct pbuf *p);
 		static void  nic_netif_status_callback(struct netif *netif);
+		static void  nic_netif_link_callback(struct netif *netif);
 	}
 
 	/**
@@ -230,12 +231,22 @@ class Lwip::Nic_netif
 			netif_set_default(&_netif);
 			netif_set_up(&_netif);
 			configure(config);
+
+			netif_set_link_callback(
+				&_netif, nic_netif_link_callback);
+			nic_netif_link_callback(&_netif);
+
 			netif_set_status_callback(
 				&_netif, nic_netif_status_callback);
 			nic_netif_status_callback(&_netif);
 		}
 
 		virtual ~Nic_netif() { }
+
+		/**
+		* Link callback to override in subclass
+		 */
+		virtual void link_callback() { }
 
 		/**
 		* Status callback to override in subclass
@@ -371,6 +382,16 @@ static err_t nic_netif_linkoutput(struct netif *netif, struct pbuf *p)
 {
 	Lwip::Nic_netif *nic_netif = (Lwip::Nic_netif *)netif->state;
 	return nic_netif->linkoutput(p);
+}
+
+
+static void nic_netif_link_callback(struct netif *netif)
+{
+	bool const link_up =  netif_is_link_up(netif);
+
+	Genode::log("lwIP Nic link ", link_up ? "up" : "down");
+
+	nic_netif->link_callback();
 }
 
 
