@@ -95,6 +95,8 @@ class Lwip::Nic_netif
 		Genode::Io_signal_handler<Nic_netif> _link_state_handler;
 		Genode::Io_signal_handler<Nic_netif> _rx_packet_handler;
 
+		bool _use_dhcp { false };
+
 	public:
 
 		void free_pbuf(Nic_netif_pbuf &pbuf)
@@ -114,14 +116,9 @@ class Lwip::Nic_netif
 
 		void handle_link_state()
 		{
-			/*
-			 * if the application wants to know what is going
-			 * on then it should use 'set_link_callback'
-			 */
-
 			if (_nic.link_state()) {
+				/* will also update DHCP */
 				netif_set_link_up(&_netif);
-				/* XXX: DHCP? */
 			} else {
 				netif_set_link_down(&_netif);
 			}
@@ -156,8 +153,14 @@ class Lwip::Nic_netif
 
 		void configure(Genode::Xml_node const &config)
 		{
-			if (config.attribute_value("dhcp", false)) {
+			bool const dhcp = config.attribute_value("dhcp", false);
 
+			if (_use_dhcp && !dhcp)
+				dhcp_stop(&_netif);
+
+			_use_dhcp = dhcp;
+
+			if (_use_dhcp) {
 				err_t err = dhcp_start(&_netif);
 				if (err == ERR_OK)
 					Genode::log("configuring lwIP interface with DHCP");
