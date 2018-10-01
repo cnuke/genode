@@ -77,7 +77,7 @@ append config {
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
 	</start>
-	<start name="audio_drv">
+	<start name="audio_drv" ld="no">
 		<binary name="} [audio_drv_binary] {"/>
 		<resource name="RAM" quantum="8M"/>
 		<provides>
@@ -85,16 +85,19 @@ append config {
 		</provides>
 	</start>
 	<start name="avplay" caps="200">
-		<resource name="RAM" quantum="64M"/>
+		<resource name="RAM" quantum="256M"/>
 		<config>
 			<arg value="avplay"/>
 			<arg value="mediafile"/>
 			<sdl_audio_volume value="100"/>
 			<vfs>
-				<dir name="dev"> <log/> </dir>
+				<dir name="dev">
+					<log/>
+					<inline name="rtc">2018-10-01 00:00</inline>
+				</dir>
 				<rom name="mediafile"/>
 			</vfs>
-			<libc stdout="/dev/log" stderr="/dev/log"/>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
 		</config>
 		<route>
 			<service name="Platform"> <any-child /> </service>
