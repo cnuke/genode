@@ -204,6 +204,8 @@ struct Ssh::Login_registry : Genode::Registry<Ssh::Login>
 {
 	Genode::Allocator &_alloc;
 
+	Genode::Lock _lock { };
+
 	/**
 	 * Import one login from node
 	 */
@@ -221,7 +223,7 @@ struct Ssh::Login_registry : Genode::Registry<Ssh::Login>
 		}
 
 		if (lookup(user.string())) {
-			Genode::warning("ignoring already imported login");
+			Genode::warning("ignoring already imported login ", user.string());
 			return false;
 		}
 
@@ -231,33 +233,38 @@ struct Ssh::Login_registry : Genode::Registry<Ssh::Login>
 		} catch (...) { return false; }
 	}
 
-	/**
-	 * Import all login information from config
-	 */
-	bool _import(Genode::Xml_node const &node)
+	void _remove_all()
 	{
-		try {
-			node.for_each_sub_node("policy",
-			[&] (Genode::Xml_node const &node) {
-				_import_single(node);
-			});
-			return true;
-		} catch (...) { return false; }
+		for_each([&] (Login &login) {
+			Genode::destroy(&_alloc, &login);
+		});
 	}
 
 	/**
 	 * Constructor
 	 *
 	 * \param  alloc   allocator for registry elements
-	 * \param  node    node to import logins from
-	 *
-	 * \throw Import_failed
 	 */
-	Login_registry(Genode::Allocator      &alloc,
-	               Genode::Xml_node const &node) : _alloc(alloc)
+	Login_registry(Genode::Allocator &alloc) : _alloc(alloc) { }
+
+	/**
+	 * Return registry lock
+	 */
+	Genode::Lock &lock() { return _lock; }
+
+	/**
+	 * Import all login information from config
+	 */
+	void import(Genode::Xml_node const &node)
 	{
-		struct Import_failed : Genode::Exception { };
-		if (!_import(node)) { throw Import_failed(); }
+		_remove_all();
+
+		try {
+			node.for_each_sub_node("policy",
+			[&] (Genode::Xml_node const &node) {
+				_import_single(node);
+			});
+		} catch (...) { }
 	}
 
 	/**
@@ -293,7 +300,7 @@ class Ssh::Terminal
 		Signal_context_capability _connected_sigh;
 		Signal_context_capability _read_avail_sigh;
 
-		Ssh::Login const &_login;
+		Ssh::User const _user { };
 
 		unsigned _attached_channels { 0u };
 		unsigned _pending_channels  { 0u };
@@ -303,11 +310,11 @@ class Ssh::Terminal
 		/**
 		 * Constructor
 		 */
-		Terminal(Ssh::Login const &login) : _login(login) { }
+		Terminal(Ssh::User const &user) : _user(user) { }
 
 		~Terminal() { }
 
-		Ssh::User const &user() const { return _login.user; }
+		Ssh::User const &user() const { return _user; }
 
 		unsigned attached_channels() const { return _attached_channels; }
 
@@ -516,7 +523,7 @@ class Ssh::Server
 			        ssh_session s,
 			        ssh_channel_callbacks ccb,
 			        uint32_t id)
-			: Element(reg, *this), session(s), channel_cb(ccb), _id(id) { }
+			: Element(reg, *this), _id(id), session(s), channel_cb(ccb) { }
 
 			void adopt(User const &user) { _user = user; }
 
@@ -661,11 +668,13 @@ class Ssh::Server
 		};
 		Terminal_registry _terminals { };
 
-		Login_registry const &_logins;
+		Login_registry &_logins;
 
 		Util::Filename rsa_key     { };
 		Util::Filename ecdsa_key   { };
 		Util::Filename ed25519_key { };
+
+		bool _config_once { false };
 
 		void _parse_config(Genode::Xml_node const &config)
 		{
@@ -673,14 +682,24 @@ class Ssh::Server
 
 			_verbose = config.attribute_value("verbose", false);
 
+			_log_level       = config.attribute_value("debug", 0u);
+			_log_logins      = config.attribute_value("log_logins",      true);
+
+			Genode::Lock::Guard g(_logins.lock());
+			auto print = [&] (Login const &login) {
+				Genode::log("Login configured: ", login);
+			};
+			_logins.for_each(print);
+
+			if (_config_once) { return; }
+
+			_config_once = true;
+
 			_port = config.attribute_value("port", 0u);
 			if (!_port) {
 				error("port invalid");
 				throw Invalid_config();
 			}
-
-			_log_level       = config.attribute_value("debug", 0u);
-			_log_logins      = config.attribute_value("log_logins",      true);
 
 			_allow_password  = config.attribute_value("allow_password",  false);
 			_allow_publickey = config.attribute_value("allow_publickey", false);
@@ -692,11 +711,6 @@ class Ssh::Server
 			rsa_key     = config.attribute_value("rsa_key",     Util::Filename());
 			ecdsa_key   = config.attribute_value("ecdsa_key",   Util::Filename());
 			ed25519_key = config.attribute_value("ed25519_key", Util::Filename());
-
-			auto print = [&] (Login const &login) {
-				Genode::log("Login configured: ", login);
-			};
-			_logins.for_each(print);
 
 			Genode::log("Allowed auth methods: ",
 			            _allow_password  ? "password "  : "",
@@ -784,7 +798,7 @@ class Ssh::Server
 
 		Server(Genode::Env &env,
 		       Genode::Xml_node const &config,
-		       Ssh::Login_registry const &logins)
+		       Ssh::Login_registry    &logins)
 		: _env(env), _heap(env.ram(), env.rm()), _logins(logins)
 		{
 			Libc::with_libc([&] {
@@ -940,6 +954,17 @@ class Ssh::Server
 			Genode::destroy(&_heap, p);
 		}
 
+		/**
+		 * Update config
+		 */
+		void update_config(Genode::Xml_node const &config)
+		{
+			Genode::Lock::Guard g(_terminals.lock());
+
+			_parse_config(config);
+			ssh_bind_options_set(_ssh_bind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &_log_level);
+		}
+
 		/*******************************************************
 		 ** Methods below are only used by callback back ends **
 		 *******************************************************/
@@ -975,6 +1000,7 @@ class Ssh::Server
 		 */
 		bool request_terminal(Session &session)
 		{
+			Genode::Lock::Guard g(_logins.lock());
 			Login const *l = _logins.lookup(session.user().string());
 			if (!l || !l->request_terminal) { return false; }
 
@@ -1049,6 +1075,7 @@ class Ssh::Server
 			 * Even if there is no valid login for the user, let
 			 * the client try anyway and check multi login afterwards.
 			 */
+			Genode::Lock::Guard g(_logins.lock());
 			Login const *l = _logins.lookup(u);
 			if (l && l->user == u && l->password == pass) {
 				if (_allow_multi_login(s, *l)) {
@@ -1098,6 +1125,7 @@ class Ssh::Server
 			}
 
 			if (signature_state == SSH_PUBLICKEY_STATE_VALID) {
+				Genode::Lock::Guard g(_logins.lock());
 				Login const *l = _logins.lookup(u);
 				if (l && !ssh_key_cmp(pubkey, l->pub_key,
 				                      SSH_KEY_CMP_PUBLIC)) {
@@ -1377,9 +1405,9 @@ class Terminal::Session_component : public Genode::Rpc_object<Session, Session_c
 
 		Session_component(Genode::Env &env,
 		                  Genode::size_t io_buffer_size,
-		                  Ssh::Login const &login)
+		                  Ssh::User const &user)
 		:
-			Ssh::Terminal(login),
+			Ssh::Terminal(user),
 			_io_buffer(env.ram(), env.rm(), io_buffer_size)
 		{ }
 
@@ -1443,9 +1471,25 @@ class Terminal::Root_component : public Genode::Root_component<Session_component
 		Genode::Xml_node                _config     { _config_rom.xml() };
 
 		Genode::Heap        _logins_alloc { _env.ram(), _env.rm() };
-		Ssh::Login_registry _logins       { _logins_alloc, _config };
+		Ssh::Login_registry _logins       { _logins_alloc };
 
 		Ssh::Server _server { _env, _config, _logins };
+
+		Genode::Signal_handler<Terminal::Root_component> _config_sigh {
+			_env.ep(), *this, &Terminal::Root_component::_handle_config_update };
+
+		void _handle_config_update()
+		{
+			_config_rom.update();
+			if (!_config_rom.valid()) { return; }
+
+			{
+				Genode::Lock::Guard g(_logins.lock());
+				_logins.import(_config_rom.xml());
+			}
+
+			_server.update_config(_config_rom.xml());
+		}
 
 	protected:
 
@@ -1465,7 +1509,7 @@ class Terminal::Root_component : public Genode::Root_component<Session_component
 
 				Session_component *s = nullptr;
 				Libc::with_libc([&] () {
-					s = new (md_alloc()) Session_component(_env, 4096, *login);
+					s = new (md_alloc()) Session_component(_env, 4096, login->user);
 				});
 
 				try {
@@ -1492,7 +1536,10 @@ class Terminal::Root_component : public Genode::Root_component<Session_component
 			Genode::Root_component<Session_component>(&env.ep().rpc_ep(),
 			                                          &md_alloc),
 			_env(env)
-		{ }
+		{
+			_config_rom.sigh(_config_sigh);
+			_handle_config_update();
+		}
 };
 
 
