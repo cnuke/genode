@@ -15,6 +15,7 @@ set build_components {
 	core init
 	drivers/framebuffer
 	drivers/timer
+	server/dynamic_rom
 }
 
 if {$use_vbox4} {
@@ -253,12 +254,33 @@ append_if [expr $use_gui] config {
 	</start>}
 
 append config {
+	<start name="dynamic_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="ROM"/> </provides>
+		<config verbose="yes">
+			<rom name="system">
+				<inline description="initial system state">
+<system/>
+				</inline>
+				<sleep milliseconds="30000"/>
+				<inline description="reset system state">
+<system state="reset"/>
+				</inline>
+				<sleep milliseconds="30000"/>
+				<inline description="power-off state">
+<system state="poweroff"/>
+				</inline>
+				<sleep milliseconds="30000"/>
+			</rom>
+		</config>
+	</start>
+
 	<start name="vbox1" priority="-2" caps="500">}
 append config "
 		<binary name=\"$virtualbox_binary\"/>"
 append config {
 		<resource name="RAM" quantum="448M"/>
-		<config vbox_file="test.vbox" vm_name="TestVM">
+		<config vbox_file="test.vbox" vm_name="TestVM" system_state="yes">
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev"> <log/> <rtc/> </dir>}
@@ -283,6 +305,7 @@ append_if [expr $use_gui] config {
 			<service name="Input"> <child name="nit_fb1" /> </service>}
 
 append config {
+			<service name="ROM" label="system"> <child name="dynamic_rom"/> </service>
 			<any-service> <parent /> <any-child /> </any-service>
 		</route>
 	</start>
@@ -293,7 +316,7 @@ install_config $config
 
 exec cp ${genode_dir}/repos/ports/run/test.vbox bin/.
 
-set boot_modules { core ld.lib.so init timer test.iso test.vbox }
+set boot_modules { core ld.lib.so init timer test.iso test.vbox dynamic_rom }
 
 append boot_modules $virtualbox_binary
 

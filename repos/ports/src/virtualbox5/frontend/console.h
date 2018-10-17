@@ -127,6 +127,9 @@ class GenodeConsole : public Console {
 		Genode::Signal_handler<GenodeConsole>  _clipboard_signal_dispatcher;
 		Genode::Signal_handler<GenodeConsole>  _input_sticky_keys_dispatcher;
 
+		Genode::Signal_handler<GenodeConsole>                 _system_state_dispatcher;
+		Genode::Constructible<Genode::Attached_rom_dataspace> _system_state_rom;
+
 		bool _key_status[Input::KEY_MAX + 1];
 
 		static bool _mouse_button(Input::Keycode keycode)
@@ -155,7 +158,8 @@ class GenodeConsole : public Console {
 			_input_signal_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_input),
 			_mode_change_signal_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_mode_change),
 			_clipboard_signal_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_cb_rom_change),
-			_input_sticky_keys_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_sticky_keys)
+			_input_sticky_keys_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_sticky_keys),
+			_system_state_dispatcher(genode_env().ep(), *this, &GenodeConsole::handle_system_state)
 		{
 			for (unsigned i = 0; i <= Input::KEY_MAX; i++)
 				_key_status[i] = 0;
@@ -169,6 +173,11 @@ class GenodeConsole : public Console {
 			if (config.xml().attribute_value("capslock", capslock) == "ROM") {
 				_caps_lock.construct(genode_env(), "capslock");
 				_caps_lock->sigh(_input_sticky_keys_dispatcher);
+			}
+
+			if (config.xml().attribute_value("system_state", false)) {
+				_system_state_rom.construct(genode_env(), "system");
+				_system_state_rom->sigh(_system_state_dispatcher);
 			}
 		}
 
@@ -258,4 +267,5 @@ class GenodeConsole : public Console {
 		void handle_mode_change();
 		void handle_cb_rom_change();
 		void handle_sticky_keys();
+		void handle_system_state();
 };

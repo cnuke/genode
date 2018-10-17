@@ -554,3 +554,31 @@ void GenodeConsole::handle_sticky_keys()
 		_vbox_keyboard->PutScancode(Input::KEY_CAPSLOCK | 0x80);
 	}
 }
+
+void GenodeConsole::handle_system_state()
+{
+	if (!_system_state_rom.constructed() || !_system_state_rom->valid())
+		return;
+
+	_system_state_rom->update();
+	Genode::Xml_node system = _system_state_rom->xml();
+
+	using State = Genode::String<16>;
+	State state = system.attribute_value("state", State());
+
+	ComPtr <IProgress> progress;
+
+	if (state == "reset") {
+		Genode::log("VM reset requested");
+
+		if (Reset() != S_OK)
+			Genode::error("VM reset failed");
+	} else
+	
+	if (state == "poweroff") {
+		Genode::log("VM power-off requested");
+
+		if (PowerDown(progress.asOutParam()) != S_OK)
+			Genode::error("VM power-off failed");
+	}
+}
