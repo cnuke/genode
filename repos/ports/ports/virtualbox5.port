@@ -74,6 +74,7 @@ VBOX_MAIN_INC += USBDeviceImpl HostUSBDeviceImpl Matching Wrapper
 VBOX_MAIN_INC += RemoteUSBDeviceImpl RemoteUSBBackend ConsoleVRDPServer
 VBOX_MAIN_INC += MachineDebuggerImpl EmulatedUSBImpl
 VBOX_MAIN_INC += ThreadTask USBProxyBackend
+VBOX_MAIN_INC += PerformanceImpl
 
 
 VBOX_SRC_VBOX := VMM Devices Runtime GuestHost/HGSMI Storage Disassembler
