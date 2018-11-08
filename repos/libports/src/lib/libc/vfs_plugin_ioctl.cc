@@ -29,6 +29,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <sys/disk.h>
+#include <sys/soundcard.h>
 #include <dlfcn.h>
 
 /* libc plugin interface */
@@ -195,6 +196,59 @@ static int block_ioctl(Genode::Allocator &alloc, Vfs::File_system &root,
 }
 
 
+static int audio_ioctl(Genode::Allocator &alloc, Vfs::File_system &root,
+                       char const *dir, unsigned request, char *argp)
+{
+	char buffer[4096];
+
+	/*
+	 * Normally used to request the number of channels, we just check if
+	 * if number is equal to the available number.
+	 */
+	if (request == SNDCTL_DSP_CHANNELS && argp) {
+
+		Util::Ioctl_path const file { dir, "/channels" };
+		bool const read_ok = Util::read_file(alloc, root, file.string(),
+		                                     buffer, sizeof(buffer));
+		if (!read_ok) { return Libc::Errno(EINVAL); }
+
+		int const num_channels   = *(int const*)argp;
+		int const avail_channels = atoi(buffer);
+		if (num_channels != avail_channels) { return Libc::Errno(ENOTSUP); }
+
+		return 0;
+	} else
+
+	if (request == SNDCTL_DSP_SAMPLESIZE && argp) {
+		int const fmt = *(int const*)argp;
+		/* only support format currently */
+		return fmt == AFMT_S16_LE ? 0 : Libc::Errno(ENOTSUP);
+	} else
+
+	if (request == SNDCTL_DSP_SPEED && argp) {
+		Util::Ioctl_path const file { dir, "/sample_rate" };
+		bool const read_ok = Util::read_file(alloc, root, file.string(),
+		                                     buffer, sizeof(buffer));
+		if (!read_ok) { return Libc::Errno(EINVAL); }
+
+		int const speed = *(int const*)argp;
+		int const rate  = atoi(buffer);
+
+		return speed == rate ? 0 : Libc::Errno(ENOTSUP);
+	} else
+
+	if (request == SNDCTL_DSP_SETFRAGMENT) {
+	} else
+
+	if (request == SNDCTL_DSP_POST) {
+	} else
+
+	if (request == SNDCTL_DSP_GETOSPACE) {
+	}
+
+	return Libc::Errno(EINVAL);
+}
+
 int Libc::Vfs_plugin::ioctl(Libc::File_descriptor *fd, int request, char *argp)
 {
 	/*
@@ -224,6 +278,13 @@ int Libc::Vfs_plugin::ioctl(Libc::File_descriptor *fd, int request, char *argp)
 	case DIOCGMEDIASIZE:
 		ioctl_func = block_ioctl;
 		break;
+	case SNDCTL_DSP_CHANNELS:
+	case SNDCTL_DSP_SAMPLESIZE:
+	case SNDCTL_DSP_SPEED:
+	case SNDCTL_DSP_SETFRAGMENT:
+	case SNDCTL_DSP_POST:
+	case SNDCTL_DSP_GETOSPACE:
+		ioctl_func = audio_ioctl;
 	default:
 		return Libc::Errno(EINVAL);
 	}
