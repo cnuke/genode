@@ -50,6 +50,12 @@ class Vfs::Device_file_system : public File_system,
 		{
 			using Vfs_handle::Vfs_handle;
 
+			Device_vfs_handle(Directory_service &ds,
+			                  File_io_service   &fs,
+			                  Genode::Allocator &alloc,
+			                  int                status_flags)
+			: Vfs_handle(ds, fs, alloc, status_flags) { }
+
 			virtual Read_result read(char *dst, file_size count,
 			                         file_size &out_count) = 0;
 
@@ -179,11 +185,11 @@ class Vfs::Device_file_system : public File_system,
 
 		void release(char const *, Dataspace_capability) override { }
 
-		Open_result open(char const *path, unsigned,
+		Open_result open(char const *path, unsigned flags,
 		                 Vfs_handle **out_handle,
 		                 Allocator   &alloc) override
 		{
-			return _dir_fs->open(path, 0, out_handle, alloc);
+			return _dir_fs->open(path, flags, out_handle, alloc);
 		}
 
 		Stat_result stat(char const *path, Stat &out) override
@@ -302,6 +308,10 @@ class Vfs::Device_file_system : public File_system,
 		Write_result write(Vfs_handle *vfs_handle, char const *src, file_size count,
 		                   file_size &out_count) override
 		{
+			if ((vfs_handle->status_flags() & OPEN_MODE_ACCMODE) == OPEN_MODE_RDONLY) {
+				return WRITE_ERR_INVALID;
+			}
+
 			Device_vfs_handle *handle =
 				static_cast<Device_vfs_handle*>(vfs_handle);
 			return handle ? handle->write(src, count, out_count)
