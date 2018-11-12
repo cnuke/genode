@@ -79,7 +79,7 @@ append config {
 	</start>
 
 	<start name="test-vfs_oss">
-		<resource name="RAM" quantum="4M"/>
+		<resource name="RAM" quantum="16M"/>
 		<config>
 			<vfs>
 				<dir name="dev"> <log/> <oss name="dsp"/> </dir>
