@@ -220,12 +220,14 @@ static int audio_ioctl(Genode::Allocator &alloc, Vfs::File_system &root,
 	} else
 
 	if (request == SNDCTL_DSP_SAMPLESIZE && argp) {
+
 		int const fmt = *(int const*)argp;
 		/* only support format currently */
 		return fmt == AFMT_S16_LE ? 0 : Libc::Errno(ENOTSUP);
 	} else
 
 	if (request == SNDCTL_DSP_SPEED && argp) {
+
 		Util::Ioctl_path const file { dir, "/sample_rate" };
 		bool const read_ok = Util::read_file(alloc, root, file.string(),
 		                                     buffer, sizeof(buffer));
@@ -237,13 +239,70 @@ static int audio_ioctl(Genode::Allocator &alloc, Vfs::File_system &root,
 		return speed == rate ? 0 : Libc::Errno(ENOTSUP);
 	} else
 
-	if (request == SNDCTL_DSP_SETFRAGMENT) {
+	if (request == SNDCTL_DSP_SETFRAGMENT && argp) {
+
+		int frag_size = 0, frag_size_log2 = 0;
+		{
+			Util::Ioctl_path const file { dir, "/frag_size" };
+			bool const read_ok = Util::read_file(alloc, root, file.string(),
+			                                     buffer, sizeof(buffer));
+			if (!read_ok) { return Libc::Errno(EINVAL); }
+			frag_size = atoi(buffer);
+		}
+
+		if (frag_size > 0) {
+			frag_size_log2 = Genode::log2(frag_size);
+		}
+
+		/* XXX total */
+		int frag_avail = 0;
+		{
+			Util::Ioctl_path const file { dir, "/frag_avail" };
+			bool const read_ok = Util::read_file(alloc, root, file.string(),
+			                                     buffer, sizeof(buffer));
+			if (!read_ok) { return Libc::Errno(EINVAL); }
+			frag_avail = atoi(buffer);
+		}
+
+		if (!frag_avail || !frag_size_log2) { return Libc::Errno(ENOTSUP); }
+
+		*argp = ((unsigned)frag_avail << 16)|frag_size_log2;
+		return 0;
 	} else
 
 	if (request == SNDCTL_DSP_POST) {
+
+		return 0;
 	} else
 
-	if (request == SNDCTL_DSP_GETOSPACE) {
+	if (request == SNDCTL_DSP_GETOSPACE && argp) {
+
+		int frag_size = 0;
+		{
+			Util::Ioctl_path const file { dir, "/frag_size" };
+			bool const read_ok = Util::read_file(alloc, root, file.string(),
+			                                     buffer, sizeof(buffer));
+			if (!read_ok) { return Libc::Errno(EINVAL); }
+			frag_size = atoi(buffer);
+		}
+
+		int frag_avail = 0;
+		{
+			Util::Ioctl_path const file { dir, "/frag_avail" };
+			bool const read_ok = Util::read_file(alloc, root, file.string(),
+			                                     buffer, sizeof(buffer));
+			if (!read_ok) { return Libc::Errno(EINVAL); }
+			frag_avail = atoi(buffer);
+		}
+
+		if (!frag_avail || !frag_size) { return Libc::Errno(ENOTSUP); }
+
+		audio_buf_info *bi = (audio_buf_info*)argp;
+		bi->fragments = frag_avail;
+		bi->fragsize  = frag_size;
+		bi->bytes     = frag_size * frag_avail;
+
+		return 0;
 	}
 
 	return Libc::Errno(EINVAL);
@@ -285,6 +344,7 @@ int Libc::Vfs_plugin::ioctl(Libc::File_descriptor *fd, int request, char *argp)
 	case SNDCTL_DSP_POST:
 	case SNDCTL_DSP_GETOSPACE:
 		ioctl_func = audio_ioctl;
+		break;
 	default:
 		return Libc::Errno(EINVAL);
 	}
