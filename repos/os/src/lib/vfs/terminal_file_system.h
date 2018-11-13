@@ -53,8 +53,9 @@ class Vfs::Terminal_file_system : public Device_file_system
 			Terminal_vfs_file_handle(Directory_service    &ds,
 			                    File_io_service      &fs,
 			                    Genode::Allocator    &alloc,
-			                    Terminal::Connection &terminal)
-			: Device_vfs_handle(ds, fs, alloc, 0), _terminal(terminal) { }
+			                    Terminal::Connection &terminal,
+			                    int flags)
+			: Device_vfs_handle(ds, fs, alloc, flags), _terminal(terminal) { }
 
 			Read_result read(char *dst, file_size count, file_size &out_count)
 			{
@@ -197,14 +198,15 @@ class Vfs::Terminal_file_system : public Device_file_system
 		 ** Directory service interface **
 		 *********************************/
 
-		Open_result open(char const  *path, unsigned,
+		Open_result open(char const  *path, unsigned flags,
 		                 Vfs_handle **out_handle,
 		                 Allocator   &alloc) override
 		{
 			try {
 				if (_device_file(path)) {
 					*out_handle = new (alloc)
-						Registered_handle(_handle_registry, *this, *this, alloc, _terminal);
+						Registered_handle(_handle_registry, *this, *this,
+						                  alloc, _terminal, flags);
 					return OPEN_OK;
 				} else
 
