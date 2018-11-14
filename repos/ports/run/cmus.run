@@ -19,6 +19,7 @@ set build_components {
 	lib/libc_noux
 	lib/vfs/jitterentropy
 	lib/vfs/lxip
+	lib/vfs/oss
 	test/libports/ncurses
 	app/cmus
 }
@@ -72,6 +73,7 @@ append config {
 		<provides> <service name="Nic"/> </provides>
 	</start>
 
+	<!--
 	<start name="nic_router" caps="200">
 		<resource name="RAM" quantum="6M"/>
 		<provides> <service name="Nic"/> </provides>
@@ -84,19 +86,11 @@ append config {
 
 			<domain name="uplink" verbose_packets="no">
 				<nat domain="ssh" udp-ports="64" tcp-ports="64" icmp-ids="64"/>
-				<nat domain="irssi" udp-ports="64" tcp-ports="64" icmp-ids="64"/>
 				<tcp-forward port="22" domain="ssh" to="10.0.1.2"/>
 			</domain>
 
 			<domain name="ssh" interface="10.0.1.1/24">
 				<dhcp-server ip_first="10.0.1.2" ip_last="10.0.1.2"/>
-				<icmp dst="0.0.0.0/0" domain="uplink"/>
-				<udp dst="0.0.0.0/0"><permit-any domain="uplink"/></udp>
-				<tcp dst="0.0.0.0/0"><permit-any domain="uplink"/></tcp>
-			</domain>
-
-			<domain name="irssi" interface="10.0.2.1/24">
-				<dhcp-server ip_first="10.0.2.2" ip_last="10.0.2.2" dns_server="1.1.1.1"/>
 				<icmp dst="0.0.0.0/0" domain="uplink"/>
 				<udp dst="0.0.0.0/0"><permit-any domain="uplink"/></udp>
 				<tcp dst="0.0.0.0/0"><permit-any domain="uplink"/></tcp>
@@ -108,6 +102,7 @@ append config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
+	-->
 
 	<start name="ssh_terminal" caps="250">
 		<resource name="RAM" quantum="32M"/>
@@ -134,7 +129,7 @@ append config {
 			</libc>
 		</config>
 		<route>
-			<service name="Nic"> <child name="nic_router"/> </service>
+			<!--<service name="Nic"> <child name="nic_router"/> </service>-->
 			<service name="Report"> <child name="report_rom"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
@@ -157,13 +152,15 @@ append config {
 			<vfs>
 				<dir name="dev">
 					<log/> <rtc/> <terminal/>
-					<jitterentropy name="random"/>
 					<oss name="dsp"/>
+				</dir>
+				<dir name="media">
+					<rom name="god.ogg"/>
 				</dir>
 				<dir name="home"> <ram/> </dir>
 				<dir name="lib">
 					<dir name="cmus">
-						<dir name="ip"> <inline name="foo"/> </dir>
+						<dir name="ip"> <rom name="cmus_ip_vorbis.lib.so"/> </dir>
 						<dir name="op"> <rom name="cmus_op_oss.lib.so"/> </dir>
 					</dir>
 				</dir>
@@ -211,8 +208,9 @@ append boot_modules {
 	ed25519_key cmus libiconv.lib.so
 
 	cmus_op_oss.lib.so
+	cmus_ip_vorbis.lib.so libogg.lib.so libvorbis.lib.so
 
-	vfs_oss.lib.so
+	vfs_oss.lib.so god.ogg
 }
 
 # platform-specific modules

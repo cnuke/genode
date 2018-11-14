@@ -84,6 +84,8 @@ class Vfs_oss::File_system : public Device_file_system
 
 				bool write(char const *buf, file_size buf_size, file_size &out_size)
 				{
+					Genode::error(__func__, " buf_size: ", buf_size);
+
 					Genode::size_t const samples = Genode::min(_left_buffer.write_avail(), buf_size/2);
 
 					float *dest[2] = { _left_buffer.write_addr(), _right_buffer.write_addr() };
@@ -103,6 +105,8 @@ class Vfs_oss::File_system : public Device_file_system
 						if (!_started) {
 							_started = true;
 
+							Genode::error(__func__, " START");
+
 							_out[0]->start();
 							_out[1]->start();
 						}
@@ -121,6 +125,7 @@ class Vfs_oss::File_system : public Device_file_system
 
 						_out[0]->submit(lp);
 						_out[1]->submit(rp);
+						Genode::error(__func__, " submit: ", pos);
 					}
 
 					/* XXX */
