@@ -82,9 +82,11 @@ class Audio_out::Session_client : public Genode::Rpc_client<Session>
 		 *************/
 
 		void progress_sigh(Genode::Signal_context_capability sigh) {
+			Genode::error(__func__, " client");
 			call<Rpc_progress_sigh>(sigh); }
 
 		void alloc_sigh(Genode::Signal_context_capability sigh) {
+			Genode::error(__func__, " client");
 			call<Rpc_alloc_sigh>(sigh); }
 
 		Genode::Signal_context_capability data_avail_sigh() {

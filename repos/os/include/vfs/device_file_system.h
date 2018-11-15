@@ -308,11 +308,9 @@ class Vfs::Device_file_system : public File_system,
 		Write_result write(Vfs_handle *vfs_handle, char const *src, file_size count,
 		                   file_size &out_count) override
 		{
-			Genode::error(__func__, ":", __LINE__, " ", (char const*)_filename, " count: ", count);
 			if ((vfs_handle->status_flags() & OPEN_MODE_ACCMODE) == OPEN_MODE_RDONLY) {
 				return WRITE_ERR_INVALID;
 			}
-			Genode::error(__func__, ":", __LINE__, " ", (char const*)_filename, " count: ", count);
 
 			Device_vfs_handle *handle =
 				static_cast<Device_vfs_handle*>(vfs_handle);
