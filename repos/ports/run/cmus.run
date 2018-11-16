@@ -165,7 +165,7 @@ append config {
 					</dir>
 				</dir>
 				<dir name="share">
-					<dir name="cmus"> <inline name="rc"/> </dir>
+					<dir name="cmus"> <rom name="rc"/> </dir>
 				</dir>
 			</vfs>
 			<libc stdin="/dev/terminal" stdout="/dev/terminal" stderr="/dev/log" rtc="/dev/rtc"/>
@@ -209,6 +209,8 @@ append boot_modules {
 
 	cmus_op_oss.lib.so
 	cmus_ip_vorbis.lib.so libogg.lib.so libvorbis.lib.so
+
+	rc
 
 	vfs_oss.lib.so god.ogg
 }
