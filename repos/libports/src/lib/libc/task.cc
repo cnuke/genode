@@ -686,11 +686,9 @@ struct Libc::Kernel
 			while ((!_app_returned) && (!_suspend_scheduled)) {
 				if (_dispatch_pending_io_signals) {
 					/* dispatch pending signals but don't block */
-					Genode::error("dispatch_pending_io_signal");
 					while (_env.ep().dispatch_pending_io_signal()) ;
 				} else {
 					/* block for signals */
-					Genode::error("wait_and_dispatch_one_io_signal");
 					_env.ep().wait_and_dispatch_one_io_signal();
 				}
 
