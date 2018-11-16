@@ -391,8 +391,6 @@ struct Libc::Io_response_handler : Vfs::Io_response_handler
 {
 	void handle_io_response(Vfs::Vfs_handle::Context *) override
 	{
-		Genode::error(__func__, ":", __LINE__);
-
 		/* some contexts may have been deblocked from select() */
 		if (libc_select_notify)
 			libc_select_notify();
@@ -760,10 +758,7 @@ struct Libc::Kernel
 
 		void dispatch_pending_io_signals()
 		{
-			if (!_main_context()) {
-				Genode::error("nicht die mama");
-				return;
-			}
+			if (!_main_context()) return;
 
 			if (!_setjmp(_user_context)) {
 				_valid_user_context          = true;
