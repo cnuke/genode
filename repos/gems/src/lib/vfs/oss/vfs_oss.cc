@@ -72,17 +72,13 @@ class Vfs_oss::File_system : public Device_file_system
 					for (int i = 0; i < CHANNELS; i++) {
 						try {
 							_out[i].construct(env, _channel_names[i], false, false);
-							if (i == 0) {
-								Genode::error(__func__, " alloc_sigh");
-								_out[i]->alloc_sigh(alloc_sigh);
-								_out[i]->progress_sigh(progress_sigh);
-								Genode::error(__func__, " alloc_sigh DONE");
-							}
 						} catch (...) {
 							Genode::error("could not create Audio_out channel ", i);
 							throw;
 						}
 					}
+					_out[0]->alloc_sigh(alloc_sigh);
+					_out[0]->progress_sigh(progress_sigh);
 				}
 
 				void pause()
@@ -91,19 +87,25 @@ class Vfs_oss::File_system : public Device_file_system
 					_started = false;
 				}
 
-				Genode::size_t _samples_buffered { 0 };
+				bool _queue_threshold_reached() const
+				{
+					return _out[0]->stream()->queued() > 40;
+				}
+
+				bool need_data() const
+				{
+					return !_queue_threshold_reached();
+				}
 
 				bool write(char const *buf, file_size buf_size, file_size &out_size)
 				{
 					bool block_write = false;
 
-					if (_left_buffer.read_avail() > (64*1024) || _samples_buffered > (Audio_out::SAMPLE_RATE*10)) {
-						Genode::error("block buffer write");
+					if (_queue_threshold_reached()) {
 						block_write = true;
 					} else {
 
 						Genode::size_t const samples = Genode::min(_left_buffer.write_avail(), buf_size/2);
-						Genode::error(__func__, " buf_size: ", buf_size, " samples: ", samples, " s16: ", samples * 2, " f32: ", samples * 4);
 
 						float *dest[2] = { _left_buffer.write_addr(), _right_buffer.write_addr() };
 
@@ -119,15 +121,12 @@ class Vfs_oss::File_system : public Device_file_system
 						_right_buffer.fill(samples/2);
 
 						out_size += (samples * 2);
-						_samples_buffered += samples;
 					}
 
-					while (_left_buffer.read_avail() > Audio_out::PERIOD) {
+					while (_left_buffer.read_avail() >= Audio_out::PERIOD) {
 
 						if (!_started) {
 							_started = true;
-
-							Genode::error(__func__, " START");
 
 							_out[0]->start();
 							_out[1]->start();
@@ -137,10 +136,14 @@ class Vfs_oss::File_system : public Device_file_system
 
 						try { lp = _out[0]->stream()->alloc(); }
 						catch (...) {
-							Genode::error("stream full");
+							Genode::error("stream full",
+							              " queued: ", _out[0]->stream()->queued(),
+							              " pos: ",    _out[0]->stream()->pos(),
+							              " tail: ",   _out[0]->stream()->tail()
+							);
 							break;
 						}
-						unsigned const pos = _out[0]->stream()->packet_position(lp);
+						unsigned const pos    = _out[0]->stream()->packet_position(lp);
 						Audio_out::Packet *rp = _out[1]->stream()->get(pos);
 
 						float const *src[CHANNELS] = { _left_buffer.read_addr(),
@@ -153,7 +156,6 @@ class Vfs_oss::File_system : public Device_file_system
 
 						_out[0]->submit(lp);
 						_out[1]->submit(rp);
-						// Genode::error(__func__, " submit: ", pos);
 					}
 
 					if (block_write) { throw Insufficient_buffer(); }
@@ -161,7 +163,6 @@ class Vfs_oss::File_system : public Device_file_system
 					return true;
 				}
 		};
-		Audio _audio;
 
 		struct Oss_vfs_file_handle : public Device_vfs_handle
 		{
@@ -230,25 +231,29 @@ class Vfs_oss::File_system : public Device_file_system
 
 		Post_signal_hook _post_signal_hook { _env.env().ep(), _io_handler };
 
-		Genode::Io_signal_handler<File_system> _alloc_avail_handler {
-			_env.env().ep(), *this, &File_system::_handle_alloc_avail };
+		Genode::Io_signal_handler<Vfs_oss::File_system> _alloc_avail_handler {
+			_env.env().ep(), *this, &Vfs_oss::File_system::_handle_alloc_avail };
 
 		void _handle_alloc_avail()
 		{
-			Genode::error(__func__, ":", __LINE__);
+			_handle_registry.for_each([this] (Registered_handle &h) {
+				_post_signal_hook.arm(h.context);
+			});
+		}
+
+		Genode::Io_signal_handler<Vfs_oss::File_system> _progress_handler {
+			_env.env().ep(), *this, &Vfs_oss::File_system::_handle_progress };
+
+		void _handle_progress()
+		{
+			if (!_audio.need_data()) { return; }
 
 			_handle_registry.for_each([this] (Registered_handle &h) {
 				_post_signal_hook.arm(h.context);
 			});
 		}
 
-		Genode::Io_signal_handler<File_system> _progress_handler {
-			_env.env().ep(), *this, &File_system::_handle_progress };
-
-		void _handle_progress()
-		{
-			Genode::error(__func__, ":", __LINE__);
-		}
+		Audio _audio;
 
 		using Config = Genode::String<4096>;
 		static Config _dir_config(Genode::Xml_node node)
@@ -356,8 +361,6 @@ class Vfs_oss::File_system : public Device_file_system
 
 		bool check_unblock(Vfs_handle *, bool, bool, bool) override
 		{
-			/* XXX check if is enough space left in Audio packet stream */
-			Genode::error(__func__, ":", __LINE__);
 			return true;
 		}
 };
