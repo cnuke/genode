@@ -22,6 +22,9 @@
 #include <util/string.h>
 #include <vfs/simple_env.h>
 
+#include <base/debug.h>
+#include <vfs/print.h>
+
 /* local includes */
 #include <vdi_types.h>
 
@@ -29,6 +32,7 @@ namespace Vdi {
 	struct Block;
 	struct Meta_data;
 } /* namespace Vdi */
+
 
 struct Vdi::Block
 {
@@ -43,6 +47,7 @@ struct Vdi::Block
 	bool free()      const { return value == BLOCK_FREE; }
 	bool allocated() const { return value  < BLOCK_FREE; }
 };
+
 
 struct Vdi::Meta_data
 {
@@ -154,6 +159,51 @@ static Genode::Xml_node vfs_config(Genode::Xml_node const &config)
 	}
 }
 
+namespace Util {
+
+	bool blocking_read(Genode::Entrypoint &ep,
+	                   Vfs::Vfs_handle &handle, Vfs::file_size const start,
+	                   char *dst, Vfs::file_size const length)
+	{
+		Vfs::file_size bytes_read = 0;
+		Vfs::file_size remaining = length;
+		Vfs::file_size offset = start;
+
+		while (bytes_read < length) {
+
+			handle.seek(offset);
+
+			Genode::error(__func__, ":", __LINE__, " bytes_read: ", bytes_read, " remaining: ", remaining, " offset: ", offset);
+
+			while (!handle.fs().queue_read(&handle, remaining)) {
+				ep.wait_and_dispatch_one_io_signal();
+			}
+
+			char          *p = dst + bytes_read;
+			Vfs::file_size n = 0;
+			for (;;) {
+
+				Vfs::File_io_service::Read_result read_result =
+					handle.fs().complete_read(&handle, p, remaining, n);
+
+				if (read_result != Vfs::File_io_service::READ_QUEUED) { break; }
+
+				ep.wait_and_dispatch_one_io_signal();
+			}
+
+			if (!n) {
+				Genode::error("could not read file");
+				break;
+			}
+
+			bytes_read += n;
+			remaining  -= n;
+			offset     += n;
+		}
+
+		return bytes_read == length;
+	}
+}
 
 class Vdi_block_driver : public Block::Driver
 {
@@ -181,7 +231,7 @@ class Vdi_block_driver : public Block::Driver
 
 		Vfs::Vfs_handle *_vdi_file { nullptr };
 
-		Genode::Constructible<Vdi::Meta_data> _meta_data { };
+		Genode::Constructible<Vdi::Meta_data> _md { };
 
 		static inline constexpr uint32_t sectors_per_block()
 		{
@@ -195,14 +245,14 @@ class Vdi_block_driver : public Block::Driver
 
 		uint64_t _lookup_disk_sector(uint64_t nr)
 		{
-			uint32_t const max_bid = _meta_data->max_blocks;
+			uint32_t const max_bid = _md->max_blocks;
 			uint32_t const bid = sector_to_block(nr);
-			if (bid >= max_bid || !_meta_data->table[bid].allocated()) { return ~0; }
+			if (bid >= max_bid || !_md->table[bid].allocated()) { return ~0; }
 
-			uint64_t const pid = _meta_data->table[bid].value;
+			uint64_t const pid = _md->table[bid].value;
 			uint32_t const dis = (nr % sectors_per_block()) * HeaderV1Plus::SECTOR_SIZE;
 
-			uint32_t const data    = _meta_data->data_offset;
+			uint32_t const data    = _md->data_offset;
 			return (uint64_t)data + (pid * HeaderV1Plus::BLOCK_SIZE) + dis;
 		}
 
@@ -211,8 +261,8 @@ class Vdi_block_driver : public Block::Driver
 			HeaderV1Plus *h   = (HeaderV1Plus*)(_header_addr + sizeof(Preheader));
 			Vdi::Block *table = (Vdi::Block*)(_header_addr + h->blocks_offset);
 
-			h->allocated_blocks = _meta_data->allocated_blocks;
-			table[id].value     = _meta_data->table[id].value;
+			h->allocated_blocks = _md->allocated_blocks;
+			table[id].value     = _md->table[id].value;
 
 			using Write_result = Vfs::File_io_service::Write_result;
 			Vfs::file_size n = 0;
@@ -237,9 +287,9 @@ class Vdi_block_driver : public Block::Driver
 
 		bool _allocate_block(uint64_t nr)
 		{
-			if (_meta_data->allocated_blocks >= _meta_data->max_blocks) { return false; }
+			if (_md->allocated_blocks >= _md->max_blocks) { return false; }
 
-			uint64_t const offset = _meta_data->data_offset + (_meta_data->allocated_blocks * _meta_data->block_size);
+			uint64_t const offset = _md->data_offset + (_md->allocated_blocks * _md->block_size);
 
 			using Write_result = Vfs::File_io_service::Write_result;
 			Vfs::file_size total = 0;
@@ -251,13 +301,13 @@ class Vdi_block_driver : public Block::Driver
 				if (n != _zero_size || res != Vfs::File_io_service::WRITE_OK) { return false; }
 
 				total += n;
-			} while (total < _meta_data->block_size);
+			} while (total < _md->block_size);
 
 			_vdi_file->fs().complete_sync(_vdi_file);
 
 			uint32_t const bid = sector_to_block(nr);
-			_meta_data->table[bid].value = _meta_data->allocated_blocks;
-			_meta_data->allocated_blocks++;
+			_md->table[bid].value = _md->allocated_blocks;
+			_md->allocated_blocks++;
 
 			return _sync_header(bid);
 		}
@@ -279,31 +329,59 @@ class Vdi_block_driver : public Block::Driver
 				_block_ops.set_operation(Block::Packet_descriptor::WRITE);
 			}
 
+			PDBG();
+
 			Genode::String<256> file;
 			try {
-				config.attribute("vdi_file").value(&file);
+				config.attribute("file").value(&file);
+				Vfs::Directory_service::Open_result open_result =
 				_vfs_env.root_dir().open(file.string(),
 				                         writeable ? Vfs::Directory_service::OPEN_MODE_RDWR
 				                                   : Vfs::Directory_service::OPEN_MODE_RDONLY,
 				                         &_vdi_file, _heap);
+				if (open_result != Vfs::Directory_service::OPEN_OK) {
+					Genode::error("Could not open '", file, "'");
+					throw Could_not_open_file();
+				}
 			} catch (...) {
 				Genode::error("mandatory file attribute missing");
 				throw Could_not_open_file();
 			}
 
-			Vfs::file_size n = 0;
-			_vdi_file->fs().complete_read(_vdi_file, _header_addr, _header_size, n);
-			if (n != _header_size) { throw Io_error(); }
+			PDBG();
+
+			bool const success = Util::blocking_read(_env.ep(), *_vdi_file, 0,
+			                                         _header_addr, _header_size);
+			if (!success) { throw Io_error(); }
+
+			// while (!_vdi_file->fs().queue_read(_vdi_file, _header_size)) {
+			// 	_env.ep().wait_and_dispatch_one_io_signal();
+			// }
+
+			// Vfs::file_size n = 0;
+			// for (;;) {
+
+			// 	Vfs::File_io_service::Read_result read_result =
+			// 		_vdi_file->fs().complete_read(_vdi_file, _header_addr, _header_size, n);
+			// 	if (read_result != Vfs::File_io_service::READ_QUEUED
+			// 	    && n != _header_size) {
+			// 		PDBG("n: ", n, " ", read_result);
+			// 		throw Io_error(); }
+
+			// 	_env.ep().wait_and_dispatch_one_io_signal();
+			// }
+
+			PDBG();
 
 			HeaderV1Plus *h = (HeaderV1Plus*)(_header_addr + sizeof(Preheader));
 
 			uint32_t blocks_offset = h->blocks_offset;
 			uint32_t data_offset   = h->data_offset;
-			_meta_data.construct(blocks_offset, data_offset,
+			_md.construct(blocks_offset, data_offset,
 			                     HeaderV1Plus::BLOCK_SIZE, HeaderV1Plus::SECTOR_SIZE);
-			_meta_data->max_blocks       = h->blocks;
-			_meta_data->allocated_blocks = h->allocated_blocks;
-			_meta_data->table            = (Vdi::Block*)(_header_addr + h->blocks_offset);
+			_md->max_blocks       = h->blocks;
+			_md->allocated_blocks = h->allocated_blocks;
+			_md->table            = (Vdi::Block*)(_header_addr + h->blocks_offset);
 
 			_block_size  = HeaderV1Plus::SECTOR_SIZE;
 			_block_count = h->disk_size / _block_size;
@@ -313,7 +391,8 @@ class Vdi_block_driver : public Block::Driver
 			            _block_count, " writeable: ", writeable ? "yes" : "no");
 		}
 
-		~Vdi_block_driver() {
+		~Vdi_block_driver()
+		{
 			/* XXX close file */
 		}
 
