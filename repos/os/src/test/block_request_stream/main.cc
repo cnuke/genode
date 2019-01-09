@@ -41,7 +41,7 @@ struct Test::Block_session_component : Rpc_object<Block::Session>,
 	                        Entrypoint               &ep,
 	                        Signal_context_capability sigh)
 	:
-		Request_stream(rm, ds, ep, sigh), _ep(ep)
+		Request_stream(rm, ds, ep, sigh, BLOCK_SIZE), _ep(ep)
 	{
 		_ep.manage(*this);
 	}
@@ -159,6 +159,7 @@ struct Test::Main : Rpc_object<Typed_root<Block::Session> >
 			return;
 
 		Block_session_component &block_session = *_block_session;
+		Block::Request_stream::Payload payload = block_session.payload();
 
 		for (;;) {
 
@@ -169,6 +170,15 @@ struct Test::Main : Rpc_object<Typed_root<Block::Session> >
 
 				if (!_jobs.acceptable(request))
 					return Block_session_component::Response::RETRY;
+
+				payload.with_content(request, [&] (Genode::addr_t addr, Genode::size_t size) {
+					(void)request.block_number;
+					(void)request.offset;
+					(void)request.count;
+
+					(void)addr;
+					(void)size;
+				});
 
 				_jobs.submit(request);
 
@@ -239,5 +249,3 @@ struct Test::Main : Rpc_object<Typed_root<Block::Session> >
 
 
 void Component::construct(Genode::Env &env) { static Test::Main inst(env); }
-
-

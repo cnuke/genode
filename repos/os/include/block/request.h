@@ -27,8 +27,9 @@ struct Block::Request
 
 	Operation         operation;
 	Success           success;
+	Genode::uint64_t  block_number;
 	Genode::uint64_t  offset;
-	Genode::uint32_t  size;
+	Genode::uint32_t  count;
 
 	bool operation_defined() const
 	{
