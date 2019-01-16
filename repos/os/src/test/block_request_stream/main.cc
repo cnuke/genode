@@ -17,15 +17,15 @@
 #include <base/attached_ram_dataspace.h>
 #include <root/root.h>
 
-namespace Test {
+namespace Cbe {
 
-	using Tag = Genode::uint64_t;
+	using Tag                  = Genode::uint32_t;
 	using Number_of_primitives = Genode::size_t;
 
 	struct Primitive
 	{
 		using Number = Genode::uint64_t;
-		using Offset = Genode::uint64_t;
+		using Index  = Genode::uint64_t;
 
 		enum class Operation : Genode::uint32_t { INVALID, READ, WRITE, SYNC };
 		enum class Success   : Genode::uint32_t { FALSE, TRUE };
@@ -34,14 +34,21 @@ namespace Test {
 		Success success     { Success::FALSE };
 		Tag tag             { 0 };
 		Number block_number { 0 };
-		Offset offset       { 0 };
+		Index index         { 0 };
 
 		bool valid() const { return operation != Operation::INVALID; }
 	};
 
+	struct Data_block
+	{
+		Genode::addr_t base { 0 };
+		Genode::size_t size { 0 };
+	};
+
 	struct Block_session_component;
-	template <unsigned> struct Jobs;
-	template <Genode::size_t> struct Splitter;
+	template <unsigned> struct Io;
+	struct Splitter;
+	template <unsigned> struct Request_pool;
 
 	struct Main;
 
@@ -49,8 +56,8 @@ namespace Test {
 }
 
 
-struct Test::Block_session_component : Rpc_object<Block::Session>,
-                                       Block::Request_stream
+struct Cbe::Block_session_component : Rpc_object<Block::Session>,
+                                      Block::Request_stream
 {
 	Entrypoint &_ep;
 
@@ -86,32 +93,30 @@ struct Test::Block_session_component : Rpc_object<Block::Session>,
 
 
 template <unsigned N>
-struct Test::Jobs : Noncopyable
+struct Cbe::Io : Noncopyable
 {
 	struct Entry
 	{
-		Test::Primitive primitive { };
+		Cbe::Primitive primitive { };
+		Cbe::Data_block data { };
 
-		enum State { UNUSED, IN_PROGRESS, COMPLETE } state;
+		enum State { UNUSED, IN_PROGRESS, COMPLETE } state { UNUSED };
 	};
 
-	Entry _entries[N] { };
+	Entry    _entries[N]   {   };
+	unsigned _used_entries { 0 };
 
-	bool acceptable(Primitive const &) const
-	{
-		for (unsigned i = 0; i < N; i++)
-			if (_entries[i].state == Entry::UNUSED)
-				return true;
+	bool acceptable() const { return _used_entries < N; }
 
-		return false;
-	}
-
-	void submit(Primitive const &p)
+	void submit(Primitive const &p, Data_block const &d)
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].state == Entry::UNUSED) {
-				_entries[i] = Entry { .primitive = p,
-				                      .state     = Entry::IN_PROGRESS };
+				_entries[i].primitive = p;
+				_entries[i].data      = d;
+				_entries[i].state     = Entry::IN_PROGRESS;
+
+				_used_entries++;
 				return;
 			}
 		}
@@ -125,25 +130,17 @@ struct Test::Jobs : Noncopyable
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].state == Entry::IN_PROGRESS) {
 				_entries[i].state = Entry::COMPLETE;
-				_entries[i].p.success = Primitive::Success::TRUE;
+
+				void          *dest = reinterpret_cast<void*>(_entries[i].data.base);
+				Genode::size_t size = _entries[i].data.size;
+				Genode::memset(dest, 0x55, size);
+
+				_entries[i].primitive.success = Primitive::Success::TRUE;
 				progress = true;
 			}
 		}
 
 		return progress;
-	}
-
-	void _completed_job(Primitive &out)
-	{
-		out = Primitive { };
-
-		for (unsigned i = 0; i < N; i++) {
-			if (_entries[i].state == Entry::COMPLETE) {
-				out = _entries[i].primitive;
-				_entries[i].state = Entry::UNUSED;
-				return;
-			}
-		}
 	}
 
 	/**
@@ -154,22 +151,28 @@ struct Test::Jobs : Noncopyable
 	{
 		Primitive p { };
 
-		_completed_job(p);
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Entry::COMPLETE) {
+				_entries[i].state = Entry::UNUSED;
+				_used_entries--;
 
-		if (p.valid())
-			fn(p);
+				p = _entries[i].primitive;
+				break;
+			}
+		}
+
+		if (p.valid()) { fn(p); }
 	}
 };
 
-template <Genode::size_t BS>
-struct Test::Splitter
+
+struct Cbe::Splitter
 {
 	Block::Request       _current_request   { };
 	Primitive            _current_primitive { };
 	Number_of_primitives _num_primitives    { 0 };
-	Number_of_primitives _current           { 0 };
 
-	bool request_acceptable(Block::Request const request) const
+	bool request_acceptable() const
 	{
 		return !_current_request.operation_defined();
 	}
@@ -179,36 +182,47 @@ struct Test::Splitter
 		return request.count;
 	}
 
-	Number_of_primitives submit_request(Block::Request const request, Tag const tag)
+	Number_of_primitives submit_request(Block::Request const &request, Tag const tag)
 	{
-		_current_request  = request;
-		_current_primitive = Test::Primitive {
-			.tag          = tag;
-			.block_number = request.block_number;
-			.operation    = request.operation;
-			.offset       = request.offset;
+		auto operation = [] (Block::Request::Operation op)
+		{
+			switch (op) {
+			case Block::Request::Operation::READ:  return Primitive::Operation::READ;
+			case Block::Request::Operation::WRITE: return Primitive::Operation::WRITE;
+			case Block::Request::Operation::SYNC:  return Primitive::Operation::SYNC;
+			default:                               return Primitive::Operation::INVALID;
+			}
 		};
-		_num_primitives = request.count;
-		_current = 1;
+
+		_current_primitive.tag          = tag;
+		_current_primitive.block_number = request.block_number;
+		_current_primitive.operation    = operation(request.operation);
+		_current_primitive.index        = 0;
+
+		_current_request = request;
+		_num_primitives  = request.count;
 
 		return _num_primitives;
 	}
 
 	Primitive peek_generated_primitive() const
 	{
-		if (_current <= _num_primitives)
-			return _current_primitive;
-
-		return Primitive();
+		return _current_primitive;
 	}
 
 	Primitive take_generated_primitive()
 	{
-		Primitive p = _current_primitive;
+		Primitive p { };
 
-		if (_current <= _num_primitives) {
+		if (_current_primitive.index < _num_primitives) {
+			p = _current_primitive;
 			_current_primitive.block_number++;
-			_current_primitive.offset += BS;
+			_current_primitive.index++;
+
+			if (_current_primitive.index == _num_primitives) {
+				_current_primitive = Primitive { };
+				_current_request   = Block::Request { };
+			}
 		}
 
 		return p;
@@ -216,72 +230,127 @@ struct Test::Splitter
 };
 
 
-template <unsigned N, typename T>
-struct Pool
+template <unsigned N>
+struct Cbe::Request_pool
 {
-	T                    _entries[N] { };
-	Test::Number_of_primitives _used       { 0 };
-
-	bool acceptable(Test::Number_of_primitives const num) const
+	struct Entry
 	{
-		return num <= (N - _used);
+		Block::Request       request    {   };
+		Tag                  tag        { 0 };
+		Number_of_primitives primitives { 0 };
+		Number_of_primitives done       { 0 };
+
+		enum State { UNUSED, PENDING, IN_PROGRESS, COMPLETE } state { State::UNUSED };
+
+		bool unused()   const { return state == State::UNUSED; }
+		bool pending()  const { return state == State::PENDING; }
+		bool complete() const { return state == State::COMPLETE; }
+	};
+
+	Entry    _entries[N]   {   };
+	unsigned _used_entries { 0 };
+
+	Block::Request request_for_tag(Tag const tag) const
+	{
+		return _entries[tag].request;
 	}
 
-	void submit(T const &p)
+	bool acceptable() const { return _used_entries < N; }
+
+	void submit_request(Block::Request request, Number_of_primitives num)
 	{
 		for (unsigned i = 0; i < N; i++) {
-			if (!_entries[i].valid()) {
-				_entries[i] = p;
+			if (_entries[i].unused()) {
+
+				_entries[i].request    = request;
+				_entries[i].primitives = num;
+				_entries[i].state      = Entry::State::PENDING;
+				_entries[i].done       = 0;
+
+				/* assume success, might be overriden in process_primitive */
+				_entries[i].request.success = Block::Request::Success::TRUE;
+
+				_used_entries++;
+				break;
 			}
 		}
 	}
 
-	/**
-	 * Apply 'fn' with completed job, reset job
-	 */
-	template <typename FN>
-	void for_each_valid_entry(FN const &fn)
+	Entry get_pending_request()
 	{
-		for (unsigned i = 0; i < N; i++)
-			if (_entries[i].valid())
-				fn(_entries[i]);
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].pending()) {
+				_entries[i].state = Entry::State::IN_PROGRESS;
+				return _entries[i];
+			}
+		}
+
+		return Entry();
+	}
+
+	void process_primitive(Primitive const &p)
+	{
+		Tag const &tag = p.tag;
+
+		if (p.success == Primitive::Success::FALSE &&
+		    _entries[tag].request.success == Block::Request::Success::TRUE) {
+			_entries[tag].request.success = Block::Request::Success::FALSE;
+		}
+
+		_entries[tag].done++;
+
+		if (_entries[tag].done == _entries[tag].primitives)
+			_entries[tag].state = Entry::State::COMPLETE;
+	}
+
+	template <typename FN>
+	void with_any_completed_request(FN const &fn)
+	{
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].complete()) {
+				_entries[i].state = Entry::State::UNUSED;
+				_used_entries--;
+
+				fn(_entries[i].request);
+			}
+		}
 	}
 };
 
-struct Test::Main : Rpc_object<Typed_root<Block::Session> >
+
+struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 {
 	Env &_env;
 
-	Constructible<Attached_ram_dataspace> _block_ds { };
-
+	Constructible<Attached_ram_dataspace>  _block_ds { };
 	Constructible<Block_session_component> _block_session { };
 
 	Signal_handler<Main> _request_handler { _env.ep(), *this, &Main::_handle_requests };
 
-	Jobs<10> _jobs { };
-	Splitter<4096> _splitter { };
+	using Pool = Request_pool<16>;
 
-	Pool<16, Test::Primitive> _splitter_pool { };
+	enum { BLOCK_SIZE = 4096u };
 
-	struct Prims_for_tag
+	Pool      _request_pool { };
+	Splitter  _splitter     { };
+	Io<1>     _io           { };
+
+	Data_block _data_for_primitive(Block::Request_stream::Payload const &payload,
+	                         Pool const &pool, Primitive const p)
 	{
-		Tag const tag;
-		Number_of_primitives const num;
+		Block::Request const client_req = pool.request_for_tag(p.tag);
+		Block::Request request { };
+		request.offset = client_req.offset + (p.index * BLOCK_SIZE);
+		request.count  = 1;
 
+		Data_block data { };
+		payload.with_content(request, [&] (Genode::addr_t addr, Genode::size_t size) {
+			data.base = addr;
+			data.size = size;
+		});
 
-		Prims_for_tag() : tag(0), num (0) { }
-		Prims_for_tag(Tag const &tag, Number_of_primitives const num)
-		: tag(tag), num(num) { }
-
-		bool valid() const { return num != 0; }
-	};
-
-	Pool<16, Prims_for_tag> _tag_pool { };
-
-	Block::Request _current_request { };
-	Tag _current_tag { 0 };
-	Number_of_primitives _current_num { 0 };
-	Number_of_primitives _done_num    { 0 };
+		return data;
+	}
 
 	void _handle_requests()
 	{
@@ -298,56 +367,53 @@ struct Test::Main : Rpc_object<Typed_root<Block::Session> >
 			/* import new requests */
 			block_session.with_requests([&] (Block::Request request) {
 
-				Number_of_primitives const num = _splitter.number_of_primitives(request);
-
-				if (!_splitter_pool.acceptable(num) || !_splitter.request_acceptable(request))
+				if (   !_request_pool.acceptable()
+				    || !_splitter.request_acceptable())
 					return Block_session_component::Response::RETRY;
 
-				_current_num = num;
-				_done_num    = 0;
+				Number_of_primitives const num = _splitter.number_of_primitives(request);
 
-				_current_request = request;
-				_current_tag++;
-				progress = true;
+				_request_pool.submit_request(request, num);
+				Pool::Entry e = _request_pool.get_pending_request();
 
-				_splitter.submit_request(_current_request, _current_tag);
+				_splitter.submit_request(e.request, e.tag);
+
+				progress |= true;
 				return Block_session_component::Response::ACCEPTED;
 			});
 
-			while (true) {
-				Splitter::Primitive p = _splitter.peek_generated_primitive();
-				if (!p.valid()) { break; }
+			while (_splitter.peek_generated_primitive().valid()) {
 
-				if (!_jobs.acceptable(request)) { break; }
+				if (!_io.acceptable()) { break; }
 
-				p = _splitter.take_generated_primitive();
-				_splitter_pool.submit(p);
+				Primitive p  = _splitter.take_generated_primitive();
+				Data_block d = _data_for_primitive(payload, _request_pool, p);
+				_io.submit(p, d);
 
-				_jobs.submit(p);
 				progress = true;
 			}
 
 			/* process I/O */
-			progress |= _jobs.execute();
+			progress |= _io.execute();
 
+			/* acknowledge finished I/O jobs */
+			_io.with_any_completed_job([&] (Primitive const &p) {
+
+				_request_pool.process_primitive(p);
+				progress |= true;
+			});
 
 			/* acknowledge finished jobs */
 			block_session.try_acknowledge([&] (Block_session_component::Ack &ack) {
 
-				/* acknowledge finished I/O jobs */
-				_jobs.with_any_completed_job([&] (Primitive const &p) {
+				_request_pool.with_any_completed_request([&] (Block::Request request) {
 
+					ack.submit(request);
 					progress |= true;
-
-					_done_num ++;
 				});
-
-				if (_done_num == _current_num)
-					ack.submit(_current_request);
 			});
 
-			if (!progress)
-				break;
+			if (!progress) { break; }
 		}
 
 		block_session.wakeup_client();
@@ -395,4 +461,4 @@ struct Test::Main : Rpc_object<Typed_root<Block::Session> >
 };
 
 
-void Component::construct(Genode::Env &env) { static Test::Main inst(env); }
+void Component::construct(Genode::Env &env) { static Cbe::Main inst(env); }
