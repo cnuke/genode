@@ -60,7 +60,7 @@ class Block::Request_stream : Genode::Noncopyable
 				Payload() : _base(0), _size(0), _block_size(0) { }
 
 				template <typename FN>
-				void with_content(Block::Request request, FN const &fn)
+				void with_content(Block::Request request, FN const &fn) const
 				{
 					if (_check_range(request))
 						fn(_addr(request), request.count * _block_size);
