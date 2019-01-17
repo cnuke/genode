@@ -108,7 +108,7 @@ struct Cbe::Io : Noncopyable
 
 	bool acceptable() const { return _used_entries < N; }
 
-	void submit(Primitive const &p, Data_block const &d)
+	void submit_primitive(Primitive const &p, Data_block const &d)
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].state == Entry::UNUSED) {
@@ -143,11 +143,16 @@ struct Cbe::Io : Noncopyable
 		return progress;
 	}
 
-	/**
-	 * Apply 'fn' with completed job, reset job
-	 */
-	template <typename FN>
-	void with_any_completed_job(FN const &fn)
+	bool peek_completed_primitive()
+	{
+		for (unsigned i = 0; i < N; i++)
+			if (_entries[i].state == Entry::COMPLETE)
+				return true;
+
+		return false;
+	}
+
+	Primitive take_completed_primitive()
 	{
 		Primitive p { };
 
@@ -160,8 +165,7 @@ struct Cbe::Io : Noncopyable
 				break;
 			}
 		}
-
-		if (p.valid()) { fn(p); }
+		return p;
 	}
 };
 
@@ -257,15 +261,15 @@ struct Cbe::Request_pool
 
 	bool acceptable() const { return _used_entries < N; }
 
-	void submit_request(Block::Request request, Number_of_primitives num)
+	void submit_request(Block::Request request)
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].unused()) {
 
 				_entries[i].request    = request;
-				_entries[i].primitives = num;
 				_entries[i].state      = Entry::State::PENDING;
 				_entries[i].done       = 0;
+				_entries[i].tag        = i;
 
 				/* assume success, might be overriden in process_primitive */
 				_entries[i].request.success = Block::Request::Success::TRUE;
@@ -276,7 +280,21 @@ struct Cbe::Request_pool
 		}
 	}
 
-	Entry get_pending_request()
+	void set_primitive_count(Tag const tag, Number_of_primitives num)
+	{
+		_entries[tag].primitives = num;
+	}
+
+	bool peek_request_pending() const
+	{
+		for (unsigned i = 0; i < N; i++)
+			if (_entries[i].pending())
+				return true;
+
+		return false;
+	}
+
+	Entry take_pending_request()
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].pending()) {
@@ -285,10 +303,11 @@ struct Cbe::Request_pool
 			}
 		}
 
+		/* should never be reached */
 		return Entry();
 	}
 
-	void process_primitive(Primitive const &p)
+	void mark_completed_primitive(Primitive const &p)
 	{
 		Tag const &tag = p.tag;
 
@@ -303,17 +322,28 @@ struct Cbe::Request_pool
 			_entries[tag].state = Entry::State::COMPLETE;
 	}
 
-	template <typename FN>
-	void with_any_completed_request(FN const &fn)
+	Block::Request take_completed_request()
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].complete()) {
 				_entries[i].state = Entry::State::UNUSED;
 				_used_entries--;
 
-				fn(_entries[i].request);
+				return _entries[i].request;
 			}
 		}
+
+		/* should never be reached */
+		return Block::Request { };
+	}
+
+	bool peek_completed_request()
+	{
+		for (unsigned i = 0; i < N; i++)
+			if (_entries[i].complete())
+				return true;
+
+		return false;
 	}
 };
 
@@ -367,20 +397,26 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 			/* import new requests */
 			block_session.with_requests([&] (Block::Request request) {
 
-				if (   !_request_pool.acceptable()
-				    || !_splitter.request_acceptable())
+				if (!_request_pool.acceptable())
 					return Block_session_component::Response::RETRY;
 
-				Number_of_primitives const num = _splitter.number_of_primitives(request);
-
-				_request_pool.submit_request(request, num);
-				Pool::Entry e = _request_pool.get_pending_request();
-
-				_splitter.submit_request(e.request, e.tag);
-
+				_request_pool.submit_request(request);
 				progress |= true;
 				return Block_session_component::Response::ACCEPTED;
 			});
+
+			while (_request_pool.peek_request_pending()) {
+
+				if (!_splitter.request_acceptable()) { break; }
+
+					Pool::Entry e = _request_pool.take_pending_request();
+					Number_of_primitives const num = _splitter.number_of_primitives(e.request);
+
+					_request_pool.set_primitive_count(e.tag, num);
+					_splitter.submit_request(e.request, e.tag);
+
+					progress |= true;
+			}
 
 			while (_splitter.peek_generated_primitive().valid()) {
 
@@ -388,7 +424,7 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 
 				Primitive p  = _splitter.take_generated_primitive();
 				Data_block d = _data_for_primitive(payload, _request_pool, p);
-				_io.submit(p, d);
+				_io.submit_primitive(p, d);
 
 				progress = true;
 			}
@@ -397,20 +433,21 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 			progress |= _io.execute();
 
 			/* acknowledge finished I/O jobs */
-			_io.with_any_completed_job([&] (Primitive const &p) {
+			while (_io.peek_completed_primitive()) {
+				Primitive p = _io.take_completed_primitive();
 
-				_request_pool.process_primitive(p);
+				_request_pool.mark_completed_primitive(p);
 				progress |= true;
-			});
+			}
 
 			/* acknowledge finished jobs */
 			block_session.try_acknowledge([&] (Block_session_component::Ack &ack) {
 
-				_request_pool.with_any_completed_request([&] (Block::Request request) {
-
+				if (_request_pool.peek_completed_request()) {
+					Block::Request request = _request_pool.take_completed_request();
 					ack.submit(request);
 					progress |= true;
-				});
+				}
 			});
 
 			if (!progress) { break; }
