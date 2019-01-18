@@ -12,15 +12,20 @@
  */
 
 /* Genode includes */
-#include <block/request_stream.h>
+#include <base/allocator_avl.h>
 #include <base/component.h>
+#include <base/heap.h>
 #include <base/attached_ram_dataspace.h>
+#include <block/request_stream.h>
+#include <block_session/connection.h>
 #include <root/root.h>
 
 namespace Cbe {
 
 	using Tag                  = Genode::uint32_t;
 	using Number_of_primitives = Genode::size_t;
+
+	enum { BLOCK_SIZE = 4096u };
 
 	struct Primitive
 	{
@@ -37,6 +42,9 @@ namespace Cbe {
 		Index index         { 0 };
 
 		bool valid() const { return operation != Operation::INVALID; }
+		bool read()  const { return operation == Operation::READ; }
+		bool write() const { return operation == Operation::WRITE; }
+		bool sync()  const { return operation == Operation::SYNC; }
 	};
 
 	struct Data_block
@@ -46,7 +54,7 @@ namespace Cbe {
 	};
 
 	struct Block_session_component;
-	template <unsigned> struct Io;
+	template <unsigned, Genode::size_t> struct Io;
 	struct Splitter;
 	template <unsigned> struct Request_pool;
 
@@ -92,7 +100,7 @@ struct Cbe::Block_session_component : Rpc_object<Block::Session>,
 };
 
 
-template <unsigned N>
+template <unsigned N, Genode::size_t BS>
 struct Cbe::Io : Noncopyable
 {
 	struct Entry
@@ -100,13 +108,79 @@ struct Cbe::Io : Noncopyable
 		Cbe::Primitive primitive { };
 		Cbe::Data_block data { };
 
-		enum State { UNUSED, IN_PROGRESS, COMPLETE } state { UNUSED };
+		Block::Packet_descriptor packet { };
+
+		enum State { UNUSED, PENDING, IN_PROGRESS, COMPLETE } state { UNUSED };
+
+		void print(Genode::Output &out) const
+		{
+			auto state_string = [](State state) {
+				switch (state) {
+				case State::UNUSED:      return "unused";
+				case State::PENDING:     return "pending";
+				case State::IN_PROGRESS: return "in_progress";
+				case State::COMPLETE:    return "complete";
+				}
+				return "unknown";
+			};
+			Genode::print(out, "primitve.block_number: ", primitive.block_number,
+			              " state: ", state_string(state));
+		}
 	};
 
 	Entry    _entries[N]   {   };
 	unsigned _used_entries { 0 };
 
-	bool acceptable() const { return _used_entries < N; }
+	struct Geometry
+	{
+		Block::sector_t block_count { 0 };
+		Genode::size_t  block_size  { 0 };
+	};
+
+	Geometry           _geom { };
+	Block::Connection &_block;
+
+	struct Fake_sync_primitive     { };
+	struct Invalid_block_operation { };
+
+	Block::Packet_descriptor _convert_from(Cbe::Primitive const &primitive)
+	{
+		auto operation = [] (Cbe::Primitive::Operation op) {
+			switch (op) {
+			case Cbe::Primitive::Operation::READ:  return Block::Packet_descriptor::READ;
+			case Cbe::Primitive::Operation::WRITE: return Block::Packet_descriptor::WRITE;
+			case Cbe::Primitive::Operation::SYNC:  throw Fake_sync_primitive();
+			default:                               throw Invalid_block_operation();
+			}
+		};
+
+		return Block::Packet_descriptor(_block.tx()->alloc_packet(BS),
+		                                operation(primitive.operation),
+		                                primitive.block_number,
+		                                BS / _geom.block_size);
+	}
+
+	bool _equal_packets(Block::Packet_descriptor const &p1,
+	                    Block::Packet_descriptor const &p2) const
+	{
+		return p1.block_number() == p2.block_number() && p1.operation() == p2.operation();
+	}
+
+	Io(Block::Connection &block) : _block(block)
+	{
+		Block::Session::Operations block_ops { };
+		_block.info(&_geom.block_count, &_geom.block_size, &block_ops);
+
+		if (_geom.block_size > BS) {
+			Genode::error("back end block size must be equal to or be a multiple of ", BS);
+			throw -1;
+		}
+	}
+
+	bool acceptable() const
+	{
+		return _used_entries < N;
+	}
 
 	void submit_primitive(Primitive const &p, Data_block const &d)
 	{
@@ -114,7 +188,7 @@ struct Cbe::Io : Noncopyable
 			if (_entries[i].state == Entry::UNUSED) {
 				_entries[i].primitive = p;
 				_entries[i].data      = d;
-				_entries[i].state     = Entry::IN_PROGRESS;
+				_entries[i].state     = Entry::PENDING;
 
 				_used_entries++;
 				return;
@@ -127,16 +201,64 @@ struct Cbe::Io : Noncopyable
 	bool execute()
 	{
 		bool progress = false;
-		for (unsigned i = 0; i < N; i++) {
-			if (_entries[i].state == Entry::IN_PROGRESS) {
+
+		/* first mark all finished I/O ops */
+		while (_block.tx()->ack_avail()) {
+			Block::Packet_descriptor packet = _block.tx()->get_acked_packet();
+
+			for (unsigned i = 0; i < N; i++) {
+				if (_entries[i].state != Entry::IN_PROGRESS) { continue; }
+				if (!_equal_packets(_entries[i].packet, packet)) { continue; }
+
+				if (_entries[i].primitive.read()) {
+					void const * const src = _block.tx()->packet_content(packet);
+					Genode::size_t    size = _entries[i].data.size;
+					void      * const dest = reinterpret_cast<void*>(_entries[i].data.base);
+					Genode::memcpy(dest, src, size);
+				}
+
 				_entries[i].state = Entry::COMPLETE;
+				_entries[i].primitive.success = packet.succeeded() ? Primitive::Success::TRUE
+				                                                   : Primitive::Success::FALSE;
 
-				void          *dest = reinterpret_cast<void*>(_entries[i].data.base);
-				Genode::size_t size = _entries[i].data.size;
-				Genode::memset(dest, 0x55, size);
-
-				_entries[i].primitive.success = Primitive::Success::TRUE;
+				_block.tx()->release_packet(_entries[i].packet);
 				progress = true;
+			}
+		}
+
+		/* second submit new I/O ops */
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Entry::PENDING) {
+
+				if (!_block.tx()->ready_to_submit()) { break; }
+
+				try {
+					Block::Packet_descriptor packet = _convert_from(_entries[i].primitive);
+
+					if (_entries[i].primitive.write()) {
+						void const * const src = reinterpret_cast<void*>(_entries[i].data.base);
+						Genode::size_t    size = _entries[i].data.size;
+						void      * const dest = _block.tx()->packet_content(packet);
+						Genode::memcpy(dest, src, size);
+					}
+
+					_entries[i].state  = Entry::IN_PROGRESS;
+					_entries[i].packet = packet;
+
+					_block.tx()->submit_packet(_entries[i].packet);
+					progress = true;
+				}
+				catch (Fake_sync_primitive) {
+					_entries[i].state = Entry::COMPLETE;
+					_entries[i].primitive.success = Primitive::Success::TRUE;
+					break;
+				}
+				catch (Invalid_block_operation) {
+					_entries[i].state = Entry::COMPLETE;
+					_entries[i].primitive.success = Primitive::Success::FALSE;
+					break;
+				}
+				catch (Block::Session::Tx::Source::Packet_alloc_failed) { break; }
 			}
 		}
 
@@ -355,15 +477,21 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 	Constructible<Attached_ram_dataspace>  _block_ds { };
 	Constructible<Block_session_component> _block_session { };
 
+	enum {
+		BLOCK_TX_BUFFER_SIZE = Block::Session::TX_QUEUE_SIZE * BLOCK_SIZE,
+	};
+
+	Heap              _heap        { _env.ram(), _env.rm() };
+	Allocator_avl     _block_alloc { &_heap };
+	Block::Connection _block       { _env, &_block_alloc, BLOCK_TX_BUFFER_SIZE };
+
 	Signal_handler<Main> _request_handler { _env.ep(), *this, &Main::_handle_requests };
 
 	using Pool = Request_pool<16>;
 
-	enum { BLOCK_SIZE = 4096u };
-
-	Pool      _request_pool { };
-	Splitter  _splitter     { };
-	Io<1>     _io           { };
+	Pool              _request_pool { };
+	Splitter          _splitter     { };
+	Io<1, BLOCK_SIZE> _io           { _block };
 
 	Data_block _data_for_primitive(Block::Request_stream::Payload const &payload,
 	                         Pool const &pool, Primitive const p)
@@ -440,7 +568,7 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 				progress |= true;
 			}
 
-			/* acknowledge finished jobs */
+			/* acknowledge finished requests */
 			block_session.try_acknowledge([&] (Block_session_component::Ack &ack) {
 
 				if (_request_pool.peek_completed_request()) {
@@ -480,6 +608,9 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 		_block_session.construct(_env.rm(), _block_ds->cap(), _env.ep(),
 		                         _request_handler);
 
+		_block.tx_channel()->sigh_ack_avail(_request_handler);
+		_block.tx_channel()->sigh_ready_to_submit(_request_handler);
+
 		return _block_session->cap();
 	}
 
@@ -487,6 +618,9 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 
 	void close(Capability<Session>) override
 	{
+		_block.tx_channel()->sigh_ack_avail(Signal_context_capability());
+		_block.tx_channel()->sigh_ready_to_submit(Signal_context_capability());
+
 		_block_session.destruct();
 		_block_ds.destruct();
 	}
