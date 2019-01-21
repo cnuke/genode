@@ -63,7 +63,10 @@ install_config {
 </config>}
 
 
-build_boot_image { core init timer ram_blk block_tester test-block_request_stream ld.lib.so }
+build_boot_image {
+	core init timer ram_blk block_tester test-block_request_stream
+	ld.lib.so ada.lib.so
+}
 
 
 append qemu_args " -nographic -m 512 "

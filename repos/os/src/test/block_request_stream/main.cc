@@ -47,14 +47,14 @@ namespace Cbe {
 		bool sync()  const { return operation == Operation::SYNC; }
 	};
 
-	struct Data_block
+	struct Block_data
 	{
-		Genode::addr_t base { 0 };
-		Genode::size_t size { 0 };
+		char values[BLOCK_SIZE] { };
 	};
 
 	struct Block_session_component;
 	template <unsigned, Genode::size_t> struct Io;
+	template <unsigned> struct Crypto;
 	struct Splitter;
 	template <unsigned> struct Request_pool;
 
@@ -100,13 +100,17 @@ struct Cbe::Block_session_component : Rpc_object<Block::Session>,
 };
 
 
-template <unsigned N, Genode::size_t BS>
+/****************
+ ** I/O module **
+ ****************/
+
+template <unsigned N, Genode::size_t BLOCK_SIZE>
 struct Cbe::Io : Noncopyable
 {
 	struct Entry
 	{
 		Cbe::Primitive primitive { };
-		Cbe::Data_block data { };
+		Cbe::Block_data *data { nullptr };
 
 		Block::Packet_descriptor packet { };
 
@@ -123,7 +127,7 @@ struct Cbe::Io : Noncopyable
 				}
 				return "unknown";
 			};
-			Genode::print(out, "primitve.block_number: ", primitive.block_number,
+			Genode::print(out, "primitive.block_number: ", primitive.block_number,
 			              " state: ", state_string(state));
 		}
 	};
@@ -154,10 +158,10 @@ struct Cbe::Io : Noncopyable
 			}
 		};
 
-		return Block::Packet_descriptor(_block.tx()->alloc_packet(BS),
+		return Block::Packet_descriptor(_block.tx()->alloc_packet(BLOCK_SIZE),
 		                                operation(primitive.operation),
 		                                primitive.block_number,
-		                                BS / _geom.block_size);
+		                                BLOCK_SIZE / _geom.block_size);
 	}
 
 	bool _equal_packets(Block::Packet_descriptor const &p1,
@@ -171,8 +175,8 @@ struct Cbe::Io : Noncopyable
 		Block::Session::Operations block_ops { };
 		_block.info(&_geom.block_count, &_geom.block_size, &block_ops);
 
-		if (_geom.block_size > BS) {
-			Genode::error("back end block size must be equal to or be a multiple of ", BS);
+		if (_geom.block_size > BLOCK_SIZE) {
+			Genode::error("back end block size must be equal to or be a multiple of ", BLOCK_SIZE);
 			throw -1;
 		}
 	}
@@ -182,12 +186,12 @@ struct Cbe::Io : Noncopyable
 		return _used_entries < N;
 	}
 
-	void submit_primitive(Primitive const &p, Data_block const &d)
+	void submit_primitive(Primitive const &p, Block_data &d)
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].state == Entry::UNUSED) {
 				_entries[i].primitive = p;
-				_entries[i].data      = d;
+				_entries[i].data      = &d;
 				_entries[i].state     = Entry::PENDING;
 
 				_used_entries++;
@@ -212,8 +216,8 @@ struct Cbe::Io : Noncopyable
 
 				if (_entries[i].primitive.read()) {
 					void const * const src = _block.tx()->packet_content(packet);
-					Genode::size_t    size = _entries[i].data.size;
-					void      * const dest = reinterpret_cast<void*>(_entries[i].data.base);
+					Genode::size_t    size = BLOCK_SIZE;
+					void      * const dest = reinterpret_cast<void*>(_entries[i].data);
 					Genode::memcpy(dest, src, size);
 				}
 
@@ -236,8 +240,8 @@ struct Cbe::Io : Noncopyable
 					Block::Packet_descriptor packet = _convert_from(_entries[i].primitive);
 
 					if (_entries[i].primitive.write()) {
-						void const * const src = reinterpret_cast<void*>(_entries[i].data.base);
-						Genode::size_t    size = _entries[i].data.size;
+						void const * const src = reinterpret_cast<void*>(_entries[i].data);
+						Genode::size_t    size = BLOCK_SIZE;
 						void      * const dest = _block.tx()->packet_content(packet);
 						Genode::memcpy(dest, src, size);
 					}
@@ -291,6 +295,171 @@ struct Cbe::Io : Noncopyable
 	}
 };
 
+
+/*******************
+ ** Crypto module **
+ *******************/
+
+#include <aes_cbc_4k/aes_cbc_4k.h>
+
+template <unsigned N>
+struct Cbe::Crypto : Noncopyable
+{
+	Aes_cbc_4k::Key const _key { "All your secrets are belong to " };
+
+	struct Internal_entry
+	{
+		Cbe::Primitive primitive { };
+		Cbe::Block_data *data { nullptr };
+
+		enum State { UNUSED, SUBMITTED, PENDING, IN_PROGRESS, COMPLETE } state { UNUSED };
+	};
+
+	struct Entry
+	{
+		Cbe::Primitive const &primitive { };
+		Cbe::Block_data &data { };
+
+		Entry(Cbe::Primitive const &p, Cbe::Block_data &d)
+		: primitive(p), data(d) { }
+	};
+
+	Cbe::Primitive  _dummy_primitive { };
+	Cbe::Block_data _dummy_block_data { };
+	Entry           _dummy_entry { _dummy_primitive, _dummy_block_data };
+
+	Internal_entry  _entries[N]   {   };
+	unsigned        _used_entries { 0 };
+	Cbe::Block_data _buffer[N]    {   };
+
+	bool _equal_primitives(Primitive const &p1, Primitive const &p2)
+	{
+		return p1.block_number == p2.block_number
+		    && p1.index        == p2.index
+		    && p1.operation    == p2.operation;
+	}
+
+	bool acceptable() const
+	{
+		return _used_entries < N;
+	}
+
+	void submit_primitive(Primitive const &p, Block_data &d)
+	{
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Internal_entry::UNUSED) {
+				_entries[i].primitive = p;
+				_entries[i].data      = &d;
+				_entries[i].state     = Internal_entry::SUBMITTED;
+
+				_used_entries++;
+				return;
+			}
+		}
+
+		error("failed to accept request");
+	}
+
+	bool execute()
+	{
+		bool progress = false;
+
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state != Internal_entry::SUBMITTED) { continue; }
+
+			if (_entries[i].primitive.write()) {
+
+				Aes_cbc_4k::Block_number const block_number { _entries[i].primitive.block_number };
+				Aes_cbc_4k::Plaintext    const *src = reinterpret_cast<Aes_cbc_4k::Plaintext*>(_entries[i].data);
+				Aes_cbc_4k::Ciphertext         *dst = reinterpret_cast<Aes_cbc_4k::Ciphertext*>(&_buffer[i]);
+
+				Aes_cbc_4k::encrypt(_key, block_number, *src, *dst);
+
+				_entries[i].state = Internal_entry::COMPLETE;
+				_entries[i].primitive.success = Primitive::Success::TRUE;
+			} else {
+				_entries[i].state = Internal_entry::PENDING;
+			}
+			progress = true;
+		}
+
+		return progress;
+	}
+
+	Primitive peek_completed_primitive() const
+	{
+		for (unsigned i = 0; i < N; i++)
+			if (_entries[i].state == Internal_entry::COMPLETE)
+				return _entries[i].primitive;
+
+		return Primitive { };
+	}
+
+	Primitive take_completed_primitive()
+	{
+		Primitive p { };
+
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Internal_entry::COMPLETE) {
+				_entries[i].state = Internal_entry::UNUSED;
+				_used_entries--;
+
+				p = _entries[i].primitive;
+				break;
+			}
+		}
+		return p;
+	}
+
+	Primitive peek_generated_primitive() const
+	{
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Internal_entry::PENDING) {
+				return _entries[i].primitive;
+			}
+		}
+
+		return Primitive { };
+	}
+
+	Entry take_generated_primitive()
+	{
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state == Internal_entry::PENDING) {
+				_entries[i].state = Internal_entry::IN_PROGRESS;
+				return Entry { .primitive = _entries[i].primitive, .data = _buffer[i] };
+			}
+		}
+
+		/* should never be reached */
+		return _dummy_entry;
+	}
+
+	void mark_completed_primitive(Primitive const &p)
+	{
+		for (unsigned i = 0; i < N; i++) {
+			if (_entries[i].state != Internal_entry::IN_PROGRESS) { continue; }
+			if (!_equal_primitives(_entries[i].primitive, p)) { continue; }
+
+			if (_entries[i].primitive.read()) {
+
+				Aes_cbc_4k::Block_number const block_number { _entries[i].primitive.block_number };
+				Aes_cbc_4k::Ciphertext   const *src = reinterpret_cast<Aes_cbc_4k::Ciphertext*>(&_buffer[i]);
+				Aes_cbc_4k::Plaintext          *dst = reinterpret_cast<Aes_cbc_4k::Plaintext*>(_entries[i].data);
+
+				Aes_cbc_4k::decrypt(_key, block_number, *src, *dst);
+			}
+			_entries[i].state = Internal_entry::COMPLETE;
+			_entries[i].primitive.success = Primitive::Success::TRUE;
+			break;
+		}
+	}
+};
+
+
+/*********************
+ ** Splitter module **
+ *********************/
 
 struct Cbe::Splitter
 {
@@ -355,6 +524,10 @@ struct Cbe::Splitter
 	}
 };
 
+
+/*************************
+ ** Request-pool module **
+ *************************/
 
 template <unsigned N>
 struct Cbe::Request_pool
@@ -487,20 +660,24 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 
 	Pool              _request_pool { };
 	Splitter          _splitter     { };
+	Crypto<1>         _crypto       { };
 	Io<1, BLOCK_SIZE> _io           { _block };
 
-	Data_block _data_for_primitive(Block::Request_stream::Payload const &payload,
-	                         Pool const &pool, Primitive const p)
+	Block_data* _data_for_primitive(Block::Request_stream::Payload const &payload,
+	                                Pool const &pool, Primitive const p)
 	{
 		Block::Request const client_req = pool.request_for_tag(p.tag);
 		Block::Request request { };
 		request.offset = client_req.offset + (p.index * BLOCK_SIZE);
 		request.count  = 1;
 
-		Data_block data { };
+		Block_data *data { nullptr };
 		payload.with_content(request, [&] (Genode::addr_t addr, Genode::size_t size) {
-			data.base = addr;
-			data.size = size;
+			if (size != BLOCK_SIZE) {
+				Genode::error("content size and block size differ");
+				return;
+			}
+			data = reinterpret_cast<Block_data*>(addr);
 		});
 
 		return data;
@@ -542,13 +719,38 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 
 			while (_splitter.peek_generated_primitive().valid()) {
 
-				if (!_io.acceptable()) { break; }
+				if (!_crypto.acceptable()) { break; }
 
 				Primitive p  = _splitter.take_generated_primitive();
-				Data_block d = _data_for_primitive(payload, _request_pool, p);
-				_io.submit_primitive(p, d);
+				Block_data *data_ptr = _data_for_primitive(payload, _request_pool, p);
+				if (data_ptr == nullptr) {
+					Genode::error("BUG: data_ptr is nullptr");
+					break;
+				}
+				_crypto.submit_primitive(p, *data_ptr);
 
 				progress = true;
+			}
+
+			/* process crypto */
+			progress |= _crypto.execute();
+
+			/* acknowledge finished crypto jobs */
+			while (_crypto.peek_completed_primitive().valid()) {
+				Primitive p = _crypto.take_completed_primitive();
+
+				_request_pool.mark_completed_primitive(p);
+				progress |= true;
+			}
+
+			while (_crypto.peek_generated_primitive().valid()) {
+
+				if (!_io.acceptable()) { break; }
+
+				Crypto<1>::Entry e = _crypto.take_generated_primitive();
+
+				_io.submit_primitive(e.primitive, e.data);
+				progress |= true;
 			}
 
 			/* process I/O */
@@ -558,7 +760,7 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 			while (_io.peek_completed_primitive()) {
 				Primitive p = _io.take_completed_primitive();
 
-				_request_pool.mark_completed_primitive(p);
+				_crypto.mark_completed_primitive(p);
 				progress |= true;
 			}
 
