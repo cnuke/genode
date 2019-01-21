@@ -383,13 +383,14 @@ struct Cbe::Request_pool
 
 	bool acceptable() const { return _used_entries < N; }
 
-	void submit_request(Block::Request request)
+	void submit_request(Block::Request request, Number_of_primitives num)
 	{
 		for (unsigned i = 0; i < N; i++) {
 			if (_entries[i].unused()) {
 
 				_entries[i].request    = request;
 				_entries[i].state      = Entry::State::PENDING;
+				_entries[i].primitives = num;
 				_entries[i].done       = 0;
 				_entries[i].tag        = i;
 
@@ -400,11 +401,6 @@ struct Cbe::Request_pool
 				break;
 			}
 		}
-	}
-
-	void set_primitive_count(Tag const tag, Number_of_primitives num)
-	{
-		_entries[tag].primitives = num;
 	}
 
 	bool peek_request_pending() const
@@ -528,7 +524,8 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 				if (!_request_pool.acceptable())
 					return Block_session_component::Response::RETRY;
 
-				_request_pool.submit_request(request);
+				Number_of_primitives const num = _splitter.number_of_primitives(request);
+				_request_pool.submit_request(request, num);
 				progress |= true;
 				return Block_session_component::Response::ACCEPTED;
 			});
@@ -538,9 +535,6 @@ struct Cbe::Main : Rpc_object<Typed_root<Block::Session> >
 				if (!_splitter.request_acceptable()) { break; }
 
 					Pool::Entry e = _request_pool.take_pending_request();
-					Number_of_primitives const num = _splitter.number_of_primitives(e.request);
-
-					_request_pool.set_primitive_count(e.tag, num);
 					_splitter.submit_request(e.request, e.tag);
 
 					progress |= true;
