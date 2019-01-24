@@ -83,14 +83,14 @@ append config {
 		<binary name="report_rom"/>
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config verbose="no"/>
+		<config verbose="yes"/>
 	</start>
 
 	<start name="accesspoints_report_rom">
 		<binary name="report_rom"/>
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config verbose="no"/>
+		<config verbose="yes"/>
 	</start>
 
 	<start name="config_rom">
@@ -103,24 +103,326 @@ append config {
 <wifi_config connected_scan_interval="30" scan_interval="5" rfkill="no" verbose="no" verbose_state="no"/>
 				</inline>
 				<sleep milliseconds="15000"/>
-				<inline description="connect">
+				<inline description="connect fiktive">
 <wifi_config connected_scan_interval="30" scan_interval="5" rfkill="no" verbose="no" verbose_state="no">
+	<!-- <network ssid="} [wifi_ssid] {" protection="WPA2" explicit_scan="true" passphrase="} [wifi_psk] {"/> -->
+	<network ssid="T01_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T02_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T03_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T04_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T05_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T06_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T07_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T010_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T011_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T012_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T013_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T014_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T015_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T016_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T017_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T020_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T021_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T022_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T023_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T024_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T025_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T026_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T027_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T030_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T031_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T032_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T033_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T034_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T035_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T036_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T037_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T040_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T041_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T042_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T043_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T044_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T045_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T046_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T047_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T050_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T051_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T052_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T053_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T054_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T055_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T056_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T057_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T060_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T061_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T062_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T063_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T064_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T065_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T066_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T067_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T070_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T071_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T072_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T073_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T074_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T075_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T076_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T077_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0100_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0101_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0102_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0103_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0104_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0105_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0106_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0107_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0110_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0111_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0112_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0113_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0114_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0115_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0116_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0117_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0120_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0121_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0122_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0123_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0124_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0125_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0126_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0127_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0130_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0131_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0132_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0133_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0134_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0135_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0136_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0137_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0140_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0141_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0142_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0143_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0144_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0145_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+</wifi_config>
+				</inline>
+				<sleep milliseconds="60000"/> <!-- 1min -->
+				<inline description="connect fiktive + real">
+<wifi_config connected_scan_interval="30" scan_interval="5" rfkill="no" verbose="no" verbose_state="no">
+	<network ssid="T01_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T02_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T03_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T04_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T05_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T06_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T07_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T010_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T011_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T012_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T013_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T014_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T015_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T016_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T017_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T020_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T021_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T022_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T023_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T024_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T025_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T026_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T027_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T030_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T031_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T032_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T033_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T034_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T035_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T036_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T037_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T040_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T041_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T042_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T043_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
 	<network ssid="} [wifi_ssid] {" protection="WPA2" explicit_scan="true" passphrase="} [wifi_psk] {"/>
+	<network ssid="T044_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T045_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T046_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T047_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T050_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T051_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T052_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T053_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T054_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T055_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T056_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T057_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T060_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T061_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T062_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T063_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T064_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T065_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T066_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T067_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T070_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T071_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T072_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T073_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T074_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T075_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T076_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T077_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0100_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0101_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0102_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0103_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0104_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0105_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0106_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0107_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0110_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0111_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0112_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0113_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0114_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0115_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0116_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0117_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0120_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0121_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0122_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0123_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0124_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0125_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0126_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0127_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0130_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0131_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0132_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0133_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0134_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0135_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0136_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0137_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0140_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0141_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0142_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0143_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0144_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0145_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+</wifi_config>
+				</inline>
+				<sleep milliseconds="120000"/>
+				<inline description="connect fiktive 2">
+<wifi_config connected_scan_interval="30" scan_interval="5" rfkill="no" verbose="no" verbose_state="no">
+	<network ssid="T01_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T02_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T03_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T04_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T05_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T06_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T07_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T010_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T011_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T012_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T013_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T014_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T015_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T016_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T017_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T020_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T021_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T022_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T023_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T024_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T025_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T026_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T027_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T030_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T031_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T032_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T033_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T034_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T035_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T036_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T037_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T040_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T041_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T042_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T043_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T044_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T045_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T046_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T047_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T050_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T051_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T052_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T053_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T054_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T055_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T056_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T057_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T060_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T061_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T062_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T063_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T064_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T065_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T066_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T067_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T070_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T071_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T072_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T073_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T074_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T075_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T076_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T077_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0100_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0101_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0102_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0103_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0104_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0105_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0106_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0107_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0110_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0111_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0112_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0113_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0114_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0115_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0116_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0117_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0120_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0121_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0122_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0123_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0124_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0125_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0126_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0127_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0130_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0131_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0132_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0133_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0134_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0135_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0136_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0137_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0140_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0141_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0142_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0143_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0144_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
+	<network ssid="T0145_abcdefghi_jklmnopqr_stuvwxyz" protection="WPA-PSK" passphrase="111111111122222222223333333333444444444455555555556666666666777" explicit_scan="true" auto_connect="true"/>
 </wifi_config>
 				</inline>
 				<sleep milliseconds="60000"/>
-				<inline description="rfkill block">
-<wifi_config connected_scan_interval="30" scan_interval="5" rfkill="yes" verbose="no" verbose_state="no">
-	<network ssid="} [wifi_ssid] {" protection="WPA2" explicit_scan="true" passphrase="} [wifi_psk] {"/>
-</wifi_config>
-				</inline>
-				<sleep milliseconds="30000"/>
-				<inline description="rfkill unblock">
-<wifi_config connected_scan_interval="30" scan_interval="5" rfkill="no" verbose="no" verbose_state="no">
-	<network ssid="} [wifi_ssid] {" protection="WPA2" explicit_scan="true" passphrase="} [wifi_psk] {"/>
-</wifi_config>
-				</inline>
-				<sleep milliseconds="30000"/>
 			</rom>
 		</config>
 	</start>
