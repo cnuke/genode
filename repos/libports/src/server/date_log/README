@@ -1,0 +1,2 @@
+LOG server that prefixes log messages with the current date and forwards
+them to another LOG server.
