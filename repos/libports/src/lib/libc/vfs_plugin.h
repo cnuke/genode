@@ -78,11 +78,31 @@ class Libc::Vfs_plugin : public Libc::Plugin
 			fd->fd_path = strdup(path.string());
 		}
 
+
+		/**
+		 * Update modification time
+		 */
+		bool _vfs_write_mtime(Vfs::Vfs_handle *handle)
+		{
+			struct timespec ts;
+
+			/* XXX using  clock_gettime directly is probably not the best idea */
+			if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+				return false;
+			}
+
+			Vfs::Timestamp time { .value = (long long)ts.tv_sec };
+			return handle->fs().update_modification_timestamp(handle, time);
+		}
+
+
 		/**
 		 * Sync a handle and propagate errors
 		 */
 		int _vfs_sync(Vfs::Vfs_handle *vfs_handle)
 		{
+			_vfs_write_mtime(vfs_handle);
+
 			typedef Vfs::File_io_service::Sync_result Result;
 			Result result = Result::SYNC_QUEUED;
 

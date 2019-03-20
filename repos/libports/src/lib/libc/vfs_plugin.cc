@@ -86,6 +86,8 @@ static void vfs_stat_to_libc_stat_struct(Vfs::Directory_service::Stat const &src
 	dst->st_blocks  = (dst->st_size + FS_BLOCK_SIZE - 1) / FS_BLOCK_SIZE;
 	dst->st_ino     = src.inode;
 	dst->st_dev     = src.device;
+	long long mtime = src.modification_time.value;
+	dst->st_mtime   = mtime != Vfs::Timestamp::INVALID ? mtime : 0;
 }
 
 
