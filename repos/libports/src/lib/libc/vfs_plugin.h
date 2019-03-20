@@ -78,6 +78,12 @@ class Libc::Vfs_plugin : public Libc::Plugin
 			fd->fd_path = strdup(path.string());
 		}
 
+
+		/**
+		 * Update modification time
+		 */
+		void _vfs_write_mtime(Vfs::Vfs_handle&);
+
 		/**
 		 * Sync a handle and propagate errors
 		 */
