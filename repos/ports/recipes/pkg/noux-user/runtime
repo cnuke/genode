@@ -1,0 +1,33 @@
+<runtime ram="96M" caps="1000" binary="init" config="noux-user.config">
+
+	<requires>
+		<nitpicker/>
+		<timer/>
+		<file_system label="mnt1" writeable="yes"/>
+		<file_system label="mnt2" writeable="yes"/>
+		<file_system label="fonts" writeable="no"/>
+		<rom label="vimrc"/>
+	</requires>
+
+	<content>
+		<rom label="noux-user.config"/>
+		<rom label="ld.lib.so"/>
+		<rom label="libc.lib.so"/>
+		<rom label="libm.lib.so"/>
+		<rom label="init"/>
+		<rom label="nit_fb"/>
+		<rom label="terminal"/>
+		<rom label="noux"/>
+		<rom label="libc_noux.lib.so"/>
+		<rom label="posix.lib.so"/>
+		<rom label="ncurses.lib.so"/>
+		<rom label="bash-minimal.tar"/>
+		<rom label="coreutils.tar"/>
+		<rom label="vim-minimal.tar"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="grep.tar"/>
+		<rom label="sed.tar"/>
+		<rom label="findutils.tar"/>
+	</content>
+
+</runtime>
