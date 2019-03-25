@@ -1,0 +1,40 @@
+<runtime ram="32M" caps="200" binary="ssh_terminal">
+
+	<requires>
+		<file_system label="ssh" writeable="no"/>
+		<timer/>
+		<nic/>
+		<rm/>
+		<rtc/>
+		<report/>
+	</requires>
+
+	<provides> <terminal/> </provides>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="libc.lib.so"/>
+		<rom label="libc_pipe.lib.so"/>
+		<rom label="libcrypto.lib.so"/>
+		<rom label="libssh.lib.so"/>
+		<rom label="lxip.lib.so" />
+		<rom label="ssh_terminal"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="vfs_jitterentropy.lib.so"/>
+		<rom label="vfs_lxip.lib.so"/>
+		<rom label="zlib.lib.so"/>
+	</content>
+
+	<config port="22" allow_password="yes" show_password="yes" ed25519_key="/etc/ed25519_key">
+
+		<policy label_prefix="noux" user="sculpt" password="sculpt" multi_login="yes"/>
+
+		<vfs>
+			<dir name="dev"> <log/> <rtc/> <jitterentropy name="random"/> </dir>
+			<dir name="etc"> <fs label="ssh"/> </dir>
+			<dir name="socket"> <lxip ip_addr="10.0.1.222" netmask="255.255.255.0"/> </dir>
+		</vfs>
+		<libc stdout="/dev/log" stderr="/dev/log" socket="/socket" rtc="/dev/rtc"/>
+	</config>
+
+</runtime>

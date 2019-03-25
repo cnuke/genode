@@ -1,0 +1,8 @@
+_/src/ssh_terminal
+_/src/libc
+_/src/libcrypto
+_/src/libssh
+_/src/vfs
+_/src/vfs_jitterentropy
+_/src/vfs_lxip
+_/src/zlib
