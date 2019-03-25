@@ -1,0 +1,11 @@
+
+  This package provides a Terminal session via SSH
+
+It contains a default configuration that uses a ed25519 host key and
+is configured with login for user 'sculpt' with the password 'sculpt'
+on the usual SSH port '22'. The IP is statically set to '10.0.1.222'.
+
+For now the host key must be generated externally for example by using
+'ssh-keygen(1)' from OpenSSH:
+
+  ssh-keygen -t ed25519 -f ed25519_key -q -N ""
