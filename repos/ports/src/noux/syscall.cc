@@ -880,12 +880,33 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 
 		case SYSCALL_UTIMES:
 			{
+				char const *path   = (char const *)_sysio.utimes_in.path;
+				unsigned long sec  = _sysio.utimes_in.sec;
+				unsigned long usec = _sysio.utimes_in.usec;
+
+				Vfs::Vfs_handle *vfs_handle = 0;
+				_root_dir.open(path, 0, &vfs_handle, _heap);
+				if (!vfs_handle) {
+					Genode::error("COULD NOT OPEN '", path, "'");
+					break;
+				}
+
+				if (!sec) {
+					Milliseconds const ms =
+						_timer_connection.curr_time().trunc_to_plain_ms();
+					sec  = (ms.value / 1000);
+					usec = (ms.value % 1000) * 1000;
+				}
+
+				Genode::error("SYSCALL_UTIMES '", path, "'", " ", sec, ".", usec);
+
+				Vfs::Timestamp ts { .value = (long long)sec };
+				vfs_handle->fs().update_modification_timestamp(vfs_handle, ts);
+				_root_dir.close(vfs_handle);
+
 				/**
-				 * This systemcall is currently not implemented because we lack
-				 * the needed mechanisms in most file-systems.
-				 *
-				 * But we return true anyway to keep certain programs, e.g. make
-				 * happy.
+				 * Always return true, even if 'update_modification_timestamp'
+				 * failed to keep programs, e.g. make, happy.
 				 */
 				result = true;
 				break;
