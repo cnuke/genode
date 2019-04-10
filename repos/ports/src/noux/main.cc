@@ -27,6 +27,7 @@
 #include <kill_broadcaster.h>
 #include <vfs/dir_file_system.h>
 #include <vfs/simple_env.h>
+#include <time_info.h>
 
 namespace Noux {
 
@@ -241,6 +242,8 @@ struct Noux::Main
 
 	User_info _user_info { _config.xml() };
 
+	Time_info _time_info { _env, _config.xml() };
+
 	Signal_handler<Main> _destruct_handler {
 		_env.ep(), *this, &Main::_handle_destruct };
 
@@ -273,6 +276,7 @@ struct Noux::Main
 	Noux::Child _init_child { _name_of_init_process(),
 	                          _verbose,
 	                          _user_info,
+	                          _time_info,
 	                          0,
 	                          _kill_broadcaster,
 	                          _timer_connection,

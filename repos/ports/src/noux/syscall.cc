@@ -503,6 +503,7 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 					child = new (_heap) Child(_child_policy.name(),
 					                          _verbose,
 					                          _user_info,
+					                          _time_info,
 					                          this,
 					                          _kill_broadcaster,
 					                          _timer_connection,
@@ -836,7 +837,8 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 				Milliseconds const ms =
 					_timer_connection.curr_time().trunc_to_plain_ms();
 
-				_sysio.gettimeofday_out.sec  = (ms.value / 1000);
+				_sysio.gettimeofday_out.sec  = _time_info.initial_time();
+				_sysio.gettimeofday_out.sec += (ms.value / 1000);
 				_sysio.gettimeofday_out.usec = (ms.value % 1000) * 1000;
 
 				result = true;
@@ -856,7 +858,8 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 				/* CLOCK_SECOND is used by time(3) in the libc. */
 				case Sysio::CLOCK_ID_SECOND:
 					{
-						_sysio.clock_gettime_out.sec    = (ms.value / 1000);
+						_sysio.clock_gettime_out.sec    = _time_info.initial_time();
+						_sysio.clock_gettime_out.sec   += (ms.value / 1000);
 						_sysio.clock_gettime_out.nsec   = 0;
 
 						result = true;
@@ -894,8 +897,9 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 				if (!sec) {
 					Milliseconds const ms =
 						_timer_connection.curr_time().trunc_to_plain_ms();
-					sec  = (ms.value / 1000);
-					usec = (ms.value % 1000) * 1000;
+					sec   = _time_info.initial_time();
+					sec  += (ms.value / 1000);
+					usec  = (ms.value % 1000) * 1000;
 				}
 
 				Genode::error("SYSCALL_UTIMES '", path, "'", " ", sec, ".", usec);
