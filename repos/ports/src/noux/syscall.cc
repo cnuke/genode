@@ -230,7 +230,9 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 					                                   leaf_path,
 					                                   vfs_handle,
 					                                   _vfs_io_waiter_registry,
-					                                   _env.ep()),
+					                                   _env.ep(),
+					                                   _time_info,
+					                                   _timer_connection),
 					                                   _heap);
 
 				_sysio.open_out.fd = add_io_channel(channel);
@@ -883,16 +885,20 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 
 		case SYSCALL_UTIMES:
 			{
+				/**
+				 * Always return true, even if 'update_modification_timestamp'
+				 * failed to keep programs, e.g. make, happy.
+				 */
+				result = true;
+
 				char const *path   = (char const *)_sysio.utimes_in.path;
 				unsigned long sec  = _sysio.utimes_in.sec;
 				unsigned long usec = _sysio.utimes_in.usec;
+				(void)usec;
 
 				Vfs::Vfs_handle *vfs_handle = 0;
 				_root_dir.open(path, 0, &vfs_handle, _heap);
-				if (!vfs_handle) {
-					Genode::error("COULD NOT OPEN '", path, "'");
-					break;
-				}
+				if (!vfs_handle) { break; }
 
 				if (!sec) {
 					Milliseconds const ms =
@@ -902,17 +908,21 @@ bool Noux::Child::syscall(Noux::Session::Syscall sc)
 					usec  = (ms.value % 1000) * 1000;
 				}
 
-				Genode::error("SYSCALL_UTIMES '", path, "'", " ", sec, ".", usec);
+				Registered_no_delete<Vfs_io_waiter>
+					vfs_io_waiter(_vfs_io_waiter_registry);
 
 				Vfs::Timestamp ts { .value = (long long)sec };
-				vfs_handle->fs().update_modification_timestamp(vfs_handle, ts);
-				_root_dir.close(vfs_handle);
 
-				/**
-				 * Always return true, even if 'update_modification_timestamp'
-				 * failed to keep programs, e.g. make, happy.
-				 */
-				result = true;
+				for (;;) {
+					try {
+						vfs_handle->fs().update_modification_timestamp(vfs_handle, ts);
+						break;
+					} catch (Vfs::File_io_service::Insufficient_buffer) {
+						vfs_io_waiter.wait_for_io();
+					}
+				}
+
+				_root_dir.close(vfs_handle);
 				break;
 			}
 

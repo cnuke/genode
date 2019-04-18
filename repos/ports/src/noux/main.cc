@@ -99,7 +99,9 @@ connect_stdio(Genode::Env                                 &env,
               Vfs::File_system                            &root,
               Noux::Vfs_io_waiter_registry                &vfs_io_waiter_registry,
               Noux::Terminal_io_channel::Type              type,
-              Genode::Allocator                           &alloc)
+              Genode::Allocator                           &alloc,
+              Noux::Time_info                             &time_info,
+              Timer::Connection                           &timer)
 {
 	using namespace Vfs;
 	using namespace Noux;
@@ -143,7 +145,8 @@ connect_stdio(Genode::Env                                 &env,
 
 	return *new (alloc)
 		Vfs_io_channel(path.string(), root.leaf_path(path.string()),
-		               vfs_handle, vfs_io_waiter_registry, env.ep());
+		               vfs_handle, vfs_io_waiter_registry, env.ep(),
+		               time_info, timer);
 }
 
 
@@ -306,13 +309,13 @@ struct Noux::Main
 	Shared_pointer<Io_channel>
 		_channel_0 { &connect_stdio(_env, _terminal, _config.xml(), _root_dir,
 		             _io_response_handler.io_waiter_registry,
-		             Tio::STDIN,  _heap), _heap },
+		             Tio::STDIN,  _heap, _time_info, _timer_connection), _heap },
 		_channel_1 { &connect_stdio(_env, _terminal, _config.xml(), _root_dir,
 		            _io_response_handler.io_waiter_registry,
-		             Tio::STDOUT, _heap), _heap },
+		             Tio::STDOUT, _heap, _time_info, _timer_connection), _heap },
 		_channel_2 { &connect_stdio(_env, _terminal, _config.xml(), _root_dir,
 		             _io_response_handler.io_waiter_registry,
-		             Tio::STDERR, _heap), _heap };
+		             Tio::STDERR, _heap, _time_info, _timer_connection), _heap };
 
 	Main(Env &env) : _env(env)
 	{
