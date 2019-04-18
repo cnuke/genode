@@ -47,6 +47,8 @@ namespace Libc {
 		bool            cloexec = 0;  /* for 'fcntl' */
 		Genode::Lock    lock;
 
+		bool modified = false;
+
 		void path(char const *newpath)
 		{
 			if (fd_path) { Genode::warning("may leak former FD path memory"); }
