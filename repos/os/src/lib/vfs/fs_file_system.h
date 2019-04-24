@@ -231,8 +231,10 @@ class Vfs::Fs_file_system : public File_system
 				::File_system::Session::Tx::Source &source = *_fs.tx();
 				using ::File_system::Packet_descriptor;
 
-				if (!source.ready_to_submit())
-					throw Insufficient_buffer();
+				if (!source.ready_to_submit()) {
+					Genode::error(__func__, ":", __LINE__, " Insufficient_buffer");
+					return false;
+				}
 
 				try {
 					Packet_descriptor p(source.alloc_packet(0),
@@ -243,7 +245,8 @@ class Vfs::Fs_file_system : public File_system
 					/* pass packet to server side */
 					source.submit_packet(p);
 				} catch (::File_system::Session::Tx::Source::Packet_alloc_failed) {
-					throw Insufficient_buffer();
+					Genode::error(__func__, ":", __LINE__, " Insufficient_buffer");
+					return false;
 				} catch (...) {
 					Genode::error("unhandled exception");
 					return false;
