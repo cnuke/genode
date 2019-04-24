@@ -82,17 +82,36 @@ class Libc::Vfs_plugin : public Libc::Plugin
 		/**
 		 * Update modification time
 		 */
-		bool _vfs_write_mtime(Vfs::Vfs_handle *handle)
+		void _vfs_write_mtime(Vfs::Vfs_handle *handle)
 		{
 			struct timespec ts;
 
 			/* XXX using  clock_gettime directly is probably not the best idea */
 			if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
-				return false;
+				ts.tv_sec = 0;
 			}
 
 			Vfs::Timestamp time { .value = (long long)ts.tv_sec };
-			return handle->fs().update_modification_timestamp(handle, time);
+
+			struct Check : Libc::Suspend_functor
+			{
+				bool retry { false };
+
+				Vfs::Vfs_handle *vfs_handle;
+				Vfs::Timestamp &time;
+
+				Check(Vfs::Vfs_handle *vfs_handle, Vfs::Timestamp &time)
+				: vfs_handle(vfs_handle), time(time) { }
+
+				bool suspend() override
+				{
+					return !vfs_handle->fs().update_modification_timestamp(vfs_handle, time);
+				}
+			} check(handle, time);
+
+			do {
+				Libc::suspend(check);
+			} while (check.retry);
 		}
 
 
