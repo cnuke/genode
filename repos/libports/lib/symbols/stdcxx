@@ -655,6 +655,9 @@ _ZTVSt9basic_iosIcSt11char_traitsIcEE V
 _ZNKSt12__basic_fileIcE7is_openEv T
 _ZNKSt5ctypeIcE13_M_widen_initEv T
 _ZNKSt9type_infoeqERKS_ T
+_ZNSi4readEPcl T
+_ZNSi5seekgElSt12_Ios_Seekdir T
+_ZNSi5tellgEv T
 _ZNSi6ignoreEli T
 _ZNSi7getlineEPclc T
 _ZNSt12__basic_fileIcE4openEPKcSt13_Ios_Openmodei T
@@ -684,6 +687,7 @@ _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12find_last_ofEcm W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_local_dataEv W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13find_first_ofEPKcmm W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13find_first_ofEcm W
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE16find_last_not_ofEPKcmm W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE17find_first_not_ofEPKcmm W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE3endEv W
 _ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4backEv W
@@ -721,12 +725,14 @@ _ZNSaIcED2Ev W
 _ZNSi10_M_extractIdEERSiRT_ W
 _ZNSi10_M_extractIfEERSiRT_ W
 _ZNSi10_M_extractIjEERSiRT_ W
+_ZNSi10_M_extractIlEERSiRT_ W
 _ZNSirsERd W
 _ZNSirsERf W
 _ZNSirsERi W
 _ZNSirsERj W
 _ZNSo3putEc W
 _ZNSo5flushEv W
+_ZNSo9_M_insertIbEERSoT_ W
 _ZNSo9_M_insertIdEERSoT_ W
 _ZNSo9_M_insertIlEERSoT_ W
 _ZNSo9_M_insertImEERSoT_ W
