@@ -274,6 +274,7 @@ extern "C" int statfs(const char *path, struct statfs *buf)
 	buf->f_bsize  = result.f_bsize;
 
 	bool show_warning = !buf->f_bsize || !buf->f_blocks || !buf->f_bavail;
+	static bool show_warning_once = true;
 
 	if (!buf->f_bsize)
 		buf->f_bsize = 4096;
@@ -282,8 +283,10 @@ extern "C" int statfs(const char *path, struct statfs *buf)
 	if (!buf->f_bavail)
 		buf->f_bavail = buf->f_blocks;
 
-	if (show_warning)
+	if (show_warning && show_warning_once) {
+		show_warning_once = false;
 		Genode::warning("statfs provides bogus values for '", path, "' (probably a shared folder)");
+	}
 
 	return res;
 }
