@@ -241,6 +241,7 @@ $(D)/include/rpcsvc/nis_object.x : $(DOWNLOADS)
 
 %.h: %.x
 	@$(MSG_GENERATE)$(notdir $@)
+	$(VERBOSE)rm $@ || true
 	$(VERBOSE)rpcgen -C -h -DWANT_NFS3 $< -o $@
 
 generated_rpcsvc_files := \
