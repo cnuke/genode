@@ -30,7 +30,7 @@ export GENODE_DIR := $(realpath $(dir $(MAKEFILE_LIST))/../..)
 
 PUBLIC_DIR ?= $(GENODE_DIR)/public
 
-XZ_THREADS ?= 0
+XZ_THREADS ?= 1
 
 include $(GENODE_DIR)/tool/depot/mk/front_end.inc
 
