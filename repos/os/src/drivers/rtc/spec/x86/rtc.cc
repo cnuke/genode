@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2007-2017 Genode Labs GmbH
+ * Copyright (C) 2007-2019 Genode Labs GmbH
  * Copyright (C) 2012 Intel Corporation
  *
  * This file is part of the Genode OS framework, which is distributed
@@ -88,7 +88,7 @@ static inline void cmos_write(Io_port_connection &rtc_ports, unsigned char addr,
 
 #define RTC_ALWAYS_BCD   1 /* RTC operates in binary mode */
 #define BCD_TO_BIN(val)  ((val) = ((val) & 15) + ((val) >> 4) * 10)
-#define BIN_TO_BCD(val)  ((val) = (((val) / 10) << 4) + (val) % 10)
+#define BIN_TO_BCD(val)  ((val) = (((val)/10) << 4) + (val) % 10)
 
 
 static Io_port_connection &rtc_ports(Env *env = nullptr)
