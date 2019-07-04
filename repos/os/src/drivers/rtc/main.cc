@@ -92,7 +92,7 @@ struct Rtc::Main
 	Main(Env &env) : env(env)
 	{
 		if (_set_rtc) {
-			_update_rom.construct(env, "set-rtc");
+			_update_rom.construct(env, "set_rtc");
 			_update_rom->sigh(_update_sigh);
 		}
 
@@ -117,7 +117,7 @@ void Rtc::Main::_handle_update()
 	                   && node.has_attribute("second");
 
 	if (!complete) {
-		Genode::warning("ignore incomplete RTC update");
+		Genode::warning("set_rtc: ignoring incomplete RTC update");
 		return;
 	}
 
@@ -125,31 +125,31 @@ void Rtc::Main::_handle_update()
 
 	ts.second = node.attribute_value("second", 0u);
 	if (ts.second > 59) {
-		Genode::error("second invalid");
+		Genode::error("set_rtc: second invalid");
 		return;
 	}
 
 	ts.minute = node.attribute_value("minute", 0u);
 	if (ts.minute > 59) {
-		Genode::error("minute invalid");
+		Genode::error("set_rtc: minute invalid");
 		return;
 	}
 
 	ts.hour = node.attribute_value("hour", 0u);
 	if (ts.hour > 23) {
-		Genode::error("hour invalid");
+		Genode::error("set_rtc: hour invalid");
 		return;
 	}
 
 	ts.day = node.attribute_value("day", 1u);
 	if (ts.day > 31 || ts.day == 0) {
-		Genode::error("day invalid");
+		Genode::error("set_rtc: day invalid");
 		return;
 	}
 
 	ts.month = node.attribute_value("month", 1u);
 	if (ts.month > 12 || ts.month == 0) {
-		Genode::error("month invalid");
+		Genode::error("set_rtc: month invalid");
 		return;
 	}
 

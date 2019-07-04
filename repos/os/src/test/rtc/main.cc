@@ -49,7 +49,7 @@ struct Main
 		bool const test_update = config_rom.xml().attribute_value("set_rtc", false);
 		if (test_update) {
 			try {
-				Reporter reporter { env, "set-rtc" };
+				Reporter reporter { env, "set_rtc" };
 				reporter.enabled(true);
 
 				Rtc::Timestamp ts = rtc[0].current_time();
