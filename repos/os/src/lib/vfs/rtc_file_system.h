@@ -15,6 +15,7 @@
 #define _INCLUDE__VFS__RTC_FILE_SYSTEM_H_
 
 /* Genode includes */
+#include <base/registry.h>
 #include <rtc_session/connection.h>
 #include <vfs/file_system.h>
 #include <util/list.h>
@@ -26,22 +27,6 @@ namespace Vfs { class Rtc_file_system; }
 class Vfs::Rtc_file_system : public Single_file_system
 {
 	private:
-
-		class Watch_handle : public  Vfs_watch_handle,
-		                     private Genode::List<Watch_handle>::Element
-		{
-			friend class Genode::List<Watch_handle>;
-
-			public:
-
-				Watch_handle(Vfs::File_system &fs,
-				             Allocator        &alloc)
-				:
-					Vfs_watch_handle { fs, alloc }
-				{ }
-		};
-
-		using Watch_handle_list = Genode::List<Watch_handle>;
 
 		class Rtc_vfs_handle : public Single_vfs_handle
 		{
@@ -100,15 +85,32 @@ class Vfs::Rtc_file_system : public Single_file_system
 		};
 
 		Rtc::Connection   _rtc;
-		Watch_handle_list _watch_handles { };
+
+		typedef Genode::Registered<Vfs_watch_handle>      Registered_watch_handle;
+		typedef Genode::Registry<Registered_watch_handle> Watch_handle_registry;
+
+		Watch_handle_registry _handle_registry { };
+
+		Genode::Io_signal_handler<Rtc_file_system> _set_signal_handler;
+
+		void _handle_set_signal()
+		{
+			_handle_registry.for_each([this] (Registered_watch_handle &handle) {
+				handle.watch_response();
+			});
+		}
 
 	public:
 
 		Rtc_file_system(Vfs::Env &env, Genode::Xml_node config)
 		:
 			Single_file_system(NODE_TYPE_CHAR_DEVICE, name(), config),
-			_rtc(env.env())
-		{ }
+			_rtc(env.env()),
+			_set_signal_handler(env.env().ep(), *this,
+			                    &Rtc_file_system::_handle_set_signal)
+		{
+			_rtc.set_sigh(_set_signal_handler);
+		}
 
 		static char const *name()   { return "rtc"; }
 		char const *type() override { return "rtc"; }
@@ -149,10 +151,9 @@ class Vfs::Rtc_file_system : public Single_file_system
 				return WATCH_ERR_UNACCESSIBLE;
 
 			try {
-				Watch_handle &watch_handle = *new (alloc)
-					Watch_handle(*this, alloc);
+				Vfs_watch_handle &watch_handle = *new (alloc)
+					Registered_watch_handle(_handle_registry, *this, alloc);
 
-				_watch_handles.insert(&watch_handle);
 				*handle = &watch_handle;
 				return WATCH_OK;
 			}
