@@ -23,6 +23,7 @@
 
 #include <base/duration.h>
 #include <util/xml_node.h>
+#include <vfs/vfs_handle.h>
 
 namespace Libc {
 
@@ -50,6 +51,10 @@ namespace Libc {
 	Genode::uint64_t suspend(Suspend_functor &, Genode::uint64_t timeout_ms = 0);
 
 	void dispatch_pending_io_signals();
+
+	/**
+	 */
+	Vfs::Vfs_watch_handle *watch(char const *path);
 
 	/**
 	 * Get time since startup in ms
