@@ -28,6 +28,7 @@
 #include <base/log.h>
 #include <vfs/vfs_handle.h>
 
+
 namespace Libc {
 	extern char const *config_rtc();
 }
@@ -39,7 +40,6 @@ struct Rtc : Vfs::Watch_response_handler
 	char const            *_file         { nullptr };
 	bool                  _read_file     { false };
 	time_t                _rtc_value     { 0 };
-	Genode::uint64_t      _ts_value      { 0 };
 
 	Rtc(char const *rtc_file)
 	: _file(rtc_file)
@@ -96,8 +96,11 @@ struct Rtc : Vfs::Watch_response_handler
 
 		close(fd);
 
-		_ts_value = Libc::current_time().trunc_to_plain_ms().value;
-		return _rtc_value + (time_t)_ts_value / 1000;
+		uint64_t const ts_value =
+			Libc::current_time().trunc_to_plain_ms().value;
+		_rtc_value += (time_t)ts_value / 1000;
+
+		return _rtc_value;
 	}
 };
 
