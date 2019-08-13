@@ -53,6 +53,12 @@ namespace Libc {
 	void dispatch_pending_io_signals();
 
 	/**
+	 * Get watch handle for given path
+	 *
+	 * \param path  path that should be be watched
+	 *
+	 * \return      point to the watch handle object or a nullptr
+	 *              when the watch operation failed
 	 */
 	Vfs::Vfs_watch_handle *watch(char const *path);
 

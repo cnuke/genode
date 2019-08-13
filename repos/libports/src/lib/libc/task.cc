@@ -768,7 +768,7 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 		}
 
 		/**
-		 * Get wtach handler for given path
+		 * Alloc new watch handler for given path
 		 */
 		Vfs::Vfs_watch_handle *alloc_watch_handle(char const *path)
 		{
