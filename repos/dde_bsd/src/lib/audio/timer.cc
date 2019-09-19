@@ -133,3 +133,22 @@ extern "C" void delay(int delay)
 {
 	_bsd_timer->delay(delay);
 }
+
+
+/**************** 
+ ** sys/time.h **
+ ****************/
+
+void microuptime(struct timeval *tv)
+{
+	if (!tv) { return; }
+
+	/*
+	 * So far only needed by auich_calibrate, which
+	 * reuqires microseconds - switching the Bsd::Timer
+	 * implementation over to the new Genode::Timer API
+	 * is probably necessary for that to work properly.
+	 */
+	tv->tv_sec = millisecs / 1000;
+	tv->tv_usec = 0;
+}

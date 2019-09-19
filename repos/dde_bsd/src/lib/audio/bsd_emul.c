@@ -31,6 +31,8 @@ extern struct cfdriver azalia_cd;
 extern struct cfattach azalia_ca;
 extern struct cfdriver eap_cd;
 extern struct cfattach eap_ca;
+extern struct cfdriver auich_cd;
+extern struct cfattach auich_ca;
 
 
 /* original value */
@@ -42,6 +44,7 @@ struct cfdata cfdata[] = {
 	{&audio_ca,  &audio_cd,  0, 0, 0, 0, pv+0, 0, 0},
 	{&azalia_ca, &azalia_cd, 0, 0, 0, 0, pv+1, 0, 0},
 	{&eap_ca,    &eap_cd,    0, 0, 0, 0, pv+1, 0, 0},
+	{&auich_ca,  &auich_cd,  0, 0, 0, 0, pv+1, 0, 0},
 };
 
 
