@@ -33,6 +33,7 @@ extern "C" {
 #include <sys/limits.h>
 #include <time.h>
 #include <inttypes.h>
+#include <poll.h>
 }
 
 int main(int argc, char **argv)
@@ -205,6 +206,28 @@ int main(int argc, char **argv)
 		}
 
 		puts("Check mktime: success");
+	} while (0);
+
+	do {
+		/* code copied from neatvi to illustrate the issue */
+		static char ibuf[4096];         /* input character buffer */
+		static char icmd[4096];         /* read after the last term_cmd() */
+		static int ibuf_pos, ibuf_cnt;  /* ibuf[] position and length */
+		static int icmd_pos;            /* icmd[] position */
+
+		struct pollfd ufds[1];
+		int n, c;
+		if (ibuf_pos >= ibuf_cnt) {
+			ufds[0].fd = 0;
+			ufds[0].events = POLLIN;
+			if (poll(ufds, 1, -1) <= 0)
+				return -1;
+			/* read a single input character */
+			if ((n = read(0, ibuf, 1)) <= 0)
+				return -1;
+			ibuf_cnt = n;
+			ibuf_pos = 0;
+		}
 	} while (0);
 
 	exit(error_count);
