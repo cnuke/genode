@@ -77,12 +77,18 @@ namespace File_system {
 		 * The INVALID value is used in the when the underlying file
 		 * system session does not support modification timestamps.
 		 * Its value is chosen abitrarily and instead of simply
-		 * returning '0', which would also correspond to
-		 * 1970-01-01T00:00:00Z, this allows for handling this case
-		 * explicitly. In any case, an invalid timestamp should not
-		 * be used for doing any calculations.
+		 * returning '0' (see comment below), this allows for handling
+		 * this case explicitly. In any case, an invalid timestamp
+		 * should not be used for doing any calculations.
 		 */
 		static constexpr Genode::int64_t INVALID = 0x7fffffffffffffffLL;
+
+		/*
+		 * The 'value' member contains the modification timestamp in
+		 * seconds. Value '0' is defined as 1970-01-01T00:00:00Z, where
+		 * a positive value covers all seconds after this date and a
+		 * negative one all before.
+		 */
 		Genode::int64_t value;
 	};
 
