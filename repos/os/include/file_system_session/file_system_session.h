@@ -85,9 +85,6 @@ namespace File_system {
 			 */
 			static constexpr Genode::int64_t INVALID = 0x7fffffffffffffffLL;
 
-			static constexpr Genode::uint32_t RESOLUTION_US = 1000'000'000u;
-			static constexpr Genode::uint32_t RESOLUTION = 1000u;
-
 			/*
 			 * The 'value' member contains the raw modification timestamp.
 			 * Value '0' is defined as 1970-01-01T00:00:00Z, where a positive value
@@ -96,24 +93,38 @@ namespace File_system {
 			 */
 			Genode::int64_t value;
 
+			/*
+			 * RESOLUTION specifies the resolution of the value returned by
+			 * a call to 'nanoseconds()'.
+			 */
+			static constexpr Genode::uint32_t RESOLUTION = 1000u;
+
+			/* helper for truncating to resolution */
+			static constexpr Genode::uint32_t SEC_IN_US  = 1000'000'000u;
+			static constexpr Genode::uint32_t SCALER     = SEC_IN_US / RESOLUTION;
+
+
 		public:
+
+			using Seconds     = Genode::int64_t;
+			using Nanoseconds = Genode::int64_t;
 
 			Timestamp() : value(INVALID) { }
 
-			Timestamp(Genode::int64_t seconds, Genode::int64_t nanoseconds)
+			Timestamp(Seconds seconds, Nanoseconds nanoseconds)
 			{
 				value  = seconds;
-				value += nanoseconds / (RESOLUTION_US / RESOLUTION);
+				value += nanoseconds / SCALER;
 			}
 
-			Genode::int64_t seconds() const
+			Seconds seconds() const
 			{
 				return value / RESOLUTION;
 			}
 
-			Genode::int64_t nanoseconds() const
+			Nanoseconds nanoseconds() const
 			{
-				return (value % RESOLUTION) * (RESOLUTION_US / RESOLUTION);
+				return (value % RESOLUTION) * SCALER;
 			}
 
 			Genode::uint32_t resolution() const
