@@ -73,22 +73,55 @@ namespace File_system {
 
 	struct Timestamp
 	{
-		/*
-		 * The INVALID value is used whenever the underlying file system
-		 * session does not support modification timestamps. The value is
-		 * chosen such that it is unlikely to occur, instead of simply '0',
-		 * which would correspond to plausible time (see comment below).
-		 * This allows for handling this case explicitly. In any case, an
-		 * invalid timestamp should not be used for doing any calculations.
-		 */
-		static constexpr Genode::int64_t INVALID = 0x7fffffffffffffffLL;
+		private:
 
-		/*
-		 * The 'value' member contains the modification timestamp in seconds.
-		 * Value '0' is defined as 1970-01-01T00:00:00Z, where a positive value
-		 * covers all seconds after this date and a negative one all before.
-		 */
-		Genode::int64_t value;
+			/*
+			 * The INVALID value is used whenever the underlying file system
+			 * session does not support modification timestamps. The value is
+			 * chosen such that it is unlikely to occur, instead of simply '0',
+			 * which would correspond to plausible time (see comment below).
+			 * This allows for handling this case explicitly. In any case, an
+			 * invalid timestamp should not be used for doing any calculations.
+			 */
+			static constexpr Genode::int64_t INVALID = 0x7fffffffffffffffLL;
+
+			static constexpr Genode::uint32_t RESOLUTION_US = 1000'000'000u;
+			static constexpr Genode::uint32_t RESOLUTION = 1000u;
+
+			/*
+			 * The 'value' member contains the raw modification timestamp.
+			 * Value '0' is defined as 1970-01-01T00:00:00Z, where a positive value
+			 * covers the positive range after this date and a negative the one
+			 * before.
+			 */
+			Genode::int64_t value;
+
+		public:
+
+			Timestamp() : value(INVALID) { }
+
+			Timestamp(Genode::int64_t seconds, Genode::int64_t nanoseconds)
+			{
+				value  = seconds;
+				value += nanoseconds / (RESOLUTION_US / RESOLUTION);
+			}
+
+			Genode::int64_t seconds() const
+			{
+				return value / RESOLUTION;
+			}
+
+			Genode::int64_t nanoseconds() const
+			{
+				return (value % RESOLUTION) * (RESOLUTION_US / RESOLUTION);
+			}
+
+			Genode::uint32_t resolution() const
+			{
+				return RESOLUTION;
+			}
+
+			bool valid() const { return value != INVALID; }
 	};
 
 	typedef Genode::Out_of_ram  Out_of_ram;
