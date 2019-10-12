@@ -1200,7 +1200,7 @@ int Socket_fs::Plugin::close(Libc::File_descriptor *fd)
 }
 
 
-int Socket_fs::Plugin::ioctl(Libc::File_descriptor *, int request, char*)
+int Socket_fs::Plugin::ioctl(Libc::File_descriptor *fd, int request, char*)
 {
 	if (request == FIONREAD) {
 		/*
@@ -1214,6 +1214,17 @@ int Socket_fs::Plugin::ioctl(Libc::File_descriptor *, int request, char*)
 			print_fionread_error_message = false;
 		}
 		return -1;
+	}
+
+	if (request == -2147195266 /* FIONBIO */) {
+		int flags = fcntl(fd, F_GETFL, 0);
+		if (flags == -1) {
+			return -1;
+		}
+		flags |= O_NONBLOCK;
+		if (fcntl(fd, F_SETFL, flags) != -1) {
+			return 0;
+		}
 	}
 
 	Genode::error(__func__, " request ", request, " not supported on sockets");
