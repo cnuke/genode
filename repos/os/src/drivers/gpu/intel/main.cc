@@ -1134,8 +1134,8 @@ struct Igd::Device
 		_mmio.construct(_delayer, gttmmadr_base);
 
 		/* GGTT */
-		Number_of_bytes const fb_size =
-			config.attribute_value("fb_size", 32u<<20);
+		size_t const fb_size =
+			config.attribute_value("fb_size", Number_of_bytes(32u<<20));
 		log("Reserve beginning ", fb_size, " in GGTT for framebuffer");
 
 		Ram_dataspace_capability scratch_page_ds = _pci_backend_alloc.alloc(_md_alloc, PAGE_SIZE);
