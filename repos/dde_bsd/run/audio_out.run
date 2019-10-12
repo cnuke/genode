@@ -68,12 +68,15 @@ append_if $use_mixer config {
 		</route>
 	</start>}
 
+append_if [have_spec linux] config {
+	<start name="audio_drv" ld="no">}
+append_if [expr ![have_spec linux]] config {
+	<start name="audio_drv">}
 append config {
-	<start name="audio_drv">
 		<binary name="} [audio_drv_binary] {"/>
 		<resource name="RAM" quantum="8M"/>
 		<provides> <service name="Audio_out"/> </provides>
-		<config />
+		<config alsa_device="hw:CARD=Schiit,DEV=0"/>
 	</start>
 	<start name="test-audio_out">
 		<resource name="RAM" quantum="4M"/>
