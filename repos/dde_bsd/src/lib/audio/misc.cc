@@ -12,6 +12,7 @@
  */
 
 /* Genode includes */
+#include <base/log.h>
 #include <base/sleep.h>
 #include <base/snprintf.h>
 #include <util/string.h>
@@ -44,6 +45,15 @@ static int _vprintf(char const *format, va_list list)
 	char buf[128] { };
 	Genode::String_console sc(buf, sizeof(buf));
 	sc.vprintf(format, list);
+	/*
+ 	 * Check if the buffer contains more than the terminating
+	 * NUL byte and strip the last '\n' in the buffer as log()
+	 * will append one.
+ 	 */
+	if (sc.len() > 2 && buf[sc.len()-1] == '\n') {
+		buf[sc.len()-1] = '\0';
+	}
+	Genode::log((char const*)buf);
 	return sc.len();
 }
 
