@@ -100,6 +100,8 @@ int probe_cfdata(struct pci_attach_args *pa)
 			struct device *dev = (struct device *) malloc(ca->ca_devsize,
 			                                              M_DEVBUF, M_NOWAIT|M_ZERO);
 
+			dev->dv_cfdata = cf;
+
 			snprintf(dev->dv_xname, sizeof(dev->dv_xname), "%s%d", cd->cd_name,
 			         dev->dv_unit);
 			printf("%s at %s\n", dev->dv_xname, pci_bus.dv_xname);
@@ -127,6 +129,8 @@ struct device *config_found_sm(struct device *parent, void *aux, cfprint_t print
 		snprintf(dev->dv_xname, sizeof(dev->dv_xname), "%s%d", cd->cd_name,
 		         dev->dv_unit);
 		printf("%s at %s\n", dev->dv_xname, parent->dv_xname);
+
+		dev->dv_cfdata = cf;
 
 		ca->ca_attach(parent, dev, aux);
 
