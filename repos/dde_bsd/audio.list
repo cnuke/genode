@@ -1,5 +1,6 @@
 ./sys/dev/audio.c
 ./sys/dev/audio_if.h
+./sys/dev/pci/auich.c
 ./sys/dev/pci/azalia.c
 ./sys/dev/pci/azalia.h
 ./sys/dev/pci/azalia_codec.c
