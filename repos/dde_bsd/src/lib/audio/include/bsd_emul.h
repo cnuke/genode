@@ -47,6 +47,7 @@ typedef unsigned int   uint;
 
 typedef signed short       int16_t;
 typedef signed   int       int32_t;
+typedef signed   long long int64_t;
 typedef unsigned char      uint8_t;
 typedef unsigned short     uint16_t;
 typedef unsigned int       uint32_t;
@@ -120,6 +121,8 @@ enum {
 	PCATCH = 0x100,
 };
 
+#define PAGE_SIZE (1 << 12)
+
 #ifdef __cplusplus
 #define NULL 0
 #else
@@ -127,6 +130,8 @@ enum {
 #endif /* __cplusplus */
 
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
+
+#define offsetof(s, e) __builtin_offsetof(s, e)
 
 
 /******************
@@ -549,6 +554,7 @@ enum {
 	BUS_DMA_WAITOK   = 0x0000,
 	BUS_DMA_NOWAIT   = 0x0001,
 	BUS_DMA_COHERENT = 0x0004,
+	BUS_DMA_NOCACHE  = 0x0800,
 };
 
 
@@ -678,6 +684,18 @@ int timeout_del(struct timeout *);
 
 #define htole32(x) ((uint32_t)(x))
 
+
+/****************
+ ** sys/time.h **
+ ****************/
+
+struct timeval
+{
+	int64_t tv_sec;
+	long    tv_usec;
+};
+
+void microuptime(struct timeval *);
 
 #include <extern_c_end.h>
 

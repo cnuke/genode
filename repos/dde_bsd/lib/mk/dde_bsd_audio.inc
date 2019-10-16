@@ -42,6 +42,9 @@ SRC_C += dev/ic/ac97.c
 # HDA driver
 SRC_C += dev/pci/azalia.c dev/pci/azalia_codec.c
 
+# ICH driver
+SRC_C += dev/pci/auich.c
+
 # ES1370
 SRC_C += dev/pci/eap.c
 
