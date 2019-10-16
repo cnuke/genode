@@ -31,7 +31,7 @@ void usleep(int);
 }
 
 
-enum { verbose_ioctl = false };
+enum { verbose_ioctl = true };
 
 namespace Utils
 {
@@ -587,8 +587,11 @@ class Drm_call
 
 		int _device_gem_sw_finish(void *arg)
 		{
-			// drm_i915_gem_sw_finish * const p = reinterpret_cast<drm_i915_gem_sw_finish*>(arg);
-			// Handle const handle              = p->handle;
+			drm_i915_gem_sw_finish * const p = reinterpret_cast<drm_i915_gem_sw_finish*>(arg);
+			Handle const handle              = p->handle;
+			if (verbose_ioctl) {
+				Genode::error(__func__, ": ", "handle: ", handle);
+			}
 			return 0;
 		}
 
@@ -732,18 +735,25 @@ class Drm_call
 		int _device_gem_busy(void *arg)
 		{
 			drm_i915_gem_busy * const p = reinterpret_cast<drm_i915_gem_busy*>(arg);
-			// Handle const handle = p->handle;
-			// uint32_t busy = p->busy;
+			Handle const handle = p->handle;
 			/* TODO flag currently executed buffer */
-			p->busy = 0;
+			Genode::warning(__func__, ": ", "handle: ", handle, " set busy: 1");
+			p->busy = 1;
+
+			if (verbose_ioctl) {
+				Genode::error(__func__, ": ", "handle: ", handle, " busy: ", p->busy);
+			}
 			return 0;
 		}
 
 		int _device_gem_madvise(void *arg)
 		{
 			drm_i915_gem_madvise * const p = reinterpret_cast<drm_i915_gem_madvise*>(arg);
-			// Handle const handle = p->handle;
-			// uint32_t const madv = p->madv;
+			Handle const handle = p->handle;
+			uint32_t const madv = p->madv;
+			if (verbose_ioctl) {
+				Genode::error(__func__, ": ", "handle: ", handle, " madv: ", madv);
+			}
 			/* all buffer are always available */
 			p->retained = 1;
 			return 0;
@@ -759,22 +769,23 @@ class Drm_call
 		int _device_ioctl(unsigned cmd, void *arg)
 		{
 			switch (cmd) {
-			case DRM_I915_GEM_GET_APERTURE:   return _device_gem_get_aperture_size(arg);
-			case DRM_I915_GETPARAM:           return _device_getparam(arg);
+			case DRM_I915_GEM_BUSY:           return _device_gem_busy(arg);
+			case DRM_I915_GEM_CONTEXT_CREATE: return _device_gem_context_create(arg);
 			case DRM_I915_GEM_CREATE:         return _device_gem_create(arg);
+			case DRM_I915_GEM_EXECBUFFER2:    return _device_gem_execbuffer2(arg);
+			case DRM_I915_GEM_GET_APERTURE:   return _device_gem_get_aperture_size(arg);
+			case DRM_I915_GEM_MADVISE:        return _device_gem_madvise(arg);
 			case DRM_I915_GEM_MMAP:           return _device_gem_mmap(arg);
 			case DRM_I915_GEM_MMAP_GTT:       return _device_gem_mmap_gtt(arg);
-			case DRM_I915_GEM_SET_DOMAIN:     return _device_gem_set_domain(arg);
-			case DRM_I915_GEM_CONTEXT_CREATE: return _device_gem_context_create(arg);
-			case DRM_I915_GEM_SET_TILING:     return _device_gem_set_tiling(arg);
 			case DRM_I915_GEM_PWRITE:         return _device_gem_pwrite(arg);
+			case DRM_I915_GEM_SET_DOMAIN:     return _device_gem_set_domain(arg);
+			case DRM_I915_GEM_SET_TILING:     return _device_gem_set_tiling(arg);
 			case DRM_I915_GEM_SW_FINISH:      return _device_gem_sw_finish(arg);
-			case DRM_I915_GEM_EXECBUFFER2:    return _device_gem_execbuffer2(arg);
-			case DRM_I915_GEM_BUSY:           return _device_gem_busy(arg);
-			case DRM_I915_GEM_MADVISE:        return _device_gem_madvise(arg);
 			case DRM_I915_GEM_THROTTLE:       return _device_gem_throttle(arg);
+			case DRM_I915_GETPARAM:           return _device_getparam(arg);
 			default:
-				Genode::error("Unhandled device specific ioctl:", Genode::Hex(cmd));
+				Genode::error("Unhandled device specific ioctl:",
+				              command_name(cmd), " (", Genode::Hex(cmd), ")");
 				break;
 			}
 
@@ -800,7 +811,8 @@ class Drm_call
 			case DRM_NUMBER(DRM_IOCTL_GEM_CLOSE): return _generic_gem_close(arg);
 			case DRM_NUMBER(DRM_IOCTL_GEM_FLINK): return _generic_gem_flink(arg);
 			default:
-				Genode::error("Unhandled generic DRM ioctl:", Genode::Hex(cmd));
+				Genode::error("Unhandled generic DRM ioctl:",
+				              command_name(cmd), " (", Genode::Hex(cmd), ")");
 				break;
 			}
 
