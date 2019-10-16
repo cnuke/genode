@@ -71,9 +71,9 @@ class Bsd::Timer
 			millisecs = _timer_conn.elapsed_ms();
 		}
 
-		void delay(Genode::uint64_t ms)
+		void delay(Genode::uint64_t us)
 		{
-			_timer_conn.msleep(ms);
+			_timer_conn.usleep(us);
 		}
 };
 
