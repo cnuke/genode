@@ -23,21 +23,23 @@
 Firmware_list fw_list[] = {
 	{ "regulatory.db", 4144, nullptr },
 
-	{ "iwlwifi-1000-5.ucode",     337520, nullptr },
-	{ "iwlwifi-3160-17.ucode",    918268, nullptr },
-	{ "iwlwifi-5000-5.ucode",     340696, nullptr },
-	{ "iwlwifi-6000-4.ucode",     454608, nullptr },
-	{ "iwlwifi-6000-6.ucode",     454608, "iwlwifi-6000-4.ucode" },
-	{ "iwlwifi-6000g2a-6.ucode",  677296, nullptr },
-	{ "iwlwifi-6000g2b-6.ucode",  679436, nullptr },
-	{ "iwlwifi-7260-17.ucode",   1049340, nullptr },
-	{ "iwlwifi-7265-16.ucode",   1180412, nullptr },
-	{ "iwlwifi-7265D-22.ucode",  1028376, nullptr },
-	{ "iwlwifi-7265D-29.ucode",  1036432, nullptr },
-	{ "iwlwifi-8000C-22.ucode",  2120860, nullptr },
-	{ "iwlwifi-8000C-36.ucode",  2486572, nullptr },
-	{ "iwlwifi-8265-22.ucode",   1811984, nullptr },
-	{ "iwlwifi-8265-36.ucode",   2498044, nullptr }
+	{ "iwlwifi-1000-5.ucode",               337520, nullptr },
+	{ "iwlwifi-3160-17.ucode",              918268, nullptr },
+	{ "iwlwifi-5000-5.ucode",               340696, nullptr },
+	{ "iwlwifi-6000-4.ucode",               454608, nullptr },
+	{ "iwlwifi-6000-6.ucode",               454608, "iwlwifi-6000-4.ucode" },
+	{ "iwlwifi-6000g2a-6.ucode",            677296, nullptr },
+	{ "iwlwifi-6000g2b-6.ucode",            679436, nullptr },
+	{ "iwlwifi-7260-17.ucode",             1049340, nullptr },
+	{ "iwlwifi-7265-16.ucode",             1180412, nullptr },
+	{ "iwlwifi-7265D-22.ucode",            1028376, nullptr },
+	{ "iwlwifi-7265D-29.ucode",            1036432, nullptr },
+	{ "iwlwifi-8000C-22.ucode",            2120860, nullptr },
+	{ "iwlwifi-8000C-36.ucode",            2486572, nullptr },
+	{ "iwlwifi-8265-22.ucode",             1811984, nullptr },
+	{ "iwlwifi-8265-36.ucode",             2498044, nullptr },
+	{ "iwlwifi-9000-pu-b0-jf-b0-34.ucode", 2678284, nullptr },
+	{ "iwlwifi-9000-pu-b0-jf-b0-36.ucode", 2678284, "iwlwifi-9000-pu-b0-jf-b0-34.ucode" }
 };
 
 
@@ -53,6 +55,10 @@ int request_firmware_nowait(struct module *module, bool uevent,
                             gfp_t gfp, void *context,
                             void (*cont)(const struct firmware *, void *))
 {
+	for (size_t i = 0; i < fw_list_len; i++) {
+		Genode::error(fw_list[i].requested_name);
+	}
+
 	/* only try to load known firmware images */
 	Firmware_list *fwl = 0;
 	for (size_t i = 0; i < fw_list_len; i++) {
