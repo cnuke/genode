@@ -109,6 +109,7 @@ int probe_cfdata(struct pci_attach_args *pa)
 			         dev->dv_unit);
 			printf("%s at %s\n", dev->dv_xname, pci_bus.dv_xname);
 			ca->ca_attach(&pci_bus, dev, pa);
+
 			return 1;
 		}
 	}
@@ -155,3 +156,15 @@ struct device *device_lookup(struct cfdriver *cd, int unit)
 
 	return audio_cd.cd_devs[unit];
 }
+
+/*****************
+ ** sys/ucred.h **
+ *****************/
+
+int suser(struct proc *p)
+{
+	(void)p;
+
+	/* we always have special user powers */
+	return 0;
+};

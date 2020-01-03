@@ -120,6 +120,10 @@ extern "C" int msleep(const volatile void *ident, struct mutex *mtx,
 
 extern "C" void wakeup(const volatile void *ident)
 {
+	if (!_sleep_task) {
+		Genode::error("sleep task is NULL");
+		Genode::sleep_forever();
+	}
 	_sleep_task->unblock();
 	_sleep_task = nullptr;
 }
