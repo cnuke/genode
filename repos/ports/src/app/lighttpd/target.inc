@@ -1,7 +1,7 @@
 LIGHTTPD_DIR := $(call select_from_ports,lighttpd)/src/app/lighttpd
 
 FILTER_OUT = lempar.c lighttpd-angel.c lemon.c \
-             mod_accesslog.c mod_alias.c \
+             mod_alias.c \
              mod_authn_file.c mod_authn_gssapi.c mod_authn_ldap.c \
              mod_authn_mysql.c mod_authn_pam.c mod_authn_sasl.c \
              mod_cgi.c mod_cml.c mod_cml_funcs.c mod_cml_lua.c \
