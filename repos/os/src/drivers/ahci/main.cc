@@ -117,7 +117,9 @@ class Ahci::Driver : Noncopyable
 				case ATA_SIG:
 					try {
 						_ata[index].construct();
+						log("try to construct port: ", index);
 						_ports[index].construct(*_ata[index], rm, _hba, index);
+						log("constructed port: ", index);
 						enabled = true;
 					} catch (...) { }
 
@@ -167,20 +169,31 @@ class Ahci::Driver : Noncopyable
 		{
 			unsigned port_list = _hba.read<Hba::Is>();
 
+			log(__func__, ":", __LINE__);
 			while (port_list) {
 				unsigned port = log2(port_list);
+				log(__func__, ":", __LINE__, "port_list: ", Hex(port_list), " port: ", port);
 				port_list    &= ~(1U << port);
 
 				/* handle (pending) requests */
 				_dispatch.session(port);
 
 				/* ack irq */
-				_ports[port]->handle_irq();
+				log(__func__, ":", __LINE__);
+				if (_ports[port].constructed()) {
+					log("handle_irq for port: ", port);
+					_ports[port]->handle_irq();
+				} else {
+					log("port: ", port, " not constructed");
+				}
+				log(__func__, ":", __LINE__);
 			}
+			log(__func__, ":", __LINE__);
 
 			/* clear status register */
 			_hba.ack_irq();
 		}
+
 		Port &port(long device, char const *model_num, char const *serial_num)
 		{
 			/* check for model/device */
@@ -388,14 +401,18 @@ struct Ahci::Main : Rpc_object<Typed_root<Block::Session>>,
 		auto const serial = policy.attribute_value("serial", String<64>());
 
 		try {
+			log(__func__, ":", __LINE__);
 			Port &port = driver->port(device, model.string(), serial.string());
+			log(__func__, ":", __LINE__);
 
 			if (block_session[port.index].constructed()) {
 				error("Device with number=", port.index, " is already in use");
 				throw Service_denied();
 			}
 
+			log(__func__, ":", __LINE__);
 			block_session[port.index].construct(env, port, tx_buf_size);
+			log(__func__, ":", __LINE__);
 			return block_session[port.index]->cap();
 		} catch (...) {
 			error("rejecting session request, no matching policy for '", label, "'",

@@ -462,20 +462,28 @@ struct Ahci::Port : private Port_base
 		index(index),
 		protocol(protocol), rm(rm), hba(hba)
 	{
+
+		log(__func__, ":", __LINE__);
 		reset();
+		log(__func__, ":", __LINE__);
 		if (!enable())
 			throw 1;
+		log(__func__, ":", __LINE__);
 
 		stop();
+		log(__func__, ":", __LINE__);
 
 		wait_for(hba.delayer(), Cmd::Cr::Equal(0));
+		log(__func__, ":", __LINE__);
 
 		init();
 
+		log(__func__, ":", __LINE__);
 		/*
 		 * Init protocol and determine actual number of command slots of device
 		 */
 		unsigned device_slots = protocol.init(*this);
+		log(__func__, ":", __LINE__);
 		cmd_slots = min(device_slots, cmd_slots);
 	}
 
@@ -617,9 +625,11 @@ struct Ahci::Port : private Port_base
 
 	void start()
 	{
+		log(__func__, ":", __LINE__);
 		if (read<Cmd::St>())
 			return;
 
+		log(__func__, ":", __LINE__);
 		try {
 			wait_for(hba.delayer(), Tfd::Sts_bsy::Equal(0));
 		} catch (Polling_timeout) {
@@ -635,6 +645,7 @@ struct Ahci::Port : private Port_base
 		}
 
 		write<Cmd::St>(1);
+		log(__func__, ":", __LINE__);
 	}
 
 	void stop()
@@ -830,6 +841,7 @@ struct Ahci::Port : private Port_base
 	{
 		start();
 		write<Ci>(1U << slot);
+		log(__func__, ":", __LINE__);
 	}
 
 	bool sanity_check(Block::Request const &request)

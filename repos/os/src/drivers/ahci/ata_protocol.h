@@ -211,16 +211,21 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 		unsigned init(Port &port) override
 		{
 			/* identify device */
+			log(__func__, ":", __LINE__);
 			addr_t phys = Dataspace_client(port.device_info_ds).phys_addr();
 
+		log(__func__, ":", __LINE__);
 			Command_table table(port.command_table_addr(0), phys, 0x1000);
 			table.fis.identify_device();
+		log(__func__, ":", __LINE__);
 			port.execute(0);
+		log(__func__, ":", __LINE__);
 
 			port.wait_for_any(port.hba.delayer(), Port::Is::Dss::Equal(1),
 			                                      Port::Is::Pss::Equal(1),
 			                                      Port::Is::Dhrs::Equal(1));
 
+		log(__func__, ":", __LINE__);
 			error("Identified ATA device: ", (unsigned)port.read<Port::Is>());
 			_identity.construct(port.device_info);
 			serial.construct(*_identity);

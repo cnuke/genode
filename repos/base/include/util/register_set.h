@@ -746,7 +746,7 @@ class Genode::Register_set : Noncopyable
 		template <typename... CONDITIONS>
 		inline void wait_for_any(Delayer &delayer, CONDITIONS... conditions)
 		{
-			wait_for_any<CONDITIONS...>(Attempts(500), Microseconds(1000),
+			wait_for_any<CONDITIONS...>(Attempts(1000), Microseconds(1000),
 			                            delayer, conditions...);
 		}
 };
