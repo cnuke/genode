@@ -186,6 +186,13 @@ void Cancelable_lock::unlock()
 }
 
 
+bool Cancelable_lock::lock_owner()
+{
+	Applicant myself(Thread::myself());
+	return _owner == myself;
+}
+
+
 Cancelable_lock::Cancelable_lock(Cancelable_lock::State initial)
 :
 	_spinlock_state(SPINLOCK_UNLOCKED),

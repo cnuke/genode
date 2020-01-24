@@ -21,11 +21,14 @@ namespace Genode {
 
 	class Thread;
 	class Cancelable_lock;
+	class Mutex;
 }
 
 
 class Genode::Cancelable_lock
 {
+	friend class Mutex;
+
 	private:
 
 		class Applicant
@@ -67,6 +70,8 @@ class Genode::Cancelable_lock
 		Applicant * volatile _last_applicant = nullptr;
 
 		Applicant _owner;
+
+		bool lock_owner();
 
 	public:
 
