@@ -32,11 +32,6 @@ void Genode::Cancelable_lock::lock()
 	_state = LOCKED;
 }
 
-bool Genode::Cancelable_lock::lock_owner()
-{
-	return false;
-}
-
 void Genode::Mutex::acquire()
 {
 	_lock.lock();

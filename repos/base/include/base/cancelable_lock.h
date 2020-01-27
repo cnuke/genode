@@ -71,7 +71,8 @@ class Genode::Cancelable_lock
 
 		Applicant _owner;
 
-		bool lock_owner();
+		bool lock_owner(Applicant &myself) { return _owner == myself; }
+		void lock(Applicant &);
 
 	public:
 

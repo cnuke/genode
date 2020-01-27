@@ -63,7 +63,11 @@ void Cancelable_lock::Applicant::wake_up()
 void Cancelable_lock::lock()
 {
 	Applicant myself(Thread::myself());
+	lock(myself);
+}
 
+void Cancelable_lock::lock(Applicant &myself)
+{
 	spinlock_lock(&_spinlock_state);
 
 	if (cmpxchg(&_state, UNLOCKED, LOCKED)) {
@@ -183,13 +187,6 @@ void Cancelable_lock::unlock()
 
 		spinlock_unlock(&_spinlock_state);
 	}
-}
-
-
-bool Cancelable_lock::lock_owner()
-{
-	Applicant myself(Thread::myself());
-	return _owner == myself;
 }
 
 
