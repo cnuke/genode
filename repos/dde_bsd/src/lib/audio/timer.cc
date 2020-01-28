@@ -25,7 +25,8 @@
 #include <bsd_emul.h>
 
 
-static Genode::uint64_t millisecs;
+static Genode::uint64_t microseconds;
+static Bsd::Task *_sleep_task;
 
 
 namespace Bsd {
@@ -39,14 +40,22 @@ class Bsd::Timer
 {
 	private:
 
-		::Timer::Connection                _timer_conn;
-		Genode::Signal_handler<Bsd::Timer> _dispatcher;
+		::Timer::Connection                   _timer_conn_old;
+		::Timer::Connection                   _timer_conn;
+		::Timer::One_shot_timeout<Bsd::Timer> _delay_timeout;
 
 		/**
 		 * Handle trigger_once signal
 		 */
-		void _handle()
+		void _handle_delay_timeout(Genode::Duration)
 		{
+			update_time();
+
+			// Genode::error(__func__, ":", __LINE__);
+			if (_sleep_task) {
+				_sleep_task->unblock();
+				_sleep_task = nullptr;
+			}
 			Bsd::scheduler().schedule();
 		}
 
@@ -57,23 +66,28 @@ class Bsd::Timer
 		 */
 		Timer(Genode::Env &env)
 		:
+			_timer_conn_old(env),
 			_timer_conn(env),
-			_dispatcher(env.ep(), *this, &Bsd::Timer::_handle)
+			_delay_timeout(_timer_conn, *this, &Bsd::Timer::_handle_delay_timeout)
 		{
-			_timer_conn.sigh(_dispatcher);
 		}
 
 		/**
 		 * Update time counter
 		 */
-		void update_millisecs()
+		void update_time()
 		{
-			millisecs = _timer_conn.elapsed_ms();
+			microseconds = _timer_conn.curr_time().trunc_to_plain_us().value;
+		}
+
+		void delay(Genode::Microseconds us)
+		{
+			_delay_timeout.schedule(us);
 		}
 
 		void delay(Genode::uint64_t us)
 		{
-			_timer_conn.usleep(us);
+			_timer_conn_old.usleep(us);
 		}
 };
 
@@ -88,15 +102,14 @@ void Bsd::timer_init(Genode::Env &env)
 	_bsd_timer = &bsd_timer;
 
 	/* initialize value explicitly */
-	millisecs = 0;
+	microseconds = 0;
 }
 
 
-void Bsd::update_time() {
-	_bsd_timer->update_millisecs(); }
-
-
-static Bsd::Task *_sleep_task;
+void Bsd::update_time()
+{
+	_bsd_timer->update_time();
+}
 
 
 /*****************
@@ -106,6 +119,7 @@ static Bsd::Task *_sleep_task;
 extern "C" int msleep(const volatile void *ident, struct mutex *mtx,
                       int priority, const char *wmesg, int timo)
 {
+	Genode::error(__func__, ":", __LINE__);
 	if (_sleep_task) {
 		Genode::error("_sleep_task is not null, current task: ",
 		              Bsd::scheduler().current()->name());
@@ -120,6 +134,8 @@ extern "C" int msleep(const volatile void *ident, struct mutex *mtx,
 
 extern "C" void wakeup(const volatile void *ident)
 {
+	Genode::error(__func__, ":", __LINE__);
+
 	if (!_sleep_task) {
 		Genode::error("sleep task is NULL");
 		Genode::sleep_forever();
@@ -135,17 +151,31 @@ extern "C" void wakeup(const volatile void *ident)
 
 extern "C" void delay(int delay)
 {
-	_bsd_timer->delay(delay);
+#if 1
+	_bsd_timer->delay((Genode::uint64_t)delay);
+	Genode::error(__func__, ":", __LINE__, ": OLD delay: ", delay, " from: ", __builtin_return_address(0));
+#else
+	Genode::error(__func__, ":", __LINE__, ": NEW delay: ", delay, " from: ", __builtin_return_address(0));
+	if (_sleep_task) {
+		Genode::error("_sleep_task is not null, current task: ",
+		              Bsd::scheduler().current()->name());
+		Genode::sleep_forever();
+	}
+
+	_sleep_task = Bsd::scheduler().current();
+	_bsd_timer->delay(Genode::Microseconds { (Genode::uint64_t)delay * 10 });
+	_sleep_task->block_and_schedule();
+#endif
 }
 
 
-/**************** 
+/****************
  ** sys/time.h **
  ****************/
 
 void microuptime(struct timeval *tv)
 {
-	_bsd_timer->update_millisecs();
+	_bsd_timer->update_time();
 
 	if (!tv) { return; }
 
@@ -155,6 +185,6 @@ void microuptime(struct timeval *tv)
 	 * implementation over to the new Genode::Timer API
 	 * is probably necessary for that to work properly.
 	 */
-	tv->tv_sec = millisecs / 1000;
-	tv->tv_usec = 0;
+	tv->tv_sec  = microseconds / (1000*1000);
+	tv->tv_usec = microseconds % (1000*1000);
 }
