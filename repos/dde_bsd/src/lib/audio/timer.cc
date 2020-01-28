@@ -26,9 +26,6 @@
 #include <scheduler.h>
 
 
-static Genode::uint64_t millisecs;
-
-
 namespace Bsd {
 	class Timer;
 }
@@ -40,16 +37,18 @@ class Bsd::Timer
 {
 	private:
 
-		::Timer::Connection                _timer_conn;
-		Genode::Signal_handler<Bsd::Timer> _dispatcher;
-
-		/**
-		 * Handle trigger_once signal
+		/*
+		 * Use timer session for delay handling because we must prevent
+		 * the calling task and thereby the EP from handling signals.
+		 * Otherwise the interrupt task could be executed behind the
+		 * suspended task, which leads to problems in the contrib source.
 		 */
-		void _handle()
-		{
-			Bsd::scheduler().schedule();
-		}
+		::Timer::Connection _delay_timer;
+
+		::Timer::Connection _timer;
+		Genode::uint64_t    _microseconds;
+
+		Bsd::Task *_sleep_task;
 
 	public:
 
@@ -58,23 +57,52 @@ class Bsd::Timer
 		 */
 		Timer(Genode::Env &env)
 		:
-			_timer_conn(env),
-			_dispatcher(env.ep(), *this, &Bsd::Timer::_handle)
-		{
-			_timer_conn.sigh(_dispatcher);
-		}
+			_delay_timer(env),
+			_timer(env),
+			_microseconds(_timer.curr_time().trunc_to_plain_us().value),
+			_sleep_task(nullptr)
+		{ }
 
 		/**
 		 * Update time counter
 		 */
-		void update_millisecs()
+		void update_time()
 		{
-			millisecs = _timer_conn.elapsed_ms();
+			_microseconds = _timer.curr_time().trunc_to_plain_us().value;
 		}
 
+		/**
+		 * Return current microseconds
+		 */
+		Genode::uint64_t microseconds() const
+		{
+			return _microseconds;
+		}
+
+		/**
+		 * Block until delay is reached
+		 */
 		void delay(Genode::uint64_t us)
 		{
-			_timer_conn.usleep(us);
+			_delay_timer.usleep(us);
+		}
+
+		/**
+		 * Return pointer for currently sleeping task
+		 */
+		Bsd::Task *sleep_task() const
+		{
+			return _sleep_task;
+		}
+
+		/**
+		 * Set sleep task
+		 *
+		 * If the argment is 'nullptr' the task is reset.
+		 */
+		void sleep_task(Bsd::Task *task)
+		{
+			_sleep_task = task;
 		}
 };
 
@@ -84,20 +112,15 @@ static Bsd::Timer *_bsd_timer;
 
 void Bsd::timer_init(Genode::Env &env)
 {
-	/* XXX safer way preventing possible nullptr access? */
 	static Bsd::Timer bsd_timer(env);
 	_bsd_timer = &bsd_timer;
-
-	/* initialize value explicitly */
-	millisecs = 0;
 }
 
 
-void Bsd::update_time() {
-	_bsd_timer->update_millisecs(); }
-
-
-static Bsd::Task *_sleep_task;
+void Bsd::update_time()
+{
+	_bsd_timer->update_time();
+}
 
 
 /*****************
@@ -107,26 +130,33 @@ static Bsd::Task *_sleep_task;
 extern "C" int msleep(const volatile void *ident, struct mutex *mtx,
                       int priority, const char *wmesg, int timo)
 {
-	if (_sleep_task) {
-		Genode::error("_sleep_task is not null, current task: ",
+	Bsd::Task *sleep_task = _bsd_timer->sleep_task();
+
+	if (sleep_task) {
+		Genode::error("sleep_task is not null, current task: ",
 		              Bsd::scheduler().current()->name());
 		Genode::sleep_forever();
 	}
 
-	_sleep_task = Bsd::scheduler().current();
-	_sleep_task->block_and_schedule();
+	sleep_task = Bsd::scheduler().current();
+	_bsd_timer->sleep_task(sleep_task);
+	sleep_task->block_and_schedule();
 
 	return 0;
 }
 
+
 extern "C" void wakeup(const volatile void *ident)
 {
-	if (!_sleep_task) {
+	Bsd::Task *sleep_task = _bsd_timer->sleep_task();
+
+	if (!sleep_task) {
 		Genode::error("sleep task is NULL");
 		Genode::sleep_forever();
 	}
-	_sleep_task->unblock();
-	_sleep_task = nullptr;
+
+	sleep_task->unblock();
+	_bsd_timer->sleep_task(nullptr);
 }
 
 
@@ -136,26 +166,23 @@ extern "C" void wakeup(const volatile void *ident)
 
 extern "C" void delay(int delay)
 {
-	_bsd_timer->delay(delay);
+	_bsd_timer->delay((Genode::uint64_t)delay);
 }
 
 
-/**************** 
+/****************
  ** sys/time.h **
  ****************/
 
 void microuptime(struct timeval *tv)
 {
-	_bsd_timer->update_millisecs();
+	/* always update the time */
+	_bsd_timer->update_time();
 
 	if (!tv) { return; }
 
-	/*
-	 * So far only needed by auich_calibrate, which
-	 * reuqires microseconds - switching the Bsd::Timer
-	 * implementation over to the new Genode::Timer API
-	 * is probably necessary for that to work properly.
-	 */
-	tv->tv_sec = millisecs / 1000;
-	tv->tv_usec = 0;
+	Genode::uint64_t const ms = _bsd_timer->microseconds();
+
+	tv->tv_sec  = ms / (1000*1000);
+	tv->tv_usec = ms % (1000*1000);
 }
