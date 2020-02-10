@@ -633,22 +633,22 @@ exec rm -r [run_dir]/genode/launcher
 #
 # Generate depot index from gems/run/sculpt/index
 #
-set fd [open [genode_dir]/repos/gems/run/sculpt/index r]
-set pkg_index [read $fd]
-close $fd
-
-# filter 'pkg' attribute
-set pattern {(\<pkg[^\>]+?path=")([^/]+)(")}
-while {[regexp $pattern $pkg_index dummy head pkg tail]} {
-	set pkg_path [depot_user]/pkg/[current_pkg $pkg]
-	regsub $pattern $pkg_index "$head$pkg_path$tail" pkg_index
-}
-
-# write filtered pkg index into the depot
-file mkdir [depot_dir]/[depot_user]/index
-set fd [open [depot_dir]/[depot_user]/index/[sculpt_version] w]
-puts $fd $pkg_index
-close $fd
+#set fd [open [genode_dir]/repos/gems/run/sculpt/index r]
+#set pkg_index [read $fd]
+#close $fd
+#
+## filter 'pkg' attribute
+#set pattern {(\<pkg[^\>]+?path=")([^/]+)(")}
+#while {[regexp $pattern $pkg_index dummy head pkg tail]} {
+#	set pkg_path [depot_user]/pkg/[current_pkg $pkg]
+#	regsub $pattern $pkg_index "$head$pkg_path$tail" pkg_index
+#}
+#
+## write filtered pkg index into the depot
+#file mkdir [depot_dir]/[depot_user]/index
+#set fd [open [depot_dir]/[depot_user]/index/[sculpt_version] w]
+#puts $fd $pkg_index
+#close $fd
 
 
 #
