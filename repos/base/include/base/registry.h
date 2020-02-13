@@ -78,7 +78,7 @@ class Genode::Registry_base
 
 	protected:
 
-		Mutex mutable  _mutex     { }; /* protect '_elements' */
+		Mutex mutable _mutex    { }; /* protect '_elements' */
 		List<Element> _elements { };
 
 	private:
