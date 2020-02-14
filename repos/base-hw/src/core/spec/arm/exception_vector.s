@@ -123,6 +123,9 @@
 	ldr   r1, [r1]
 	blx   r1
 
+	dsb /* synchronize after the context switch */
+	isb
+
 	/*
 	 * Go to kernel entry code
 	 */
@@ -164,4 +167,6 @@
 	ldr   r1, [sp, #16*4]
 	msr   spsr_cxsf, r1
 	ldm   sp, {r0-r14}^
+	dsb /* synchronize after the context switch */
+	isb
 	subs  pc, lr, #0

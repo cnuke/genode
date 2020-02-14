@@ -116,8 +116,17 @@ struct Genode::Arm_cpu : public Hw::Arm_cpu
 
 		Cidr::access_t cidr = Cidr::read();
 		if (cidr != o.cidr) {
-			Cidr::write(o.cidr);
+			/**
+			 * First switch to global mappings only to prevent
+			 * that wrong branch predicts result due to ASID
+			 * and Page-Table not being in sync (see ARM RM B 3.10.4)
+			 */
+			Cidr::write(0);
+			synchronization_barrier();
 			Ttbr0::write(o.ttbr0);
+			synchronization_barrier();
+			Cidr::write(o.cidr);
+			synchronization_barrier();
 		}
 	}
 
