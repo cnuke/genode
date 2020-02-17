@@ -12,6 +12,7 @@
  * under the terms of the GNU Affero General Public License version 3.
  */
 
+#include <synchronize.s>
 
 /*********************
  ** Constant values **
@@ -123,8 +124,7 @@
 	ldr   r1, [r1]
 	blx   r1
 
-	dsb /* synchronize after the context switch */
-	isb
+	SYSTEM_REGISTER_SYNC_BARRIER /* synchronize after the context switch */
 
 	/*
 	 * Go to kernel entry code
@@ -167,6 +167,5 @@
 	ldr   r1, [sp, #16*4]
 	msr   spsr_cxsf, r1
 	ldm   sp, {r0-r14}^
-	dsb /* synchronize after the context switch */
-	isb
+	SYSTEM_REGISTER_SYNC_BARRIER /* synchronize after the context switch */
 	subs  pc, lr, #0
