@@ -125,7 +125,7 @@ void Cancelable_lock::lock(Applicant &myself)
 	 * ! for (int i = 0; i < 10; i++)
 	 * !   thread_yield();
 	 */
-	thread_stop_myself();
+	thread_stop_myself(myself.thread_base());
 
 	/*
 	 * We expect to be the lock owner when woken up. If this is not
