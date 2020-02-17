@@ -21,7 +21,12 @@ void Genode::Mutex::acquire()
 	if (_lock.lock_owner(myself))
 		Genode::error("deadlock ahead, mutex=", this, ", return ip=",
 			      __builtin_return_address(0));
-	_lock.Cancelable_lock::lock(myself);
+
+	while (1)
+		try {
+			_lock.Cancelable_lock::lock(myself);
+			return;
+		} catch (Blocking_canceled) { }
 }
 
 void Genode::Mutex::release()
