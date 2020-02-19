@@ -272,6 +272,7 @@ class Kernel::Thread : private Kernel::Object, public Cpu_job, private Timeout
 		}
 
 		void _ipc_alloc_recv_caps(unsigned rcv_cap_count);
+		void _ipc_free_recv_caps();
 		void _ipc_init(Genode::Native_utcb &utcb, Thread &callee);
 
 	public:
@@ -296,6 +297,8 @@ class Kernel::Thread : private Kernel::Object, public Cpu_job, private Timeout
 		 */
 		Thread(char const * const label)
 		: Thread(Cpu_priority::MIN, 0, label, true) { }
+
+		~Thread();
 
 
 		/**************************

@@ -47,6 +47,18 @@ void Thread::_ipc_alloc_recv_caps(unsigned cap_count)
 }
 
 
+void Thread::_ipc_free_recv_caps()
+{
+	for (unsigned i = 0; i < _ipc_rcv_caps; i++) {
+		if (_obj_id_ref_ptr[i]) {
+			Genode::Allocator &slab = pd().platform_pd().capability_slab();
+			slab.free(_obj_id_ref_ptr[i], sizeof(Object_identity_reference));
+		}
+	}
+	_ipc_rcv_caps = 0;
+}
+
+
 void Thread::_ipc_init(Genode::Native_utcb &utcb, Thread &starter)
 {
 	_utcb = &utcb;
@@ -817,6 +829,9 @@ Thread::Thread(unsigned const priority, unsigned const quota,
 	Kernel::Object { *this },
 	Cpu_job(priority, quota), _ipc_node(*this), _state(AWAITS_START),
 	_label(label), _core(core), regs(core) { }
+
+
+Thread::~Thread() { _ipc_free_recv_caps(); }
 
 
 void Thread::print(Genode::Output &out) const
