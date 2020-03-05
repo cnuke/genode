@@ -424,6 +424,7 @@ void Driver_manager::Main::_handle_pci_devices_update()
 		enum {
 			VENDOR_VBOX  = 0x80EEU,
 			VENDOR_INTEL = 0x8086U,
+			VENDOR_MARVELL = 0x1B4BU,
 			CLASS_VGA    = 0x300U,
 			CLASS_AHCI   = 0x106U,
 			CLASS_NVME   = 0x108U,
@@ -435,7 +436,9 @@ void Driver_manager::Main::_handle_pci_devices_update()
 		if (vendor_id == VENDOR_INTEL && class_code == CLASS_VGA)
 			has_intel_graphics = true;
 
-		if (vendor_id == VENDOR_INTEL && class_code == CLASS_AHCI)
+		if (class_code == CLASS_AHCI
+		    && (vendor_id == VENDOR_INTEL
+			||  vendor_id == VENDOR_MARVELL))
 			has_ahci = true;
 
 		if (vendor_id == VENDOR_VBOX)
