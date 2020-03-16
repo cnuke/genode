@@ -1,0 +1,13 @@
+<runtime ram="256M" caps="100" binary="ram_fs">
+
+	<requires/>
+	<provides> <file_system/> </provides>
+
+	<config/>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="ram_fs"/>
+	</content>
+
+</runtime>
