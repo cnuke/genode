@@ -50,6 +50,7 @@ if {[have_spec arm]} {
 	set gcc          "gcc_arm"
 	set tool_prefix  "genode-arm-"
 	set boot_timeout 350
+	set arch         "arm_v7a"
 }
 
 if {[have_spec arm_64]} {
@@ -57,7 +58,7 @@ if {[have_spec arm_64]} {
 	set gcc          "gcc_arm_64"
 	set tool_prefix  "genode-aarch64-" 
 	set boot_timeout 350
-	set platform     "arm_v8a"
+	set arch         "arm_v8a"
 }
 
 if {[have_spec x86]} {
@@ -65,7 +66,7 @@ if {[have_spec x86]} {
 	set gcc          "gcc_x86"
 	set tool_prefix  "genode-x86-"
 	set boot_timeout 250
-	set platform     "x86_64"
+	set arch         "x86_64"
 }
 
 #
@@ -89,7 +90,7 @@ mkdir -p "/home/build"
 cp -r /genode/depot /home/build
 }
 puts $bash_profile_fd "/genode/tool/depot/create DEPOT_DIR=/home/build/depot \
-      test/bin/$platform/zlib CROSS_DEV_PREFIX=$tool_prefix && exit 234"
+      test/bin/$arch/zlib CROSS_DEV_PREFIX=$tool_prefix && exit 234"
 close $bash_profile_fd
 
 
