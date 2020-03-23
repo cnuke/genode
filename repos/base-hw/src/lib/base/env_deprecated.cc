@@ -61,6 +61,16 @@ void Genode::upgrade_capability_slab()
 		return;
 	}
 
+	auto request_resources_from_parent = [&] (Ram_quota ram, Cap_quota caps)
+	{
+		/*
+		 * The call of 'resource_request' is handled synchronously by
+		 * 'Expanding_parent_client'.
+		 */
+		String<100> const args("ram_quota=", ram, ", cap_quota=", caps);
+		internal_env().parent().resource_request(args.string());
+	};
+
 	retry<Genode::Out_of_caps>(
 		[&] () {
 			retry<Genode::Out_of_ram>(
@@ -69,12 +79,10 @@ void Genode::upgrade_capability_slab()
 					pd.upgrade_cap_slab();
 				},
 				[&] () {
-					internal_env().upgrade(Parent::Env::pd(),
-					                       String<100>("ram_quota=", 8192).string());
+					request_resources_from_parent(Ram_quota{8192}, Cap_quota{0});
 				});
 		},
 		[&] () {
-			internal_env().upgrade(Parent::Env::pd(),
-			                       String<100>("cap_quota=", 2).string());
+			request_resources_from_parent(Ram_quota{0}, Cap_quota{2});
 		});
 }
