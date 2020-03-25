@@ -1,5 +1,5 @@
 /*
- * \brief  Component starting noux in a sub-init to execute a specific command
+ * \brief  Component starting bash in a sub-init to execute a specific command
  * \author Sid Hussmann
  * \author Norman Feske
  * \date   2019-05-11
