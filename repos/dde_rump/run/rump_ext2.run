@@ -58,12 +58,19 @@ append config {
 		<config file="ext2.raw" block_size="512"/>
 	</start>
 	<start name="vfs" caps="200">
-		<resource name="RAM" quantum="16M" />
+		<resource name="RAM" quantum="20M" />
 		<provides><service name="File_system"/></provides>
 		<config>
-			<vfs> <rump fs="ext2fs" ram="10M"/> </vfs>
+			<vfs>
+				<dir name="dev"> <block name="block" block_buffer_count="128"/> </dir>
+				<rump fs="ext2fs" ram="10M" block_device="/dev/block"/>
+			</vfs>
 			<policy label_prefix="test-libc_vfs" root="/" writeable="yes"/>
 		</config>
+		<route>
+			<service name="Block"> <child name="ram_block"/> </service>
+			<any-service> <any-child/> <parent/> </any-service>
+		</route>
 	</start>
 	<start name="test-libc_vfs">
 		<resource name="RAM" quantum="4M"/>
