@@ -13,12 +13,9 @@
 
 #include "sched.h"
 #include <base/allocator_avl.h>
+#include <block_session/connection.h>
 #include <rump/env.h>
 #include <rump_fs/fs.h>
-
-#include <vfs/simple_env.h>
-#include <vfs/file_system_factory.h>
-#include <vfs/dir_file_system.h>
 
 
 static const bool verbose = false;
@@ -32,130 +29,25 @@ class Backend
 {
 	private:
 
-		Genode::Allocator              &_alloc      { Rump::env().heap() };
-		Genode::Attached_rom_dataspace &_config_rom { Rump::env().config_rom() };
-		Genode::Entrypoint             &_ep         { Rump::env().env().ep() };
+		Genode::Allocator_avl _alloc { &Rump::env().heap() };
+		Block::Connection<>   _session { Rump::env().env(), &_alloc };
+		Block::Session::Info  _info { _session.info() };
+		Genode::Lock          _session_lock;
 
-		Genode::Lock _session_lock;
-
-		Vfs::File_system        &_vfs;
-		Vfs::Vfs_handle mutable *_handle { nullptr };
-
-		bool _sync()
+		void _sync()
 		{
-			while (!_handle->fs().queue_sync(_handle)) {
-				_ep.wait_and_dispatch_one_io_signal();
-			}
+			using Block::Session;
 
-			Vfs::File_io_service::Sync_result result;
-
-			for (;;) {
-				result = _handle->fs().complete_sync(_handle);
-
-				if (result != Vfs::File_io_service::SYNC_QUEUED)
-					break;
-
-				_ep.wait_and_dispatch_one_io_signal();
-			}
-
-			if (result != Vfs::File_io_service::SYNC_OK) {
-				return false;
-			}
-
-			return true;
+			Session::Tag const tag { 0 };
+			_session.tx()->submit_packet(Session::sync_all_packet_descriptor(_info, tag));
+			_session.tx()->get_acked_packet();
 		}
-
-		struct At { Vfs::file_offset value; };
-
-		bool _read(At at, char *dst, size_t bytes)
-		{
-			Vfs::file_size out_count = 0;
-
-			_handle->seek(at.value);
-
-			while (!_handle->fs().queue_read(_handle, bytes)) {
-				_ep.wait_and_dispatch_one_io_signal();
-			}
-
-			Vfs::File_io_service::Read_result result;
-
-			for (;;) {
-				result = _handle->fs().complete_read(_handle, dst, bytes,
-				                                     out_count);
-
-				if (result != Vfs::File_io_service::READ_QUEUED)
-					break;
-
-				_ep.wait_and_dispatch_one_io_signal();
-			}
-
-			/*
-			 * XXX handle READ_ERR_AGAIN, READ_ERR_WOULD_BLOCK, READ_QUEUED
-			 *                                                   */
-
-			if (result != Vfs::File_io_service::READ_OK) {
-				return false;
-			}
-
-			if (out_count != bytes) {
-				/* partial read */
-				return false;
-			}
-
-			return true;
-		}
-
-		bool _write(At at, char const *src, size_t bytes)
-		{
-			Vfs::file_size out_count = 0;
-
-			_handle->seek(at.value);
-
-			using Write_result = Vfs::File_io_service::Write_result;
-
-			Write_result result;
-
-			try {
-				result = _handle->fs().write(_handle, src, bytes, out_count);
-			} catch (Vfs::File_io_service::Insufficient_buffer) {
-				return false;
-			}
-
-			if (result != Write_result::WRITE_OK || out_count != bytes) {
-				/* partial write */
-				return false;
-			}
-
-			return true;
-		}
-
-		using Block_device = Genode::String<256>;
-		Block_device _block_device { };
 
 	public:
 
-		Backend(Vfs::File_system &fs, char const *device)
-		:
-			_vfs(fs),
-			_block_device(device)
-		{
-			if (!_block_device.valid()) {
-				throw Genode::Exception();
-			}
-
-			using Open_result = Vfs::Directory_service::Open_result;
-
-			Open_result res = _vfs.open(_block_device.string(),
-			                            Vfs::Directory_service::OPEN_MODE_RDWR,
-			                            &_handle, _alloc);
-
-			if (res != Open_result::OPEN_OK) {
-				throw Genode::Exception();
-			}
-
-		}
-
-		bool writable() const { return true; }
+		uint64_t block_count() const { return _info.block_count; }
+		size_t   block_size()  const { return _info.block_size; }
+		bool     writable()    const { return _info.writeable; }
 
 		void sync()
 		{
@@ -163,24 +55,40 @@ class Backend
 			_sync();
 		}
 
-		uint64_t size()
+		bool submit(int op, int64_t offset, size_t length, void *data)
 		{
-			using Stat_result = Vfs::Directory_service::Stat_result;
+			using namespace Block;
 
-			Vfs::Directory_service::Stat stat { };
-			Stat_result stat_res = _vfs.stat(_block_device.string(), stat);
-			return stat_res == Stat_result::STAT_OK ? stat.size : 0;
-		}
-
-		bool submit(int op, int64_t offset, size_t bytes, char *data)
-		{
 			Genode::Lock::Guard guard(_session_lock);
 
-			bool const read = op & RUMPUSER_BIO_WRITE ? false : true;
-			At at { .value = offset };
+			Packet_descriptor::Opcode opcode;
+			opcode = op & RUMPUSER_BIO_WRITE ? Packet_descriptor::WRITE :
+			                                   Packet_descriptor::READ;
+			/* allocate packet */
+			try {
+				Packet_descriptor packet( _session.alloc_packet(length),
+				                         opcode, offset / _info.block_size,
+				                         length / _info.block_size);
 
-			bool const succeeded = read ? _read(at, data, bytes)
-			                            : _write(at, data, bytes);
+				/* out packet -> copy data */
+				if (opcode == Packet_descriptor::WRITE)
+					Genode::memcpy(_session.tx()->packet_content(packet), data, length);
+
+				_session.tx()->submit_packet(packet);
+			} catch(Block::Session::Tx::Source::Packet_alloc_failed) {
+				Genode::error("I/O back end: Packet allocation failed!");
+				return false;
+			}
+
+			/* wait and process result */
+			Packet_descriptor packet = _session.tx()->get_acked_packet();
+
+			/* in packet */
+			if (opcode == Packet_descriptor::READ)
+				Genode::memcpy(data, _session.tx()->packet_content(packet), length);
+
+			bool succeeded = packet.succeeded();
+			_session.tx()->release_packet(packet);
 
 			/* sync request */
 			if (op & RUMPUSER_BIO_SYNC) {
@@ -192,13 +100,10 @@ class Backend
 };
 
 
-static Backend *_global_backend_ptr;
-
-
 static Backend &backend()
 {
-	/* rely on rump_io_backend_init be called first */
-	return *_global_backend_ptr;
+	static Backend _b;
+	return _b;
 }
 
 
@@ -211,7 +116,7 @@ int rumpuser_getfileinfo(const char *name, uint64_t *size, int *type)
 		*type = RUMPUSER_FT_BLK;
 
 	if (size)
-		*size = backend().size();
+		*size = backend().block_count() * backend().block_size();
 
 	return 0;
 }
@@ -246,7 +151,7 @@ void rumpuser_bio(int fd, int op, void *data, size_t dlen, int64_t off,
 		            "bio ",   donearg, " "
 		            "sync: ", !!(op & RUMPUSER_BIO_SYNC));
 
-	bool succeeded = backend().submit(op, off, dlen, (char*)data);
+	bool succeeded = backend().submit(op, off, dlen, data);
 
 	rumpkern_sched(nlocks, 0);
 
@@ -257,7 +162,7 @@ void rumpuser_bio(int fd, int op, void *data, size_t dlen, int64_t off,
 
 void rump_io_backend_sync()
 {
-	(void)backend().sync();
+	backend().sync();
 }
 
 
@@ -274,7 +179,7 @@ extern "C" void rumpns_modctor_msdos(void);
 extern "C" void rumpns_modctor_wapbl(void);
 
 
-void rump_io_backend_init(void *vfs, char const *block_device)
+void rump_io_backend_init()
 {
 	/* call init/constructor functions of rump_fs.lib.so (order is important!) */
 	rumpcompctor_RUMP_COMPONENT_KERN_SYSCALL();
@@ -289,8 +194,7 @@ void rump_io_backend_init(void *vfs, char const *block_device)
 	rumpns_modctor_cd9660();
 
 	/* create back end */
-	static Backend b(*reinterpret_cast<Vfs::File_system*>(vfs), block_device);
-	_global_backend_ptr = &b;
+	backend();
 }
 
 

@@ -29,15 +29,7 @@
 #define GENODE_MOUNT_DIR     "/mnt"
 
 
-/**
- * Initial I/O backend
- *
- * If the 'block_device' parameter is NULL a normal Block session is
- * used. Otherwise the block device is opened via the VFS.
- *
- * \param  block_device  path of the block device file
- */
-void rump_io_backend_init(void *, char const *block_device);
+void rump_io_backend_init();
 
 /**
  * Sync I/O back-end with underlying Genode subsystems

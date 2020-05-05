@@ -851,23 +851,18 @@ class Rump_factory : public Vfs::File_system_factory
 		Timer::Connection                       _timer;
 		Genode::Io_signal_handler<Rump_factory> _sync_handler;
 
-		using Block_device = Genode::String<256>;
-		Block_device block_device { };
-
 		void _sync() { _rump_sync(); }
 
 	public:
 
-		Rump_factory(Vfs::Env &env, Genode::Allocator &alloc,
+		Rump_factory(Genode::Env &env, Genode::Allocator &alloc,
 		             Genode::Xml_node config)
-		: _timer(env.env(), "rump-sync"),
-		  _sync_handler(env.env().ep(), *this, &Rump_factory::_sync)
+		: _timer(env, "rump-sync"),
+		  _sync_handler(env.ep(), *this, &Rump_factory::_sync)
 		{
-			Rump::construct_env(env.env());
+			Rump::construct_env(env);
 
-			block_device = config.attribute_value("block_device", Block_device());
-			rump_io_backend_init(&env.root_dir(),
-			                     block_device.valid() ? block_device.string() : nullptr);
+			rump_io_backend_init();
 
 			/* limit RAM consumption */
 			try {
@@ -905,6 +900,7 @@ class Rump_factory : public Vfs::File_system_factory
 			enum { TEN_SEC = 10*1000*1000 };
 			_timer.sigh(_sync_handler);
 			_timer.trigger_periodic(TEN_SEC);
+
 		}
 
 		Vfs::File_system *create(Vfs::Env &env, Genode::Xml_node config) override
@@ -920,7 +916,7 @@ extern "C" Vfs::File_system_factory *vfs_file_system_factory(void)
 	{
 		Vfs::File_system *create(Vfs::Env &env, Genode::Xml_node node) override
 		{
-			static Rump_factory factory(env, env.alloc(), node);
+			static Rump_factory factory(env.env(), env.alloc(), node);
 			return factory.create(env, node);
 		}
 	};
