@@ -417,6 +417,7 @@ struct Libc::Forked_child : Child_policy, Child_ready
 
 	void _handle_exit()
 	{
+		Genode::log(__func__, ": pid: ", _pid, " exit_code: ", _exit_code);
 		_signal.charge(SIGCHLD);
 		_resume.resume_all();
 	}
@@ -530,6 +531,7 @@ struct Libc::Forked_child : Child_policy, Child_ready
 	void resource_request(Parent::Resource_args const &args) override
 	{
 		Session::Resources resources = session_resources_from_args(args.string());
+		Genode::log(name(), ": args: ", args);
 
 		if (resources.ram_quota.value)
 			_env.pd().transfer_quota(_child.pd_session_cap(), resources.ram_quota);
@@ -545,6 +547,7 @@ struct Libc::Forked_child : Child_policy, Child_ready
 		_exit_code = code;
 		_state     = State::EXITED;
 
+		Genode::log(__func__, ": pid: ", _pid, " exit_code: ", _exit_code);
 		Signal_transmitter(_exit_handler).submit();
 	}
 
@@ -571,7 +574,12 @@ struct Libc::Forked_child : Child_policy, Child_ready
 		_child(env.rm(), fork_ep.rpc_ep(), *this)
 	{ }
 
-	virtual ~Forked_child() { }
+	virtual ~Forked_child()
+	{
+		Genode::log("exiting pid: ", _pid, " avail: ",
+		            _env.pd().avail_ram(), " used: ",
+		            _env.pd().used_ram());
+	}
 };
 
 
@@ -648,6 +656,7 @@ extern "C" pid_t __sys_fork(void)
 
 	_suspend_ptr->suspend(suspend_functor, 0);
 
+	Genode::log(__func__, ": res: ", fork_result);
 	return fork_result;
 }
 

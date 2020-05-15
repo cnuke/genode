@@ -505,7 +505,9 @@ int Libc::Vfs_plugin::close(File_descriptor *fd)
 	Vfs::Vfs_handle *handle = vfs_handle(fd);
 
 	if ((fd->modified) || (fd->flags & O_CREAT)) {
+		Genode::log(__func__, ":", __LINE__, ": fd_path: '", fd->fd_path, "'");
 		_vfs_sync(*handle);
+		Genode::log(__func__, ":", __LINE__, ": fd_path: '", fd->fd_path, "'");
 	}
 
 	VFS_THREAD_SAFE(handle->close());

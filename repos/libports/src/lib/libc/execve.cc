@@ -350,6 +350,8 @@ extern "C" int execve(char const *filename,
 		return Libc::Errno(EACCES);
 	}
 
+	Genode::log("filename: '", filename, "'");
+
 	/* close all file descriptors with the close-on-execve flag enabled */
 	while (Libc::File_descriptor *fd = _fd_alloc_ptr->any_cloexec_libc_fd())
 		close(fd->libc_fd);
