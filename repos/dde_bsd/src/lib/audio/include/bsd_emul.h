@@ -720,6 +720,7 @@ void microuptime(struct timeval *);
  ** lib/libkern/libkern.h **
  ***************************/
 
+char  *strchr(char const *, int);
 size_t strlcpy(char *, char const *, size_t);
 
 
