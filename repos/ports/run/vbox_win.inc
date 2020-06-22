@@ -35,10 +35,11 @@ set build_components {
 set boot_modules {
 	input_filter
 	ipxe_nic_drv
-	audio_drv
 	report_rom
 	dynamic_rom
 }
+
+append boot_modules pci_audio_drv
 
 set virtualbox5_binary "virtualbox5"
 if {$use_vbox5_nova} { set virtualbox5_binary "virtualbox5-nova" }
@@ -53,15 +54,11 @@ set config_of_app {
 		<config>}
 append_if [expr $use_ps2] config_of_app {
 			<input label="ps2"/> }
-append_if [expr $use_usb] config_of_app {
-			<input label="usb_hid"/>}
 append config_of_app {
 			<output>
 				<merge>}
 append_if [expr $use_ps2] config_of_app {
 					<input name="ps2"/>}
-append_if [expr $use_usb] config_of_app {
-					<input name="usb_hid"/>}
 append config_of_app {
 				</merge>
 			</output>
@@ -94,7 +91,7 @@ append config_of_app {
 		(Recording is configured to use the external mic.)
 	-->
 	<start name="audio_drv" priority="-1">
-		<binary name="} [audio_drv_binary] {"/>
+		<binary name="pci_audio_drv"/>
 		<resource name="RAM" quantum="9M"/>
 		<provides>
 			<service name="Audio_out"/>

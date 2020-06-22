@@ -265,7 +265,6 @@ append_if [expr $use_usb] config {
 				<import>
 					<inline name="usb_drv.config">
 <config uhci="yes" ohci="yes" ehci="yes" xhci="yes">
-	<hid/>
 	<raw>
 		<report devices="yes"/>
 	</raw>
@@ -275,25 +274,29 @@ append_if [expr $use_usb] config {
 <config>
 	<!-- USB device whitelist -->
 	<client label="vbox1"/>
-	<device vendor_id="0x13fe" product_id="0x5200"/> <!-- platinum stick -->
-	<device vendor_id="0x148f" product_id="0x2573"/> <!-- ralink wifi -->
-	<device vendor_id="0x1f75" product_id="0x0917"/> <!-- intenso stick -->
-	<device vendor_id="0x04f9" product_id="0x0051"/> <!-- brother printer -->
-	<device vendor_id="0x090c" product_id="0x6000"/> <!-- hama sd/hc reader -->
-	<device vendor_id="0x1b1c" product_id="0x1a09"/> <!-- voyager gt stick -->
-	<device vendor_id="0x1b1c" product_id="0x1a03"/> <!-- voyager stick -->
-	<device vendor_id="0x04b3" product_id="0x310d"/> <!-- lenovo mouse -->
-	<device vendor_id="0x04b3" product_id="0x310c"/> <!-- lenovo mouse -->
-	<device vendor_id="0x04b3" product_id="0x3025"/> <!-- lenovo keyboard -->
+	<device vendor_id="0x041e" product_id="0x323d"/> <!-- sound blaster -->
+	<device vendor_id="0x045e" product_id="0x028e"/> <!-- x360 controller -->
 	<device vendor_id="0x046a" product_id="0x0001"/> <!-- cherry keyboard -->
+	<device vendor_id="0x046d" product_id="0x09c1"/> <!-- logitech QuickCam Deluxe for Notebooks -->
+	<device vendor_id="0x046d" product_id="0xc00e"/> <!-- logitech mouse -->
 	<device vendor_id="0x0482" product_id="0x0015"/> <!-- kyo printer -->
 	<device vendor_id="0x04a9" product_id="0x2220"/> <!-- canon scanner -->
-	<device vendor_id="0x067b" product_id="0x2303"/> <!-- prolific serial -->
+	<device vendor_id="0x04b3" product_id="0x3025"/> <!-- lenovo keyboard -->
+	<device vendor_id="0x04b3" product_id="0x310c"/> <!-- lenovo mouse -->
+	<device vendor_id="0x04b3" product_id="0x310d"/> <!-- lenovo mouse -->
+	<device vendor_id="0x04f9" product_id="0x0051"/> <!-- brother printer -->
 	<device vendor_id="0x0583" product_id="0x2060"/> <!-- snes controller -->
-	<device vendor_id="0x045e" product_id="0x028e"/> <!-- x360 controller -->
-	<device vendor_id="0x046d" product_id="0xc00e"/> <!-- logitech mouse -->
+	<device vendor_id="0x067b" product_id="0x2303"/> <!-- prolific serial -->
+	<device vendor_id="0x090c" product_id="0x6000"/> <!-- hama sd/hc reader -->
 	<device vendor_id="0x0984" product_id="0x0066"/> <!-- lenovo DVDRW -->
+	<device vendor_id="0x0d8c" product_id="0x000c"/> <!-- beyer dynamic -->
+	<device vendor_id="0x13fe" product_id="0x5200"/> <!-- platinum stick -->
+	<device vendor_id="0x148f" product_id="0x2573"/> <!-- ralink wifi -->
+	<device vendor_id="0x1609" product_id="0x3a04"/> <!-- intenso stick  -->
 	<device vendor_id="0x174c" product_id="0x5106"/> <!-- delock SATA -->
+	<device vendor_id="0x1b1c" product_id="0x1a03"/> <!-- voyager stick -->
+	<device vendor_id="0x1b1c" product_id="0x1a09"/> <!-- voyager gt stick -->
+	<device vendor_id="0x1f75" product_id="0x0917"/> <!-- intenso stick -->
 </config>
 					</inline>
 				</import>

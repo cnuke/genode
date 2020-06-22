@@ -10,6 +10,8 @@ set vm_ram   "4500M"
 
 set use_vbox5 1
 
+set use_serial 0
+
 set use_rumpfs 1
 # Write overlay only into ram
 set use_ram_fs 0
