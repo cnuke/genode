@@ -9,8 +9,11 @@
   <Machine uuid="{03ba59c2-4476-4bb2-ba12-d63ec11e20d6}" name="Xubuntu" OSType="Ubuntu_64" snapshotFolder="Snapshots" lastStateChange="2018-01-16T12:54:49Z">
     <MediaRegistry>
       <HardDisks>
-        <HardDisk uuid="{35e6b088-4425-4802-b1c0-9d71d86ebb11}" location="/vm/debian/Gentoo.vdi" format="VDI" type="Normal"/>
+        <HardDisk uuid="{a90a16bf-f724-4321-99df-5498d6e4b796}" location="/vm/debian/void.vdi" format="VDI" type="Normal"/>
       </HardDisks>
+      <DVDImages>
+	      <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}" location="/vm/debian/void-live-x86_64-musl-20191109.iso"/>
+      </DVDImages>
     </MediaRegistry>
     <Hardware>
       <CPU count="4">
@@ -52,7 +55,10 @@
     <StorageControllers>
       <StorageController name="SATA" type="AHCI" PortCount="2" useHostIOCache="true" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3">
         <AttachedDevice type="HardDisk" port="0" device="0">
-          <Image uuid="{35e6b088-4425-4802-b1c0-9d71d86ebb11}"/>
+          <Image uuid="{a90a16bf-f724-4321-99df-5498d6e4b796}"/>
+        </AttachedDevice>
+        <AttachedDevice passthrough="false" type="DVD" port="1" device="0">
+          <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}"/>
         </AttachedDevice>
       </StorageController>
     </StorageControllers>
