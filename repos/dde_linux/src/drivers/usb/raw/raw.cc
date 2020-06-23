@@ -291,7 +291,7 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 
 			int ret = usb_submit_urb(bulk_urb, GFP_KERNEL);
 			if (ret != 0) {
-				error("Failed to submit URB, error: ", ret);
+				error(__LINE__, ": Failed to submit URB, error: ", ret);
 				p.error = Usb::Packet_descriptor::SUBMIT_ERROR;
 
 				free_complete_data(data);
@@ -344,7 +344,7 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 
 			int ret = usb_submit_urb(irq_urb, GFP_KERNEL);
 			if (ret != 0) {
-				error("Failed to submit URB, error: ", ret);
+				error(__LINE__, ": Failed to submit URB, error: ", ret);
 				p.error = Usb::Packet_descriptor::SUBMIT_ERROR;
 
 				free_complete_data(data);
@@ -400,6 +400,7 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			for (int i = 0; i < p.transfer.number_of_packets; i++) {
 				urb->iso_frame_desc[i].offset = offset;
 				urb->iso_frame_desc[i].length = p.transfer.packet_size[i];
+				error(__func__, ": i: ", i, " offset: ", offset, " length: ", urb->iso_frame_desc[i].length);
 				offset += p.transfer.packet_size[i];
 			}
 
@@ -407,7 +408,7 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			if (ret == 0)
 				return true;
 
-			error("Failed to submit URB, error: ", ret);
+			error(__LINE__, ": Failed to submit URB, error: ", ret);
 			p.error = Usb::Packet_descriptor::SUBMIT_ERROR;
 
 			free_complete_data(data);
@@ -421,6 +422,8 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 		 */
 		void _alt_setting(Packet_descriptor &p)
 		{
+			Genode::log(__func__, ":", __LINE__, ": iface: ", p.interface.number,
+			            " alt_setting: ", p.interface.alt_setting);
 			int err = usb_set_interface(_device->udev, p.interface.number,
 			                            p.interface.alt_setting);
 			if (!err)
@@ -439,11 +442,11 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 
 			for (unsigned i = 0; i < config->desc.bNumInterfaces; i++) {
 				if (usb_interface_claimed(config->interface[i])) {
-					error("There are interfaces claimed, won't set configuration");
-					return;
+					warning("There are interfaces claimed, set configuration dangerous");
 				}
 			}
 
+			Genode::log(__func__, ":", __LINE__, ": number: ", p.number);
 			int err = usb_set_configuration(_device->udev, p.number);
 
 			if (!err)

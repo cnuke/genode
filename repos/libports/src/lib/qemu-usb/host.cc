@@ -71,6 +71,8 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 
 			_offset += copy_size;
 
+			Genode::error(__func__, ":", __LINE__, ": copy_size: ", copy_size);
+
 			if (!_packet.read_transfer()) {
 				_packet.transfer.packet_size[_packet.transfer.number_of_packets] = copy_size;
 				_packet.transfer.number_of_packets++;
@@ -372,6 +374,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			return;
 
 		size_t size = usb_packet->ep->max_packet_size * NUMBER_OF_PACKETS;
+		Genode::error(__func__, ":", __LINE__, ": max: ", usb_packet->ep->max_packet_size,
+		              " nr: ", (unsigned) NUMBER_OF_PACKETS);
 		try {
 			Usb::Packet_descriptor packet     = alloc_packet(size);
 			packet.type                       = Packet_type::ISOC;
@@ -380,6 +384,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			packet.transfer.number_of_packets = NUMBER_OF_PACKETS;
 			for (unsigned i = 0; i < NUMBER_OF_PACKETS; i++) {
 				packet.transfer.packet_size[i] = usb_packet->ep->max_packet_size;
+				Genode::error(__func__, ":", __LINE__, ": ",
+				              "i: ", i, " packet_size: ", packet.transfer.packet_size[i]);
 			}
 
 			Completion *c = dynamic_cast<Completion *>(packet.completion);
@@ -428,6 +434,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		}
 
 		size_t size = usb_packet->ep->max_packet_size * NUMBER_OF_PACKETS;
+		Genode::error(__func__, ":", __LINE__, ": max: ", usb_packet->ep->max_packet_size,
+		              " nr: ", (unsigned) NUMBER_OF_PACKETS);
 		try {
 			Usb::Packet_descriptor packet     = alloc_packet(size, false);
 			packet.type                       = Packet_type::ISOC;
@@ -633,6 +641,10 @@ struct Usb_host_device : List<Usb_host_device>::Element
 					int const pid      = (endp.address & USB_DIR_IN) ? USB_TOKEN_IN : USB_TOKEN_OUT;
 					int const ep       = (endp.address & 0xf);
 					uint8_t const type = (endp.attributes & 0x3);
+
+					int const max_packet_size = endp.max_packet_size;
+					Genode::error(__func__, ":", __LINE__, ": ", i, ",", j, ",", k,
+					              " endp.max_packet_size: ", max_packet_size);
 
 					usb_ep_set_max_packet_size(udev, pid, ep, endp.max_packet_size);
 					usb_ep_set_type(udev, pid, ep, type);
