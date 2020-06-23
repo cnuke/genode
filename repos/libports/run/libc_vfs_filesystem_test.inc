@@ -59,7 +59,7 @@ set depot_pkgs "[depot_user]/src/[base_src] [depot_user]/src/init"
 lappend_if $use_ahci       depot_pkgs [depot_user]/src/ahci_drv
 lappend_if $use_vfs_block  depot_pkgs [depot_user]/src/vfs_block
 lappend_if $use_vfs_server depot_pkgs [depot_user]/src/vfs
-lappend_if $use_vfs_server depot_pkgs [depot_user]/src/vfs_import
+lappend_if $use_vfs_block  depot_pkgs [depot_user]/src/vfs_import
 
 import_from_depot {*}$depot_pkgs
 
@@ -190,8 +190,6 @@ lappend boot_modules {*}$test_boot_modules
 
 lappend_if $use_sd_card_drv  boot_modules pbxa9_sd_card_drv
 lappend_if $use_vfs_block    boot_modules test.hda
-lappend_if $use_vfs_block    boot_modules vfs_block
-lappend_if $use_vfs_block    boot_modules vfs_import.lib.so
 
 append_platform_drv_boot_modules
 
