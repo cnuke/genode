@@ -3,6 +3,9 @@ LIB_INC_DIR = $(LIB_DIR)/include
 
 AUDIO_CONTRIB_DIR := $(call select_from_ports,dde_bsd)/src/lib/audio
 
+# XXX properly split up MD stuff
+INC_DIR += $(LIB_INC_DIR)/spec/x86_64 $(LIB_INC_DIR)/spec/x86
+
 #
 # Set include paths up before adding the dde_bsd_audio_include library
 # because it will use INC_DIR += and must be at the end
@@ -28,7 +31,7 @@ CC_OPT += -D_KERNEL
 SRC_C += lib/libkern/strchr.c
 
 # enable when debugging
-#CC_OPT += -DUAUDIO_DEBUG
+CC_OPT += -DUAUDIO_DEBUG
 
 CC_C_OPT += -Wno-pointer-sign
 CC_C_OPT += -Wno-maybe-uninitialized

@@ -15,7 +15,7 @@
 
 #include <sys/device.h>
 #include <dev/audio_if.h>
-
+#include <dev/usb/usb.h>
 
 /******************
  ** sys/kernel.h **
@@ -39,7 +39,7 @@ struct cfdata cfdata[] = {
  * This function is our little helper that matches and attaches
  * the driver to the device.
  */
-int probe_cfdata(void *attach_args)
+int probe_cfdata(struct usb_attach_arg *attach_args)
 {
 	size_t ncd = sizeof(cfdata) / sizeof(struct cfdata);
 

@@ -716,6 +716,8 @@ struct timeval
 
 void microuptime(struct timeval *);
 
+void getmicrotime(struct timeval *); 
+
 
 /***************************
  ** lib/libkern/libkern.h **

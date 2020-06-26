@@ -64,9 +64,9 @@ typedef struct usb_device_request usb_device_request_t;
 #define  UE_ISOCHRONOUS 0x01
 #define UE_GET_XFERTYPE(a) ((a) & UE_XFERTYPE)
 #define UE_ISO_TYPE 0x0c
-// #define  UE_ISO_ASYNC   0x04
-// #define  UE_ISO_ADAPT   0x08
-// #define  UE_ISO_SYNC    0x0c
+#define  UE_ISO_ASYNC   0x04
+#define  UE_ISO_ADAPT   0x08
+#define  UE_ISO_SYNC    0x0c
 #define UE_GET_ISO_TYPE(a) ((a) & UE_ISO_TYPE)
 #define UE_GET_SIZE(a) ((a) & 0x7ff)
 
@@ -77,9 +77,21 @@ typedef struct usb_device_request usb_device_request_t;
 
 struct usb_config_descriptor
 {
+	uByte bLength;
+	uByte bDescriptorType;
 	uWord wTotalLength;
+	uByte bNumInterface;
+	uByte bConfigurationValue;
+	uByte iConfiguration;
+	uByte bmAttributes;
+	uByte bMaxPower;
 } __packed;
 typedef struct usb_config_descriptor usb_config_descriptor_t;
+
+#define UC_BUS_POWERED          0x80
+#define UC_SELF_POWERED         0x40
+#define UC_REMOTE_WAKEUP        0x20
+#define UC_POWER_FACTOR 2
 
 struct usb_interface_descriptor
 {
@@ -167,6 +179,8 @@ int               usbd_is_dying(struct usbd_device *);
 usb_interface_descriptor_t *usbd_get_interface_descriptor(struct usbd_interface *iface);
 usb_config_descriptor_t    *usbd_get_config_descriptor(struct usbd_device *dev);
 
+char const *usbd_errstr(usbd_status);
+
 struct usb_attach_arg
 {
 	struct usbd_device    *device;
@@ -185,13 +199,23 @@ struct usb_attach_arg
 
 struct usbd_device
 {
+	void *genode_usb_device;
+
 	u_int8_t speed;         /* low/full/high speed */
 };
+
+
+struct usbd_interface
+{
+	void *genode_usb_device;
+};
+
 
 struct usbd_pipe
 {
 	struct usbd_interface *iface;
 };
+
 
 struct usbd_xfer
 {

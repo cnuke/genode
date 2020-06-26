@@ -533,6 +533,7 @@ struct Main
 		                   announce_session_dispatcher);
 
 		if (!Audio::driver_active()) {
+			Genode::error("driver not active");
 			return;
 		}
 

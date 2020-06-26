@@ -1,0 +1,139 @@
+assert_spec x86
+
+#
+# Check used commands
+#
+
+set wget [installed_command wget]
+
+#
+# Build
+#
+
+set build_components {
+	core init timer
+	drivers/audio/spec/usb
+	drivers/usb_host
+	test/audio_out
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+#
+# Config
+#
+
+append config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>}
+
+append_platform_drv_config
+
+append config {
+
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<default-policy report="usb_drv -> devices"/>
+		</config>
+	</start>
+
+	<start name="usb_drv" caps="150">
+		<binary name="} [usb_host_drv_binary] {"/>
+		<resource name="RAM" quantum="12M"/>
+		<provides> <service name="Usb"/> </provides>
+		<config bios_handoff="yes">
+			<report devices="yes"/>
+			<policy label_prefix="usb_audio_drv" class="0x01"/>
+		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="usb_audio_drv">
+		<resource name="RAM" quantum="8M"/>
+		<provides> <service name="Audio_out"/> </provides>
+		<config/>
+		<route>
+			<service name="ROM" label="report"> <child name="report_rom"/> </service>
+			<service name="Usb"> <child name="usb_drv"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="test-audio_out">
+		<resource name="RAM" quantum="4M"/>
+		<config>
+			<filename>sample.raw</filename>
+		</config>
+		<route>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+
+#
+# Get sample file
+#
+
+if {[info exists env(GENODE_SAMPLE_RAW)]} {
+	catch { exec $wget $::env(GENODE_SAMPLE_RAW) -O bin/sample.raw }
+}
+
+if {![file exists bin/sample.raw]} {
+	puts ""
+	puts "The sample file is missing. Please take a look at"
+	puts "repos/dde_bsd/README, create 'sample.raw' and put"
+	puts "the file into './bin'. afterwards"
+	puts ""
+	exit 1
+}
+
+#
+# Boot modules
+#
+
+append boot_modules {
+	core ld.lib.so init timer usb_audio_drv
+	test-audio_out sample.raw
+}
+
+append boot_modules [usb_host_drv_binary]
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+#
+# For obvious reasons the timeout depends on the total
+# length of the used sample file.
+#
+run_genode_until {.*played.*1 time\(s\)} 60
