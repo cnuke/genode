@@ -320,8 +320,13 @@ struct Io_memory : public Bus_space
 } /* anonymous namespace */
 
 
-int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc)
+int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
+                       Genode::Signal_context_capability announce_sigh,
+                       Genode::Signal_context_capability report_sigh)
 {
+	(void)announce_sigh;
+	(void)report_sigh;
+
 	Genode::log("--- probe drivers ---");
 	static Pci_driver drv(env, alloc);
 	return drv.probe();
@@ -588,4 +593,9 @@ extern "C" paddr_t bus_dmamem_mmap(bus_dma_tag_t, bus_dma_segment_t *,
 	Genode::warning("not implemented, called from ",
 	                __builtin_return_address(0));
 	return 0;
+}
+
+
+void Bsd::execute_driver()
+{
 }
