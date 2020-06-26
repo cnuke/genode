@@ -21,7 +21,8 @@
 
 namespace Bsd {
 
-	int probe_drivers(Genode::Env&, Genode::Allocator&);
+	int probe_drivers(Genode::Env&, Genode::Allocator&,
+	                  Genode::Signal_context_capability);
 
 	void mem_init(Genode::Env&, Genode::Allocator &);
 	void irq_init(Genode::Entrypoint&, Genode::Allocator&);
