@@ -410,6 +410,9 @@ static bool configure_audio_device(Genode::Env &env, dev_t dev, Genode::Xml_node
 }
 
 
+static void run_bsd(void *p);
+
+
 namespace {
 
 	struct Task_args
@@ -427,15 +430,44 @@ namespace {
 			announce_sigh(announce_sigh)
 		{ }
 	};
+
+	struct Task
+	{
+		Task_args _args;
+
+		Bsd::Task _task;
+
+		Genode::Signal_handler<Task> _handler;
+
+		void _handle_signal()
+		{
+			_task.unblock();
+			Bsd::scheduler().schedule();
+		}
+
+		template <typename... ARGS>
+		Task(Genode::Env &env, Genode::Allocator &alloc,
+		     Genode::Xml_node config,
+		     Genode::Signal_context_capability announce_sigh)
+		:
+			_args { env, alloc, config, announce_sigh },
+			_task { run_bsd, this, "bsd", Bsd::Task::PRIORITY_0,
+			        Bsd::scheduler(), 2048 * sizeof(Genode::addr_t) },
+			_handler { env.ep(), *this, &Task::_handle_signal }
+		{ }
+	};
 }
 
 
-static void run_bsd(void *p)
+void run_bsd(void *p)
 {
-	Task_args *args = static_cast<Task_args*>(p);
+	Task *task = static_cast<Task*>(p);
 
-	int const success = Bsd::probe_drivers(args->env, args->alloc,
-		                                   args->announce_sigh);
+	int const success =
+		Bsd::probe_drivers(task->_args.env,
+		                   task->_args.alloc,
+		                   task->_args.announce_sigh,
+		                   task->_handler);
 	if (!success) {
 		Genode::error("no supported sound card found");
 		Genode::sleep_forever();
@@ -446,7 +478,8 @@ static void run_bsd(void *p)
 		Genode::sleep_forever();
 	}
 
-	adev_usuable = configure_audio_device(args->env, adev, args->config);
+	adev_usuable = configure_audio_device(task->_args.env, adev,
+	                                      task->_args.config);
 
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();
@@ -502,11 +535,7 @@ void Audio::init_driver(Genode::Env &env, Genode::Allocator &alloc,
 	Bsd::irq_init(env.ep(), alloc);
 	Bsd::timer_init(env);
 
-	static Task_args args(env, alloc, config, announce_sigh);
-
-	static Bsd::Task task_bsd(run_bsd, &args, "bsd",
-	                          Bsd::Task::PRIORITY_0, Bsd::scheduler(),
-	                          2048 * sizeof(Genode::addr_t));
+	static Task bsd_task(env, alloc, config, announce_sigh);
 	Bsd::scheduler().schedule();
 }
 
