@@ -535,8 +535,6 @@ struct Main
 		if (!Audio::driver_active()) {
 			return;
 		}
-
-		handle_announce_session();
 	}
 };
 
