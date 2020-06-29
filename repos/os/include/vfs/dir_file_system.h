@@ -153,11 +153,15 @@ class Vfs::Dir_file_system : public File_system
 			curr->next = fs;
 		}
 
+	protected:
+
 		/**
 		 * Directory name
 		 */
 		typedef String<MAX_NAME_LEN> Name;
 		Name const _name;
+
+	private:
 
 		/**
 		 * Returns if path corresponds to top directory of file system
@@ -267,10 +271,20 @@ class Vfs::Dir_file_system : public File_system
 		 */
 		file_size _sum_dirents_of_file_systems(char const *path)
 		{
+			static unsigned _level = 0;
+
+			++_level;
+
 			file_size cnt = 0;
+			Genode::log(this, " ", _level, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			for (File_system *fs = _first_file_system; fs; fs = fs->next) {
-				cnt += fs->num_dirent(path);
+				Genode::log(this, " ", _level, " DIR ", __func__, ":", __LINE__, ": path '", path, "' fs: ", fs);
+				file_size const num = fs->num_dirent(path);
+				Genode::log(this, " ", _level, " DIR ", __func__, ":", __LINE__, ": path '", path, "' fs: ", fs, " num: ", num);
+				cnt += num;
 			}
+			Genode::log(this, " ", _level, " DIR ", __func__, ":", __LINE__, ": path '", path, "' DONE");
+			--_level;
 			return cnt;
 		}
 
@@ -281,14 +295,16 @@ class Vfs::Dir_file_system : public File_system
 			dir_vfs_handle->queued_read_handle = nullptr;
 
 			file_offset index = dir_vfs_handle->seek() / sizeof(Dirent);
-
 			char const *sub_path = _sub_path(dir_vfs_handle->path.base());
+
+			Genode::error(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' INDEX: ", index);
 
 			if (strlen(sub_path) == 0)
 				sub_path = "/";
 
 			/* base of composite directory index */
 			int base = 0;
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "'");
 
 			auto f = [&] (Dir_vfs_handle::Subdir_handle_element &handle_element) {
 				if (dir_vfs_handle->queued_read_handle) return; /* skip through */
@@ -299,7 +315,9 @@ class Vfs::Dir_file_system : public File_system
 				 * Determine number of matching directory entries within
 				 * the current file system.
 				 */
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "'");
 				int const fs_num_dirent = vfs_handle.ds().num_dirent(sub_path);
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' fs_num_dirent: ", fs_num_dirent);
 
 				/*
 				 * Query directory entry if index lies with the file
@@ -317,7 +335,9 @@ class Vfs::Dir_file_system : public File_system
 					dir_vfs_handle->apply_handler([&] (Vfs::Io_response_handler &h) {
 						vfs_handle.handler(&h); });
 
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "'");
 					result = vfs_handle.fs().queue_read(&vfs_handle, sizeof(Dirent));
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' DONE");
 				}
 
 				/* adjust base index for next file system */
@@ -326,6 +346,7 @@ class Vfs::Dir_file_system : public File_system
 
 			dir_vfs_handle->subdir_handle_registry.for_each(f);
 
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' result: ", (unsigned)result);
 			return result;
 		}
 
@@ -375,21 +396,28 @@ class Vfs::Dir_file_system : public File_system
 		{
 			using namespace Genode;
 
+			Genode::error(__func__, ":", __LINE__, ": dir: ", this, " name: '", _name, "'");
 			for (unsigned i = 0; i < node.num_sub_nodes(); i++) {
 
 				Xml_node sub_node = node.sub_node(i);
 
 				/* traverse into <dir> nodes */
 				if (sub_node.has_type("dir")) {
-					_append_file_system(new (_env.alloc())
-						Dir_file_system(_env, sub_node, fs_factory));
+					Genode::warning(__func__, ":", __LINE__, ": dir sub_node: '", sub_node, "'");
+					File_system * const fs = new (_env.alloc())
+						Dir_file_system(_env, sub_node, fs_factory);
+
+					Genode::error(__func__, ":", __LINE__, ": dir DONE");
+					_append_file_system(fs);
 					continue;
 				}
 
+				Genode::warning(__func__, ":", __LINE__, ": fs sub_node: '", sub_node, "'");
 				File_system * const fs =
 					fs_factory.create(_env, sub_node);
 
 				if (fs) {
+					Genode::error(__func__, ":", __LINE__, ": fs: ", fs, " type: ", fs->type(), " DONE");
 					_append_file_system(fs);
 					continue;
 				}
@@ -407,6 +435,7 @@ class Vfs::Dir_file_system : public File_system
 					}
 				} catch (Xml_node::Nonexistent_attribute) { }
 			}
+			Genode::error(__func__, ":", __LINE__, ": dir: ", this, " name: '", _name, "' DONE");
 		}
 
 		/*********************************
@@ -445,17 +474,21 @@ class Vfs::Dir_file_system : public File_system
 
 		Stat_result stat(char const *path, Stat &out) override
 		{
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			path = _sub_path(path);
 
 			/* path does not match directory name */
-			if (!path)
+			if (!path) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				return STAT_ERR_NO_ENTRY;
+			}
 
 			/*
 			 * If path equals directory name, return information about the
 			 * current directory.
 			 */
 			if (strlen(path) == 0 || _top_dir(path)) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				out = {
 					.size              = 0,
 					.type              = Node_type::DIRECTORY,
@@ -473,28 +506,41 @@ class Vfs::Dir_file_system : public File_system
 			 */
 			for (File_system *fs = _first_file_system; fs; fs = fs->next) {
 
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				Stat_result const err = fs->stat(path, out);
 
-				if (err == STAT_OK)
+				if (err == STAT_OK) {
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 					return err;
+				}
 
-				if (err != STAT_ERR_NO_ENTRY)
+				if (err != STAT_ERR_NO_ENTRY) {
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 					return err;
+				}
 			}
 
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			/* none of our file systems felt responsible for the path */
 			return STAT_ERR_NO_ENTRY;
 		}
 
 		file_size num_dirent(char const *path) override
 		{
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			if (_vfs_root) {
-				return _sum_dirents_of_file_systems(path);
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
+				file_size const num = _sum_dirents_of_file_systems(path);
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' num: ", num);
+				return num;
 
 			} else {
 
-				if (_top_dir(path))
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
+				if (_top_dir(path)) {
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 					return 1;
+				}
 
 				/*
 				 * The path contains at least one element. Remove current
@@ -508,7 +554,10 @@ class Vfs::Dir_file_system : public File_system
 				 * matching dirents of all our file systems. Otherwise,
 				 * the specified path lies outside our directory node.
 				 */
-				return path ? _sum_dirents_of_file_systems(*path ? path : "/") : 0;
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
+				file_size const num = path ? _sum_dirents_of_file_systems(*path ? path : "/") : 0;
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' num: ", num);
+				return num;
 			}
 		}
 
@@ -517,39 +566,60 @@ class Vfs::Dir_file_system : public File_system
 		 */
 		bool directory(char const *path) override
 		{
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			if (_top_dir(path))
 				return true;
 
 			path = _sub_path(path);
 
-			if (!path)
+			if (!path) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				return false;
+			}
 
-			if (strlen(path) == 0)
+			if (strlen(path) == 0) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				return true;
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
+			}
 
-			for (File_system *fs = _first_file_system; fs; fs = fs->next)
-				if (fs->directory(path))
+			for (File_system *fs = _first_file_system; fs; fs = fs->next) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'"); 
+				if (fs->directory(path)) {
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' fs: ",
+					            fs);
 					return true;
+				}
+			}
 
 			return false;
 		}
 
 		char const *leaf_path(char const *path) override
 		{
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 			path = _sub_path(path);
-			if (!path)
+			if (!path) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 				return nullptr;
-
-			if (strlen(path) == 0)
-				return path;
-
-			for (File_system *fs = _first_file_system; fs; fs = fs->next) {
-				char const *leaf_path = fs->leaf_path(path);
-				if (leaf_path)
-					return leaf_path;
 			}
 
+			if (strlen(path) == 0) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
+				return path;
+			}
+
+			for (File_system *fs = _first_file_system; fs; fs = fs->next) {
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' fs: ", fs);
+				char const *leaf_path = fs->leaf_path(path);
+				Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' fs: ", fs, " DONE");
+				if (leaf_path) {
+					Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", leaf_path, "'");
+					return leaf_path;
+				}
+			}
+
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "' nullptr");
 			return nullptr;
 		}
 
@@ -652,6 +722,8 @@ class Vfs::Dir_file_system : public File_system
 		                       Vfs_handle **out_handle, Allocator &alloc) override
 		{
 			Opendir_result result = OPENDIR_OK;
+
+			Genode::log(this, " DIR ", __func__, ":", __LINE__, ": path '", path, "'");
 
 			if (_top_dir(path)) {
 				if (create)
@@ -879,13 +951,22 @@ class Vfs::Dir_file_system : public File_system
 			Dir_vfs_handle *dir_vfs_handle =
 				static_cast<Dir_vfs_handle*>(vfs_handle);
 
-			if (_vfs_root)
-				return _queue_read_of_file_systems(dir_vfs_handle);
+			if (_vfs_root) {
+				char const *sub_path = _sub_path(dir_vfs_handle->path.base());
+				Genode::error(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "'");
+				bool const v = _queue_read_of_file_systems(dir_vfs_handle);
+				Genode::error(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' v: ", v);
+				return v;
+			}
 
 			if (_top_dir(dir_vfs_handle->path.base()))
 				return true;
 
-			return _queue_read_of_file_systems(dir_vfs_handle);
+			char const *sub_path = _sub_path(dir_vfs_handle->path.base());
+			Genode::error(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "'");
+			bool const v = _queue_read_of_file_systems(dir_vfs_handle);
+			Genode::error(this, " DIR ", __func__, ":", __LINE__, ": path '", sub_path, "' v: ", v);
+			return v;
 		}
 
 		Read_result complete_read(Vfs_handle *vfs_handle,

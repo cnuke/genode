@@ -204,6 +204,7 @@ static void resolve_symlinks_except_last_element(char const *path, Absolute_path
 
 extern "C" int access(const char *path, int amode)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks(path, resolved_path);
@@ -217,6 +218,8 @@ extern "C" int access(const char *path, int amode)
 
 extern "C" int chdir(const char *path)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
+
 	struct stat stat_buf;
 	if ((stat(path, &stat_buf) == -1) ||
 	    (!S_ISDIR(stat_buf.st_mode))) {
@@ -315,6 +318,7 @@ __SYS_(int, fstat, (int libc_fd, struct stat *buf),
 
 __SYS_(int, fstatat, (int libc_fd, char const *path, struct stat *buf, int flags),
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	if (*path == '/') {
 		if (flags & AT_SYMLINK_NOFOLLOW)
 			return lstat(path, buf);
@@ -371,6 +375,7 @@ __SYS_(::off_t, lseek, (int libc_fd, ::off_t offset, int whence), {
 
 extern "C" int lstat(const char *path, struct stat *buf)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
@@ -384,6 +389,7 @@ extern "C" int lstat(const char *path, struct stat *buf)
 
 extern "C" int mkdir(const char *path, mode_t mode)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
@@ -525,6 +531,7 @@ __SYS_(int, open, (const char *pathname, int flags, ...),
 
 __SYS_(int, openat, (int libc_fd, const char *path, int flags, ...),
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	va_list ap;
 	va_start(ap, flags);
 	mode_t mode = va_arg(ap, unsigned);
@@ -594,6 +601,7 @@ __SYS_(ssize_t, read, (int libc_fd, void *buf, ::size_t count), {
 
 extern "C" ssize_t readlink(const char *path, char *buf, ::size_t bufsiz)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
@@ -647,6 +655,7 @@ extern "C" int rmdir(const char *path)
 
 extern "C" int stat(const char *path, struct stat *buf)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
@@ -660,6 +669,7 @@ extern "C" int stat(const char *path, struct stat *buf)
 
 extern "C" int symlink(const char *oldpath, const char *newpath)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", oldpath, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(newpath, resolved_path);
@@ -672,6 +682,7 @@ extern "C" int symlink(const char *oldpath, const char *newpath)
 
 extern "C" int unlink(const char *path)
 {
+	Genode::log(__func__, ":", __LINE__, ": path '", path, "'");
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
