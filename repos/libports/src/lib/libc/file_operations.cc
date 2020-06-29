@@ -374,6 +374,7 @@ extern "C" int lstat(const char *path, struct stat *buf)
 	try {
 		Absolute_path resolved_path;
 		resolve_symlinks_except_last_element(path, resolved_path);
+		resolved_path.remove_trailing('/');
 		FNAME_FUNC_WRAPPER(stat, resolved_path.base(), buf);
 	} catch (Symlink_resolve_error) {
 		return -1;
@@ -648,7 +649,8 @@ extern "C" int stat(const char *path, struct stat *buf)
 {
 	try {
 		Absolute_path resolved_path;
-		resolve_symlinks(path, resolved_path);
+		resolve_symlinks_except_last_element(path, resolved_path);
+		resolved_path.remove_trailing('/');
 		FNAME_FUNC_WRAPPER(stat, resolved_path.base(), buf);
 	} catch(Symlink_resolve_error) {
 		return -1;
