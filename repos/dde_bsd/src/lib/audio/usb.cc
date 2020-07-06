@@ -114,6 +114,8 @@ struct Usb_driver
 	struct usb_interface_descriptor _usb_iface_descr  { };
 	struct usb_config_descriptor    _usb_config_descr { };
 
+	char _config_descr_buffer[4096] { };
+
 	u_int8_t _get_speed(Usb::Device_descriptor const &descr)
 	{
 		switch (descr.speed) {
@@ -173,6 +175,7 @@ struct Usb_driver
 		_ua.device = &_usbd_device;
 		_ua.iface  = &_usbd_iface;
 		int found = 0;
+		Genode::log("num_interfaces: ", _usb_device.config_descr.num_interfaces);
 		for (uint8_t i = 0; i < _usb_device.config_descr.num_interfaces; i++) {
 
 			Usb::Interface_descriptor iface_descr;
@@ -197,8 +200,8 @@ struct Usb_driver
 			_usb_config_descr.bmAttributes        = _usb_device.config_descr.attributes;
 			_usb_config_descr.bMaxPower           = _usb_device.config_descr.max_power;
 
-			found = probe_cfdata(&_ua);
-			if (found) { break; }
+			// found = probe_cfdata(&_ua);
+			// if (found) { break; }
 		}
 
 		_probed = true;
