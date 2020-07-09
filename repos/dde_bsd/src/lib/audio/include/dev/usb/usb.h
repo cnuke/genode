@@ -127,7 +127,7 @@ struct usbd_xfer;
 
 typedef enum
 {
-	// USBD_NORMAL_COMPLETION = 0, /* must be 0 */
+	USBD_NORMAL_COMPLETION = 0, /* must be 0 */
 	USBD_IN_PROGRESS,       /* 1 */
 	// /* errors */
 	// USBD_PENDING_REQUESTS,  /* 2 */

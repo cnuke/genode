@@ -441,8 +441,10 @@ namespace {
 
 		void _handle_signal()
 		{
+			Genode::log(__func__, ":", __LINE__, " before");
 			_task.unblock();
 			Bsd::scheduler().schedule();
+			Genode::log(__func__, ":", __LINE__, " after");
 		}
 
 		template <typename... ARGS>
@@ -480,6 +482,9 @@ void run_bsd(void *p)
 
 	adev_usuable = configure_audio_device(task->_args.env, adev,
 	                                      task->_args.config);
+
+	Genode::log("Announce sessions");
+	Genode::Signal_transmitter(task->_args.announce_sigh).submit();
 
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();

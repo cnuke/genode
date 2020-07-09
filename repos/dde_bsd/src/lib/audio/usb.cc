@@ -129,9 +129,152 @@ struct Usb_driver
 		}
 	}
 
+	bool _config_descriptor_available { false };
+
+	Genode::Signal_context_capability _task_sigh;
+
+	void _handle_ctrl(Usb::Packet_descriptor &p)
+	{
+		Genode::log("Handle USB packet");
+
+		uint8_t const * const data = (uint8_t *) _usb.source()->packet_content(p);
+		int             const len  = p.control.actual_size;
+
+		if (len != p.size()) {
+			Genode::warning("size differs: ", len, " != ", p.size());
+		}
+
+		if ((size_t)len > sizeof (_config_descr_buffer)) {
+			Genode::error("static config descriptor buffer too small");
+			return;
+		}
+
+		Genode::memcpy(_config_descr_buffer, data, len);
+		_config_descriptor_available = true;
+
+		Genode::Signal_transmitter(_task_sigh).submit();
+	}
+
+	void _handle_ctrl_sync(Usb::Packet_descriptor &p, void *buf)
+	{
+		Genode::log("Handle ctrl sync USB packet");
+
+		int const len = p.control.actual_size;
+		if (len != p.size()) {
+			Genode::warning("size differs: ", len, " != ", p.size());
+		}
+
+		if ((p.control.request_type & 0x80) && buf) {
+			uint8_t const * const data = (uint8_t *) _usb.source()->packet_content(p);
+			Genode::memcpy(buf, data, len);
+		}
+
+		Genode::Signal_transmitter(_task_sigh).submit();
+	}
+
+	struct Sync_completion : Usb::Completion
+	{
+		Usb_driver &_usb_driver;
+
+		void *buf;
+		bool  success;
+		bool  completed;
+
+		Sync_completion(Usb_driver &driver)
+		: _usb_driver { driver }, buf { nullptr }, success { false }, completed { false }
+		{ }
+
+		void complete(Usb::Packet_descriptor &p) override
+		{
+			completed = true;
+			success = p.succeded;
+			if (!p.succeded) {
+				Genode::error("sync completion failed");
+				return;
+			}
+
+			Genode::log(__func__, ": success: ", success);
+
+			using Upd = Usb::Packet_descriptor;
+
+			switch (p.type) {
+			case Upd::CTRL: _usb_driver._handle_ctrl_sync(p, buf); break;
+			default: break;
+			}
+		}
+	};
+
+	Sync_completion _sync_completion { *this };
+
+
+	struct Completion : Usb::Completion
+	{
+		Usb_driver &_usb_driver;
+
+		Completion(Usb_driver &driver) : _usb_driver { driver }
+		{ }
+
+		void complete(Usb::Packet_descriptor &p) override
+		{
+			if (!p.succeded) {
+				Genode::error("completion failed");
+				return;
+			}
+
+			using Upd = Usb::Packet_descriptor;
+
+			switch (p.type) {
+			case Upd::CTRL: _usb_driver._handle_ctrl(p); break;
+			default: break;
+			}
+		}
+	};
+
+	Completion _completion { *this };
+
+	void _get_config_descriptor()
+	{
+		size_t const total_length = _usb_device.config_descr.total_length;
+		Usb::Packet_descriptor p = _usb.source()->alloc_packet(total_length);
+		p.completion = &_completion;
+
+		enum {
+			REQUEST_TYPE              = 0x80,  /* bmRequestType */
+			REQUEST_GET_DESCRIPTOR    = 0x06,  /* bRequest */
+			REQUEST_CONFIG_DESCRIPTOR = 0x02   /* wValue */
+		};
+
+		p.type                 = Usb::Packet_descriptor::CTRL;
+		p.control.request_type = REQUEST_TYPE;
+		p.control.request      = REQUEST_GET_DESCRIPTOR;
+		p.control.value        = (REQUEST_CONFIG_DESCRIPTOR << 8);
+		p.control.index        = 0;
+		p.control.timeout      = 1000; // XXX
+
+		_usb.source()->submit_packet(p);
+	}
+
+	void _process_completions()
+	{
+		while (_usb.source()->ack_avail()) {
+			Usb::Packet_descriptor p = _usb.source()->get_acked_packet();
+			if (p.completion) {
+				p.completion->complete(p);
+			}
+			_usb.source()->release_packet(p);
+		}
+	}
+
+	enum State {
+		INVALID, INIT, GET_CONFIG_DESCR, GOT_CONFIG_DESCR,
+	};
+
+	State _state { INVALID };
+
 	Usb_driver(Genode::Env       &env,
 	           Genode::Allocator &alloc,
-	           Label              label)
+	           Label              label,
+	           Genode::Signal_context_capability task_sigh)
 	:
 		_env { env },
 		_alloc { alloc },
@@ -139,11 +282,10 @@ struct Usb_driver
 		                         &Usb_driver::_handle_usb_state_change },
 		_usb_alloc { &_alloc },
 		_usb { _env, &_usb_alloc, label.string(), 256 * 1024,
-		       _usb_state_change_sigh }
-	{ }
-
-	int probe()
+		       _usb_state_change_sigh },
+		_task_sigh { task_sigh }
 	{
+		_usb.tx_channel()->sigh_ack_avail(task_sigh);
 		try {
 			_usb.config_descriptor(&_usb_device.dev_descr,
 			                       &_usb_device.config_descr);
@@ -152,33 +294,60 @@ struct Usb_driver
 			throw Could_not_read_config_descriptor();
 		}
 
-		// XXX only claim audio related interfaces
-		bool already_claimed = false;
-		for (unsigned i = 0; i < _usb_device.config_descr.num_interfaces; i++) {
-			try {
-				_usb.claim_interface(i);
-			} catch (Usb::Session::Interface_already_claimed) {
-				already_claimed = true;
-				break;
-			}
-		}
-
-		if (already_claimed) {
-			Genode::error("device already claimed");
-			throw Device_already_claimed();
-		}
-
 		_usbd_device.speed = _get_speed(_usb_device.dev_descr);
 		_usbd_device.genode_usb_device = this;
 		_usbd_iface.genode_usb_device  = this;
 
 		_ua.device = &_usbd_device;
 		_ua.iface  = &_usbd_iface;
+
+		_state = State::INIT;
+	}
+
+	void execute()
+	{
+		switch (_state) {
+		case State::INIT:
+			_get_config_descriptor();
+			_state = State::GET_CONFIG_DESCR;
+			break;
+		case State::GET_CONFIG_DESCR:
+			_process_completions();
+			if (_config_descriptor_available) {
+				_state = State::GOT_CONFIG_DESCR;
+			}
+			break;
+		case State::GOT_CONFIG_DESCR: [[fallthrough]];
+		default: break;
+		}
+	}
+
+	bool config_descriptor_available() const
+	{
+		return _state == State::GOT_CONFIG_DESCR;
+	}
+
+	void claim_interface(unsigned index)
+	{
+		try {
+			_usb.claim_interface(index);
+		} catch (Usb::Session::Interface_already_claimed) {
+			Genode::warning("interface ", index, " already claimed");
+			// throw Device_already_claimed();
+		}
+	}
+
+	int probe()
+	{
+		_ua.device = &_usbd_device;
+		_ua.iface  = &_usbd_iface;
+
 		int found = 0;
 		Genode::log("num_interfaces: ", _usb_device.config_descr.num_interfaces);
 		for (uint8_t i = 0; i < _usb_device.config_descr.num_interfaces; i++) {
 
 			Usb::Interface_descriptor iface_descr;
+	// XXX 
 			_usb.interface_descriptor(i, 0, &iface_descr);
 
 			uint16_t const total_length = _usb_device.config_descr.total_length;
@@ -198,10 +367,14 @@ struct Usb_driver
 			_usb_config_descr.bConfigurationValue = _usb_device.config_descr.config_value;
 			_usb_config_descr.iConfiguration      = _usb_device.config_descr.config_index;
 			_usb_config_descr.bmAttributes        = _usb_device.config_descr.attributes;
+
 			_usb_config_descr.bMaxPower           = _usb_device.config_descr.max_power;
 
-			// found = probe_cfdata(&_ua);
-			// if (found) { break; }
+			found = probe_cfdata(&_ua);
+			if (found) {
+				_found++;
+				break;
+			}
 		}
 
 		_probed = true;
@@ -218,7 +391,44 @@ struct Usb_driver
 
 	struct usb_config_descriptor *usb_config_descr()
 	{
-		return &_usb_config_descr;
+		return (struct usb_config_descriptor*)_config_descr_buffer;
+	}
+
+	usbd_status sync_request(usb_device_request_t const &req, void *buf)
+	{
+		uint16_t const len = UGETW(req.wLength);
+		Usb::Packet_descriptor p = _usb.source()->alloc_packet(len);
+		bool const in = req.bmRequestType & 0x80;
+
+		if (!in) {
+			void *dst = (void*) _usb.source()->packet_content(p);
+			Genode::memcpy(dst, buf, len);
+		}
+
+		_sync_completion.completed = false;
+		_sync_completion.success = false;
+		_sync_completion.buf = in ? buf : nullptr;
+
+		p.completion = &_sync_completion;
+
+		p.type                 = Usb::Packet_descriptor::CTRL;
+		p.control.request_type = req.bmRequestType;
+		p.control.request      = req.bRequest;
+		p.control.value        = UGETW(req.wValue);
+		p.control.index        = UGETW(req.wIndex);
+		p.control.timeout      = 5000; // XXX
+
+		_usb.source()->submit_packet(p);
+
+		while (!_sync_completion.completed) {
+			Genode::log(__func__, ":", __LINE__, " before block");
+			Bsd::scheduler().current()->block_and_schedule();
+			_process_completions();
+			Genode::log(__func__, ":", __LINE__, " completed: ", _sync_completion.completed,
+			            " success: ", _sync_completion.success);
+		}
+
+		return _sync_completion.success ? USBD_NORMAL_COMPLETION : USBD_IOERROR;
 	}
 };
 
@@ -244,16 +454,21 @@ usbd_status usbd_close_pipe(struct usbd_pipe *)
 	return USBD_IOERROR;
 }
 
-usbd_status usbd_do_request(struct usbd_device *, usb_device_request_t *,
-                            void *)
+usbd_status usbd_do_request(struct usbd_device *dev,
+                            usb_device_request_t *req,
+                            void *buf)
 {
-	Genode::error(__func__, ": not implemented");
-	return USBD_IOERROR;
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(dev->genode_usb_device);
+	Genode::log(__func__, ": called: ", dev, " req: ", req, " buf: ", buf);
+	return usb.sync_request(*req, buf);
 }
 
-void usbd_claim_iface(struct usbd_device *, int)
+void usbd_claim_iface(struct usbd_device *dev, int i)
 {
-	Genode::error(__func__, ": not implemented");
+	// XXX uaudio(4) will claim the same interface multiple times
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(dev->genode_usb_device);
+	Genode::log(__func__, ": called: ", dev, " i: ", i);
+	usb.claim_interface(i);
 }
 
 
@@ -312,8 +527,9 @@ void usbd_get_xfer_status(struct usbd_xfer *, void **,
 
 int usbd_is_dying(struct usbd_device *)
 {
-	Genode::error(__func__, ": not implemented");
-	return 1;
+	Genode::warning(__func__, ": not implemented, return 0");
+	// XXX unplugging would lead to dying == 1
+	return 0;
 }
 
 
@@ -368,15 +584,23 @@ int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
 		while (true) {
 			Label device = report_handler.process_report();
 			if (!_usb_driver && device.valid()) {
+				Genode::log("Device valid: ", device);
 				_usb_driver =
-					new (&alloc) Usb_driver { env, alloc, device };
+					new (&alloc) Usb_driver { env, alloc, device, report_sigh };
 			}
 
-			if (_usb_driver && _usb_driver->probe()) {
-				break;
+			if (_usb_driver) {
+				_usb_driver->execute();
+
+				if (_usb_driver->config_descriptor_available()) {
+					Genode::log("Config_descriptor available");
+					if (_usb_driver->probe()) {
+						break;
+					}
+				}
 			}
 
-			Genode::log("wait for USB plug signal");
+			Genode::log("wait for USB signal");
 			Bsd::scheduler().current()->block_and_schedule();
 		}
 		return _usb_driver->found();
