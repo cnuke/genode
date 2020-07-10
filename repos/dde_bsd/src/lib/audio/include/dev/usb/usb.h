@@ -199,14 +199,17 @@ struct usb_attach_arg
 
 struct usbd_device
 {
-	void *genode_usb_device;
-
 	u_int8_t speed;         /* low/full/high speed */
+
+	/* private */
+	void *genode_usb_device;
 };
 
 
 struct usbd_interface
 {
+	/* private */
+	uint8_t num;
 	void *genode_usb_device;
 };
 
@@ -214,12 +217,22 @@ struct usbd_interface
 struct usbd_pipe
 {
 	struct usbd_interface *iface;
+
+	/* private */
+	uint8_t addr;
 };
 
 
 struct usbd_xfer
 {
 	struct usbd_pipe *pipe;
+	void *priv;
+
+	/* private */
+	void *dma_buf;
+	size_t dma_size;
+	void *genode_usb_device;
+	void *genode_packet_descriptor;
 };
 
 

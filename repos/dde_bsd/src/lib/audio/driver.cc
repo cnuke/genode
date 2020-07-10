@@ -457,8 +457,18 @@ namespace {
 			        Bsd::scheduler(), 2048 * sizeof(Genode::addr_t) },
 			_handler { env.ep(), *this, &Task::_handle_signal }
 		{ }
+
+		void unblock() { _task.unblock(); }
 	};
 }
+
+
+static bool __play   { false };
+static bool __record { false };
+static struct uio __play_uio;
+static struct uio __record_uio;
+static int __play_result;
+static int __record_result;
 
 
 void run_bsd(void *p)
@@ -488,6 +498,19 @@ void run_bsd(void *p)
 
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();
+
+		if (__play) {
+			Genode::log("Play");
+			__play_result = audiowrite(adev, &__play_uio, IO_NDELAY);
+			Genode::log("Play result: ", __play_result);
+		}
+		if (__record) {
+			Genode::log("Play");
+			__record_result = audiowrite(adev, &__record_uio, IO_NDELAY);
+			Genode::log("Play result: ", __record_result);
+		}
+
+		Bsd::execute_driver();
 	}
 }
 
@@ -528,9 +551,11 @@ void Audio::update_config(Genode::Env &env, Genode::Xml_node config)
 {
 	if (mixer.info == nullptr) { return; }
 
+	// XXX use task
 	configure_mixer(env, mixer, config);
 }
 
+static Task *_bsd_task;
 
 void Audio::init_driver(Genode::Env &env, Genode::Allocator &alloc,
                         Genode::Xml_node config,
@@ -541,6 +566,7 @@ void Audio::init_driver(Genode::Env &env, Genode::Allocator &alloc,
 	Bsd::timer_init(env);
 
 	static Task bsd_task(env, alloc, config, announce_sigh);
+	_bsd_task = &bsd_task;
 	Bsd::scheduler().schedule();
 }
 
@@ -558,13 +584,28 @@ void Audio::record_sigh(Genode::Signal_context_capability sigh) {
 
 int Audio::play(short *data, Genode::size_t size)
 {
-	struct uio uio = { 0, size, UIO_READ, data, size };
-	return audiowrite(adev, &uio, IO_NDELAY);
+	// struct uio uio = { 0, size, UIO_READ, data, size }
+	// return audiowrite(adev, &uio, IO_NDELAY);
+	__play_uio = { 0, size, UIO_READ, data, size };
+	__play = true;
+
+	Genode::log(__func__, ":", __LINE__);
+	_bsd_task->unblock();
+	Bsd::scheduler().schedule();
+	Genode::log(__func__, ":", __LINE__);
+	return __play_result;
 }
 
 
 int Audio::record(short *data, Genode::size_t size)
 {
-	struct uio uio = { 0, size, UIO_WRITE, data, size };
-	return audioread(adev, &uio, IO_NDELAY);
+	// struct uio uio = { 0, size, UIO_WRITE, data, size };
+	// return audioread(adev, &uio, IO_NDELAY);
+	__record_uio = { 0, size, UIO_WRITE, data, size };
+	__record = true;
+	Genode::log(__func__, ":", __LINE__);
+	_bsd_task->unblock();
+	Bsd::scheduler().schedule();
+	Genode::log(__func__, ":", __LINE__);
+	return __record_result;
 }

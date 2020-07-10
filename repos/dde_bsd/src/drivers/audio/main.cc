@@ -347,6 +347,10 @@ class Audio_in::In
 					return;
 			}
 
+			if (!_active()) {
+				return;
+			}
+
 			/*
 			 * Check for an overrun first and notify the client later.
 			 */
@@ -381,7 +385,12 @@ class Audio_in::In
 		:
 			_env(env),
 			_notify_dispatcher(env.ep(), *this, &Audio_in::In::_handle_notify)
-		{ _record_packet(); }
+		{
+			if (_active()) {
+				_record_packet();
+			            " config_descr length: ", total_length);
+			}
+		}
 
 		Signal_context_capability sigh() { return _notify_dispatcher; }
 

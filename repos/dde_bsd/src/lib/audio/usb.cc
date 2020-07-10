@@ -110,8 +110,7 @@ struct Usb_driver
 
 	struct usb_attach_arg           _ua              { NULL, NULL };
 	struct usbd_device              _usbd_device     { NULL, 0 };
-	struct usbd_interface           _usbd_iface      { NULL };
-	struct usb_interface_descriptor _usb_iface_descr  { };
+	// struct usbd_interface           _usbd_iface      { NULL };
 	struct usb_config_descriptor    _usb_config_descr { };
 
 	char _config_descr_buffer[4096] { };
@@ -140,7 +139,7 @@ struct Usb_driver
 		uint8_t const * const data = (uint8_t *) _usb.source()->packet_content(p);
 		int             const len  = p.control.actual_size;
 
-		if (len != p.size()) {
+		if (len != (int)p.size()) {
 			Genode::warning("size differs: ", len, " != ", p.size());
 		}
 
@@ -160,7 +159,7 @@ struct Usb_driver
 		Genode::log("Handle ctrl sync USB packet");
 
 		int const len = p.control.actual_size;
-		if (len != p.size()) {
+		if (len != (int)p.size()) {
 			Genode::warning("size differs: ", len, " != ", p.size());
 		}
 
@@ -168,6 +167,13 @@ struct Usb_driver
 			uint8_t const * const data = (uint8_t *) _usb.source()->packet_content(p);
 			Genode::memcpy(buf, data, len);
 		}
+
+		Genode::Signal_transmitter(_task_sigh).submit();
+	}
+
+	void _handle_alt_setting(Usb::Packet_descriptor &p, void *buf)
+	{
+		Genode::log("Handle alt setting USB packet");
 
 		Genode::Signal_transmitter(_task_sigh).submit();
 	}
@@ -198,7 +204,8 @@ struct Usb_driver
 			using Upd = Usb::Packet_descriptor;
 
 			switch (p.type) {
-			case Upd::CTRL: _usb_driver._handle_ctrl_sync(p, buf); break;
+			case Upd::CTRL:        _usb_driver._handle_ctrl_sync(p, buf); break;
+			case Upd::ALT_SETTING: _usb_driver._handle_alt_setting(p, buf); break;
 			default: break;
 			}
 		}
@@ -234,6 +241,13 @@ struct Usb_driver
 
 	void _get_config_descriptor()
 	{
+		Genode::error(__func__, ":", __LINE__, ": this: ", this, " _usb: ", &_usb, " source: ", _usb.source());
+		bool const ready = _usb.source()->ready_to_submit();
+		if (!ready) {
+			Genode::error(__func__, ":", __LINE__, ": could not submit");
+			return;
+		}
+
 		size_t const total_length = _usb_device.config_descr.total_length;
 		Usb::Packet_descriptor p = _usb.source()->alloc_packet(total_length);
 		p.completion = &_completion;
@@ -267,6 +281,7 @@ struct Usb_driver
 
 	enum State {
 		INVALID, INIT, GET_CONFIG_DESCR, GOT_CONFIG_DESCR,
+		XXX
 	};
 
 	State _state { INVALID };
@@ -296,10 +311,10 @@ struct Usb_driver
 
 		_usbd_device.speed = _get_speed(_usb_device.dev_descr);
 		_usbd_device.genode_usb_device = this;
-		_usbd_iface.genode_usb_device  = this;
+		// _usbd_iface.genode_usb_device  = this;
 
 		_ua.device = &_usbd_device;
-		_ua.iface  = &_usbd_iface;
+		// _ua.iface  = &_usbd_iface;
 
 		_state = State::INIT;
 	}
@@ -317,7 +332,9 @@ struct Usb_driver
 				_state = State::GOT_CONFIG_DESCR;
 			}
 			break;
-		case State::GOT_CONFIG_DESCR: [[fallthrough]];
+		// case State::GOT_CONFIG_DESCR: [[fallthrough]];
+		case State::XXX:
+			_process_completions();
 		default: break;
 		}
 	}
@@ -337,39 +354,53 @@ struct Usb_driver
 		}
 	}
 
+	Usb::Interface_descriptor       _iface_descr[16] { };
+	struct usbd_interface           _usbd_iface[16] { };
+	struct usb_interface_descriptor _usb_iface_descr[16] { };
+
 	int probe()
 	{
+		_state = State::XXX;
+
+		_usb_config_descr.bLength             = _usb_device.config_descr.length;
+		_usb_config_descr.bDescriptorType     = _usb_device.config_descr.type;
+		USETW(_usb_config_descr.wTotalLength, _usb_device.config_descr.total_length);
+		_usb_config_descr.bNumInterface       = _usb_device.config_descr.num_interfaces;
+		_usb_config_descr.bConfigurationValue = _usb_device.config_descr.config_value;
+		_usb_config_descr.iConfiguration      = _usb_device.config_descr.config_index;
+		_usb_config_descr.bmAttributes        = _usb_device.config_descr.attributes;
+		_usb_config_descr.bMaxPower           = _usb_device.config_descr.max_power;
+
 		_ua.device = &_usbd_device;
-		_ua.iface  = &_usbd_iface;
 
 		int found = 0;
-		Genode::log("num_interfaces: ", _usb_device.config_descr.num_interfaces);
+		Genode::log("prepare num_interfaces: ", _usb_device.config_descr.num_interfaces);
 		for (uint8_t i = 0; i < _usb_device.config_descr.num_interfaces; i++) {
 
-			Usb::Interface_descriptor iface_descr;
-	// XXX 
-			_usb.interface_descriptor(i, 0, &iface_descr);
+			// XXX move to construction
+			_usb.interface_descriptor(i, 0, &_iface_descr[i]);
+			_usbd_iface[i] = { i, this };
 
 			uint16_t const total_length = _usb_device.config_descr.total_length;
-			Genode::log("Probe interface ", i, ":",
-			            " number: ",   iface_descr.number,
-			            " class: ",    iface_descr.iclass,
-			            " subclass: ", iface_descr.isubclass,
+			_usb_iface_descr[i].bInterfaceClass    = _iface_descr[i].iclass;
+			_usb_iface_descr[i].bInterfaceSubClass = _iface_descr[i].isubclass;
+
+			Genode::log("prepare interface ", i, ":",
+			            " number: ",   _iface_descr[i].number,
+			            " class: ",    _iface_descr[i].iclass,
+			            " subclass: ", _iface_descr[i].isubclass,
 			            " config_descr length: ", total_length);
+		}
 
-			_usb_iface_descr.bInterfaceClass    = iface_descr.iclass;
-			_usb_iface_descr.bInterfaceSubClass = iface_descr.isubclass;
+		Genode::log("probe num_interfaces: ", _usb_device.config_descr.num_interfaces);
+		for (uint8_t i = 0; i < _usb_device.config_descr.num_interfaces; i++) {
 
-			_usb_config_descr.bLength         = _usb_device.config_descr.length;
-			_usb_config_descr.bDescriptorType = _usb_device.config_descr.type;
-			USETW(_usb_config_descr.wTotalLength, _usb_device.config_descr.total_length);
-			_usb_config_descr.bNumInterface       = _usb_device.config_descr.num_interfaces;
-			_usb_config_descr.bConfigurationValue = _usb_device.config_descr.config_value;
-			_usb_config_descr.iConfiguration      = _usb_device.config_descr.config_index;
-			_usb_config_descr.bmAttributes        = _usb_device.config_descr.attributes;
+			Genode::log("Probe interface ", i, ":",
+			            " number: ",   _iface_descr[i].number,
+			            " class: ",    _iface_descr[i].iclass,
+			            " subclass: ", _iface_descr[i].isubclass);
 
-			_usb_config_descr.bMaxPower           = _usb_device.config_descr.max_power;
-
+			_ua.iface  = &_usbd_iface[i];
 			found = probe_cfdata(&_ua);
 			if (found) {
 				_found++;
@@ -384,9 +415,25 @@ struct Usb_driver
 	bool probed() const { return _probed; }
 	int  found()  const { return _found; }
 
-	struct usb_interface_descriptor *usb_iface_descr()
+	struct usbd_interface *get_usbd_interface(uint8_t num)
 	{
-		return &_usb_iface_descr;
+		if (num >= _usb_device.config_descr.num_interfaces) {
+			return NULL;
+		}
+
+		Genode::error("num: ", num, " iface: ", &_usbd_iface[num], " genode: ",
+		              _usbd_iface[num].genode_usb_device);
+
+		return &_usbd_iface[num];
+	}
+
+	struct usb_interface_descriptor *usb_iface_descr(uint8_t num)
+	{
+		if (num >= _usb_device.config_descr.num_interfaces) {
+			return NULL;
+		}
+
+		return &_usb_iface_descr[num];
 	}
 
 	struct usb_config_descriptor *usb_config_descr()
@@ -394,8 +441,48 @@ struct Usb_driver
 		return (struct usb_config_descriptor*)_config_descr_buffer;
 	}
 
+	usbd_status set_alternate_interface(uint8_t ifnum, uint8_t altnum)
+	{
+		bool const ready = _usb.source()->ready_to_submit();
+		if (!ready) {
+			Genode::error(__func__, ":", __LINE__, ": could not submit");
+			return USBD_IOERROR;
+		}
+
+		Usb::Packet_descriptor p = _usb.source()->alloc_packet(0);
+
+		_sync_completion.completed = false;
+		_sync_completion.success = false;
+
+		p.completion = &_sync_completion;
+
+		p.type                  = Usb::Packet_descriptor::ALT_SETTING;
+		p.interface.number      = ifnum;
+		p.interface.alt_setting = altnum;
+
+		Genode::log(__func__, ":", __LINE__, " before submit");
+		_usb.source()->submit_packet(p);
+		Genode::log(__func__, ":", __LINE__, " after submit");
+
+		while (!_sync_completion.completed) {
+			Genode::log(__func__, ":", __LINE__, " before block");
+			Bsd::scheduler().current()->block_and_schedule();
+			_process_completions();
+			Genode::log(__func__, ":", __LINE__, " completed: ", _sync_completion.completed,
+			            " success: ", _sync_completion.success);
+		}
+
+		return _sync_completion.success ? USBD_NORMAL_COMPLETION : USBD_IOERROR;
+	}
+
 	usbd_status sync_request(usb_device_request_t const &req, void *buf)
 	{
+		bool const ready = _usb.source()->ready_to_submit();
+		if (!ready) {
+			Genode::error(__func__, ":", __LINE__, ": could not submit");
+			return USBD_IOERROR;
+		}
+
 		uint16_t const len = UGETW(req.wLength);
 		Usb::Packet_descriptor p = _usb.source()->alloc_packet(len);
 		bool const in = req.bmRequestType & 0x80;
@@ -430,21 +517,198 @@ struct Usb_driver
 
 		return _sync_completion.success ? USBD_NORMAL_COMPLETION : USBD_IOERROR;
 	}
+
+	struct Iso_packet
+	{
+		bool valid;
+		Usb::Packet_descriptor packet_descriptor;
+	};
+
+	Iso_packet _iso_packet[16] { };
+
+	void _handle_iso(Usb::Packet_descriptor &p,
+	                 usbd_xfer *xfer, usbd_callback callback)
+	{
+		_iso_packet[0].valid = false;
+
+		Genode::log("Handle ISO USB packet");
+
+		if (callback) {
+			Genode::log("Handle ISO USB packet callback: ", callback);
+			callback(xfer, xfer->priv, USBD_NORMAL_COMPLETION);
+			         // p.succeded ? USBD_NORMAL_COMPLETION
+			         //            : USBD_IOERROR);
+		}
+
+		// XXX in EP
+		// Genode::Signal_transmitter(_task_sigh).submit();
+	}
+
+	struct Iso_completion : Usb::Completion
+	{
+		Usb_driver &_usb_driver;
+
+		usbd_callback callback;
+		usbd_xfer *xfer;
+		bool  success;
+		bool  completed;
+
+		Iso_completion(Usb_driver &driver)
+		:
+			_usb_driver { driver },
+			callback    { nullptr }, xfer { nullptr },
+			success     { false }, completed { false }
+		{ }
+
+		void complete(Usb::Packet_descriptor &p) override
+		{
+			completed = true;
+			success = p.succeded;
+			if (!p.succeded) {
+				Genode::error("iso completion failed");
+				return;
+			}
+
+			Genode::log(__func__, ": success: ", success);
+
+			using Upd = Usb::Packet_descriptor;
+
+			switch (p.type) {
+			case Upd::ISOC: _usb_driver._handle_iso(p, xfer, callback); break;
+			default: break;
+			}
+		}
+	};
+
+	Iso_completion _iso_completion /* [16] */ { *this };
+
+	void *setup_iso_packet(struct usbd_xfer *xfer, struct usbd_pipe *pipe,
+                           u_int16_t *frlengths, u_int32_t nframes,
+                           usbd_callback callback)
+	{
+		bool const ready = _usb.source()->ready_to_submit();
+		if (!ready) {
+			Genode::error(__func__, ":", __LINE__, ": could not submit");
+			return NULL;
+		}
+
+		if (_iso_packet[0].valid) {
+			Genode::error(__func__, ":", __LINE__, ": no free ISO packet left");
+			return NULL;
+		}
+
+		size_t len = 0;
+		for (u_int32_t i = 0; i < nframes; i++) {
+			len += frlengths[i];
+		}
+
+		Usb::Packet_descriptor p = _usb.source()->alloc_packet(len);
+		bool const in = pipe->addr & 0x80;
+
+		if (!in) {
+			void *dst = (void*) _usb.source()->packet_content(p);
+			Genode::memcpy(dst, xfer->dma_buf, len);
+		}
+
+		_iso_completion.completed = false;
+		_iso_completion.success   = false;
+		_iso_completion.xfer      = xfer;
+		_iso_completion.callback  = callback;
+
+		p.completion = &_iso_completion;
+
+		p.type                       = Usb::Packet_descriptor::ISOC;
+		p.transfer.ep                = pipe->addr;
+		p.transfer.number_of_packets = nframes;
+		for (u_int32_t i = 0; i < nframes; i++) {
+			p.transfer.packet_size[i] = frlengths[i];
+		}
+
+		_iso_packet[0].packet_descriptor = p;
+		_iso_packet[0].valid = true;
+		return &_iso_packet[0];
+	}
+
+	usbd_status submit_iso_packet(struct usbd_xfer *xfer)
+	{
+		Iso_packet &iso =
+			*reinterpret_cast<Iso_packet*>(xfer->genode_packet_descriptor);
+
+		_usb.source()->submit_packet(iso.packet_descriptor);
+		return USBD_IN_PROGRESS;
+	}
 };
 
 } /* anonymous namespace */
 
 
-struct usbd_xfer *usbd_alloc_xfer(struct usbd_device *)
+struct usbd_xfer *usbd_alloc_xfer(struct usbd_device *dev)
 {
-	Genode::error(__func__, ": not implemented");
-	return NULL;
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(dev->genode_usb_device);
+	Genode::log(__func__, ": dev: ", dev);
+
+	struct usbd_xfer *xfer =
+		(struct usbd_xfer*)malloc(sizeof (struct usbd_xfer), 0, M_ZERO);
+	if (xfer == NULL) {
+		return NULL;
+	}
+	xfer->genode_usb_device = &usb;
+	xfer->dma_buf  = NULL;
+	xfer->dma_size = 0;
+	return xfer;
 }
 
 
 void usbd_free_xfer(struct usbd_xfer *xfer)
 {
-	Genode::error(__func__, ": not implemented");
+	Genode::log(__func__, ": xfer: ", xfer);
+
+	if (xfer->dma_size) {
+		free(xfer->dma_buf, 0, xfer->dma_size);
+
+		xfer->dma_size = 0;
+		xfer->dma_buf  = NULL;
+	}
+
+	free(xfer, 0, sizeof (struct usbd_xfer));
+}
+
+
+void *usbd_alloc_buffer(struct usbd_xfer *xfer, u_int32_t size)
+{
+	Genode::log(__func__, ": xfer: ", xfer, " size: ", size);
+	if (xfer->dma_size) {
+		Genode::warning(__func__, ": xfer: ", xfer,
+		                " dma_size: ", xfer->dma_size,
+		                " dma_buf: ", xfer->dma_buf,
+		                " used, leaking memory");
+	}
+
+	xfer->dma_size = size;
+	xfer->dma_buf  = malloc(xfer->dma_size, 0, M_ZERO);
+	if (xfer->dma_buf == NULL) {
+		return NULL;
+	}
+	return xfer->dma_buf;
+}
+
+
+usbd_status usbd_open_pipe(struct usbd_interface *iface, u_int8_t address,
+                                 u_int8_t flags, struct usbd_pipe **pipe)
+{
+	Genode::log(__func__, ": iface: ", iface,
+	            " addr: ", Genode::Hex(address), " flags: ", flags);
+	struct usbd_pipe *p =
+		(struct usbd_pipe*)malloc(sizeof (struct usbd_pipe), 0, M_ZERO);
+	if (p == NULL) {
+		return USBD_IOERROR;
+	}
+
+	p->iface = iface;
+	p->addr  = address;
+
+	*pipe = p;
+	return USBD_NORMAL_COMPLETION;
 }
 
 
@@ -453,6 +717,7 @@ usbd_status usbd_close_pipe(struct usbd_pipe *)
 	Genode::error(__func__, ": not implemented");
 	return USBD_IOERROR;
 }
+
 
 usbd_status usbd_do_request(struct usbd_device *dev,
                             usb_device_request_t *req,
@@ -472,49 +737,66 @@ void usbd_claim_iface(struct usbd_device *dev, int i)
 }
 
 
-void *usbd_alloc_buffer(struct usbd_xfer *, u_int32_t)
+usbd_status usbd_device2interface_handle(struct usbd_device *dev,
+                                         u_int8_t num,
+                                         struct usbd_interface **iface)
 {
-	Genode::error(__func__, ": not implemented");
-	return NULL;
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(dev->genode_usb_device);
+	Genode::log(__func__, ": dev: ", dev, " num: ", num);
+
+	struct usbd_interface *p = usb.get_usbd_interface(num);
+	if (p == NULL) {
+		return USBD_IOERROR;
+	}
+
+	*iface = p;
+	return USBD_NORMAL_COMPLETION;
 }
 
 
-usbd_status usbd_device2interface_handle(struct usbd_device *,
-                                         u_int8_t,
-                                         struct usbd_interface **)
+usbd_status usbd_set_interface(struct usbd_interface *iface, int altnum)
 {
-	Genode::error(__func__, ": not implemented");
-	return USBD_IOERROR;
+	if (iface == NULL) {
+		Genode::error(__func__, ": iface: ", iface);
+		return USBD_IOERROR;
+	}
+
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(iface->genode_usb_device);
+	Genode::log(__func__, ": genode_usb_device: ", iface->genode_usb_device,
+	            " iface: ", iface, " num: ", iface->num, " altnum: ", altnum);
+
+	return usb.set_alternate_interface(iface->num, altnum);
 }
 
 
-usbd_status usbd_set_interface(struct usbd_interface *, int)
+void usbd_setup_isoc_xfer(struct usbd_xfer *xfer, struct usbd_pipe *pipe,
+                          void *priv, u_int16_t *frlengths, u_int32_t nframes,
+                          u_int16_t flags, usbd_callback callback)
 {
-	Genode::error(__func__, ": not implemented");
-	return USBD_IOERROR;
+	Genode::log(__func__, ": xfer: ", xfer, " pipe: ", pipe, " priv: ", priv,
+	            " frlengths: ", frlengths, " nframes: ", nframes, " flags: ",
+	            flags, " callback: ", callback);
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(xfer->genode_usb_device);
+	xfer->priv = priv;
+
+	xfer->genode_packet_descriptor =
+		usb.setup_iso_packet(xfer, pipe, frlengths, nframes, callback);
+	if (xfer->genode_packet_descriptor == NULL) {
+		Genode::warning("could not setup ISO transfer");
+	}
 }
 
 
-usbd_status usbd_open_pipe(struct usbd_interface *iface, u_int8_t address,
-                                 u_int8_t flags, struct usbd_pipe **pipe)
+usbd_status usbd_transfer(struct usbd_xfer *xfer)
 {
-	Genode::error(__func__, ": not implemented");
-	return USBD_IOERROR;
-}
+	Genode::log(__func__, ": xfer: ", xfer,
+	            " pd: ", xfer->genode_packet_descriptor);
+	if (xfer->genode_packet_descriptor == NULL) {
+		return USBD_IOERROR;
+	}
 
-
-void usbd_setup_isoc_xfer(struct usbd_xfer *, struct usbd_pipe *,
-                          void *, u_int16_t *, u_int32_t, u_int16_t,
-                          usbd_callback)
-{
-	Genode::error(__func__, ": not implemented");
-}
-
-
-usbd_status usbd_transfer(struct usbd_xfer *req)
-{
-	Genode::error(__func__, ": not implemented");
-	return USBD_IOERROR;
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(xfer->genode_usb_device);
+	return usb.submit_iso_packet(xfer);
 }
 
 
@@ -538,7 +820,7 @@ usb_interface_descriptor_t *usbd_get_interface_descriptor(struct usbd_interface 
 	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(iface->genode_usb_device);
 	Genode::log(__func__, ": called: ", iface);
 
-	return usb.usb_iface_descr();
+	return usb.usb_iface_descr(iface->num);
 }
 
 
@@ -561,7 +843,8 @@ char const *usbd_errstr(usbd_status)
 
 void getmicrotime(struct timeval *tv)
 {
-	Genode::error(__func__, ": not implemented");
+	/* AFAICT only used in DEBUG code */
+	// Genode::error(__func__, ": not implemented");
 	if (tv) {
 		tv->tv_sec = 0;
 		tv->tv_usec = 0;
@@ -610,4 +893,12 @@ int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
 	catch (...) { /* XXX */ }
 
 	return 0;
+}
+
+
+void Bsd::execute_driver()
+{
+	if (_usb_driver) {
+		_usb_driver->execute();
+	}
 }
