@@ -70,6 +70,7 @@ typedef signed long long off_t;
  *****************/
 
 enum {
+	ENOENT      = 2,
 	EIO         = 5,
 	ENXIO       = 6,
 	EBADF       = 9,
@@ -720,12 +721,22 @@ struct timeval
 
 void microuptime(struct timeval *);
 
+void getmicrotime(struct timeval *);
+
 
 /***************************
  ** lib/libkern/libkern.h **
  ***************************/
 
+char  *strchr(char const *, int);
 size_t strlcpy(char *, char const *, size_t);
+
+
+/******************
+ ** sys/limits.h **
+ ******************/
+
+#define INT_MAX __INT_MAX__
 
 
 #include <extern_c_end.h>

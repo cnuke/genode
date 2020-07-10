@@ -1,3 +1,4 @@
+sys/lib/libkern/strchr.c
 sys/lib/libkern/strlcpy.c
 sys/dev/audio.c
 sys/dev/audio_if.h
@@ -9,6 +10,7 @@ sys/dev/pci/eap.c
 sys/dev/pci/eapreg.h
 sys/dev/pci/pcidevs.h
 sys/dev/pci/pcidevs_data.h
+sys/dev/usb/uaudio.c
 sys/dev/mulaw.c
 sys/dev/mulaw.h
 sys/dev/ic/ac97.c
