@@ -30,14 +30,14 @@ struct Genode::Nova_native_cpu : Cpu_session::Native_cpu
 	struct Exception_base { addr_t exception_base; };
 
 
-	virtual void thread_type(Thread_capability, Thread_type, Exception_base) = 0;
+	virtual Native_capability thread_type(Thread_capability, Thread_type, Exception_base) = 0;
 
 
 	/*********************
 	 ** RPC declaration **
 	 *********************/
 
-	GENODE_RPC(Rpc_thread_type, void, thread_type, Thread_capability,
+	GENODE_RPC(Rpc_thread_type, Native_capability, thread_type, Thread_capability,
 	           Thread_type, Exception_base );
 	GENODE_RPC_INTERFACE(Rpc_thread_type);
 };
