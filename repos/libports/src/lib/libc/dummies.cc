@@ -160,7 +160,6 @@ __SYS_DUMMY(void	,   , spinlock,   (spinlock_t *));
 __SYS_DUMMY(void	,   , spinunlock, (spinlock_t *));
 __SYS_DUMMY(void	,   , spinunlock_stub, (spinlock_t *));
 __SYS_DUMMY(int, -1, swapcontext, (ucontext_t *, const ucontext_t *));
-__SYS_DUMMY(int, -1, system, (const char *string));
 
 
 /*****************

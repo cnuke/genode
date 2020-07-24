@@ -888,6 +888,7 @@ vwprintf T
 vwscanf T
 wait W
 wait3 T
+wait4 T
 waitpid W
 warn W
 warnc T
