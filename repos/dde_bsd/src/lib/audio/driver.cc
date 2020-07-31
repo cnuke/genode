@@ -441,10 +441,8 @@ namespace {
 
 		void _handle_signal()
 		{
-			Genode::log(__func__, ":", __LINE__, " before");
 			_task.unblock();
 			Bsd::scheduler().schedule();
-			Genode::log(__func__, ":", __LINE__, " after");
 		}
 
 		template <typename... ARGS>
@@ -500,14 +498,10 @@ void run_bsd(void *p)
 		Bsd::scheduler().current()->block_and_schedule();
 
 		if (__play) {
-			Genode::log("Play");
 			__play_result = audiowrite(adev, &__play_uio, IO_NDELAY);
-			Genode::log("Play result: ", __play_result);
 		}
 		if (__record) {
-			Genode::log("Play");
 			__record_result = audiowrite(adev, &__record_uio, IO_NDELAY);
-			Genode::log("Play result: ", __record_result);
 		}
 
 		Bsd::execute_driver();
@@ -589,10 +583,9 @@ int Audio::play(short *data, Genode::size_t size)
 	__play_uio = { 0, size, UIO_READ, data, size };
 	__play = true;
 
-	Genode::log(__func__, ":", __LINE__);
 	_bsd_task->unblock();
 	Bsd::scheduler().schedule();
-	Genode::log(__func__, ":", __LINE__);
+	__play = false;
 	return __play_result;
 }
 
@@ -603,9 +596,8 @@ int Audio::record(short *data, Genode::size_t size)
 	// return audioread(adev, &uio, IO_NDELAY);
 	__record_uio = { 0, size, UIO_WRITE, data, size };
 	__record = true;
-	Genode::log(__func__, ":", __LINE__);
 	_bsd_task->unblock();
 	Bsd::scheduler().schedule();
-	Genode::log(__func__, ":", __LINE__);
+	__record = false;
 	return __record_result;
 }

@@ -131,7 +131,8 @@ class Audio_out::Out
 
 				/* send to driver */
 				if (int err = Audio::play(data, sizeof(data))) {
-					Genode::warning("Error ", err, " during playback");
+					Genode::warning("error ", err, " during playback");
+					return;
 				}
 
 				p_left->invalidate();
@@ -388,7 +389,6 @@ class Audio_in::In
 		{
 			if (_active()) {
 				_record_packet();
-			            " config_descr length: ", total_length);
 			}
 		}
 
