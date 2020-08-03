@@ -90,9 +90,11 @@ struct Usb_driver
 		// XXX handling to BSD task
 		if (_usb.plugged()) {
 			Genode::log("device plugged in");
+			_plugged = true;
 			// _found = probe();
 		} else {
 			Genode::log("device unplugged");
+			_plugged = false;
 		}
 
 		// Bsd::scheduler().schedule();
@@ -326,6 +328,8 @@ struct Usb_driver
 
 		_state = State::INIT;
 	}
+
+	bool plugged() const { return _plugged; }
 
 	void execute()
 	{
@@ -859,11 +863,10 @@ void usbd_get_xfer_status(struct usbd_xfer *xfer, void **priv,
 }
 
 
-int usbd_is_dying(struct usbd_device *)
+int usbd_is_dying(struct usbd_device *dev)
 {
-	// Genode::warning(__func__, ": not implemented, return 0");
-	// XXX unplugging would lead to dying == 1
-	return 0;
+	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(dev->genode_usb_device);
+	return usb.plugged() ? 0 : 1;
 }
 
 
