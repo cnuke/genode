@@ -545,8 +545,6 @@ struct Main
 			Genode::error("driver not active");
 			return;
 		}
-
-		handle_announce_session();
 	}
 };
 

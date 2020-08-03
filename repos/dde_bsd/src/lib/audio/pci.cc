@@ -594,3 +594,8 @@ extern "C" paddr_t bus_dmamem_mmap(bus_dma_tag_t, bus_dma_segment_t *,
 	                __builtin_return_address(0));
 	return 0;
 }
+
+
+void Bsd::execute_driver()
+{
+}
