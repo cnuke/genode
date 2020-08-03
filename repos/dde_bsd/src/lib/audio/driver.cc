@@ -501,7 +501,7 @@ void run_bsd(void *p)
 			__play_result = audiowrite(adev, &__play_uio, IO_NDELAY);
 		}
 		if (__record) {
-			__record_result = audiowrite(adev, &__record_uio, IO_NDELAY);
+			__record_result = audioread(adev, &__record_uio, IO_NDELAY);
 		}
 
 		Bsd::execute_driver();
