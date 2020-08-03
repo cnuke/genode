@@ -18,6 +18,7 @@
 #include <base/log.h>
 #include <usb_session/connection.h>
 #include <util/bit_array.h>
+#include <timer_session/connection.h>
 
 /* local includes */
 #include <bsd.h>
@@ -296,6 +297,8 @@ struct Usb_driver
 
 	State _state { INVALID };
 
+	Timer::Connection _timer { _env };
+
 	Usb_driver(Genode::Env       &env,
 	           Genode::Allocator &alloc,
 	           Label              label,
@@ -330,6 +333,8 @@ struct Usb_driver
 	}
 
 	bool plugged() const { return _plugged; }
+
+	Timer::Connection const &timer() const { return _timer; }
 
 	void execute()
 	{
@@ -738,6 +743,9 @@ void *usbd_alloc_buffer(struct usbd_xfer *xfer, u_int32_t size)
 	if (xfer->dma_buf == NULL) {
 		return NULL;
 	}
+	Genode::warning(__func__, ": xfer: ", xfer,
+	                " dma_size: ", xfer->dma_size,
+	                " dma_buf: ", xfer->dma_buf);
 	return xfer->dma_buf;
 }
 
@@ -896,6 +904,9 @@ char const *usbd_errstr(usbd_status)
 }
 
 
+static Usb_driver *_usb_driver;
+
+
 void getmicrotime(struct timeval *tv)
 {
 	/* AFAICT only used in DEBUG code */
@@ -904,10 +915,13 @@ void getmicrotime(struct timeval *tv)
 		tv->tv_sec = 0;
 		tv->tv_usec = 0;
 	}
+
+	if (_usb_driver) {
+		uint64_t const ms = _usb_driver->timer().elapsed_ms();
+		tv->tv_sec = ms / 1000;
+		tv->tv_usec = (ms % 1000) * 1000;
+	}
 }
-
-
-static Usb_driver *_usb_driver;
 
 
 int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,

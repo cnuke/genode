@@ -299,7 +299,7 @@ static bool open_audio_device(dev_t dev)
 	if (!drv_loaded())
 		return false;
 
-	int err = audioopen(dev, FWRITE|FREAD, 0 /* ifmt */, 0 /* proc */);
+	int err = audioopen(dev, FWRITE/*|FREAD*/, 0 /* ifmt */, 0 /* proc */);
 	if (err)
 		return false;
 
@@ -387,7 +387,7 @@ static bool configure_audio_device(Genode::Env &env, dev_t dev, Genode::Xml_node
 	 * For recording use two channels that we will mix to one in the
 	 * front end.
 	 */
-	ap.rchan = 2;
+	ap.rchan = 0;
 
 	err = audioioctl(adev, AUDIO_SETPAR, (char*)&ap, 0, 0);
 	if (err)

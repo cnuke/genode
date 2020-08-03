@@ -21,6 +21,7 @@
 #include <base/heap.h>
 #include <base/log.h>
 #include <root/component.h>
+#include <timer_session/connection.h>
 
 /* local includes */
 #include <audio/audio.h>
@@ -28,7 +29,6 @@
 
 using namespace Genode;
 using namespace Audio;
-
 
 /**************
  ** Playback **
@@ -72,6 +72,10 @@ class Audio_out::Out
 		Genode::Env                            &_env;
 		Genode::Signal_handler<Audio_out::Out>  _data_avail_dispatcher;
 		Genode::Signal_handler<Audio_out::Out>  _notify_dispatcher;
+
+
+		Genode::Constructible<Timer::Connection> _timer { };
+		uint64_t _ms { 0 };
 
 		bool _active() {
 			return  channel_acquired[LEFT] && channel_acquired[RIGHT] &&
@@ -135,6 +139,12 @@ class Audio_out::Out
 					return;
 				}
 
+				uint64_t const ms = _timer->elapsed_ms();
+
+				uint64_t const diff = ms - _ms;
+				_ms = ms;
+				Genode::error(__func__, ": pos: (", lpos, "/", rpos, ") ms: ", diff);
+
 				p_left->invalidate();
 				p_right->invalidate();
 
@@ -180,6 +190,8 @@ class Audio_out::Out
 			_data_avail_dispatcher(env.ep(), *this, &Audio_out::Out::_handle_data_avail),
 			_notify_dispatcher(env.ep(), *this, &Audio_out::Out::_handle_notify)
 		{
+			_timer.construct(env);
+
 			/* play a silence packets to get the driver running */
 			// XXX replace by explicit call to audio_start
 			_play_silence();
