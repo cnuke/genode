@@ -75,6 +75,8 @@ class Terminal::Session_component : public Genode::Rpc_object<Session, Session_c
 			if (_data_avail <= 0) return 0;
 
 			size_t count = Genode::min(dst_len, (size_t)_data_avail);
+			/* consume data */
+			_data_avail -= count;
 
 			return count;
 		}
