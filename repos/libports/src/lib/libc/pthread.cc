@@ -505,6 +505,12 @@ struct Libc::Pthread_mutex_recursive : pthread_mutex
 };
 
 
+/*
+ * The pthread_cond implementation uses the POSIX semaphore API
+ * internally that does not have means to set the clock. For this
+ * reason the private 'sem_set_clock' function is introduced,
+ * see 'semaphore.cc' for the implementation.
+*/
 extern "C" int sem_set_clock(sem_t *sem, clockid_t clock_id);
 
 
