@@ -21,7 +21,7 @@
 namespace Net {
 	struct Mac_address;
 
-	inline Genode::size_t ascii_to(char const *, Mac_address &);
+	static inline Genode::size_t ascii_to(char const *, Mac_address &);
 }
 
 
@@ -32,7 +32,7 @@ struct Net::Mac_address : Net::Network_address<6, ':', true>
 };
 
 
-inline Genode::size_t Net::ascii_to(char const *s, Net::Mac_address &mac)
+Genode::size_t Net::ascii_to(char const *s, Net::Mac_address &mac)
 {
 	using namespace Genode;
 
