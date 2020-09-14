@@ -42,7 +42,7 @@ Genode::size_t Net::ascii_to(char const *s, Net::Mac_address &mac)
 		MAC_SIZE     = 6,
 	};
 
-	if(strlen(s) < MAC_CHAR_LEN)
+	if (Genode::strlen(s) < MAC_CHAR_LEN)
 		throw -1;
 
 	char mac_str[6];
