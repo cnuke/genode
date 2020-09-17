@@ -18,8 +18,6 @@
 #include <usb_session/rpc_object.h>
 #include <util/list.h>
 
-#include <timer_session/connection.h>
-
 #include <lx_emul.h>
 #include <lx_emul/extern_c_begin.h>
 #include <linux/usb.h>
@@ -245,15 +243,6 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 		void _async_finish(Packet_descriptor &p, urb *urb, bool read)
 		{
 			if (urb->status == 0) {
-				uint64_t const ms = _timer->elapsed_ms();
-				uint64_t const diff = ms - _start_ms[(unsigned long)urb & 0xff];
-				_start_ms[(unsigned long)urb & 0xff] = ms;
-				Genode::log(__func__, ":", __LINE__,
-				            " urb: ", urb,
-				            " ep: ", p.transfer.ep,
-				            " actual_length: ", urb->actual_length,
-				            " diff: ", diff);
-
 				p.transfer.actual_size = urb->actual_length;
 				p.succeded             = true;
 
@@ -381,8 +370,6 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			return true;
 		}
 
-		uint64_t _start_ms[256] { };
-
 		/**
 		 * Isochronous transfer
 		 */
@@ -422,14 +409,6 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			urb->context                = (void *)data;
 			urb->transfer_flags         = URB_ISO_ASAP | (read ? URB_DIR_IN : URB_DIR_OUT);
 			urb->complete               = _async_complete;
-
-			Genode::log(__func__, ":", __LINE__,
-			            " urb: ", urb,
-			            " ep: ", p.transfer.ep,
-			            " number_of_packets: ", p.transfer.number_of_packets,
-			            " size: ", p.size());
-
-			_start_ms[(unsigned long)urb & 0xff] = _timer->elapsed_ms();
 
 			unsigned offset = 0;
 			for (int i = 0; i < p.transfer.number_of_packets; i++) {
@@ -596,8 +575,6 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			}
 		}
 
-		Genode::Constructible<Timer::Connection> _timer { };
-
 	public:
 
 		static void run(void *worker)
@@ -608,9 +585,7 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 
 		Worker(Session::Tx::Sink *sink)
 		: _sink(sink)
-		{
-			_timer.construct(Lx_kit::env().env());
-		}
+		{ }
 
 		~Worker()
 		{
