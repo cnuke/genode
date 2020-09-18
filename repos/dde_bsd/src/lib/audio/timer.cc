@@ -50,7 +50,29 @@ class Bsd::Timer
 
 		Bsd::Task *_sleep_task;
 
+		Bsd::Task _timer_task;
+
+		void _handle_timers(Genode::Duration)
+		{
+			_timer_task.unblock();
+
+			Bsd::scheduler().schedule();
+		}
+
+		::Timer::One_shot_timeout<Timer> _timers_one_shot;
+
 	public:
+
+		struct Timeout
+		{
+			timeout &to;
+			Genode::uint64_t expires;
+
+			Timeout(timeout &to, Genode::uint64_t expires)
+			: to(to), expires(expires) { }
+		};
+
+		Genode::Constructible<Timeout> _timeout { };
 
 		/**
 		 * Constructor
@@ -60,8 +82,57 @@ class Bsd::Timer
 			_delay_timer(env),
 			_timer(env),
 			_microseconds(_timer.curr_time().trunc_to_plain_us().value),
-			_sleep_task(nullptr)
+			_sleep_task(nullptr),
+			_timer_task(Timer::run_timer, this, "timer", Bsd::Task::PRIORITY_2,
+			            Bsd::scheduler(), 1024 * sizeof(Genode::addr_t)),
+			_timers_one_shot(_timer, *this, &Timer::_handle_timers)
 		{ }
+
+		static void run_timer(void *p)
+		{
+			Timer &timer = *static_cast<Timer*>(p);
+
+			while (true) {
+				Bsd::scheduler().current()->block_and_schedule();
+
+				timer.execute_timeouts();
+			}
+		}
+
+		void execute_timeouts()
+		{
+			if (!_timeout.constructed()) {
+				return;
+			}
+
+			if (_timeout->expires > _microseconds) {
+				return;
+			}
+
+			_timeout->to.fn(_timeout->to.arg);
+			_timeout.destruct();
+		}
+
+		void timeout_set(struct timeout *to)
+		{
+			(void)to;
+		}
+
+		int timeout_add_msec(struct timeout *to, int msec)
+		{
+			(void)to;
+			(void)msec;
+
+			// return 1 if was queued, 0 if not
+			return 0;
+		}
+
+		int timeout_del(struct timeout *to)
+		{
+			(void)to;
+			// return 1 if was queued, 0 if not
+			return 0;
+		}
 
 		/**
 		 * Update time counter
@@ -185,4 +256,33 @@ void microuptime(struct timeval *tv)
 
 	tv->tv_sec  = ms / (1000*1000);
 	tv->tv_usec = ms % (1000*1000);
+}
+
+
+/*******************
+ ** sys/timeout.h **
+ *******************/
+
+void timeout_set(struct timeout *to, void (*fn)(void *), void *arg)
+{
+	Genode::log(__func__, ":", __LINE__, ": to: ", to, " fn: ", fn, " arg: ", arg);
+	to->fn  = fn;
+	to->arg = arg;
+
+	_bsd_timer->timeout_set(to);
+}
+
+
+int timeout_del(struct timeout *to)
+{
+	Genode::log(__func__, ":", __LINE__, ": to: ", to);
+	return _bsd_timer->timeout_del(to);
+}
+
+
+int
+timeout_add_msec(struct timeout *to, int msec)
+{
+	Genode::log(__func__, ":", __LINE__, ": to: ", to, " msec: ", msec);
+	return _bsd_timer->timeout_add_msec(to, msec);
 }
