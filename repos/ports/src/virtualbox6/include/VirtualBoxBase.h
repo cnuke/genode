@@ -32,6 +32,7 @@
 #include "VBox/com/Guid.h"
 
 #include "VBox/com/VirtualBox.h"
+#include "VBox/com/ErrorInfo.h"
 
 namespace com
 {
@@ -51,16 +52,14 @@ class Medium;
 typedef std::list<ComObjPtr<Medium> > MediaList;
 typedef std::list<Utf8Str> StringsList;
 
-class VirtualBoxTranslatable : public util::Lockable
+struct VirtualBoxTranslatable : util::Lockable
 {
-	public:
-
-		/* should be used for translations */
-		inline static const char *tr(const char *pcszSourceText,
-		                             const char *aComment = NULL)
-		{
-			return pcszSourceText;
-		}
+	/* should be used for translations */
+	inline static const char *tr(const char *pcszSourceText,
+	                             const char *aComment = NULL)
+	{
+		return pcszSourceText;
+	}
 };
 
 class VirtualBoxBase : public VirtualBoxTranslatable
@@ -114,6 +113,8 @@ class VirtualBoxBase : public VirtualBoxTranslatable
 
 		virtual const char* getComponentName() const = 0;
 
+		virtual const IID& getClassIID() const = 0;
+
 		static HRESULT handleUnexpectedExceptions(VirtualBoxBase *const aThis, RT_SRC_POS_DECL);
 		static HRESULT initializeComForThread(void);
 		static void uninitializeComForThread(void);
@@ -135,6 +136,8 @@ class VirtualBoxBase : public VirtualBoxTranslatable
 		                                bool aWarning,
 		                                bool aLogIt,
 		                                LONG aResultDetail = 0);
+
+		HRESULT setWarning(HRESULT aResultCode, const char *pcsz, ...);
 
 		virtual VBoxLockingClass getLockingClass() const
 		{
@@ -439,6 +442,21 @@ class Backupable : public Shareable<T>
     do { \
         if (RT_UNLIKELY(ComSafeArrayInIsNull(arg))) \
             return setError(E_INVALIDARG, tr("Argument %s is NULL"), #arg); \
+    } while (0)
+
+/**
+ * Checks that the given pointer to an argument is valid and returns
+ * E_POINTER + extended error info otherwise.
+ * @param arg   Pointer argument.
+ */
+#define CheckComArgPointerValid(arg) \
+    do { \
+        if (RT_LIKELY(RT_VALID_PTR(arg))) \
+        { /* likely */ }\
+        else \
+            return setError(E_POINTER, \
+                tr("Argument %s points to invalid memory location (%p)"), \
+                #arg, (void *)(arg)); \
     } while (0)
 
 /**
