@@ -2,9 +2,9 @@ _/pkg/audio_player
 _/pkg/avplay
 _/pkg/bsd_audio_drv
 _/pkg/chocolate-doom
-_/pkg/chocolate-heretic
-_/pkg/fs_rom
+_/pkg/cmus
 _/pkg/fs_log
+_/pkg/fs_rom
 _/pkg/gui_fb-terminal
 _/pkg/lwext4_fs
 _/pkg/mixer
