@@ -61,6 +61,7 @@ KEEP_SYMBOLS += _ZTVN10__cxxabiv116__enum_type_infoE
 KEEP_SYMBOLS += _ZN10__cxxabiv121__vmi_class_type_infoD0Ev
 KEEP_SYMBOLS += _ZTVN10__cxxabiv119__pointer_type_infoE
 KEEP_SYMBOLS += _ZTSN10__cxxabiv120__function_type_infoE
+KEEP_SYMBOLS += __cxa_init_primary_exception
 
 #
 # Include dependency files for the corresponding object files except
