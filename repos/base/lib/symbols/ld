@@ -624,6 +624,7 @@ __cxa_get_globals_fast T
 __cxa_guard_abort T
 __cxa_guard_acquire T
 __cxa_guard_release T
+__cxa_init_primary_exception T
 __cxa_pure_virtual T
 __cxa_rethrow T
 __cxa_throw T
