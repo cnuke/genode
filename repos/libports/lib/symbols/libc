@@ -39,6 +39,7 @@ __stdoutp D 8
 __swbuf T
 __test_sse T
 __xuname T
+_Exit T
 _exit T
 _getlong T
 _getshort T
