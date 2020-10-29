@@ -328,6 +328,12 @@ int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc)
 }
 
 
+void Bsd::execute_driver()
+{
+	/* NOP */
+}
+
+
 /**********************
  ** dev/pci/pcivar.h **
  **********************/

@@ -23,6 +23,8 @@ namespace Bsd {
 
 	int probe_drivers(Genode::Env&, Genode::Allocator&);
 
+	void execute_driver();
+
 	void mem_init(Genode::Env&, Genode::Allocator &);
 	void irq_init(Genode::Entrypoint&, Genode::Allocator&);
 	void timer_init(Genode::Env&);

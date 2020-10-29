@@ -550,6 +550,8 @@ void run_bsd(void *p)
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();
 
+		Bsd::execute_driver();
+
 		if (task->_play.pending) {
 			task->_play.result = audiowrite(adev, &task->_play.uio, IO_NDELAY);
 			task->_play.pending = false;
