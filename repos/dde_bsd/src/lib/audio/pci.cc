@@ -320,7 +320,8 @@ struct Io_memory : public Bus_space
 } /* anonymous namespace */
 
 
-int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc)
+int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
+                       Genode::Signal_context_capability /* unused */)
 {
 	Genode::log("--- probe drivers ---");
 	static Pci_driver drv(env, alloc);

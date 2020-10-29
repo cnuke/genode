@@ -529,7 +529,8 @@ void run_bsd(void *p)
 	Task *task = static_cast<Task*>(p);
 
 	int const success = Bsd::probe_drivers(task->_args.env,
-	                                       task->_args.alloc);
+	                                       task->_args.alloc,
+	                                       task->_handler);
 	if (!success) {
 		Genode::error("no supported sound card found");
 		Genode::sleep_forever();

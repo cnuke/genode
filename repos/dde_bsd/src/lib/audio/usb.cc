@@ -911,11 +911,9 @@ static Usb_driver *_usb_driver;
 
 
 int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
-                       Genode::Signal_context_capability announce_sigh,
-                       Genode::Signal_context_capability report_sigh)
+                       Genode::Signal_context_capability task_sigh)
 {
-	static Usb_report_handler report_handler(env, report_sigh);
-	(void)announce_sigh;
+	static Usb_report_handler report_handler(env, task_sigh);
 
 	try {
 		Genode::log("--- probe USB audio driver ---");
@@ -924,7 +922,7 @@ int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
 			if (!_usb_driver && device.valid()) {
 				Genode::log("Device valid: ", device);
 				_usb_driver =
-					new (&alloc) Usb_driver { env, alloc, device, report_sigh };
+					new (&alloc) Usb_driver { env, alloc, device, task_sigh };
 			}
 
 			if (_usb_driver) {
