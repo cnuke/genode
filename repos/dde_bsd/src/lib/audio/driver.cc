@@ -25,6 +25,8 @@
 #include <bsd_emul.h>
 #include <scheduler.h>
 
+#include <debug/trace.h>
+
 #include <extern_c_begin.h>
 # include <sys/device.h>
 # include <sys/audioio.h>
@@ -548,6 +550,10 @@ void run_bsd(void *p)
 		Genode::Signal_transmitter(task->_args.announce_sigh).submit();
 	}
 
+	// Debug::init_tracing(task->_args.env);
+	// Debug::enable_tracing();
+	// unsigned counter = 0;
+
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();
 
@@ -561,6 +567,14 @@ void run_bsd(void *p)
 			task->_record.result = audioread(adev, &task->_record.uio, IO_NDELAY);
 			task->_record.pending = false;
 		}
+
+		// ++counter;
+		// if (counter % 1000 == 0) {
+		// 	Debug::disable_tracing();
+		// 	Genode::log("Dump trace buffer -- ", counter);
+		// 	Debug::dump_trace_buffer();
+		// 	Debug::enable_tracing();
+		// }
 	}
 }
 

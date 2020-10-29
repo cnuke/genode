@@ -15,6 +15,8 @@ set build_components {
 	drivers/audio/spec/usb
 	drivers/usb_host
 	test/audio_out
+
+	lib/trace/policy/null
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -39,6 +41,7 @@ append config {
 		<service name="RM"/>
 		<service name="CPU"/>
 		<service name="LOG"/>
+		<service name="TRACE"/>
 	</parent-provides>
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
@@ -76,7 +79,7 @@ append config {
 	</start>
 
 	<start name="usb_audio_drv">
-		<resource name="RAM" quantum="8M"/>
+		<resource name="RAM" quantum="150M"/>
 		<provides> <service name="Audio_out"/> <service name="Audio_in"/> </provides>
 		<config/>
 		<route>
@@ -124,6 +127,8 @@ if {![file exists bin/sample.raw]} {
 append boot_modules {
 	core ld.lib.so init timer usb_audio_drv
 	test-audio_out sample.raw
+
+	null
 }
 
 append boot_modules [usb_host_drv_binary]
@@ -136,4 +141,5 @@ build_boot_image $boot_modules
 # For obvious reasons the timeout depends on the total
 # length of the used sample file.
 #
-run_genode_until {.*played.*1 time\(s\)} 60
+#run_genode_until {.*played.*1 time\(s\)} 60
+run_genode_until forever

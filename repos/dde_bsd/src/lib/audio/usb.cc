@@ -18,6 +18,7 @@
 #include <base/log.h>
 #include <usb_session/connection.h>
 #include <util/bit_array.h>
+#include <base/thread.h>
 
 /* local includes */
 #include <bsd.h>
@@ -271,6 +272,8 @@ struct Usb_driver
 		_usb.source()->submit_packet(p);
 	}
 
+	uint64_t counter = 0;
+
 	void _process_completions()
 	{
 		while (_usb.source()->ack_avail()) {
@@ -279,6 +282,10 @@ struct Usb_driver
 				p.completion->complete(p);
 			}
 			_usb.source()->release_packet(p);
+
+			// ++counter;
+
+			// Genode::trace("acks: ", counter);
 
 			// XXX for now just handle one packet
 			break;

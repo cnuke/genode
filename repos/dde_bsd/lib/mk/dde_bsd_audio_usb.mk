@@ -19,6 +19,8 @@ LIBS += dde_bsd_audio_include
 SRC_C  := bsd_emul_usb.c
 SRC_CC += usb.cc
 
+SRC_CC += debug.cc
+
 CC_OPT += -Wno-unused-but-set-variable
 
 # disable builtins
