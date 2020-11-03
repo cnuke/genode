@@ -157,10 +157,16 @@ struct Tracer
 
 	void dump_trace_buffer()
 	{
-		using Buffer = Genode::String<512>;
 		trace_buffer->for_each_new_entry([&](Trace::Buffer::Entry entry) {
-			Buffer buf { entry.data(), entry.length() };
-			Genode::log(buf);
+
+			if (entry.length() == 0) {
+				return false;
+			}
+
+			char const *data = entry.data();
+			bool const ending_lf = (data[entry.length()-1] == '\n');
+
+			Genode::log(Genode::Cstring(entry.data(), entry.length() - ending_lf));
 			return true;
 		});
 	}

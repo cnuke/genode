@@ -46,6 +46,8 @@ namespace Audio {
 	void init_driver(Genode::Env &, Genode::Allocator &, Genode::Xml_node,
 	                 Genode::Signal_context_capability);
 
+	void start();
+
 	void play_sigh(Genode::Signal_context_capability cap);
 
 	void record_sigh(Genode::Signal_context_capability cap);

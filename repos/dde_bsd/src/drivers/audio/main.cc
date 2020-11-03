@@ -64,6 +64,8 @@ class Audio_out::Session_component : public Audio_out::Session_rpc_object
 		}
 };
 
+extern "C" int printf(const char *format, ...);
+
 
 class Audio_out::Out
 {
@@ -106,7 +108,9 @@ class Audio_out::Out
 		{
 			static short silence[Audio_out::PERIOD * Audio_out::MAX_CHANNELS] = { 0 };
 
+			printf("%s:%d\n", __func__, __LINE__);
 			int err = Audio::play(silence, sizeof(silence));
+			printf("%s:%d err: %d\n", __func__, __LINE__, err);
 			if (err && err != 35) {
 				Genode::warning("Error ", err, " during silence playback");
 			}
@@ -130,10 +134,13 @@ class Audio_out::Out
 				}
 
 				/* send to driver */
-				if (int err = Audio::play(data, sizeof(data))) {
+				printf("%s:%d lpos: %u rpos: %u\n", __func__, __LINE__, lpos, rpos);
+				int err = Audio::play(data, sizeof(data));
+				if (err) {
 					Genode::warning("error ", err, " during playback");
 					return;
 				}
+				printf("%s:%d err: %d\n", __func__, __LINE__, err);
 
 				p_left->invalidate();
 				p_right->invalidate();
@@ -161,15 +168,21 @@ class Audio_out::Out
 		 * started to play and we will keep doing it, even if it is
 		 * silence.
 		 */
-		void _handle_data_avail() { }
+		void _handle_data_avail()
+		{
+			_handle_notify();
+		}
 
 		/*
 		 * DMA block played
 		 */
 		void _handle_notify()
 		{
-			if (_active())
+			printf("%s:%d\n", __func__, __LINE__);
+			if (_active()) {
 				_play_packet();
+			}
+			printf("%s:%d done\n", __func__, __LINE__);
 		}
 
 	public:
@@ -184,6 +197,9 @@ class Audio_out::Out
 			// XXX replace by explicit call to audio_start
 			_play_silence();
 			_play_silence();
+			// _play_silence();
+			// _play_silence();
+			// Audio::start();
 		}
 
 		Signal_context_capability data_avail() { return _data_avail_dispatcher; }
@@ -341,11 +357,14 @@ class Audio_in::In
 		void _record_packet()
 		{
 			static short data[2 * Audio_in::PERIOD];
-			if (int err = Audio::record(data, sizeof(data))) {
-					if (err && err != 35) {
-						Genode::warning("Error ", err, " during recording");
-					}
-					return;
+			printf("%s:%d\n", __func__, __LINE__);
+			int err = Audio::record(data, sizeof(data));
+			printf("%s:%d err: %d\n", __func__, __LINE__, err);
+			if (err) {
+				if (err && err != 35) {
+					Genode::warning("Error ", err, " during recording");
+				}
+				return;
 			}
 
 			if (!_active()) {
@@ -376,8 +395,10 @@ class Audio_in::In
 
 		void _handle_notify()
 		{
+			printf("%s:%d\n", __func__, __LINE__);
 			if (_active())
 				_record_packet();
+			printf("%s:%d\n", __func__, __LINE__);
 		}
 
 	public:

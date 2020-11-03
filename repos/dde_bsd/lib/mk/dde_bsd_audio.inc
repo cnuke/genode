@@ -32,7 +32,7 @@ SRC_C += lib/libkern/strlcpy.c
 CC_C_OPT += -Wno-maybe-uninitialized
 
 # enable when debugging
-#CC_OPT += -DAUDIO_DEBUG
+CC_OPT += -DAUDIO_DEBUG
 
 # audio interface
 SRC_C += dev/audio.c

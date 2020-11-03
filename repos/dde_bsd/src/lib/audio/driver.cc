@@ -550,14 +550,13 @@ void run_bsd(void *p)
 		Genode::Signal_transmitter(task->_args.announce_sigh).submit();
 	}
 
-	// Debug::init_tracing(task->_args.env);
-	// Debug::enable_tracing();
-	// unsigned counter = 0;
+	Debug::init_tracing(task->_args.env);
+	Debug::enable_tracing();
+	delay(1 * (1000*1000));
+	unsigned counter = 0;
 
 	while (true) {
 		Bsd::scheduler().current()->block_and_schedule();
-
-		Bsd::execute_driver();
 
 		if (task->_play.pending) {
 			task->_play.result = audiowrite(adev, &task->_play.uio, IO_NDELAY);
@@ -568,13 +567,13 @@ void run_bsd(void *p)
 			task->_record.pending = false;
 		}
 
-		// ++counter;
-		// if (counter % 1000 == 0) {
-		// 	Debug::disable_tracing();
-		// 	Genode::log("Dump trace buffer -- ", counter);
-		// 	Debug::dump_trace_buffer();
-		// 	Debug::enable_tracing();
-		// }
+		++counter;
+		if (counter % 1000 == 0) {
+			Debug::disable_tracing();
+			Genode::log("Dump trace buffer -- ", counter);
+			Debug::dump_trace_buffer();
+			Debug::enable_tracing();
+		}
 	}
 }
 
@@ -665,4 +664,13 @@ int Audio::record(short *data, Genode::size_t size)
 	_bsd_task->unblock();
 	Bsd::scheduler().schedule();
 	return _bsd_task->recording_result();
+}
+
+
+void Audio::start()
+{
+	int err = audioioctl(adev, AUDIO_START, NULL, 0, 0);
+	if (err && err != EBUSY) {
+		Genode::error("could not start audio device");
+	}
 }

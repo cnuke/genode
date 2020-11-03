@@ -17,6 +17,7 @@
 #include <base/sleep.h>
 #include <base/snprintf.h>
 #include <util/string.h>
+#include <trace/timestamp.h>
 
 /* local includes */
 #include <bsd_emul.h>
@@ -190,6 +191,9 @@ static char ascii(int digit, int uppercase = 0)
 }
 
 
+extern "C" uint64_t current_time();
+
+
 class Bsd::Console
 {
 	private:
@@ -205,7 +209,8 @@ class Bsd::Console
 				return;
 
 			_buf[_idx] = 0;
-			Genode::log(Genode::Cstring(_buf));
+			// Genode::log(Genode::Cstring(_buf));
+			Genode::trace(Genode::Cstring(_buf));
 			_idx = 0;
 		}
 
@@ -309,8 +314,46 @@ class Bsd::Console
 			return _inst;
 		}
 
+		unsigned backtrace()
+		{
+			unsigned depth = 0;
+			Genode::addr_t * fp;
+
+			asm volatile ("movq %%rbp, %0" : "=r"(fp) : :);
+
+			while (fp && *(fp + 1)) {
+				fp = (Genode::addr_t*)*fp;
+				depth++;
+			}
+			return depth;
+		}
+
+		void _prepend_ts()
+		{
+			static uint64_t last_us = current_time();
+
+			uint64_t current_us = current_time();
+
+			uint64_t diff_ms = (current_us - last_us) / 1000;
+
+			// last_us = current_us;
+
+			Genode::String<20> ts { diff_ms };
+			for (size_t i = 0; i < ts.length() - 1; i++) {
+				_out_char(ts.string()[i]);
+			}
+			_out_char(' ');
+		}
+
 		void vprintf(const char *format, va_list list)
 		{
+			_prepend_ts();
+
+			unsigned const d = backtrace();
+			for (unsigned i = 0; i < d; i++) {
+				_out_char(' ');
+			}
+
 			while (*format) {
 
 				/* eat and output plain characters */

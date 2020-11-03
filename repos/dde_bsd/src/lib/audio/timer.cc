@@ -282,6 +282,12 @@ void Bsd::update_time()
 	_bsd_timer->update_time();
 }
 
+extern "C" uint64_t current_time()
+{
+	_bsd_timer->update_time();
+	return _bsd_timer->microseconds();
+}
+
 
 /*****************
  ** sys/systm.h **
@@ -345,6 +351,12 @@ void microuptime(struct timeval *tv)
 
 	tv->tv_sec  = ms / (1000*1000);
 	tv->tv_usec = ms % (1000*1000);
+}
+
+
+void getmicrotime(struct timeval *tv)
+{
+	microuptime(tv);
 }
 
 

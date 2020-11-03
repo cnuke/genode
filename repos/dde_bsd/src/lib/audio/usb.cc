@@ -269,6 +269,7 @@ struct Usb_driver
 		p.control.index        = 0;
 		p.control.timeout      = 1000; // XXX
 
+		++_pending_xfer;
 		_usb.source()->submit_packet(p);
 	}
 
@@ -281,18 +282,22 @@ struct Usb_driver
 			if (p.completion) {
 				p.completion->complete(p);
 			}
+
+			--_pending_xfer;
 			_usb.source()->release_packet(p);
+
+			printf("%s: pending: %u\n", __func__, _pending_xfer);
 
 			// ++counter;
 
 			// Genode::trace("acks: ", counter);
 
 			// XXX for now just handle one packet
-			break;
+			// break;
 		}
 
 		if (_usb.source()->ack_avail()) {
-			Genode::Signal_transmitter(_task_sigh).submit();
+			Genode::Signal_transmitter(_usb_task.handler).submit();
 		}
 	}
 
@@ -302,6 +307,28 @@ struct Usb_driver
 	};
 
 	State _state { INVALID };
+
+	struct Task
+	{
+		Bsd::Task                    task;
+		Genode::Signal_handler<Task> handler;
+
+		void handle_signal()
+		{
+			task.unblock();
+			Bsd::scheduler().schedule();
+		}
+
+		template <typename... ARGS>
+		Task(Genode::Entrypoint & ep, ARGS &&... args)
+		: task {args...}, handler { ep, *this, &Task::handle_signal } { }
+	};
+
+	static void usb_task_entry(void *);
+
+	Task _usb_task { _env.ep(), usb_task_entry, this,
+	                 "usb", Bsd::Task::PRIORITY_0, Bsd::scheduler(),
+	                 (int)(2048 * sizeof (Genode::addr_t)) };
 
 	Usb_driver(Genode::Env       &env,
 	           Genode::Allocator &alloc,
@@ -317,7 +344,7 @@ struct Usb_driver
 		       _usb_state_change_sigh },
 		_task_sigh { task_sigh }
 	{
-		_usb.tx_channel()->sigh_ack_avail(task_sigh);
+		_usb.tx_channel()->sigh_ack_avail(_usb_task.handler);
 		try {
 			_usb.config_descriptor(&_usb_device.dev_descr,
 			                       &_usb_device.config_descr);
@@ -340,6 +367,7 @@ struct Usb_driver
 
 	void execute()
 	{
+		printf("%s:%d\n", __func__, __LINE__);
 		switch (_state) {
 		case State::INIT:
 			_get_config_descriptor();
@@ -358,6 +386,7 @@ struct Usb_driver
 		}
 		default: break;
 		}
+		printf("%s:%d done\n", __func__, __LINE__);
 	}
 
 	bool config_descriptor_available() const
@@ -481,6 +510,7 @@ struct Usb_driver
 		p.interface.number      = ifnum;
 		p.interface.alt_setting = altnum;
 
+		++_pending_xfer;
 		_usb.source()->submit_packet(p);
 
 		while (!_sync_completion.completed) {
@@ -521,6 +551,7 @@ struct Usb_driver
 		p.control.index        = UGETW(req.wIndex);
 		p.control.timeout      = 5000; // XXX
 
+		++_pending_xfer;
 		_usb.source()->submit_packet(p);
 
 		while (!_sync_completion.completed) {
@@ -589,6 +620,8 @@ struct Usb_driver
 		iso_packet.valid = false;
 		/* copy completed packet descriptor to get current actual_length */
 		iso_packet.packet_descriptor = p;
+
+		printf("%s: iso_packet: %p\n", __func__, &iso_packet);
 
 		if (callback) {
 			callback(xfer, xfer->priv,
@@ -680,20 +713,45 @@ struct Usb_driver
 			p.transfer.packet_size[i] = frlengths[i];
 		}
 
+		printf("%s: iso_packet: %p xfer->dma_buf: \033[31;1;4m%p\033[0m len: %zu\n", __func__,
+		       &_iso_packet[packet_id], xfer->dma_buf, len);
+
 		_iso_packet[packet_id].packet_descriptor = p;
 		_iso_packet[packet_id].valid = true;
 		return &_iso_packet[packet_id];
 	}
+
+	unsigned _pending_xfer = 0;
 
 	usbd_status submit_iso_packet(struct usbd_xfer *xfer)
 	{
 		Iso_packet &iso =
 			*reinterpret_cast<Iso_packet*>(xfer->genode_packet_descriptor);
 
+		++_pending_xfer;
+
+		if (iso.packet_descriptor.read_transfer()) {
+			printf("%s: xfer: %p xfer->dma_buf: \033[32;1;4m%p\033[0m pending: %u\n", __func__, xfer, xfer->dma_buf, _pending_xfer);
+		} else {
+			printf("%s: xfer: %p xfer->dma_buf: \033[31;1;4m%p\033[0m pending: %u\n", __func__, xfer, xfer->dma_buf, _pending_xfer);
+		}
+
 		_usb.source()->submit_packet(iso.packet_descriptor);
 		return USBD_IN_PROGRESS;
 	}
 };
+
+
+void Usb_driver::usb_task_entry(void *arg)
+{
+	Usb_driver &driver = *reinterpret_cast<Usb_driver*>(arg);
+
+	while (true) {
+		Bsd::scheduler().current()->block_and_schedule();
+
+		driver.execute();
+	}
+}
 
 } /* anonymous namespace */
 
@@ -832,6 +890,8 @@ void usbd_setup_isoc_xfer(struct usbd_xfer *xfer, struct usbd_pipe *pipe,
 	// Genode::log(__func__, ": xfer: ", xfer, " pipe: ", pipe, " priv: ", priv,
 	//             " frlengths: ", frlengths, " nframes: ", nframes, " flags: ",
 	//             flags, " callback: ", callback);
+	printf("%s: xfer: %p pipe: %p priv: %p frlengths: %p nframes: %u flags: %u callback: %p\n",
+	       __func__, xfer, pipe, priv, frlengths, nframes, flags, callback);
 	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(xfer->genode_usb_device);
 	xfer->priv = priv;
 
@@ -850,6 +910,7 @@ usbd_status usbd_transfer(struct usbd_xfer *xfer)
 	if (xfer->genode_packet_descriptor == NULL) {
 		return USBD_IOERROR;
 	}
+	printf("%s: xfer: %p pd: %p\n", __func__, xfer, xfer->genode_packet_descriptor);
 
 	Usb_driver &usb = *reinterpret_cast<Usb_driver*>(xfer->genode_usb_device);
 	return usb.submit_iso_packet(xfer);
@@ -861,6 +922,8 @@ void usbd_get_xfer_status(struct usbd_xfer *xfer, void **priv,
 {
 	// Genode::log(__func__, ": xfer: ", xfer,
 	//             " pd: ", xfer->genode_packet_descriptor);
+	printf("%s: xfer: %p pd: %p\n", __func__, xfer, xfer->genode_packet_descriptor);
+
 	Usb_driver::Iso_packet const &iso_packet =
 		*reinterpret_cast<Usb_driver::Iso_packet*>(xfer->genode_packet_descriptor);
 
@@ -903,17 +966,6 @@ char const *usbd_errstr(usbd_status)
 }
 
 
-void getmicrotime(struct timeval *tv)
-{
-	/* AFAICT only used in DEBUG code */
-	// Genode::error(__func__, ": not implemented");
-	if (tv) {
-		tv->tv_sec = 0;
-		tv->tv_usec = 0;
-	}
-}
-
-
 static Usb_driver *_usb_driver;
 
 
@@ -953,12 +1005,4 @@ int Bsd::probe_drivers(Genode::Env &env, Genode::Allocator &alloc,
 	catch (...) { /* XXX */ }
 
 	return 0;
-}
-
-
-void Bsd::execute_driver()
-{
-	if (_usb_driver) {
-		_usb_driver->execute();
-	}
 }
