@@ -35,8 +35,8 @@ namespace Audio_in {
 	class Session;
 
 	enum {
-		QUEUE_SIZE  = 431,            /* buffer queue size (~5s) */
-		PERIOD      = 512,            /* samples per periode (~11.6ms) */
+		QUEUE_SIZE  = 256,            /* buffer queue size (~5s) */
+		PERIOD      = 441,            /* samples per periode (~11.6ms) */
 		SAMPLE_RATE = 44100,
 		SAMPLE_SIZE = sizeof(float),
 	};
