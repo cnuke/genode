@@ -149,10 +149,10 @@ class Genodefb :
 			          (h <= (ULONG)_fb_mode.area.h());
 
 			if (ok) {
-				Genode::log("fb resize : [", screen, "] ",
-				            _virtual_fb_mode.area, " -> ",
-				            w, "x", h,
-				            " (host: ", _fb_mode.area, ")");
+				// Genode::log("fb resize : [", screen, "] ",
+				//             _virtual_fb_mode.area, " -> ",
+				//             w, "x", h,
+				//             " (host: ", _fb_mode.area, ")");
 
 				if ((w < (ULONG)_fb_mode.area.w()) ||
 				    (h < (ULONG)_fb_mode.area.h())) {
@@ -164,10 +164,11 @@ class Genodefb :
 
 				result = S_OK;
 			} else {
-				Genode::log("fb resize : [", screen, "] ",
-				            _virtual_fb_mode.area, " -> ",
-				            w, "x", h, " ignored"
-				            " (host: ", _fb_mode.area, ")");
+				;
+				// Genode::log("fb resize : [", screen, "] ",
+				//             _virtual_fb_mode.area, " -> ",
+				//             w, "x", h, " ignored"
+				//             " (host: ", _fb_mode.area, ")");
 			}
 
 			Unlock();
