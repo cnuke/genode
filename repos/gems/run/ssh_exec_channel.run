@@ -17,6 +17,8 @@ source ${genode_dir}/repos/base/run/platform_drv.inc
 append_platform_drv_build_components
 
 lappend build_components test/exec_terminal
+lappend build_components server/ssh_terminal
+lappend build_components lib/vfs/lxip
 
 build $build_components
 
@@ -28,7 +30,6 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/exec_terminal \
                   [depot_user]/src/init \
                   [depot_user]/src/ipxe_nic_drv \
-                  [depot_user]/src/libc \
                   [depot_user]/src/libcrypto \
                   [depot_user]/src/libssh \
                   [depot_user]/src/platform_drv \
@@ -38,7 +39,6 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/ssh_terminal \
                   [depot_user]/src/vfs \
                   [depot_user]/src/vfs_jitterentropy \
-                  [depot_user]/src/vfs_lxip \
                   [depot_user]/src/vfs_pipe \
                   [depot_user]/src/vim-minimal \
                   [depot_user]/src/zlib
@@ -105,7 +105,7 @@ set config {
 		<resource name="RAM" quantum="32M"/>
 		<provides> <service name="Terminal"/> </provides>
 
-		<config port="22" allow_password="yes" show_password="yes" ed25519_key="/etc/ssh/ed25519_key">
+		<config ld_verbose="yes" port="22" allow_password="yes" show_password="yes" ed25519_key="/etc/ssh/ed25519_key">
 
 			<policy label_prefix="dynamic" user="noux" password="xuon" multi_login="yes" request_terminal="yes"/>
 			<policy label_prefix="always-running-noux" user="charlie" password="xuon"/>
@@ -214,6 +214,15 @@ if {![file exists bin/ed25519_key]} {
 set boot_modules {
 	ed25519_key
 	exec_terminal
+
+	ssh_terminal
+
+	libssh.lib.so
+
+	lxip.lib.so
+	vfs_lxip.lib.so
+	libc.lib.so
+	libm.lib.so
 }
 
 # platform-specific modules

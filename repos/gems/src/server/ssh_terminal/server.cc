@@ -280,8 +280,10 @@ void Ssh::Server::_load_hostkey(Util::Filename const &file)
 
 void *Ssh::Server::_server_loop(void *arg)
 {
-	Ssh::Server *server = reinterpret_cast<Ssh::Server *>(arg);
-	server->loop();
+	Libc::with_libc([&] () {
+		Ssh::Server *server = reinterpret_cast<Ssh::Server *>(arg);
+		server->loop();
+	});
 	return nullptr;
 }
 
@@ -588,11 +590,15 @@ void Ssh::Server::loop()
 {
 	while (true) {
 
+		Genode::log(__func__, ":", __LINE__);
+
 		int const events = ssh_event_dopoll(_event_loop, -1);
+		Genode::log(__func__, ":", __LINE__);
 		if (events == SSH_ERROR) {
 			_cleanup_sessions();
 		}
 
+		Genode::log(__func__, ":", __LINE__);
 		{
 			Genode::Mutex::Guard guard(_terminals.mutex());
 
@@ -603,6 +609,7 @@ void Ssh::Server::loop()
 			};
 			_sessions.for_each(cleanup);
 
+		Genode::log(__func__, ":", __LINE__);
 			/* second reset all active terminals */
 			auto reset_pending = [&] (Terminal_session &t) {
 				if (!t.conn.attached_channels()) { return; }
@@ -610,6 +617,7 @@ void Ssh::Server::loop()
 			};
 			_terminals.for_each(reset_pending);
 
+		Genode::log(__func__, ":", __LINE__);
 			/*
 			 * third send data on all sessions being attached
 			 * to a terminal.
@@ -622,6 +630,7 @@ void Ssh::Server::loop()
 			};
 			_sessions.for_each(send);
 		}
+		Genode::log(__func__, ":", __LINE__);
 	}
 }
 

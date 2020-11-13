@@ -25,6 +25,9 @@
 #include <vfs/vfs_handle.h>
 #include <timer_session/connection.h>
 
+#include <base/sleep.h>
+#include <os/backtrace.h>
+
 /* Lxip includes */
 #include <lxip/lxip.h>
 #include <lx.h>
@@ -475,9 +478,22 @@ class Vfs::Lxip_data_file final : public Vfs::Lxip_file
 		{
 			using namespace Linux;
 
+			Genode::Thread::Name thread_name = Genode::Thread::myself()->name();
+
+			if (thread_name != "ep") {
+				Genode::error("called from ", thread_name);
+				Genode::backtrace();
+				Genode::sleep_forever();
+			}
+
+			if (!_sock_valid()) Genode::error(thread_name, ": SOCKET INVALID");
+
 			file f;
 			f.f_flags = 0;
-			return (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN_SET));
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__, ": sock: ", &_sock);
+			bool res = (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN_SET));
+			Genode::log(__func__, ":", __LINE__);
+			return res;
 		}
 
 		Lxip::ssize_t write(Lxip_vfs_file_handle &,
@@ -714,7 +730,10 @@ class Vfs::Lxip_connect_file final : public Vfs::Lxip_file
 
 			file f;
 			f.f_flags = 0;
-			return (_sock.ops->poll(&f, &_sock, nullptr) & (POLLOUT_SET));
+			Genode::log(__func__, ":", __LINE__);
+			bool res = (_sock.ops->poll(&f, &_sock, nullptr) & (POLLOUT_SET));
+			Genode::log(__func__, ":", __LINE__);
+			return res;
 		}
 
 		Lxip::ssize_t write(Lxip_vfs_file_handle &handle,
@@ -858,15 +877,18 @@ class Vfs::Lxip_remote_file final : public Vfs::Lxip_file
 			file f;
 			f.f_flags = 0;
 
+			Genode::log(__func__, ":", __LINE__);
+			bool res = false;
 			switch (_parent.parent().type()) {
 			case Lxip::Protocol_dir::TYPE_DGRAM:
-				return (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN_SET));
+				res = (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN_SET));
 
 			case Lxip::Protocol_dir::TYPE_STREAM:
 				return true;
 			}
 
-			return false;
+			Genode::log(__func__, ":", __LINE__);
+			return res;
 		}
 
 		Lxip::ssize_t read(Lxip_vfs_file_handle &handle,
@@ -955,7 +977,21 @@ class Vfs::Lxip_accept_file final : public Vfs::Lxip_file
 			file f;
 			f.f_flags = 0;
 
-			return (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN));
+			Genode::Thread::Name thread_name = Genode::Thread::myself()->name();
+
+			// if (thread_name != "ep") {
+			// 	Genode::error("called from ", thread_name);
+			// 	Genode::backtrace();
+			// 	Genode::sleep_forever();
+			// }
+
+			if (!_sock_valid()) Genode::error(thread_name, ": SOCKET INVALID");
+
+
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+			bool res = (_sock.ops->poll(&f, &_sock, nullptr) & (POLLIN));
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+			return res;
 		}
 
 		Lxip::ssize_t read(Lxip_vfs_file_handle &handle,

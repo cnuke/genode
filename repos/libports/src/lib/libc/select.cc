@@ -254,9 +254,14 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	select_cb.construct(nfds, in_readfds, in_writefds, in_exceptfds);
 	select_cb_list().insert(&(*select_cb));
 
+	Genode::Thread::Name thread_name = Genode::Thread::myself()->name();
+
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
+
 	int const nready = selscan(nfds,
 	                           &in_readfds, &in_writefds, &in_exceptfds,
 	                           readfds, writefds, exceptfds);
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 
 	/* return if any descripor is ready */
 	if (nready) {
@@ -292,17 +297,22 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	{
 		select_notify_from_kernel();
 
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 		if (select_cb->nready != 0)
 			return Monitor::Function_result::COMPLETE;
 
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 		if (signal_occurred_during_select())
 			return Monitor::Function_result::COMPLETE;
 
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 		return Monitor::Function_result::INCOMPLETE;
 	};
 
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 	Monitor::Result const monitor_result =
 		_monitor_ptr->monitor(monitor_fn, timeout_ms);
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 
 	select_cb_list().remove(&(*select_cb));
 
