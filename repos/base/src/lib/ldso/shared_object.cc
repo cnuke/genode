@@ -70,8 +70,14 @@ Genode::Shared_object::Shared_object(Env &env, Allocator &md_alloc,
 
 		/* print loaded object information */
 		try {
-			if (Linker::verbose)
+			if (Linker::verbose) {
 				Linker::dump_link_map(to_root(_handle).first_dep()->obj());
+
+				for (Linker::Dependency const *d = to_root(_handle).first_dep()->next();
+				     d; d = d->next()) {
+					Linker::dump_link_map(d->obj());
+				}
+			}
 		} catch (...) {  }
 
 	} catch(Linker::Not_found &symbol) {
