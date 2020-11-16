@@ -159,17 +159,26 @@ class Ssh::Terminal
 		 */
 		void send(ssh_channel channel)
 		{
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 			Mutex::Guard guard(_write_buf.mutex());
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 
 			if (!_write_buf.read_avail()) { return; }
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 
 			/* ignore send request */
 			if (!channel || !ssh_channel_is_open(channel)) { return; }
 
+			// Genode::log("before write");
+
 			char const *src     = _write_buf.content();
 			size_t const len    = _write_buf.read_avail();
 			/* XXX we do not handle partial writes */
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 			int const num_bytes = ssh_channel_write(channel, src, len);
+			Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+			// Genode::log("after write");
 
 			if (num_bytes && (size_t)num_bytes < len) {
 				warning("send on channel was truncated");

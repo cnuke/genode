@@ -30,6 +30,8 @@
 #include <base/attached_ram_dataspace.h>
 #include <base/attached_rom_dataspace.h>
 
+#include <timer_session/connection.h>
+
 /* local includes */
 #include "root_component.h"
 
@@ -43,6 +45,10 @@ struct Main
 
 	Main(Genode::Env &env) : _env(env)
 	{
+		Timer::Connection timer { _env };
+
+		timer.msleep(1000*5);
+
 		Genode::log("--- SSH terminal started ---");
 		_env.parent().announce(env.ep().manage(_root));
 	}

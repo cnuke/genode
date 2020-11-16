@@ -362,6 +362,8 @@ void Ssh::Server::detach_terminal(Ssh::Terminal &conn)
 {
 	Genode::Mutex::Guard guard(_terminals.mutex());
 
+	Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+
 	Terminal_session *p = nullptr;
 	auto lookup = [&] (Terminal_session &t) {
 
@@ -375,21 +377,31 @@ void Ssh::Server::detach_terminal(Ssh::Terminal &conn)
 		Genode::error("could not detach Terminal for user ", conn.user());
 		return;
 	}
+
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
+
 	auto invalidate_terminal = [&] (Session &sess) {
 
 		Libc::with_libc([&] () {
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 			ssh_blocking_flush(sess.session, 10000);
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 			ssh_disconnect(sess.session);
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__, " --- AFTER DISCONNECT");
 			if (sess.terminal != &conn) { return; }
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 			sess.terminal = nullptr;
 		});
 	};
 	_sessions.for_each(invalidate_terminal);
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 	_cleanup_sessions();
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 
 	Libc::with_libc([&] () {
 		Genode::destroy(&_heap, p);
 	});
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__);
 }
 
 
@@ -588,17 +600,18 @@ bool Ssh::Server::auth_pubkey(ssh_session s, char const *u,
 
 void Ssh::Server::loop()
 {
+	Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
 	while (true) {
 
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 
 		int const events = ssh_event_dopoll(_event_loop, -1);
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 		if (events == SSH_ERROR) {
 			_cleanup_sessions();
 		}
 
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 		{
 			Genode::Mutex::Guard guard(_terminals.mutex());
 
@@ -609,7 +622,7 @@ void Ssh::Server::loop()
 			};
 			_sessions.for_each(cleanup);
 
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 			/* second reset all active terminals */
 			auto reset_pending = [&] (Terminal_session &t) {
 				if (!t.conn.attached_channels()) { return; }
@@ -617,7 +630,7 @@ void Ssh::Server::loop()
 			};
 			_terminals.for_each(reset_pending);
 
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 			/*
 			 * third send data on all sessions being attached
 			 * to a terminal.
@@ -625,12 +638,20 @@ void Ssh::Server::loop()
 			auto send = [&] (Session &s) {
 				if (!s.terminal) { return; }
 
-				try { s.terminal->send(s.channel); }
-				catch (...) { _cleanup_session(s); }
+				try {
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+					s.terminal->send(s.channel);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+				}
+				catch (...) {
+					Genode::error(thread_name, ": sending to ", s.channel, " failed");
+					_cleanup_session(s);
+					Genode::error(thread_name, ": _cleanup_session finished");
+				}
 			};
 			_sessions.for_each(send);
 		}
-		Genode::log(__func__, ":", __LINE__);
+		Genode::log(thread_name, ": ", __func__, ":", __LINE__);
 	}
 }
 

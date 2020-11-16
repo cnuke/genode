@@ -596,16 +596,22 @@ int Libc::Vfs_plugin::close(File_descriptor *fd)
 
 	Sync sync { *handle , _update_mtime, _current_real_time };
 
+	Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__, ": handle: ", handle);
 	monitor().monitor([&] {
+		Genode::Thread::Name const thread_namex = Genode::Thread::myself()->name();
 		if ((fd->modified) || (fd->flags & O_CREAT))
 			if (!sync.complete())
 				return Fn::INCOMPLETE;
 
+		Genode::error(thread_namex, ": ", __func__, ":", __LINE__, ": handle: ", handle);
 		handle->close();
+		Genode::error(thread_namex, ": ", __func__, ":", __LINE__, ": handle: ", handle);
 		file_descriptor_allocator()->free(fd);
 
 		return Fn::COMPLETE;
 	});
+	Genode::error(thread_name, ": ", __func__, ":", __LINE__, ": handle: ", handle);
 
 	return 0;
 }

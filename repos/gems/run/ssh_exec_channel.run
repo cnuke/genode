@@ -4,10 +4,10 @@
 
 assert_spec x86
 
-if {[have_spec linux]} {
-	puts "Run script is not supported on this platform."
-	exit 0
-}
+# if {[have_spec linux]} {
+# 	puts "Run script is not supported on this platform."
+# 	exit 0
+# }
 
 # Build
 #
@@ -19,6 +19,8 @@ append_platform_drv_build_components
 lappend build_components test/exec_terminal
 lappend build_components server/ssh_terminal
 lappend build_components lib/vfs/lxip
+lappend build_components lib/vfs/lwip
+lappend build_components lib/ld
 
 build $build_components
 
@@ -30,13 +32,11 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/exec_terminal \
                   [depot_user]/src/init \
                   [depot_user]/src/ipxe_nic_drv \
+                  [depot_user]/src/linux_nic_drv \
                   [depot_user]/src/libcrypto \
-                  [depot_user]/src/libssh \
                   [depot_user]/src/platform_drv \
                   [depot_user]/src/posix \
                   [depot_user]/src/fs_rom \
-                  [depot_user]/src/rtc_drv \
-                  [depot_user]/src/ssh_terminal \
                   [depot_user]/src/vfs \
                   [depot_user]/src/vfs_jitterentropy \
                   [depot_user]/src/vfs_pipe \
@@ -48,7 +48,7 @@ import_from_depot [depot_user]/src/[base_src] \
 #
 
 set config {
-<config verbose="no">
+<config verbose="yes">
 	<parent-provides>
 		<service name="CPU"/>
 		<service name="IO_MEM"/>
@@ -71,18 +71,10 @@ set config {
 		</route>
 	</start>
 
-	<start name="nic_drv">
-		<binary name="ipxe_nic_drv"/>
+	<start name="nic_drv" ld="no">
+		<binary name="linux_nic_drv"/>
 		<resource name="RAM" quantum="4M"/>
 		<provides> <service name="Nic"/> </provides>
-		<route>
-			<any-service> <parent/> <any-child/> </any-service>
-		</route>
-	</start>
-
-	<start name="rtc_drv">
-		<resource name="RAM" quantum="1M"/>
-		<provides> <service name="Rtc"/> </provides>
 		<route>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
@@ -124,7 +116,9 @@ set config {
 						<rom name="ed25519_key"/>
 					</dir>
 				</dir>
-				<dir name="socket"> <lxip dhcp="yes"/> </dir>
+				<!-- <dir name="socket"> <lwip dhcp="yes"/> </dir> -->
+				<dir name="socket"> <lwip ip_addr="10.0.2.55" netmask="255.255.255.0" gateway="10.0.2.1" nameserver="1.1.1.1"/> </dir>
+				<!-- <dir name="socket"> <lxip ip_addr="10.0.2.55" netmask="255.255.255.0" gateway="10.0.2.1" nameserver="1.1.1.1"/> </dir> -->
 				<dir name="pipe"> <pipe/> </dir>
 			</vfs>
 		</config>
@@ -223,6 +217,12 @@ set boot_modules {
 	vfs_lxip.lib.so
 	libc.lib.so
 	libm.lib.so
+
+	vfs_lwip.lib.so
+
+	ld.lib.so
+
+	libssh.lib.so
 }
 
 # platform-specific modules
@@ -235,9 +235,11 @@ build_boot_image $boot_modules
 #
 
 append qemu_args     " -m 512 -nographic "
+append qemu_args     " -s -S "
 append_qemu_nic_args "hostfwd=tcp::5555-:22"
 
-set lxip_match_string "ipaddr=(\[0-9\]+\.\[0-9\]+\.\[0-9\]+\.\[0-9\]+).*\n"
+set lxip_match_string "address=(\[0-9\]+\.\[0-9\]+\.\[0-9\]+\.\[0-9\]+).*\n"
+#set lxip_match_string "ipaddr=(\[0-9\]+\.\[0-9\]+\.\[0-9\]+\.\[0-9\]+).*\n"
 
 if {[get_cmd_switch --autopilot]} {
 	run_genode_until $lxip_match_string 60
@@ -256,7 +258,7 @@ if {[get_cmd_switch --autopilot]} {
 
 	for {set index 0} {$index < 3} {incr index} {
 		puts "test interactive channel"
-		spawn sshpass -p xuon ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -l noux $host -p $port
+		spawn sshpass -p xuon ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -l noux $host -p $port foobar
 		set ssh_id $spawn_id
 		run_genode_until {/bin/bash] Hello from Genode!.*\n} 15 $serial_id
 		send -i $ssh_id "ls\r"

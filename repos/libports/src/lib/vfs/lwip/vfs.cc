@@ -435,7 +435,12 @@ struct Lwip::Socket_dir : Lwip::Directory
 		{
 			/* invoke all handles waiting for read_ready */
 			read_ready_queue.dequeue_all([] (Lwip_file_handle::Fifo_element &elem) {
-				elem.object().read_ready_response(); });
+				Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+
+				Genode::error(thread_name, ": all remove: ", &elem.object());
+				elem.object().read_ready_response();
+				Genode::error(thread_name, ": all remove: done");
+				});
 		}
 
 		/**
@@ -463,6 +468,8 @@ Lwip::Lwip_file_handle::~Lwip_file_handle()
 	if (socket) {
 		socket->handles.remove(this);
 		if (_read_ready_waiter.enqueued()) {
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+			Genode::error(thread_name, ": remove: ", &_read_ready_waiter);
 			socket->read_ready_queue.remove(_read_ready_waiter);
 		}
 		if (_io_progress_waiter.enqueued()) {
@@ -498,8 +505,11 @@ Lwip::Write_result Lwip::Lwip_file_handle::write(char const *src, file_size coun
 bool Lwip::Lwip_file_handle::notify_read_ready()
 {
 	if (socket) {
-		if (!_read_ready_waiter.enqueued())
+		if (!_read_ready_waiter.enqueued()) {
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+			Genode::error(thread_name, ": enqueue: ", &_read_ready_waiter);
 			socket->read_ready_queue.enqueue(_read_ready_waiter);
+		}
 		return true;
 	}
 
@@ -706,6 +716,7 @@ class Lwip::Protocol_dir_impl final : public Protocol_dir
 		                 Vfs_handle **out_handle,
 		                 Allocator   &alloc) override
 		{
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
 			Path subpath(path);
 
 			if (subpath == "/new_socket") {
@@ -713,6 +724,7 @@ class Lwip::Protocol_dir_impl final : public Protocol_dir
 				*out_handle = new (alloc) Lwip_file_handle(
 					fs, alloc, Vfs::Directory_service::OPEN_MODE_RDONLY,
 					new_dir, Lwip_file_handle::LOCATION);
+				Genode::error(thread_name, ": ", __func__, ": handle: ", *out_handle, " alloc: ", &(*out_handle)->alloc());
 				return Open_result::OPEN_OK;
 			}
 
@@ -1958,6 +1970,8 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory
 
 		void close(Vfs_handle *vfs_handle) override
 		{
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+
 			Socket_dir *socket = nullptr;
 
 			/* if the inteface is down this handle may be queued */
@@ -1967,6 +1981,7 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory
 				if (Lwip_file_handle *file_handle = dynamic_cast<Lwip_file_handle*>(handle)) {
 					socket = file_handle->socket;
 				}
+				Genode::error(thread_name, ": ", __func__, ": handle: ", handle, " alloc: ", &handle->alloc());
 				destroy(handle->alloc(), handle);
 			} else {
 				Genode::error("refusing to destroy strange handle");

@@ -549,8 +549,10 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 		 */
 		Monitor::Result _monitor(Function &fn, uint64_t timeout_ms) override
 		{
+			Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
 			if (_main_context()) {
 
+				Genode::warning(thread_name, ": ", __func__, ":", __LINE__);
 				_main_monitor_job.construct(fn, timeout_ms);
 
 				_monitors.monitor(*_main_monitor_job);
@@ -558,14 +560,18 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 				Monitor::Result const job_result = _main_monitor_job->completed()
 				                                 ? Monitor::Result::COMPLETE
 				                                 : Monitor::Result::TIMEOUT;
+				Genode::warning(thread_name, ": ", __func__, ":", __LINE__, " main completed: ", _main_monitor_job->completed());
 				_main_monitor_job.destruct();
 
 				return job_result;
 
 			} else {
+				Genode::warning(thread_name, ": ", __func__, ":", __LINE__, ": timeout_ms: ", timeout_ms);
 				Pthread_job job { fn, _timer_accessor, timeout_ms };
 
 				_monitors.monitor(job);
+
+				Genode::warning(thread_name, ": ", __func__, ":", __LINE__, " completed: ", job.completed());
 				return job.completed() ? Monitor::Result::COMPLETE
 				                       : Monitor::Result::TIMEOUT;
 			}

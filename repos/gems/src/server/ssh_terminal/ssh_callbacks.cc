@@ -68,6 +68,8 @@ int channel_data_cb(ssh_session session, ssh_channel channel,
 
 		char c = src[num_bytes];
 
+		Genode::warning(Genode::Hex((unsigned char)c));
+
 		/* replace ^? with ^H and let's hope we do not break anything */
 		enum { DEL = 0x7f, BS = 0x08, };
 		if (c == DEL) {

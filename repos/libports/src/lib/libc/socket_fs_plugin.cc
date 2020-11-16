@@ -1302,6 +1302,8 @@ int Socket_fs::Plugin::close(File_descriptor *fd)
 	Socket_fs::Context *context = dynamic_cast<Socket_fs::Context *>(fd->context);
 	if (!context) return Errno(EBADF);
 
+	Genode::error(__func__, ": context: ", context);
+
 	Libc::Allocator alloc { };
 	destroy(alloc, context);
 	file_descriptor_allocator()->free(fd);

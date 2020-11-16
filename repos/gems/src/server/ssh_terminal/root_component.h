@@ -92,8 +92,11 @@ class Terminal::Root_component : public Genode::Root_component<Session_component
 
 		void _destroy_session(Session_component *s)
 		{
-			_server.detach_terminal(*s);
-			Genode::destroy(md_alloc(), s);
+			Genode::log(__func__, ": ", s);
+			Libc::with_libc([&] () {
+				_server.detach_terminal(*s);
+				Genode::destroy(md_alloc(), s);
+			});
 		}
 
 	public:
