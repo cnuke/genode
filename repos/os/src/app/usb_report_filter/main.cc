@@ -183,34 +183,22 @@ class Usb_filter::Device_registry
 				if (ehci_enabled) xml.attribute("ehci", "yes");
 				if (xhci_enabled) xml.attribute("xhci", "yes");
 
-				/* copy other nodes */
-				drv_config.for_each_sub_node([&] (Xml_node &node) {
-					if (!node.has_type("raw")) {
-						node.with_raw_node([&] (char const *start, size_t length) {
-							xml.append(start, length); });
-						return;
-					}
+				/* always include report node */
+				xml.node("report", [&] {
+					xml.attribute("devices", "yes");
 				});
 
-				if (!drv_config.has_sub_node("raw"))
-					log("enable raw support in usb_drv");
+				char const * const label = _client_label.string();
 
-				xml.node("raw", [&] {
-					xml.node("report", [&] {
-						xml.attribute("devices", "yes");
-					});
+				usb_devices.for_each_sub_node("device", [&] (Xml_node &node) {
 
-					char const * const label = _client_label.string();
+					auto add_policy_entry = [&] (Entry const &entry) {
+						if (!_devices_matches(node, entry)) return;
 
-					usb_devices.for_each_sub_node("device", [&] (Xml_node &node) {
+						_gen_policy_entry(xml, node, entry, label);
+					};
 
-						auto add_policy_entry = [&] (Entry const &entry) {
-							if (!_devices_matches(node, entry)) return;
-
-							_gen_policy_entry(xml, node, entry, label);
-						};
-						_for_each_entry(add_policy_entry);
-					});
+					_for_each_entry(add_policy_entry);
 				});
 			});
 
@@ -244,20 +232,15 @@ class Usb_filter::Device_registry
 
 		bool _check_config(Xml_node &drv_config)
 		{
-			if (!drv_config.has_sub_node("raw")) {
-				error("could not access <raw> node");
-				return false;
-			}
-
 			auto check_policy = [&] (Entry const &entry) {
 				bool result = false;
-				drv_config.sub_node("raw").for_each_sub_node("policy", [&] (Xml_node &node) {
-						result |= (entry.bus == _get_value(node, "bus") &&
-						           entry.dev == _get_value(node, "dev"));
-						if (result) return;
+				drv_config.for_each_sub_node("policy", [&] (Xml_node &node) {
+					result |= (entry.bus == _get_value(node, "bus") &&
+					           entry.dev == _get_value(node, "dev"));
+					if (result) return;
 
-						result |= (entry.vendor  == _get_value(node, "vendor_id") &&
-						           entry.product == _get_value(node, "product_id"));
+					result |= (entry.vendor  == _get_value(node, "vendor_id") &&
+					           entry.product == _get_value(node, "product_id"));
 				});
 
 				if (verbose && !result)
