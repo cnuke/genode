@@ -96,6 +96,27 @@ struct Usb::Packet_descriptor : Genode::Packet_descriptor
 
 	Packet_descriptor(Genode::Packet_descriptor p, Type type, Completion *completion = nullptr)
 	: Genode::Packet_descriptor(p.offset(), p.size()), type(type), completion(completion) { }
+
+	void print(Genode::Output &out) const
+	{
+		char const *str = nullptr;
+
+		switch (type) {
+		case Type::STRING:      str = "STRING"; break;
+		case Type::CTRL:        str = "CTRL"; break;
+		case Type::BULK:        str = "BULK"; break;
+		case Type::IRQ:         str = "IRQ"; break;
+		case Type::ISOC:        str = "ISOC"; break;
+		case Type::ALT_SETTING: str = "ALT_SETTING"; break;
+		case Type::CONFIG:      str = "CONFIG"; break;
+		case Type::RELEASE_IF:  str = "RELEASE_IF"; break;
+		default: str = "<unknown>"; break;
+		}
+
+		bool in = transfer.ep & ENDPOINT_IN;
+
+		Genode::print(out, "offset: ", offset(), " ", str, " ", in ? "IN" : "OUT");
+	}
 };
 
 
