@@ -3,6 +3,7 @@ REQUIRES = nova
 
 LIBS    += virtualbox5-nova
 LIBS    += blit
+LIBS    += tracer
 
 include $(REP_DIR)/src/virtualbox5/target.inc
 
