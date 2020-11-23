@@ -26,13 +26,15 @@
 
 #include <qemu/usb.h>
 
+#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+
 /*******************
  ** USB interface **
  *******************/
 
-static bool const verbose_irq  = false;
-static bool const verbose_iov  = false;
-static bool const verbose_mmio = false;
+static bool const verbose_irq  = true;
+static bool const verbose_iov  = true;
+static bool const verbose_mmio = true;
 
 extern "C" void _type_init_usb_register_types();
 extern "C" void _type_init_usb_host_register_types(Genode::Entrypoint*,
@@ -498,6 +500,8 @@ struct Controller : public Qemu::Controller
 		Genode::size_t size;
 		Genode::off_t  offset;
 
+		char const *name;
+
 		MemoryRegionOps const *ops;
 	} mmio_regions [16];
 
@@ -512,7 +516,8 @@ struct Controller : public Qemu::Controller
 
 	void   mmio_add_region(uint64_t size) { _mmio_size = size; }
 
-	void   mmio_add_region_io(Genode::addr_t id, uint64_t size, MemoryRegionOps const *ops)
+	void   mmio_add_region_io(Genode::addr_t id, uint64_t size, MemoryRegionOps const *ops,
+	                          char const *name)
 	{
 		for (Mmio &mmio : mmio_regions) {
 			if (mmio.id != 0) continue;
@@ -520,6 +525,7 @@ struct Controller : public Qemu::Controller
 			mmio.id   = id;
 			mmio.size = size;
 			mmio.ops  = ops;
+			mmio.name = name;
 			return;
 		}
 	}
@@ -565,11 +571,15 @@ struct Controller : public Qemu::Controller
 			ptr = (void*)&Object_pool::p()->xhci_state()->ports[port];
 		}
 
+		if (verbose_mmio)
+			TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
+			            "reg: ", Hex(reg));
+
 		uint64_t v = mmio.ops->read(ptr, reg, size);
 		memcpy(buf, &v, Genode::min(sizeof(v), size));
 
 		if (verbose_mmio)
-			Genode::log(__func__, ": ", Hex(mmio.id), " offset: ", Hex(offset), " "
+			TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
 			            "reg: ", Hex(reg), " v: ", Hex(v));
 
 		return 0;
@@ -593,11 +603,10 @@ struct Controller : public Qemu::Controller
 			ptr = (void*)&Object_pool::p()->xhci_state()->ports[port];
 		}
 
-		mmio.ops->write(ptr, reg, v, size);
-
 		if (verbose_mmio)
-			Genode::log(__func__, ": ", Hex(mmio.id), " offset: ", Hex(offset), " "
+			TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
 			            "reg: ", Hex(reg), " v: ", Hex(v));
+		mmio.ops->write(ptr, reg, v, size);
 
 		return 0;
 	}
@@ -626,7 +635,7 @@ void memory_region_init(MemoryRegion *mr, Object *obj, const char *name, uint64_
 
 void memory_region_init_io(MemoryRegion* mr, Object* obj, const MemoryRegionOps* ops,
                            void *, const char * name, uint64_t size) {
-	controller()->mmio_add_region_io((Genode::addr_t)mr, size, ops); }
+	controller()->mmio_add_region_io((Genode::addr_t)mr, size, ops, name); }
 
 
 void memory_region_add_subregion(MemoryRegion *mr, hwaddr offset, MemoryRegion *sr) {
@@ -662,7 +671,7 @@ int dma_memory_read(AddressSpace*, dma_addr_t addr, void *buf, dma_addr_t size)
 void pci_set_irq(PCIDevice*, int level)
 {
 	if (verbose_irq)
-		Genode::log(__func__, ": IRQ level: ", level);
+		TRACE(__func__, ": IRQ level: ", level);
 	_pci_device->raise_interrupt(level);
 }
 
@@ -715,7 +724,7 @@ void qemu_iovec_add(QEMUIOVector *qiov, void *base, size_t len)
 
 	if (qiov->alloc_hint <= niov) {
 		if (verbose_iov)
-			Genode::log(__func__, ": alloc_hint ", qiov->alloc_hint,
+			TRACE(__func__, ": alloc_hint ", qiov->alloc_hint,
 			            " <= niov: ", niov);
 
 		qiov->alloc_hint += 64;
@@ -735,7 +744,7 @@ void qemu_iovec_add(QEMUIOVector *qiov, void *base, size_t len)
 	}
 
 	if (verbose_iov)
-		Genode::log(__func__, ": niov: ", niov, " iov_base: ",
+		TRACE(__func__, ": niov: ", niov, " iov_base: ",
 		            &qiov->iov[niov].iov_base, " base: ", base, " len: ", len);
 
 	qiov->iov[niov].iov_base = base;
@@ -764,7 +773,7 @@ void qemu_iovec_reset(QEMUIOVector *qiov)
 void qemu_iovec_init(QEMUIOVector *qiov, int alloc_hint)
 {
 	if (verbose_iov)
-		Genode::log(__func__, " iov: ", qiov->iov, " alloc_hint: ", alloc_hint);
+		TRACE(__func__, ": qiov: ", qiov, " iov: ", qiov->iov, " alloc_hint: ", alloc_hint);
 
 	iovec *iov = qiov->iov;
 	if (iov != nullptr) {
@@ -859,7 +868,7 @@ int usb_packet_map(USBPacket *p, QEMUSGList *sgl)
 			dma_addr_t xlen = len;
 			mem = _pci_device->map_dma(base, xlen);
 			if (verbose_iov)
-				Genode::log("mem: ", mem, " base: ", (void *)base, " len: ",
+				TRACE("mem: ", mem, " base: ", (void *)base, " len: ",
 				            Genode::Hex(len));
 
 			if (!mem) {
