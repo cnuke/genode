@@ -51,6 +51,11 @@
 
 static bool const verbose_timer = false;
 
+#include <trace/tracer.h>
+
+static Tracer::Id _tracer_id[16];
+static uint32_t   _max_tracer_id;
+
 
 /************************
  ** xHCI device struct **
@@ -346,7 +351,27 @@ PDMBOTHCBDECL(int) xhciMmioWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
 	Genode::off_t offset = GCPhysAddr - pThis->MMIOBase;
 	Qemu::Controller *ctl = pThis->ctl;
 
+	// Genode::Thread::Name const thread_name = Genode::Thread::myself()->name();
+	// Genode::log(thread_name, ": ", __func__, ":", __LINE__);
+
 	ctl->mmio_write(offset, pv, cb);
+
+	static unsigned count = 0;
+	if ((++count % 5000) == 0) {
+
+		// auto dump = [&] (Tracer::Entry const &entry) {
+
+		// 	char const *data = entry.data;
+		// 	bool const ending_lf = (data[entry.length-1] == '\n');
+
+		// 	Genode::log(Genode::Cstring(entry.data, entry.length - ending_lf));
+		// };
+		for (uint32_t i = 0; i < _max_tracer_id; i++) {
+			Genode::log("--- ", count, " - ", _tracer_id[i].value);
+			Tracer::dump_trace_buffer(_tracer_id[i]);
+			Genode::log("+++ ", count, " - ", _tracer_id[i].value);
+		}
+	}
 	return 0;
 }
 
@@ -443,6 +468,36 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 	static Timer_queue timer_queue(pThis->controller_timer);
 	pThis->timer_queue = &timer_queue;
 	static Pci_device pci_device(pDevIns);
+
+	Tracer::Config const cfg = {
+		.session_quota      = { 128u << 20 },
+		.arg_buffer_quota   = { 64u  << 10 },
+		.trace_buffer_quota = { 32u  << 20 },
+	};
+
+	Tracer::init(genode_env(), cfg);
+
+	struct Traced_thread
+	{
+		char const *name;
+	} threads[] = {
+		{ .name = "EMT" },
+		{ .name = "usb_ep" },
+		// { .name = "EMT-1" },
+	};
+
+	_max_tracer_id = 0;
+	for (Traced_thread const &t : threads) {
+		Tracer::Lookup_result const res = Tracer::lookup_subject("init -> vbox", t.name);
+		if (!res.valid) {
+			Genode::error("could not lookup ", t.name);
+		} else {
+			Genode::log("tracing ", t.name, " with id: ", res.id.value);
+			Tracer::resume_tracing(res.id);
+			_tracer_id[_max_tracer_id] = res.id;
+			_max_tracer_id++;
+		}
+	}
 
 	pThis->ctl = Qemu::usb_init(timer_queue, pci_device, *pThis->usb_ep,
 	                            vmm_heap(), genode_env());
