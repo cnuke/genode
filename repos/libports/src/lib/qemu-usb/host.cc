@@ -18,6 +18,8 @@
 #include <extern_c_end.h>
 #include <base/debug.h>
 
+#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+
 
 using namespace Genode;
 
@@ -68,6 +70,12 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 			int copy_size = min(usb_packet->iov.size, remaining);
 
 			usb_packet_copy(usb_packet, _content + _offset, copy_size);
+
+			if (_packet.read_transfer()) {
+				unsigned char value = *(_content + _offset);
+				TRACE(__func__, ": packet: ", _packet, " copy_size: ", copy_size,
+				      " value: ", Hex(value));
+			}
 
 			_offset += copy_size;
 
@@ -122,6 +130,12 @@ struct Completion : Usb::Completion
 		if (verbose_host)
 			log(__func__, ": packet: ", p, " packet.type: ", (int)packet.type, " "
 			    "actual_size: ", Hex(actual_size));
+
+		if (!p) {
+			error(__func__, ": packet: ", packet, " completion: ", this,
+			      " actual_size: ", Hex(actual_size));
+			return;
+		}
 
 		p->actual_length = 0;
 
@@ -311,8 +325,14 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			Usb::Packet_descriptor packet = usb_raw.source()->get_acked_packet();
 			Completion *c = dynamic_cast<Completion *>(packet.completion);
 
-			if ((packet.type == Packet_type::ISOC && !packet.read_transfer()) ||
-			    (c && c->state == Completion::CANCELED)) {
+			/* ISOC OUT OR CANCLED */
+			if ((packet.type == Packet_type::ISOC && !packet.read_transfer())) {
+				TRACE(__func__, ": ISO OUT: packet: ", packet);
+				free_packet(packet);
+				continue;
+			}
+			if ((c && c->state == Completion::CANCELED)) {
+				TRACE(__func__, ": CANCELED: packet: ", packet);
 				free_packet(packet);
 				continue;
 			}
@@ -324,8 +344,11 @@ struct Usb_host_device : List<Usb_host_device>::Element
 				free_packet(packet);
 			} else {
 				/* isochronous in */
+				TRACE(__func__, ": ISO IN: packet: ", packet);
 				free_completion(packet);
 				_isoc_in_pending--;
+
+				/* put packet into read fifo */
 				Isoc_packet *new_packet = new (_alloc)
 					Isoc_packet(packet, content);
 				isoc_read_queue.enqueue(*new_packet);
@@ -360,7 +383,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		unsigned count = 0;
 		isoc_read_queue.for_each([&count] (Isoc_packet&) { count++; });
-		return (count + _isoc_in_pending) < 3 ? true : false;
+		return (count + _isoc_in_pending) < 16 ? true : false;
 	}
 
 	void isoc_in_packet(USBPacket *usb_packet)
@@ -383,6 +406,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			}
 
 			Completion *c = dynamic_cast<Completion *>(packet.completion);
+			TRACE(__func__, ": packet: ", packet, " completion: ", c, " (old p: ", c->p, ")");
+
 			c->p          = nullptr;
 			c->dev        = usb_packet->ep->dev;
 			c->data       = nullptr;
@@ -502,6 +527,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			usb_raw.source()->release_packet(packet);
 			throw Packet_alloc_failed();
 		}
+		TRACE(__func__, ": packet: ", packet, " completion: ", packet.completion);
 
 		return packet;
 	}
@@ -532,6 +558,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	void free_completion(Usb::Packet_descriptor &packet)
 	{
 		if (packet.completion) {
+			TRACE(__func__, ": packet: ", packet, " completion: ", packet.completion);
 			dynamic_cast<Completion *>(packet.completion)->free();
 		}
 	}
@@ -560,6 +587,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	void submit(Usb::Packet_descriptor p)
 	{
+		TRACE(__func__, ": packet: ", p);
 		usb_raw.source()->submit_packet(p);
 	}
 
@@ -808,6 +836,8 @@ static void usb_host_handle_control(USBDevice *udev, USBPacket *p,
 	packet.control.value        = value;
 
 	Completion *c = dynamic_cast<Completion *>(packet.completion);
+	TRACE(__func__, ": packet: ", packet, " completion: ", c, " p: ", p);
+
 	c->p        = p;
 	c->dev      = udev;
 	c->data     = data;
