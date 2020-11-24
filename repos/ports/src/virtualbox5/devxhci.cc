@@ -49,12 +49,14 @@
 /* VBox Genode specific */
 #include "vmm.h"
 
-static bool const verbose_timer = false;
+static bool const verbose_timer = true;
 
 #include <trace/tracer.h>
 
 static Tracer::Id _tracer_id[16];
 static uint32_t   _max_tracer_id;
+
+#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
 
 
 /************************
@@ -157,7 +159,9 @@ struct Timer_queue : public Qemu::Timer_queue
 		if (TMTimerIsActive(tm_timer))
 			TMTimerStop(tm_timer);
 
-		TMTimerSetNano(tm_timer, min->timeout_abs_ns - TMTimerGetNano(tm_timer));
+		uint64_t now = TMTimerGetNano(tm_timer);
+		TRACE(__func__, ": now: ", now, " timeout: ", min->timeout_abs_ns);
+		TMTimerSetNano(tm_timer, min->timeout_abs_ns - now);
 	}
 
 	void _deactivate_timer(void *qtimer)
@@ -182,6 +186,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	void timeout()
 	{
 		uint64_t now = TMTimerGetNano(tm_timer);
+		TRACE(__func__, ": now: ", now);
 
 		for (Context *c = _context_list.first(); c; c = c->next()) {
 			if (c->pending && c->timeout_abs_ns <= now) {
@@ -222,7 +227,12 @@ struct Timer_queue : public Qemu::Timer_queue
 	 ** Qemu::Timer_queue interface **
 	 *********************************/
 
-	Qemu::int64_t get_ns() { return TMTimerGetNano(tm_timer); }
+	Qemu::int64_t get_ns()
+	{
+		uint64_t const now = TMTimerGetNano(tm_timer);
+		TRACE(__func__, ": now: ", now);
+		return now;
+	}
 
 	Genode::Mutex _timer_mutex { };
 
@@ -230,7 +240,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	{
 		Genode::Mutex::Guard guard(_timer_mutex);
 		if (verbose_timer)
-			Genode::log("qtimer: ", qtimer, " cb: ", cb, " data: ", data);
+			TRACE(__func__, ": qtimer: ", qtimer, " cb: ", cb, " data: ", data);
 
 		Context *c = _find_context(qtimer);
 		if (c != nullptr) {
@@ -245,7 +255,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	{
 		Genode::Mutex::Guard guard(_timer_mutex);
 		if (verbose_timer)
-			Genode::log("qtimer: ", qtimer);
+			TRACE(__func__, ": qtimer: ", qtimer);
 
 		Context *c = _find_context(qtimer);
 		if (c == nullptr) {
@@ -263,7 +273,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	{
 		Genode::Mutex::Guard guard(_timer_mutex);
 		if (verbose_timer)
-			Genode::log("qtimer: ", qtimer, " expire: ", expire_abs);
+			TRACE(__func__, ": qtimer: ", qtimer, " expire: ", expire_abs);
 
 		Context *c = _find_context(qtimer);
 		if (c == nullptr) {
@@ -281,7 +291,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	{
 		Genode::Mutex::Guard guard(_timer_mutex);
 		if (verbose_timer)
-			Genode::log("qtimer: ", qtimer);
+			TRACE(__func__, ": qtimer: ", qtimer);
 
 		_deactivate_timer(qtimer);
 	}
@@ -367,9 +377,9 @@ PDMBOTHCBDECL(int) xhciMmioWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
 		// 	Genode::log(Genode::Cstring(entry.data, entry.length - ending_lf));
 		// };
 		for (uint32_t i = 0; i < _max_tracer_id; i++) {
-			Genode::log("--- ", count, " - ", _tracer_id[i].value);
+			Genode::log("DUMPSTART ", _tracer_id[i].value, " ", count);
 			Tracer::dump_trace_buffer(_tracer_id[i]);
-			Genode::log("+++ ", count, " - ", _tracer_id[i].value);
+			Genode::log("DUMPEND ", _tracer_id[i].value, " ", count);
 		}
 	}
 	return 0;
