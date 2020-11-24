@@ -24,8 +24,8 @@
 using namespace Genode;
 
 static bool const verbose_devices  = false;
-static bool const verbose_host     = false;
-static bool const verbose_warnings = false;
+static bool const verbose_host     = true;
+static bool const verbose_warnings = true;
 Mutex _mutex;
 
 static void update_ep(USBDevice *);
@@ -69,6 +69,9 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 			unsigned remaining = _size - _offset;
 			int copy_size = min(usb_packet->iov.size, remaining);
 
+			TRACE(__func__, ": packet: ", usb_packet, " copy_size: ", copy_size,
+			      " remaining: ", remaining);
+
 			usb_packet_copy(usb_packet, _content + _offset, copy_size);
 
 			if (_packet.read_transfer()) {
@@ -108,6 +111,8 @@ struct Completion : Usb::Completion
 
 	void complete(Usb::Packet_descriptor &packet, char *content)
 	{
+		TRACE(__func__, ": packet: ", packet, " content: ", (void const*)content);
+
 		if (state != VALID) {
 			return;
 		}
@@ -128,11 +133,11 @@ struct Completion : Usb::Completion
 		if (actual_size < 0) actual_size = 0;
 
 		if (verbose_host)
-			log(__func__, ": packet: ", p, " packet.type: ", (int)packet.type, " "
+			TRACE(__func__, ": packet: ", p, " packet.type: ", (int)packet.type, " "
 			    "actual_size: ", Hex(actual_size));
 
 		if (!p) {
-			error(__func__, ": packet: ", packet, " completion: ", this,
+			TRACE(__func__, ": packet: ", packet, " completion: ", this,
 			      " actual_size: ", Hex(actual_size));
 			return;
 		}
@@ -292,6 +297,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		if (!_claim_interfaces())
 			throw Could_not_create_device();
 
+		TRACE(__func__, ": create_usbdevice: ", this);
 		qemu_dev = create_usbdevice(this);
 
 		if (!qemu_dev)
@@ -340,6 +346,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			char *content = usb_raw.source()->packet_content(packet);
 
 			if (packet.type != Packet_type::ISOC) {
+				TRACE(__func__, ": packet: ", packet);
 				c->complete(packet, content);
 				free_packet(packet);
 			} else {
@@ -364,11 +371,13 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	bool isoc_read(USBPacket *packet)
 	{
 		if (isoc_read_queue.empty()) {
+			TRACE(__func__, ": USBPacket: ", packet, " empty");
 			return false;
 		}
 
 		isoc_read_queue.head([&] (Isoc_packet &head) {
 			if (head.copy(packet)) {
+				TRACE(__func__, ": head: ", &head);
 				isoc_read_queue.remove(head);
 				free_packet(&head);
 			}
@@ -388,6 +397,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	void isoc_in_packet(USBPacket *usb_packet)
 	{
+		TRACE(__func__, ": USBPacket: ", usb_packet);
+
 		enum { NUMBER_OF_PACKETS = 2 };
 		isoc_read(usb_packet);
 
@@ -418,12 +429,14 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			submit(packet);
 		} catch (Packet_alloc_failed) {
 			if (verbose_warnings)
-				warning("xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
+				TRACE(__func__, ": xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
 		}
 	}
 
 	void isoc_in_flush(unsigned ep, bool all = false)
 	{
+		TRACE(__func__, ": ep: ", ep, " all: ", all);
+
 		/* flush finished and stored data */
 		isoc_read_queue.for_each([&] (Isoc_packet &packet) {
 			if (!all && (!packet.valid() || packet.packet().transfer.ep != ep)) {
@@ -440,6 +453,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	void isoc_out_packet(USBPacket *usb_packet)
 	{
+		TRACE(__func__, ": USBPacket: ", usb_packet);
+
 		enum { NUMBER_OF_PACKETS = 32 };
 
 		bool valid = isoc_write_packet->valid();
@@ -465,7 +480,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 		} catch (Packet_alloc_failed) {
 			if (verbose_warnings)
-				warning("xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
+				TRACE(__func__, ": xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
 			isoc_write_packet.construct(Usb::Packet_descriptor(), nullptr);
 			return;
 		}
@@ -519,6 +534,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 		if (!completion) {
 			packet.completion = nullptr;
+			TRACE(__func__, ": packet: ", packet, " w/o completion");
 			return packet;
 		}
 
@@ -527,19 +543,21 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			usb_raw.source()->release_packet(packet);
 			throw Packet_alloc_failed();
 		}
-		TRACE(__func__, ": packet: ", packet, " completion: ", packet.completion);
 
+		TRACE(__func__, ": packet: ", packet, " completion: ", packet.completion);
 		return packet;
 	}
 
 	void free_packet(Usb::Packet_descriptor &packet)
 	{
+		TRACE(__func__, ": packet: ", packet);
 		free_completion(packet);
 		usb_raw.source()->release_packet(packet);
 	}
 
 	void free_packet(Isoc_packet *packet)
 	{
+		TRACE(__func__, ": iso packet: ", packet);
 		free_packet(packet->packet());
 		Genode::destroy(_alloc, packet);
 	}
@@ -597,6 +615,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		_release_interfaces();
 
+		TRACE(__func__, ": USBPacket: ", p);
 		try {
 			Usb::Packet_descriptor packet = alloc_packet(0);
 			packet.type   =  Usb::Packet_descriptor::CONFIG;
@@ -609,7 +628,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			p->status = USB_RET_ASYNC;
 		} catch (...) {
 			if (verbose_warnings)
-				warning(__func__, " packet allocation failed");
+				TRACE(__func__, " packet allocation failed");
 			p->status = USB_RET_NAK;
 		}
 
@@ -617,6 +636,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	void set_interface(int index, uint8_t value, USBPacket *p)
 	{
+		TRACE(__func__, ": USBPacket: ", p);
 		try {
 			Usb::Packet_descriptor packet = alloc_packet(0);
 			packet.type                  = Usb::Packet_descriptor::ALT_SETTING;
@@ -630,7 +650,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			p->status = USB_RET_ASYNC;
 		} catch (...) {
 			if (verbose_warnings)
-				warning(__func__, " packet allocation failed");
+				TRACE(__func__, " packet allocation failed");
 			p->status = USB_RET_NAK;
 		}
 	}
@@ -714,7 +734,7 @@ static void usb_host_realize(USBDevice *udev, Error **errp)
 	catch (Usb::Session::Device_not_found) { return; }
 
 	if (verbose_host)
-		log("set udev->speed to %d", Usb_host_device::to_qemu_speed(ddescr.speed));
+		TRACE(__func__, ": set udev->speed to ", Usb_host_device::to_qemu_speed(ddescr.speed));
 
 	udev->speed     = Usb_host_device::to_qemu_speed(ddescr.speed);
 	udev->speedmask = (1 << udev->speed);
@@ -785,7 +805,7 @@ static void usb_host_handle_data(USBDevice *udev, USBPacket *p)
 		dev->submit(packet);
 	} catch (Packet_alloc_failed) {
 		if (verbose_warnings)
-			warning("xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
+			TRACE(__func__, ": xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
 		p->status = USB_RET_NAK;
 	}
 }
@@ -799,7 +819,7 @@ static void usb_host_handle_control(USBDevice *udev, USBPacket *p,
 	Usb_host_device *dev = (Usb_host_device *)d->data;
 
 	if (verbose_host)
-		log("r: ", Hex(request), " v: ", Hex(value), " "
+		TRACE(__func__, ": r: ", Hex(request), " v: ", Hex(value), " "
 		    "i: ", Hex(index), " length: ", length);
 
 	switch (request) {
@@ -825,7 +845,7 @@ static void usb_host_handle_control(USBDevice *udev, USBPacket *p,
 		packet = dev->alloc_packet(length);
 	} catch (...) {
 		if (verbose_warnings)
-			warning("Packet allocation failed");
+			TRACE(__func__, ": Packet allocation failed");
 		return;
 	}
 
@@ -982,11 +1002,13 @@ struct Usb_devices : List<Usb_host_device>
 				return;
 
 			try {
+				TRACE(__func__, ": Try to attach USB device ", dev_info);
 				Usb_host_device *new_device = new (_alloc)
 					Usb_host_device(_ep, _alloc, _env, label.string(),
 					                dev_info);
 
 				insert(new_device);
+				TRACE(__func__, ": Trying to attach USB device ", dev_info, " succeded");
 
 				log("Attach USB device ", dev_info);
 			} catch (...) {

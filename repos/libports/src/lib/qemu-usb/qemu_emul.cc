@@ -85,6 +85,7 @@ void Qemu::usb_timer_callback(void (*cb)(void*), void *data)
 {
 	Genode::Mutex::Guard guard(_mutex);
 
+	TRACE(__func__, ": cb: ", cb, " data: ", data);
 	cb(data);
 }
 
@@ -354,6 +355,7 @@ USBHostDevice *create_usbdevice(void *data)
 	 */
 	Error *e = nullptr;
 	DeviceClass *usb_device_class = &Object_pool::p()->obj[Object_pool::USB_DEVICE]._device_class;
+	TRACE(__func__, ": realize");
 	usb_device_class->realize(dev_state, &e);
 	if (e) {
 		error_free(e);
@@ -365,6 +367,7 @@ USBHostDevice *create_usbdevice(void *data)
 		return nullptr;
 	}
 
+	TRACE(__func__, ": realize done");
 	return &obj->_usb_host_device;
 }
 
