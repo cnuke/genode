@@ -235,6 +235,8 @@ set config {
 	<!-- <device vendor_id="0x04f2" product_id="0xb564"/>-->
 	<!-- beyer headset -->
 	<device vendor_id="0x0d8c" product_id="0x000c"/>
+	<!-- play 2 -->
+	<device vendor_id="0x041e" product_id="0x323d"/>
 </config>
 					</inline>
 				</import>
