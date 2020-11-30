@@ -1,0 +1,1645 @@
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/archive/tar/stat_actime1.go inno/libgo/go/archive/tar/stat_actime1.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/archive/tar/stat_actime1.go	2018-01-17 21:33:50.000000000 +0300
++++ inno/libgo/go/archive/tar/stat_actime1.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix linux dragonfly openbsd solaris
++// +build aix linux dragonfly openbsd solaris inno
++// FIXME
+ 
+ package tar
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/archive/tar/stat_actime2.go inno/libgo/go/archive/tar/stat_actime2.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/archive/tar/stat_actime2.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/archive/tar/stat_actime2.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin freebsd netbsd
++// +build darwin freebsd
++// FIXME 
+ 
+ package tar
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/cmd/go/internal/base/signal_unix.go inno/libgo/go/cmd/go/internal/base/signal_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/cmd/go/internal/base/signal_unix.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/cmd/go/internal/base/signal_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package base
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/cmd/go/internal/bug/bug.go inno/libgo/go/cmd/go/internal/bug/bug.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/cmd/go/internal/bug/bug.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/cmd/go/internal/bug/bug.go	2020-06-23 01:18:02.000000000 +0300
+@@ -96,7 +96,7 @@
+ 		printCmdOut(w, "uname -sr: ", "uname", "-sr")
+ 		printCmdOut(w, "", "lsb_release", "-a")
+ 		printGlibcVersion(w)
+-	case "openbsd", "netbsd", "freebsd", "dragonfly":
++	case "openbsd", "netbsd", "freebsd", "dragonfly", "inno":
+ 		printCmdOut(w, "uname -v: ", "uname", "-v")
+ 	case "solaris":
+ 		out, err := ioutil.ReadFile("/etc/release")
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/crypto/x509/root_bsd.go inno/libgo/go/crypto/x509/root_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/crypto/x509/root_bsd.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/crypto/x509/root_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build dragonfly freebsd netbsd openbsd
++// +build dragonfly freebsd netbsd openbsd inno
+ 
+ package x509
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/crypto/x509/root_unix.go inno/libgo/go/crypto/x509/root_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/crypto/x509/root_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/crypto/x509/root_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package x509
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/address.go inno/libgo/go/golang_org/x/net/route/address.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/address.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/address.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/binary.go inno/libgo/go/golang_org/x/net/route/binary.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/binary.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/binary.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface_announce.go inno/libgo/go/golang_org/x/net/route/interface_announce.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface_announce.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/interface_announce.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build dragonfly freebsd netbsd
++// +build dragonfly freebsd netbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface_classic.go inno/libgo/go/golang_org/x/net/route/interface_classic.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface_classic.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/interface_classic.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly netbsd
++// +build darwin dragonfly netbsd inno
+ 
+ package route
+ 
+@@ -54,6 +54,8 @@
+ 	}
+ 	if runtime.GOOS == "netbsd" {
+ 		m.Index = int(nativeEndian.Uint16(b[16:18]))
++	} else if runtime.GOOS == "inno" {
++		m.Index = int(nativeEndian.Uint16(b[16:18]))
+ 	} else {
+ 		m.Index = int(nativeEndian.Uint16(b[12:14]))
+ 	}
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface.go inno/libgo/go/golang_org/x/net/route/interface.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/interface.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/interface.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/message.go inno/libgo/go/golang_org/x/net/route/message.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/message.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/message.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/route_classic.go inno/libgo/go/golang_org/x/net/route/route_classic.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/route_classic.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/route_classic.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd
++// +build darwin dragonfly freebsd netbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/route.go inno/libgo/go/golang_org/x/net/route/route.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/route.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/route.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ // Package route provides basic functions for the manipulation of
+ // packet routing facilities on BSD variants.
+@@ -15,7 +15,8 @@
+ import (
+ 	"errors"
+ 	"os"
+-	"syscall"
++//	"syscall"
++// FIXME
+ )
+ 
+ var (
+@@ -92,8 +93,9 @@
+ type RIBType int
+ 
+ const (
+-	RIBTypeRoute     RIBType = syscall.NET_RT_DUMP
+-	RIBTypeInterface RIBType = syscall.NET_RT_IFLIST
++	// WRONG! FIXME
++	RIBTypeRoute     RIBType = 1 //syscall.NET_RT_DUMP FIXME
++	RIBTypeInterface RIBType = 2 //syscall.NET_RT_IFLIST
+ )
+ 
+ // FetchRIB fetches a routing information base from the operating
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/syscall.go inno/libgo/go/golang_org/x/net/route/syscall.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/syscall.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/syscall.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,27 +2,29 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+-import (
+-	"syscall"
+-	"unsafe"
+-)
++// FIXME 
++//import (
++//	"syscall"
++//	"unsafe"
++//)
+ 
+ var zero uintptr
+ 
+ func sysctl(mib []int32, old *byte, oldlen *uintptr, new *byte, newlen uintptr) error {
+-	var p unsafe.Pointer
+-	if len(mib) > 0 {
+-		p = unsafe.Pointer(&mib[0])
+-	} else {
+-		p = unsafe.Pointer(&zero)
+-	}
+-	_, _, errno := syscall.Syscall6(syscall.SYS___SYSCTL, uintptr(p), uintptr(len(mib)), uintptr(unsafe.Pointer(old)), uintptr(unsafe.Pointer(oldlen)), uintptr(unsafe.Pointer(new)), uintptr(newlen))
+-	if errno != 0 {
+-		return error(errno)
+-	}
++	// FIXME
++	//var p unsafe.Pointer
++	//if len(mib) > 0 {
++	//	p = unsafe.Pointer(&mib[0])
++	//} else {
++	//	p = unsafe.Pointer(&zero)
++	//}
++	//_, _, errno := syscall.Syscall6(syscall.SYS___SYSCTL, uintptr(p), uintptr(len(mib)), uintptr(unsafe.Pointer(old)), uintptr(unsafe.Pointer(oldlen)), uintptr(unsafe.Pointer(new)), uintptr(newlen))
++	//if errno != 0 {
++	//	return error(errno)
++	//}
+ 	return nil
+ }
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/sys.go inno/libgo/go/golang_org/x/net/route/sys.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/golang_org/x/net/route/sys.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/golang_org/x/net/route/sys.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package route
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_poll_runtime.go inno/libgo/go/internal/poll/fd_poll_runtime.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_poll_runtime.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/internal/poll/fd_poll_runtime.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd windows solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd windows solaris inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_posix.go inno/libgo/go/internal/poll/fd_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_posix.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/internal/poll/fd_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_unix.go inno/libgo/go/internal/poll/fd_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/fd_unix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/internal/poll/fd_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package poll
+ 
+@@ -401,7 +401,8 @@
+ 	}
+ 	defer fd.decref()
+ 	for {
+-		n, err := syscall.ReadDirent(fd.Sysfd, buf)
++		// FIXME, WRONG
++		n, err := syscall.Seek(fd.Sysfd, 1,1)
+ 		if err != nil {
+ 			n = 0
+ 			if err == syscall.EAGAIN && fd.pd.pollable() {
+@@ -411,7 +412,7 @@
+ 			}
+ 		}
+ 		// Do not call eofError; caller does not expect to see io.EOF.
+-		return n, err
++		return int(n), err
+ 	}
+ }
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/hook_unix.go inno/libgo/go/internal/poll/hook_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/hook_unix.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/internal/poll/hook_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockopt.go inno/libgo/go/internal/poll/sockopt.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockopt.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/internal/poll/sockopt.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockoptip.go inno/libgo/go/internal/poll/sockoptip.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockoptip.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/internal/poll/sockoptip.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockopt_unix.go inno/libgo/go/internal/poll/sockopt_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sockopt_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/internal/poll/sockopt_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sys_cloexec.go inno/libgo/go/internal/poll/sys_cloexec.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/sys_cloexec.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/internal/poll/sys_cloexec.go	2020-06-23 01:18:02.000000000 +0300
+@@ -5,7 +5,7 @@
+ // This file implements sysSocket and accept for platforms that do not
+ // provide a fast path for setting SetNonblock and CloseOnExec.
+ 
+-// +build aix darwin nacl netbsd openbsd solaris
++// +build aix darwin nacl netbsd openbsd solaris inno
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/writev.go inno/libgo/go/internal/poll/writev.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/internal/poll/writev.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/internal/poll/writev.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd linux netbsd openbsd
++// +build darwin dragonfly freebsd linux openbsd
++// FIXME
+ 
+ package poll
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/addrselect.go inno/libgo/go/net/addrselect.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/addrselect.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/addrselect.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ // Minimal RFC 6724 address selection.
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_resnew.go inno/libgo/go/net/cgo_resnew.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_resnew.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/cgo_resnew.go	2020-06-23 01:18:02.000000000 +0300
+@@ -3,7 +3,7 @@
+ // license that can be found in the LICENSE file.
+ 
+ // +build cgo,!netgo
+-// +build aix darwin linux,!android netbsd solaris
++// +build aix darwin linux,!android netbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_sockold.go inno/libgo/go/net/cgo_sockold.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_sockold.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/cgo_sockold.go	2020-06-23 01:18:02.000000000 +0300
+@@ -3,7 +3,7 @@
+ // license that can be found in the LICENSE file.
+ 
+ // +build cgo,!netgo
+-// +build aix darwin dragonfly freebsd netbsd openbsd
++// +build aix darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_unix.go inno/libgo/go/net/cgo_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/cgo_unix.go	2018-02-01 18:49:53.000000000 +0300
++++ inno/libgo/go/net/cgo_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -3,7 +3,7 @@
+ // license that can be found in the LICENSE file.
+ 
+ // +build cgo,!netgo
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/conf.go inno/libgo/go/net/conf.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/conf.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/conf.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/dnsclient_unix.go inno/libgo/go/net/dnsclient_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/dnsclient_unix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/net/dnsclient_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ // DNS client: see RFC 1035.
+ // Has to be linked into package net for Dial.
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/dnsconfig_unix.go inno/libgo/go/net/dnsconfig_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/dnsconfig_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/dnsconfig_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ // Read system DNS config from /etc/resolv.conf
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/error_posix.go inno/libgo/go/net/error_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/error_posix.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/net/error_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/fd_unix.go inno/libgo/go/net/fd_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/fd_unix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/net/fd_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/file_unix.go inno/libgo/go/net/file_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/file_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/file_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/hook_unix.go inno/libgo/go/net/hook_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/hook_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/hook_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_bsd.go inno/libgo/go/net/interface_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_bsd.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/net/interface_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd openbsd
++// FIXME
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_bsdvar.go inno/libgo/go/net/interface_bsdvar.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_bsdvar.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/net/interface_bsdvar.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build dragonfly netbsd openbsd
++// +build dragonfly openbsd
++// FIXME
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_stub.go inno/libgo/go/net/interface_stub.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/interface_stub.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/interface_stub.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix nacl
++// +build aix nacl inno
++//FIXME
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/iprawsock_posix.go inno/libgo/go/net/iprawsock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/iprawsock_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/iprawsock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/ipsock_posix.go inno/libgo/go/net/ipsock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/ipsock_posix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/net/ipsock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/lookup_unix.go inno/libgo/go/net/lookup_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/lookup_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/lookup_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/nss.go inno/libgo/go/net/nss.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/nss.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/nss.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/port_unix.go inno/libgo/go/net/port_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/port_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/port_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris nacl
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris nacl inno
+ 
+ // Read system port mappings from /etc/services
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sendfile_stub.go inno/libgo/go/net/sendfile_stub.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sendfile_stub.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/sendfile_stub.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin nacl netbsd openbsd
++// +build aix darwin nacl netbsd openbsd inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_bsd.go inno/libgo/go/net/sock_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_bsd.go	2018-02-08 18:30:22.000000000 +0300
++++ inno/libgo/go/net/sock_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd openbsd
++// FIXME
+ 
+ package net
+ 
+@@ -21,7 +22,7 @@
+ 		n, err = syscall.SysctlUint32("kern.ipc.somaxconn")
+ 	case "freebsd":
+ 		n, err = syscall.SysctlUint32("kern.ipc.soacceptqueue")
+-	case "netbsd":
++	case "netbsd", "inno":
+ 		// NOTE: NetBSD has no somaxconn-like kernel state so far
+ 	case "openbsd":
+ 		n, err = syscall.SysctlUint32("kern.somaxconn")
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockopt_bsd.go inno/libgo/go/net/sockopt_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockopt_bsd.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/sockopt_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockoptip_bsdvar.go inno/libgo/go/net/sockoptip_bsdvar.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockoptip_bsdvar.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/net/sockoptip_bsdvar.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd solaris
++// +build darwin dragonfly freebsd netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockoptip_posix.go inno/libgo/go/net/sockoptip_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockoptip_posix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/net/sockoptip_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockopt_posix.go inno/libgo/go/net/sockopt_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sockopt_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/sockopt_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_posix.go inno/libgo/go/net/sock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_posix.go	2017-09-27 17:22:36.000000000 +0300
++++ inno/libgo/go/net/sock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_stub.go inno/libgo/go/net/sock_stub.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sock_stub.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/sock_stub.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix nacl solaris
++// +build aix nacl solaris inno
++// FIXME
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sys_cloexec.go inno/libgo/go/net/sys_cloexec.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/sys_cloexec.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/sys_cloexec.go	2020-06-23 01:18:02.000000000 +0300
+@@ -5,7 +5,7 @@
+ // This file implements sysSocket and accept for platforms that do not
+ // provide a fast path for setting SetNonblock and CloseOnExec.
+ 
+-// +build aix darwin nacl netbsd openbsd solaris
++// +build aix darwin nacl netbsd openbsd solaris inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsockopt_posix.go inno/libgo/go/net/tcpsockopt_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsockopt_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/tcpsockopt_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsockopt_unix.go inno/libgo/go/net/tcpsockopt_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsockopt_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/tcpsockopt_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix freebsd linux netbsd
++// +build aix freebsd linux netbsd inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsock_posix.go inno/libgo/go/net/tcpsock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/tcpsock_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/tcpsock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/udpsock_posix.go inno/libgo/go/net/udpsock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/udpsock_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/udpsock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/unixsock_posix.go inno/libgo/go/net/unixsock_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/unixsock_posix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/net/unixsock_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package net
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/writev_unix.go inno/libgo/go/net/writev_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/net/writev_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/net/writev_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd linux netbsd openbsd
++// +build darwin dragonfly freebsd linux netbsd openbsd inno
+ 
+ package net
+ 
+@@ -23,7 +23,9 @@
+ }
+ 
+ func (fd *netFD) writeBuffers(v *Buffers) (n int64, err error) {
+-	n, err = fd.pfd.Writev((*[][]byte)(v))
++	// FIXME
++	//n, err = fd.pfd.Writev((*[][]byte)(v))
++	err = nil
+ 	runtime.KeepAlive(fd)
+ 	return n, wrapSyscallError("writev", err)
+ }
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/dir_unix.go inno/libgo/go/os/dir_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/dir_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/dir_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/error_posix.go inno/libgo/go/os/error_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/error_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/os/error_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/error_unix.go inno/libgo/go/os/error_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/error_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/error_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec/lp_unix.go inno/libgo/go/os/exec/lp_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec/lp_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/exec/lp_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package exec
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec_posix.go inno/libgo/go/os/exec_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec_posix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/os/exec_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec_unix.go inno/libgo/go/os/exec_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/exec_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/exec_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/executable_procfs.go inno/libgo/go/os/executable_procfs.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/executable_procfs.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/os/executable_procfs.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build linux netbsd dragonfly nacl
++// +build linux netbsd dragonfly nacl inno
+ 
+ package os
+ 
+@@ -21,7 +21,7 @@
+ 		return "", errors.New("Executable not implemented for " + runtime.GOOS)
+ 	case "linux", "android":
+ 		procfn = "/proc/self/exe"
+-	case "netbsd":
++	case "netbsd", "inno":
+ 		procfn = "/proc/curproc/exe"
+ 	case "dragonfly":
+ 		procfn = "/proc/curproc/file"
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/file_posix.go inno/libgo/go/os/file_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/file_posix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/os/file_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/file_unix.go inno/libgo/go/os/file_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/file_unix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/os/file_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/path_unix.go inno/libgo/go/os/path_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/path_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/path_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/pipe_bsd.go inno/libgo/go/os/pipe_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/pipe_bsd.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/os/pipe_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly nacl netbsd openbsd solaris
++// +build aix darwin dragonfly nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/signal/internal/pty/pty.go inno/libgo/go/os/signal/internal/pty/pty.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/signal/internal/pty/pty.go	2018-02-08 18:30:22.000000000 +0300
++++ inno/libgo/go/os/signal/internal/pty/pty.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux,!android netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux,!android netbsd openbsd solaris inno
+ 
+ // Package pty is a simple pseudo-terminal package for Unix systems,
+ // implemented by calling C functions via cgo.
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/signal/signal_unix.go inno/libgo/go/os/signal/signal_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/signal/signal_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/signal/signal_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package signal
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_atimespec.go inno/libgo/go/os/stat_atimespec.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_atimespec.go	2016-08-06 03:36:33.000000000 +0300
++++ inno/libgo/go/os/stat_atimespec.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin freebsd netbsd
++// +build darwin freebsd 
++// FIXME!
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_atim.go inno/libgo/go/os/stat_atim.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_atim.go	2018-01-10 22:51:24.000000000 +0300
++++ inno/libgo/go/os/stat_atim.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build linux openbsd solaristag
++// +build linux openbsd solaristag inno
++// FIXME!
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_unix.go inno/libgo/go/os/stat_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/stat_unix.go	2018-01-17 17:20:29.000000000 +0300
++++ inno/libgo/go/os/stat_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sticky_bsd.go inno/libgo/go/os/sticky_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sticky_bsd.go	2015-10-31 03:59:47.000000000 +0300
++++ inno/libgo/go/os/sticky_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd solaris
++// +build darwin dragonfly freebsd netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sticky_notbsd.go inno/libgo/go/os/sticky_notbsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sticky_notbsd.go	2015-10-31 03:59:47.000000000 +0300
++++ inno/libgo/go/os/sticky_notbsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -6,6 +6,7 @@
+ // +build !dragonfly
+ // +build !freebsd
+ // +build !netbsd
++// +build !inno
+ // +build !openbsd
+ // +build !solaris
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_bsd.go inno/libgo/go/os/sys_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_bsd.go	2014-07-19 12:53:52.000000000 +0400
++++ inno/libgo/go/os/sys_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd nacl netbsd openbsd
++// +build darwin dragonfly freebsd nacl openbsd
++// FIXME 
+ 
+ // os code shared between *BSD systems including OS X (Darwin)
+ // and FreeBSD.
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_uname.go inno/libgo/go/os/sys_uname.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_uname.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/sys_uname.go	2020-06-23 01:18:02.000000000 +0300
+@@ -4,7 +4,8 @@
+ 
+ // For systems which only store the hostname in uname (Solaris).
+ 
+-// +build aix solaris irix rtems
++// +build aix solaris irix rtems inno
++// FIXME
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_unix.go inno/libgo/go/os/sys_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/sys_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/os/sys_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix dragonfly linux netbsd openbsd solaris
++// +build aix dragonfly linux netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/cgo_lookup_unix.go inno/libgo/go/os/user/cgo_lookup_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/cgo_lookup_unix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/os/user/cgo_lookup_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd !android,linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd !android,linux netbsd openbsd solaris inno
+ // +build cgo
+ 
+ package user
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/decls_unix.go inno/libgo/go/os/user/decls_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/decls_unix.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/os/user/decls_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd linux netbsd openbsd
++// +build darwin dragonfly freebsd linux netbsd openbsd inno
+ // +build cgo
+ 
+ package user
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/listgroups_unix.go inno/libgo/go/os/user/listgroups_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/listgroups_unix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/os/user/listgroups_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build dragonfly darwin freebsd !android,linux netbsd openbsd
++// +build dragonfly darwin freebsd !android,linux netbsd openbsd inno
+ 
+ package user
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/lookup_unix.go inno/libgo/go/os/user/lookup_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/user/lookup_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/os/user/lookup_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd !android,linux nacl netbsd openbsd solaris
++// +build darwin dragonfly freebsd !android,linux nacl netbsd openbsd solaris inno
+ // +build !cgo
+ 
+ package user
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/wait_unimp.go inno/libgo/go/os/wait_unimp.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/os/wait_unimp.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/os/wait_unimp.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly nacl netbsd openbsd solaris
++// +build aix darwin dragonfly nacl netbsd openbsd solaris inno
+ 
+ package os
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/path/filepath/path_unix.go inno/libgo/go/path/filepath/path_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/path/filepath/path_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/path/filepath/path_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package filepath
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/env_posix.go inno/libgo/go/runtime/env_posix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/env_posix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/runtime/env_posix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package runtime
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/lock_sema.go inno/libgo/go/runtime/lock_sema.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/lock_sema.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/runtime/lock_sema.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin nacl netbsd openbsd plan9 solaris windows
++// +build aix darwin nacl netbsd openbsd plan9 solaris windows inno
+ 
+ package runtime
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/netpoll.go inno/libgo/go/runtime/netpoll.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/netpoll.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/runtime/netpoll.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris windows inno
+ 
+ package runtime
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/netpoll_kqueue.go inno/libgo/go/runtime/netpoll_kqueue.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/netpoll_kqueue.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/runtime/netpoll_kqueue.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd netbsd openbsd inno
+ 
+ package runtime
+ 
+@@ -11,11 +11,15 @@
+ import "unsafe"
+ 
+ //extern kqueue
+-func kqueue() int32
++func kqueue() int32 {
++        return 0
++}
+ 
+ //go:noescape
+ //extern kevent
+-func kevent(kq int32, ch *keventt, nch uintptr, ev *keventt, nev uintptr, ts *timespec) int32
++func kevent(kq int32, ch *keventt, nch uintptr, ev *keventt, nev uintptr, ts *timespec) int32 {
++        return 0
++}
+ 
+ //extern __go_fcntl_uintptr
+ func fcntlUintptr(fd, cmd, arg uintptr) (uintptr, uintptr)
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/os_gccgo.go inno/libgo/go/runtime/os_gccgo.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/os_gccgo.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/runtime/os_gccgo.go	2020-06-23 01:18:02.000000000 +0300
+@@ -45,8 +45,10 @@
+ 		extendRandom(r, n)
+ 		return
+ 	}
+-	fd := open(&urandom_dev[0], 0 /* O_RDONLY */, 0)
+-	n := read(fd, unsafe.Pointer(&r[0]), int32(len(r)))
+-	closefd(fd)
++	//fd := open(&urandom_dev[0], 0 /* O_RDONLY */, 0)
++	//n := read(fd, unsafe.Pointer(&r[0]), int32(len(r)))
++	//closefd(fd)
++	// FIXME there is no /dev/urandom in genode
++	n := uintptr(unsafe.Pointer(&r[0]))
+ 	extendRandom(r, int(n))
+ }
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_gccgo.go inno/libgo/go/runtime/signal_gccgo.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_gccgo.go	2018-01-10 08:15:52.000000000 +0300
++++ inno/libgo/go/runtime/signal_gccgo.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package runtime
+ 
+@@ -109,6 +109,7 @@
+ func getsig(i uint32) uintptr {
+ 	var sa _sigaction
+ 	if sigaction(i, nil, &sa) < 0 {
++		return _SIG_DFL
+ 		// On GNU/Linux glibc rejects attempts to call
+ 		// sigaction with signal 32 (SIGCANCEL) or 33 (SIGSETXID).
+ 		if GOOS == "linux" && (i == 32 || i == 33) {
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_sighandler.go inno/libgo/go/runtime/signal_sighandler.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_sighandler.go	2018-01-28 02:44:29.000000000 +0300
++++ inno/libgo/go/runtime/signal_sighandler.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package runtime
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_unix.go inno/libgo/go/runtime/signal_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/signal_unix.go	2018-02-08 01:04:55.000000000 +0300
++++ inno/libgo/go/runtime/signal_unix.go	2020-07-24 01:39:27.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package runtime
+ 
+@@ -69,8 +69,8 @@
+ 	// _NSIG is the number of signals on this operating system.
+ 	// sigtable should describe what to do for all the possible signals.
+ 	if len(sigtable) != _NSIG {
+-		print("runtime: len(sigtable)=", len(sigtable), " _NSIG=", _NSIG, "\n")
+-		throw("bad sigtable len")
++		// print("runtime: len(sigtable)=", len(sigtable), " _NSIG=", _NSIG, "\n")
++		// throw("bad sigtable len")
+ 	}
+ }
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/write_err.go inno/libgo/go/runtime/write_err.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/runtime/write_err.go	2016-10-11 03:08:35.000000000 +0300
++++ inno/libgo/go/runtime/write_err.go	2020-06-23 01:18:02.000000000 +0300
+@@ -8,6 +8,11 @@
+ 
+ import "unsafe"
+ 
++//go:noescape
++//extern __go_genode_write
++func go_genode_write(fd uintptr, p unsafe.Pointer, n int32) int32
++
+ func writeErr(b []byte) {
+-	write(2, unsafe.Pointer(&b[0]), int32(len(b)))
++	go_genode_write(2, unsafe.Pointer(&b[0]), int32(len(b)))
++	//write(2, unsafe.Pointer(&b[0]), int32(len(b)))
+ }
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/bpf_bsd.go inno/libgo/go/syscall/bpf_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/bpf_bsd.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/syscall/bpf_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// FIXME
++// +build darwin dragonfly freebsd openbsd
+ 
+ // Berkeley packet filter for BSD variants
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/dirent.go inno/libgo/go/syscall/dirent.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/dirent.go	2017-09-20 20:49:11.000000000 +0300
++++ inno/libgo/go/syscall/dirent.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package syscall
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/env_unix.go inno/libgo/go/syscall/env_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/env_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/env_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ // Unix environment variables.
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/exec_bsd.go inno/libgo/go/syscall/exec_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/exec_bsd.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/syscall/exec_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd netbsd openbsd solaris inno
+ 
+ package syscall
+ 
+@@ -81,12 +81,13 @@
+ 	runtime_AfterForkInChild()
+ 
+ 	// Enable tracing if requested.
+-	if sys.Ptrace {
+-		err1 = raw_ptrace(_PTRACE_TRACEME, 0, nil, nil)
+-		if err1 != 0 {
+-			goto childerror
+-		}
+-	}
++	// FIXME: no ptrace in genode
++	//if sys.Ptrace {
++	//	err1 = raw_ptrace(_PTRACE_TRACEME, 0, nil, nil)
++	//	if err1 != 0 {
++	//		goto childerror
++	//	}
++	//}
+ 
+ 	// Session ID
+ 	if sys.Setsid {
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/exec_unix.go inno/libgo/go/syscall/exec_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/exec_unix.go	2017-09-14 20:11:35.000000000 +0300
++++ inno/libgo/go/syscall/exec_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ // Fork, exec, wait, etc.
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/forkpipe_bsd.go inno/libgo/go/syscall/forkpipe_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/forkpipe_bsd.go	2017-09-20 17:59:39.000000000 +0300
++++ inno/libgo/go/syscall/forkpipe_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly netbsd openbsd solaris
++// +build aix darwin dragonfly netbsd openbsd solaris inno
+ 
+ package syscall
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/libcall_bsd.go inno/libgo/go/syscall/libcall_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/libcall_bsd.go	2016-08-06 03:36:33.000000000 +0300
++++ inno/libgo/go/syscall/libcall_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd solaris
++// +build darwin dragonfly freebsd netbsd openbsd solaris inno
+ 
+ // BSD library calls.
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/libcall_posix_utimesnano.go inno/libgo/go/syscall/libcall_posix_utimesnano.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/libcall_posix_utimesnano.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/libcall_posix_utimesnano.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd openbsd netbsd solaris
++// +build aix darwin dragonfly freebsd openbsd netbsd solaris inno
+ 
+ // General POSIX version of UtimesNano.
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/route_bsd.go inno/libgo/go/syscall/route_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/route_bsd.go	2016-07-22 21:15:38.000000000 +0300
++++ inno/libgo/go/syscall/route_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,8 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd netbsd openbsd
++// +build darwin dragonfly freebsd openbsd
++// FIXME
+ 
+ package syscall
+ 
+@@ -27,6 +28,10 @@
+ 		// NetBSD 6 and beyond kernels require 64-bit aligned
+ 		// access to routing facilities.
+ 		salign = 8
++	} else if inno32Bit {
++		// NetBSD 6 and beyond kernels require 64-bit aligned
++		// access to routing facilities.
++		salign = 8
+ 	} else if runtime.GOOS == "freebsd" {
+ 		// In the case of kern.supported_archs="amd64 i386",
+ 		// we need to know the underlying kernel's
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/signame.c inno/libgo/go/syscall/signame.c
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/signame.c	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/signame.c	2020-06-23 01:18:02.000000000 +0300
+@@ -8,7 +8,8 @@
+ 
+ #include "runtime.h"
+ #include "arch.h"
+-#include "malloc.h"
++// FIXME
++//#include "malloc.h"
+ 
+ String Signame (intgo sig) __asm__ (GOSYM_PREFIX "syscall.Signame");
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/sockcmsg_unix.go inno/libgo/go/syscall/sockcmsg_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/sockcmsg_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/sockcmsg_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ // Socket control messages
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/socket_bsd.go inno/libgo/go/syscall/socket_bsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/socket_bsd.go	2017-09-20 20:40:11.000000000 +0300
++++ inno/libgo/go/syscall/socket_bsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -4,7 +4,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build darwin dragonfly freebsd openbsd netbsd
++// +build darwin dragonfly freebsd openbsd netbsd inno
+ 
+ package syscall
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/syscall_netbsd.go inno/libgo/go/syscall/syscall_netbsd.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/syscall_netbsd.go	2017-01-14 03:05:42.000000000 +0300
++++ inno/libgo/go/syscall/syscall_netbsd.go	2020-06-23 01:18:02.000000000 +0300
+@@ -7,7 +7,7 @@
+ import "unsafe"
+ 
+ func direntIno(buf []byte) (uint64, bool) {
+-	return readInt(buf, unsafe.Offsetof(Dirent{}.Fileno), unsafe.Sizeof(Dirent{}.Fileno))
++	return readInt(buf, unsafe.Offsetof(Dirent{}.d_fileno), unsafe.Sizeof(Dirent{}.d_fileno))
+ }
+ 
+ func direntReclen(buf []byte) (uint64, bool) {
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/syscall_unix.go inno/libgo/go/syscall/syscall_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/syscall_unix.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/syscall_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux netbsd openbsd solaris inno
+ 
+ package syscall
+ 
+@@ -29,6 +29,7 @@
+ 	darwin64Bit    = runtime.GOOS == "darwin" && sizeofPtr == 8
+ 	dragonfly64Bit = runtime.GOOS == "dragonfly" && sizeofPtr == 8
+ 	netbsd32Bit    = runtime.GOOS == "netbsd" && sizeofPtr == 4
++	inno32Bit    = runtime.GOOS == "inno" && sizeofPtr == 4
+ 	solaris64Bit   = runtime.GOOS == "solaris" && sizeofPtr == 8
+ )
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/timestruct.go inno/libgo/go/syscall/timestruct.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/syscall/timestruct.go	2017-05-10 20:26:09.000000000 +0300
++++ inno/libgo/go/syscall/timestruct.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package syscall
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/time/sys_unix.go inno/libgo/go/time/sys_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/time/sys_unix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/time/sys_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris
++// +build aix darwin dragonfly freebsd linux nacl netbsd openbsd solaris inno
+ 
+ package time
+ 
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/time/zoneinfo_unix.go inno/libgo/go/time/zoneinfo_unix.go
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/go/time/zoneinfo_unix.go	2018-01-09 04:23:08.000000000 +0300
++++ inno/libgo/go/time/zoneinfo_unix.go	2020-06-23 01:18:02.000000000 +0300
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
+-// +build aix darwin,386 darwin,amd64 dragonfly freebsd linux,!android nacl netbsd openbsd solaris
++// +build aix darwin,386 darwin,amd64 dragonfly freebsd linux,!android nacl netbsd openbsd solaris inno
+ 
+ // Parse "zoneinfo" time zone file.
+ // This is a fairly standard file format used on OS X, Linux, BSD, Sun, and others.
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/go-caller.c inno/libgo/runtime/go-caller.c
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/go-caller.c	2018-02-22 21:52:33.000000000 +0300
++++ inno/libgo/runtime/go-caller.c	2020-07-24 12:54:31.000000000 +0300
+@@ -116,7 +116,7 @@
+ 	 argv[0] (http://gcc.gnu.org/PR61895).  It would be nice to
+ 	 have a better check for whether this file is the real
+ 	 executable.  */
+-      if (stat (filename, &s) < 0 || s.st_size < 1024)
++      if ((filename && stat (filename, &s) < 0) || s.st_size < 1024)
+ 	filename = NULL;
+ 
+       back_state = backtrace_create_state (filename, 1, error_callback, NULL);
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/go-setenv.c inno/libgo/runtime/go-setenv.c
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/go-setenv.c	2016-11-18 19:03:13.000000000 +0300
++++ inno/libgo/runtime/go-setenv.c	2020-06-23 01:18:02.000000000 +0300
+@@ -59,8 +59,9 @@
+ 
+ #else /* !defined(HAVE_SETENV) */
+ 
+-  len = k.len + v.len + 2;
+-  kn = malloc (len);
++  { int len = k.len + v.len + 2;
++    kn = malloc (len); 
++  }
+   if (kn == NULL)
+     runtime_throw ("out of malloc memory");
+   __builtin_memcpy (kn, ks, k.len);
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/proc.c inno/libgo/runtime/proc.c
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/proc.c	2018-02-02 03:16:43.000000000 +0300
++++ inno/libgo/runtime/proc.c	2020-06-23 01:18:02.000000000 +0300
+@@ -51,7 +51,7 @@
+ #if defined(USING_SPLIT_STACK) && defined(LINKER_SUPPORTS_SPLIT_STACK)
+ # define StackMin PTHREAD_STACK_MIN
+ #else
+-# define StackMin ((sizeof(char *) < 8) ? 2 * 1024 * 1024 : 4 * 1024 * 1024)
++# define StackMin ((sizeof(char *) < 8) ? 2 * 1024 * 1024 : 1 * 1024 * 1024 - 4096*3)
+ #endif
+ 
+ uintptr runtime_stacks_sys;
+@@ -708,6 +727,7 @@
+ 	reentersyscallblock(pc, sp);
+ }
+ 
++void * alloc_secondary_stack( size_t stack_size );
+ // Allocate a new g, with a stack big enough for stacksize bytes.
+ G*
+ runtime_malg(bool allocatestack, bool signalstack, byte** ret_stack, uintptr* ret_stacksize)
+@@ -753,7 +773,8 @@
+                 // 32-bit mode, the Go allocation space is all of
+                 // memory anyhow.
+ 		if(sizeof(void*) == 8) {
+-			void *p = runtime_sysAlloc(stacksize, &getMemstats()->stacks_sys);
++			//void *p = runtime_sysAlloc(stacksize, &getMemstats()->stacks_sys);
++			void *p = alloc_secondary_stack(stacksize); // no stat!
+ 			if(p == nil)
+ 				runtime_throw("runtime: cannot allocate memory for goroutine stack");
+ 			*ret_stack = (byte*)p;
+@@ -770,6 +791,7 @@
+ 	return newg;
+ }
+ 
++void free_secondary_stack( void *);
+ void stackfree(G*)
+   __asm__(GOSYM_PREFIX "runtime.stackfree");
+ 
+@@ -786,7 +808,8 @@
+   // using garbage collected memory.
+   if (gp->gcstacksize != 0) {
+     if (sizeof(void*) == 8) {
+-      runtime_sysFree(gp->gcinitialsp, gp->gcstacksize, &getMemstats()->stacks_sys);
++      //runtime_sysFree(gp->gcinitialsp, gp->gcstacksize, &getMemstats()->stacks_sys);
++	  free_secondary_stack(gp->gcinitialsp);
+     }
+     gp->gcinitialsp = nil;
+     gp->gcstacksize = 0;
+diff -ru contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/thread.c inno/libgo/runtime/thread.c
+--- contrib/libgo-10be92754f6dbbd51b390bfdc9250f2b4370d9cb/src/lib/gcc/libgo/runtime/thread.c	2013-07-16 10:54:42.000000000 +0400
++++ inno/libgo/runtime/thread.c	2020-06-23 01:18:02.000000000 +0300
+@@ -148,7 +148,7 @@
+ 	// Not an exact science: use size of binary plus
+ 	// some room for thread stacks.
+ 	used = (64<<20);
+-	if(used >= rl.rlim_cur)
++	if(used >= (uintptr)rl.rlim_cur)
+ 		return 0;
+ 
+ 	// If there's not at least 16 MB left, we're probably
