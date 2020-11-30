@@ -65,11 +65,14 @@ Libc::Mmap_registry *Libc::mmap_registry()
 
 static Cwd          *_cwd_ptr;
 static unsigned int  _mmap_align_log2 { PAGE_SHIFT };
+static Genode::Allocator *_alloc_ptr;
 
 void Libc::init_file_operations(Cwd &cwd,
-                                Config_accessor const &config_accessor)
+								Config_accessor const &config_accessor,
+								Genode::Allocator &alloc)
 {
 	_cwd_ptr = &cwd;
+	_alloc_ptr = &alloc;
 
 	config_accessor.config().with_sub_node("libc", [&] (Xml_node libc) {
 		libc.with_sub_node("mmap", [&] (Xml_node mmap) {
@@ -79,6 +82,14 @@ void Libc::init_file_operations(Cwd &cwd,
 	});
 }
 
+Genode::Allocator *kernel_allocator()
+{
+	if (_alloc_ptr)
+		return _alloc_ptr;
+
+	error("missing call of 'init_file_operations'");
+	return nullptr;
+}
 
 /***************
  ** Utilities **
@@ -417,34 +428,51 @@ extern "C" int mkdir(const char *path, mode_t mode)
 	}
 }
 
-
-__SYS_(void *, mmap, (void *addr, ::size_t length,
-                      int prot, int flags,
-                      int libc_fd, ::off_t offset),
+namespace Genode
 {
-	/* handle requests for anonymous memory */
-	if ((flags & MAP_ANONYMOUS) || (flags & MAP_ANON)) {
+	char *pd_reserve_memory(size_t bytes, void *requested_addr,
+							size_t alignment_hint);
+	bool pd_unmap_memory(void *addr, size_t bytes, bool &area_used);
+	bool pd_commit_memory(void *addr, size_t size, bool exec, bool with_requested_addr);
+	void *pd_get_base_address(void *addr, bool &anon);
+}; // namespace Genode
 
-		if (flags & MAP_FIXED) {
-			Genode::error("mmap for fixed predefined address not supported yet");
-			errno = EINVAL;
-			return MAP_FAILED;
-		}
-
+__SYS_(void *, mmap, (void *addr, ::size_t length, int prot, int flags, int libc_fd, ::off_t offset),
+{
+	if ((flags & MAP_ANONYMOUS) || (flags & MAP_ANON))
+	{
+		/* handle requests for anonymous memory */
 		bool const executable = prot & PROT_EXEC;
-		void *start = mem_alloc(executable)->alloc(length, _mmap_align_log2);
-		if (!start) {
+
+		/* FIXME do not allow overlap with other areas as in original mmap() - just fail */
+		/* desired address given as addr (mandatory if flags has MAP_FIXED) */
+		void *start = Genode::pd_reserve_memory(length, addr, _mmap_align_log2);
+		if (!start || ((flags & MAP_FIXED) && (start != addr)))
+		{
 			errno = ENOMEM;
 			return MAP_FAILED;
 		}
-		::memset(start, 0, align_addr(length, PAGE_SHIFT));
 		mmap_registry()->insert(start, length, 0);
+
+		if (prot == PROT_NONE)
+		{
+			/* process request for memory range reservation (no access, no commit) */
+			return start;
+		}
+
+		/* 
+		* desired address returned; commit virtual range
+		*/
+		Genode::pd_commit_memory(start, length, executable, addr != 0);
+		/* zero commited ram */
+		::memset(start, 0, align_addr(length, PAGE_SHIFT));
 		return start;
 	}
 
 	/* lookup plugin responsible for file descriptor */
 	File_descriptor *fd = libc_fd_to_fd(libc_fd, "mmap");
-	if (!fd || !fd->plugin || !fd->plugin->supports_mmap()) {
+	if (!fd || !fd->plugin || !fd->plugin->supports_mmap())
+	{
 		warning("mmap not supported for file descriptor ", libc_fd);
 		errno = EBADF;
 		return MAP_FAILED;
@@ -458,10 +486,15 @@ __SYS_(void *, mmap, (void *addr, ::size_t length,
 	return start;
 })
 
-
-extern "C" int munmap(void *start, ::size_t length)
+extern "C" int munmap(void *base, ::size_t length)
 {
-	if (!mmap_registry()->registered(start)) {
+	bool nanon;
+	void *start = Genode::pd_get_base_address(base, nanon);
+	if (!start)
+		start = base;
+
+	if (nanon && !mmap_registry()->registered(start))
+	{
 		warning("munmap: could not lookup plugin for address ", start);
 		errno = EINVAL;
 		return -1;
@@ -472,7 +505,7 @@ extern "C" int munmap(void *start, ::size_t length)
 	 *
 	 * If the pointer is NULL, 'start' refers to an anonymous mmap.
 	 */
-	Plugin *plugin = mmap_registry()->lookup_plugin_by_addr(start);
+	Plugin *plugin = nanon? mmap_registry()->lookup_plugin_by_addr(start) : 0;
 
 	/*
 	 * Remove registry entry before unmapping to avoid double insertion error
@@ -481,15 +514,15 @@ extern "C" int munmap(void *start, ::size_t length)
 	mmap_registry()->remove(start);
 
 	int ret = 0;
+	bool area_used = false;
 	if (plugin)
 		ret = plugin->munmap(start, length);
 	else {
-		bool const executable = true;
-		/* XXX another metadata handling required to track anonymous memory */
-		mem_alloc(!executable)->free(start);
-		mem_alloc(executable)->free(start);
+		Genode::pd_unmap_memory(base, length, area_used);
 	}
 
+	if (nanon && !area_used)
+		mmap_registry()->remove(start);
 	return ret;
 }
 
