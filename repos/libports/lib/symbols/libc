@@ -1079,7 +1079,12 @@ _ZTIN4Libc6PluginE D 40
 _Unwind_Complete T
 _Unwind_DeleteException T
 _Unwind_Resume T
+_Z16kernel_allocatorv T
 _ZN10__cxxabiv120__si_class_type_infoD2Ev T
+_ZN6Genode15pd_unmap_memoryEPvmRb T
+_ZN6Genode16pd_commit_memoryEPvmbb T
+_ZN6Genode17pd_reserve_memoryEmPvm T
+_ZN6Genode19pd_get_base_addressEPvRb T
 _ZN9__gnu_cxx9__freeresEv T
 _ZNK10__cxxabiv117__class_type_info10__do_catchEPKSt9type_infoPPvj T
 _ZNK10__cxxabiv117__class_type_info11__do_upcastEPKS0_PPv T

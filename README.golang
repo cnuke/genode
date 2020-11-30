@@ -1,0 +1,185 @@
+
+	This is initial port of golang to genode
+	========================================
+This work is a side result of one of the research project made in Innopolis University.
+	(c) Alex Tormasov, tor@innopolis.ru - port itsels, Alexey Semenov aleks.semenov@innopolis.ru - build
+
+It allow compilation and execution of simple go applications/packages (without unsupported OS/platform features).
+In this moment it supports nova and sel4 kernels on x86 platform.
+
+I use only gccgo version of golang compiler. Things like "go build" in cross mode not supported yet (while we make
+some techology to produce makefiles from "go build" to compilei go code, not attached yet).
+Other limitations see below.
+
+It build a set of libraries, in form of "libport" and "noux-pkg" each (because we need to run configure which is not
+supported in libport), as static ones.
+Also it build a set of standard golang packages (namely fmt, os, syscall, runtime/etc) as files for gccgo compilation.
+Note: Go runtinme support around 9 systems as backend. I use netbsd as simplest one as the base for new system - "inno".
+
+To implement context switching I have to develop it from the scratch; for stack it use alloc_secondary_stack() from Genode.
+I suspect that I need to use a low-level context switching from kernel (native thread switch), this is not implemented yet.
+
+	Installation instruction
+	========================
+0. setup genode on appropriate platform using https://github.com/tor-m6/genode.git, configure toolchain and prepare
+   code to compile, setup environment, e.g. (replace by your own dirs):
+	export PATH=/usr/local/genode/tool/current/bin:/media/psf/Home/gen/20.05/build/tool_chain-19.05/install/bin:$PATH
+	export AS=genode-x86-as
+	export LD=genode-x86-ld
+	export GDB=genode-x86-gdb
+	export STRIP=genode-x86-stripexport 
+	export RANLIB=genode-x86-ranlib
+	export OBJCOPY=genode-x86-objcopy
+	export OBJDUMP=genode-x86-objdump
+	export READELF=genode-x86-readelf
+	export AR=genode-x86-ar
+	export NM=genode-x86-gcc-nm
+   add to begining of build/x86_64/etc/build.conf something like (correct dirs):
+	GENODE_DIR  := <your genode dir>
+	BASE_DIR    := $(GENODE_DIR)/repos/base
+	CONTRIB_DIR := $(GENODE_DIR)/contrib
+
+	# toolchain prefix
+	export CROSS_DEV_PREFIX:=/usr/local/genode/tool/current/bin/genode-x86-
+	# compiler for GO
+	export GOC := /usr/local/genode/tool/current/bin/genode-x86-gccgo
+	# stack options
+	CC_OLEVEL := -O0 -fno-omit-frame-pointer
+	export CC_OLEVEL:=$(CC_OLEVEL)
+	...
+   and finally cd to genode dir
+1. prepare ports from genode, e.g. by
+	./tool/ports/prepare_port libc nova x86emu stdcxx grub2
+2. prepare ports to build golang libgo from gcc distirbution
+	./tool/ports/prepare_port libatomic libbacktrace libffi libgo
+3. build native libraries for genode (libgo should be the last) by
+	make -C build/x86_64/ KERNEL=nova CFLAGS="-g -O0 -fno-omit-frame-pointer" noux-pkg/libatomic
+	make -C build/x86_64/ KERNEL=nova CFLAGS="-g -O0 -fno-omit-frame-pointer" noux-pkg/libbacktrace
+	make -C build/x86_64/ KERNEL=nova CFLAGS="-g -O0 -fno-omit-frame-pointer" noux-pkg/libffi
+	make -C build/x86_64/ KERNEL=nova CFLAGS="-g -O0 -fno-omit-frame-pointer" noux-pkg/libgo
+4. build and run test go application by
+	make -C build/x86_64/ KERNEL=nova CFLAGS="-g -O0 -fno-omit-frame-pointer" run/go_app
+
+target.mk for test app:
+
+TARGET = test-go
+SRC_GO = main.go
+# important! file mycontext.cc shdould be complied with -fno-omit-frame-pointer with myacontext.s file
+SRC_CC = dummy.cc mycontext.cc
+SRC_S  = myacontext.s
+LIBS   = base stdcxx libc libm libgo
+
+CC_OLEVEL = -O0 -fno-omit-frame-pointer
+
+OS_DIR := $(BASE_DIR)-$(KERNEL)/src
+CC_CXX_OPT += -I$(OS_DIR)/include
+CC_CXX_OPT += -I$(BASE_DIR)/src/include
+CC_CXX_OPT += -I$(BASE_DIR)/src/core/include
+
+# add place where compiled packages appears
+GCCGO_CMD_LINE = genode-x86-gccgo -B$(BUILD_BASE_DIR)/noux-pkg/libgo
+
+TOOL_PATH:=$(dir $(GOC))
+
+LD_CMD = genode-x86-gcc -B ${TOOL_PATH}/x86/gcc/gcc/
+
+# order is important; problem in correct initializers order for different so libs for Env
+LD_LIBGCC = \
+${LIB_CACHE_DIR}/base-$(KERNEL)-common/base-$(KERNEL)-common.lib.a \
+${LIB_CACHE_DIR}/startup-$(KERNEL)/startup-$(KERNEL).lib.a \
+${LIB_CACHE_DIR}/cxx/cxx.lib.a \
+${LIB_CACHE_DIR}/libc-stdlib/libc-stdlib.lib.a \
+${LIB_CACHE_DIR}/libc-gen/libc-gen.lib.a  \
+${LIB_CACHE_DIR}/libgo/libgobegin.a \
+${LIB_CACHE_DIR}/libgo/libgolibbegin.a \
+${LIB_CACHE_DIR}/libgo/libgo.a \
+${TOOL_PATH}/../lib/gcc/x86_64-pc-elf/8.3.0/64/libgcc_eh.a \
+${TOOL_PATH}/../lib/gcc/x86_64-pc-elf/8.3.0/64/libgcc.a
+
+
+CUSTOM_GO = $(GCCGO_CMD_LINE)
+
+CC_CXX_WARN_STRICT =
+	
+	
+	Configuration after build
+	=========================
+Golang package (like fmt) is an object file (e.g. fmt.o) which appears in build/x86_64/noux-pkg/libgo/ directory and
+subdirectories. This path should be included during golang/gccgo compilation (not only linking). Built libraries for Go
+will be in ${LIB_CACHE_DIR}/libgo/libgobegin.a ${LIB_CACHE_DIR}/libgo/libgolibbegin.a ${LIB_CACHE_DIR}/libgo/libgo.a
+
+Sequnce of libraries in target.mk is important, otherwise you can hit problem that libc heap initialization in libc.lib.so
+does not happens because some statical constructors (malloc heap init) do not called in proper order.
+
+	Debugging
+	=========
+On most systems (like seL4) you can use only debug print, and sometimes print locking (and output) is tricky.
+You can use gdb to debug your application on nova (while gdb support in genode somehow limited, I found a lot of problems
+with improper breaks/etc); I use Parallels VM or qemu on Mac. To compile code for gdb please, take a look at
+ports/run/go_app_dbg.run. For convenience I add my VSCode launch.json (to run debugger using VSCode as frontend):
+        {
+            "type": "gdb",
+            "request": "attach",
+            "name": "Attach to goport qemu",
+            "gdbpath": "gdb",
+            "executable": "build/x86_64/debug/ld-nova.lib.so",
+            "target": "localhost:5555",
+            "remote": true,
+            "cwd": "/home/tor/go-port",
+            "autorun": [
+                "set output-radix 16",
+                "set solib-search-path build/x86_64/debug",
+                // "file build/x86_64/debug/ld-nova.lib.so",
+                "b binary_ready_hook_for_gdb",
+                "c",
+                "delete 1",
+                // "add-symbol-file build/x86_64/debug/libc.lib.so -o 0xad6a000",
+                // "add-symbol-file build/x86_64/debug/stdcxx.lib.so -o 0x119a000",
+                "add-symbol-file build/x86_64/debug/test-go",
+                "sharedlibrary",
+                //"b _ZZN4Libc9Component9constructERNS_3EnvEENKUlvE_clEv",
+                "b main"
+            ],
+            "valuesFormatting": "parseText"
+        },
+
+
+	Current limitations
+	===================
+  -	can run in VM with 1 CPU only:
+	in general it support checking of CPU number (by backporting patch from current genode code) and trying to run
+	everything, but it hangs somewhere in the middle due to recursive locking (error "deadlock ahead" in acquire() in mutex.cc)
+		May be this is small mistake - don't have time to find and fix (in this place due to slot_jump() gdb do not give
+		normal info related to stack). I found that problem during stack unwind in  ... runtime.startm -> runtime.newm -> 
+		runtime.newm -> runtime.mcommoninit -> runtime.callers -> runtime_callers() -> backtrace_full() ... ;
+		here it try to call strlcpy() which call _jmp_slot() and make nested Guard construction inside this function
+   -	it works only on x86_64, tested on nova and sel4 kernels
+	genode do not support makecontex/setcontext/gencontext family; but it is crucial to support because of goroutine model;
+	I have to implement it by myself. It is machine-dependent; moreover, context swiching do not work after direct port from
+	libc/etc - I have to make 1 step stack unwind procedure to jump using stack frame to the next function. So, I add
+	everywhere compilation option -fno-omit-frame-pointer to be sure that this approach works. Probably it need only for
+	implementation of the file mycontext.cc
+  -	any golang application need to add 3 files into it
+	dummy.cc: with Genode initialization and some empty functions which are not supported on genode
+	mycontext.cc:
+	myacontext.s: with implementation of x86 [sg]etcontext.
+	may be it worth to place them in another library or libgo.a?
+  -	during port I make a set of dirty fixes for absent on the platform (genode/nova), in particular "empty" C implementaion of
+	sendfile(), getpgid(), lchown(), mount(), settimeofday(), mlock(), munlock(), mlockall(), munlockall(), sigaltstack();
+	in go part of runtime port I also "damage" some functions, in particualr route.sysctl(), broke poll.ReadDirent(), do not
+	use ptrace, and some others.
+	See patches for libgo in repos/libports/src/lib/libgo/. Anything in Golang which use them will fail.
+	Potentially new genode releases will contain something which can replace or fix these and other patched functions
+  -	mmap support for ANON mapping implemented do not support re-map of already allocated memory outside of made by mmap alloc
+  -	once I compile all code with -O3 option, and it hangs. I did not check why...
+  -	networking: never try, need to integrate with other ports, and see above about broken syscalls/routing/etc
+  -	exit() do not finished normally (at least with 20.08 with gdb)
+	seems that atexit() do not terminates all threads correctly (some of them instead of termination try to access memory, 
+	e.g. to process the signals locally, while that memory are already released due to main thread termination).
+  -	I found that my unwind lib from gcc to call standard strlen wich replaced to call via PLT@ (from shared libs).
+	During exception error processing it is called from code with already taken mutex - so, deadlock, see details
+	https://lists.genode.org/pipermail/users/2020-October/007269.html
+
+Questions? tor@innopolis.ru - related to port (and Alexey Semenov aleks.semenov@innopolis.ru - related to build process).
+Origin in https://github.com/tor-m6/genode.git
+
