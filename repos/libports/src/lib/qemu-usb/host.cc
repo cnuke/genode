@@ -8,6 +8,7 @@
 #include <base/allocator_avl.h>
 #include <base/log.h>
 #include <base/attached_rom_dataspace.h>
+#include <timer_session/connection.h>
 #include <usb_session/connection.h>
 #include <usb/usb.h>
 #include <util/xml_node.h>
@@ -55,6 +56,8 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 		char                  *_content;
 		int                    _size;
 
+		uint64_t _submit_ts_us { 0 };
+
 	public:
 
 		Isoc_packet(Usb::Packet_descriptor packet, char *content)
@@ -85,6 +88,7 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 			if (!_packet.read_transfer()) {
 				_packet.transfer.packet_size[_packet.transfer.number_of_packets] = copy_size;
 				_packet.transfer.number_of_packets++;
+				TRACE(__func__, ": number_of_packets: ", _packet.transfer.number_of_packets);
 			}
 
 			return remaining <= usb_packet->iov.size;
@@ -248,6 +252,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	Signal_handler<Usb_host_device> ack_avail_dispatcher { _ep, *this, &Usb_host_device::ack_avail };
 
+	Timer::Connection _timer;
+
 	void _release_interfaces()
 	{
 		Usb::Config_descriptor cdescr;
@@ -290,7 +296,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	:
 		label(label), _alloc(alloc),
 		usb_raw(env, &_usb_alloc, label, 6*1024*1024, state_dispatcher),
-		info(info), _ep(ep)
+		info(info), _ep(ep),
+		_timer(env)
 	{
 		usb_raw.tx_channel()->sigh_ack_avail(ack_avail_dispatcher);
 
@@ -320,6 +327,15 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		}
 	}
 
+	struct Submitted_isoc_out
+	{
+		uint64_t ts_us { 0 };
+		Usb::Packet_descriptor pd { };
+	};
+
+	Submitted_isoc_out submitted_isoc_out { };
+
+
 	void ack_avail()
 	{
 		Mutex::Guard guard(_mutex);
@@ -333,7 +349,13 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 			/* ISOC OUT OR CANCLED */
 			if ((packet.type == Packet_type::ISOC && !packet.read_transfer())) {
-				TRACE(__func__, ": ISO OUT: packet: ", packet);
+				uint64_t diff = 0;
+				if (packet.offset() == submitted_isoc_out.pd.offset()) {
+					uint64_t current_ts = _timer.curr_time().trunc_to_plain_us().value;
+					diff = (current_ts - submitted_isoc_out.ts_us);
+				}
+				TRACE(__func__, ": ISO OUT: packet: ", packet, " diff: ", diff, " us");
+				submitted_isoc_out.pd = Usb::Packet_descriptor();
 				free_packet(packet);
 				continue;
 			}
@@ -464,6 +486,11 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			if (isoc_write_packet->packet_count() < NUMBER_OF_PACKETS)
 				return;
 
+			if (submitted_isoc_out.pd.offset() == 0) {
+				submitted_isoc_out.ts_us = _timer.curr_time().trunc_to_plain_us().value;
+				submitted_isoc_out.pd = isoc_write_packet->packet();
+				TRACE(__func__, ": submitted_isoc_out.ts_us: ", submitted_isoc_out.ts_us);
+			}
 			submit(isoc_write_packet->packet());
 		}
 
@@ -477,6 +504,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 			isoc_write_packet.construct(packet, usb_raw.source()->packet_content(packet));
 			if (!valid) isoc_write_packet->copy(usb_packet);
+
+			TRACE(__func__, ": packet: ", packet);
 
 		} catch (Packet_alloc_failed) {
 			if (verbose_warnings)
