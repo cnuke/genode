@@ -121,6 +121,19 @@ void q_printf(char const *fmt, ...)
 }
 
 
+extern "C" void q_trace(char const *fmt, ...)
+{
+	enum { BUF_SIZE = 256 };
+	char buf[BUF_SIZE] { };
+	va_list args;
+	va_start(args, fmt);
+	Genode::String_console sc(buf, BUF_SIZE);
+	sc.vprintf(fmt, args);
+	TRACE((char const*)buf);
+	va_end(args);
+}
+
+
 int snprintf(char *buf, size_t size, const char *fmt, ...)
 {
 	va_list args;
