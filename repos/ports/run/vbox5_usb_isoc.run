@@ -239,6 +239,8 @@ set config {
 	<device vendor_id="0x0d8c" product_id="0x0014"/>
 	<!-- play 2 -->
 	<device vendor_id="0x041e" product_id="0x323d"/>
+	<!-- xxx -->
+	<device vendor_id="0x8086" product_id="0x0808"/>
 </config>
 					</inline>
 				</import>
