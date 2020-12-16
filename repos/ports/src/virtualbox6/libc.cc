@@ -25,9 +25,18 @@
 
 static bool const debug = true;
 
+
 extern "C" {
 
-int sched_yield() { /* silent dummy */ return 0; }
+int sched_yield()
+{
+	static unsigned long counter = 0;
+
+	if (++counter % 100'000 == 0)
+		Genode::warning(__func__, " called ", counter, " times");
+
+	return 0;
+}
 
 int sched_get_priority_max(int policy) TRACE(0)
 int sched_get_priority_min(int policy) TRACE(0)
