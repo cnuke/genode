@@ -1,11 +1,12 @@
 /*
  * \brief  Dummy implementations of symbols needed by VirtualBox
  * \author Norman Feske
+ * \author Christian Helmuth
  * \date   2013-08-22
  */
 
 /*
- * Copyright (C) 2013-2020 Genode Labs GmbH
+ * Copyright (C) 2013-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.

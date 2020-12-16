@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2020 Genode Labs GmbH
+ * Copyright (C) 2020-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.
@@ -250,7 +250,7 @@ VBOXSTRICTRC nemR3NativeRunGC(PVM pVM, PVMCPU pVCpu)
 	nem_ptr->commit_range();
 
 	VBOXSTRICTRC result = 0;
-	vm.with_vcpu_handler(Cpu_index { pVCpu->idCpu }, [&] (Vcpu_handler &handler) {
+	vm.with_vcpu_handler(Cpu_index { pVCpu->idCpu }, [&] (Sup::Vcpu_handler &handler) {
 		result = handler.run_hw(vm);
 	});
 

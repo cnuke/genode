@@ -1,6 +1,7 @@
 /*
  * \brief  Utility for attempting VirtualBox operations
  * \author Norman Feske
+ * \author Christian Helmuth
  * \date   2020-12-11
  *
  * The utility avoids repetitive code for checking the return value of
@@ -8,7 +9,7 @@
  */
 
 /*
- * Copyright (C) 2020 Genode Labs GmbH
+ * Copyright (C) 2020-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.

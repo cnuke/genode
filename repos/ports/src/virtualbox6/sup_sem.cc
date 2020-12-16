@@ -1,11 +1,12 @@
 /*
  * \brief  Genode backend for VirtualBox Suplib
  * \author Norman Feske
+ * \author Christian Helmuth
  * \date   2020-10-12
  */
 
 /*
- * Copyright (C) 2020 Genode Labs GmbH
+ * Copyright (C) 2020-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.

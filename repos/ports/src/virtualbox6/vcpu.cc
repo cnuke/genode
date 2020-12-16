@@ -6,14 +6,14 @@
  */
 
 /*
- * Copyright (C) 2013-2020 Genode Labs GmbH
+ * Copyright (C) 2013-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.
  */
 
 /* Genode includes */
-#include <cpu/vm_state.h>
+#include <cpu/vcpu_state.h>
 
 /* VirtualBox includes */
 #include <VBox/vmm/cpum.h> /* must be included before CPUMInternal.h */
@@ -36,9 +36,12 @@
 
 
 /*
- * VirtualBox stores segment attributes in Intel format using a 32-bit
- * value. Genode represents the attributes in packed format using a 16-bit
- * value.
+ * VirtualBox stores segment attributes in Intel format using 17 bits of a
+ * 32-bit value, which includes bits 19:16 of segment limit (see
+ * X86DESCATTRBITS).
+ *
+ * Genode represents the attributes in packed SVM VMCB format using 13 bits of
+ * a 16-bit value without segment-limit bits.
  */
 static inline Genode::uint16_t sel_ar_conv_to_genode(Genode::uint32_t v)
 {
@@ -66,17 +69,19 @@ void Sup::Vcpu_handler_svm::_svm_vintr()   { _irq_window(); }
 
 void Sup::Vcpu_handler_svm::_svm_ioio()
 {
-	if (_state->qual_primary.value() & 0x4) {
-		unsigned ctrl0 = _state->ctrl_primary.value();
+	Vcpu_state &state { _vcpu.state() };
+
+	if (state.qual_primary.value() & 0x4) {
+		unsigned ctrl0 = state.ctrl_primary.value();
 
 		Genode::warning("invalid gueststate");
 
-		_state->discharge();
+		state.discharge();
 
-		_state->ctrl_primary.charge(ctrl0);
-		_state->ctrl_secondary.charge(0);
+		state.ctrl_primary.charge(ctrl0);
+		state.ctrl_secondary.charge(0);
 
-		_vm_session.run(_vcpu);
+		_run_vm();
 	} else
 		_default_handler();
 }
@@ -84,9 +89,11 @@ void Sup::Vcpu_handler_svm::_svm_ioio()
 
 template <unsigned X> void Sup::Vcpu_handler_svm::_svm_npt()
 {
-	bool           const unmap          = _state->qual_primary.value() & 1;
-	Genode::addr_t const exit_addr      = _state->qual_secondary.value();
-	RTGCUINT       const vbox_errorcode = _state->qual_primary.value();
+	Vcpu_state &state { _vcpu.state() };
+
+	bool           const unmap          = state.qual_primary.value() & 1;
+	Genode::addr_t const exit_addr      = state.qual_secondary.value();
+	RTGCUINT       const vbox_errorcode = state.qual_primary.value();
 
 	_npt_ept_exit_addr = exit_addr;
 	_npt_ept_unmap     = unmap;
@@ -104,9 +111,15 @@ void Sup::Vcpu_handler_svm::_svm_startup()
 }
 
 
-void Sup::Vcpu_handler_svm::_handle_vm_exception()
+void Sup::Vcpu_handler_svm::_handle_exit()
 {
-	unsigned const exit = _state->exit_reason;
+	/*
+	 * Table B-1. 070h 63:0 EXITCODE
+	 *
+	 * Appendix C SVM Intercept Exit Codes defines only
+	 * 0x000..0x403 plus -1 and -2
+	 */
+	unsigned short const exit = _vcpu.state().exit_reason & 0xffff;
 	bool recall_wait = true;
 
 //	Genode::warning(__PRETTY_FUNCTION__, ": ", HMGetSvmExitName(exit));
@@ -156,36 +169,15 @@ void Sup::Vcpu_handler_svm::_handle_vm_exception()
 }
 
 
-void Sup::Vcpu_handler_svm::_exit_config(Genode::Vm_state &state, unsigned exit)
-{
-	switch (exit) {
-	case RECALL:
-	case SVM_EXIT_IOIO:
-	case SVM_EXIT_VINTR:
-	case SVM_EXIT_RDTSC:
-	case SVM_EXIT_MSR:
-	case SVM_NPT:
-	case SVM_EXIT_HLT:
-	case SVM_EXIT_CPUID:
-	case VCPU_STARTUP:
-		/* todo - touch all members */
-		Genode::memset(&state, ~0U, sizeof(state));
-		break;
-	default:
-		break;
-	}
-}
-
-
 bool Sup::Vcpu_handler_svm::_hw_save_state(VM * pVM, PVMCPU pVCpu)
 {
-	return svm_save_state(_state, pVM, pVCpu);
+	return svm_save_state(_vcpu.state(), pVM, pVCpu);
 }
 
 
 bool Sup::Vcpu_handler_svm::_hw_load_state(VM * pVM, PVMCPU pVCpu)
 {
-	return svm_load_state(_state, pVM, pVCpu);
+	return svm_load_state(_vcpu.state(), pVM, pVCpu);
 }
 
 
@@ -201,22 +193,18 @@ int Sup::Vcpu_handler_svm::_vm_exit_requires_instruction_emulation(PCPUMCTX)
 Sup::Vcpu_handler_svm::Vcpu_handler_svm(Genode::Env &env, size_t stack_size,
                                         Genode::Affinity::Location location,
                                         unsigned int cpu_id,
-                                        Genode::Vm_connection &vm_session,
+                                        Genode::Vm_connection &vm_connection,
                                         Genode::Allocator &alloc)
 :
 	Vcpu_handler(env, stack_size, location, cpu_id),
-	_handler(_ep, *this, &Vcpu_handler_svm::_handle_vm_exception,
-	                     &Vcpu_handler_svm::_exit_config),
-	_vm_session(vm_session),
-	/* construct vcpu */
-	_vcpu(_vm_session.with_upgrade([&]() {
-		return _vm_session.create_vcpu(alloc, env, _handler); })),
-	/* get state of vcpu */
-	_state_ds(env.rm(), _vm_session.cpu_state(_vcpu))
+	_handler(_ep, *this, &Vcpu_handler_svm::_handle_exit),
+	_vm_connection(vm_connection),
+	_vcpu(_vm_connection, alloc, _handler, _exit_config)
 {
-	_state = _state_ds.local_addr<Genode::Vm_state>();
+	/* FIXME get state of vcpu */
+	_state = &_vcpu.state();
 
-	_vm_session.run(_vcpu);
+	_vcpu.run();
 
 	/* sync with initial startup exception */
 	_blockade_emt.block();
@@ -313,9 +301,10 @@ __attribute__((noreturn)) void Sup::Vcpu_handler_vmx::_vmx_invalid()
 }
 
 
-void Sup::Vcpu_handler_vmx::_handle_vm_exception()
+void Sup::Vcpu_handler_vmx::_handle_exit()
 {
-	unsigned const exit = _state->exit_reason;
+	/* table 24-14. Format of Exit Reason - 15:0 Basic exit reason */
+	unsigned short const exit = _state->exit_reason & 0xffff;
 	bool recall_wait = true;
 
 //	Genode::warning(__PRETTY_FUNCTION__, ": ", HMGetVmxExitName(exit));
@@ -378,49 +367,15 @@ void Sup::Vcpu_handler_vmx::_handle_vm_exception()
 }
 
 
-void Sup::Vcpu_handler_vmx::_exit_config(Genode::Vm_state &state, unsigned exit)
-{
-	switch (exit) {
-	case VMX_EXIT_TRIPLE_FAULT:
-	case VMX_EXIT_INIT_SIGNAL:
-	case VMX_EXIT_INT_WINDOW:
-	case VMX_EXIT_TASK_SWITCH:
-	case VMX_EXIT_CPUID:
-	case VMX_EXIT_HLT:
-	case VMX_EXIT_RDTSC:
-	case VMX_EXIT_RDTSCP:
-	case VMX_EXIT_VMCALL:
-	case VMX_EXIT_IO_INSTR:
-	case VMX_EXIT_RDMSR:
-	case VMX_EXIT_WRMSR:
-	case VMX_EXIT_ERR_INVALID_GUEST_STATE:
-//	case VMX_EXIT_PAUSE:
-	case VMX_EXIT_WBINVD:
-	case VMX_EXIT_MOV_CRX:
-	case VMX_EXIT_MOV_DRX:
-	case VMX_EXIT_TPR_BELOW_THRESHOLD:
-	case VMX_EXIT_EPT_VIOLATION:
-	case VMX_EXIT_XSETBV:
-	case VCPU_STARTUP:
-	case RECALL:
-		/* todo - touch all members */
-		Genode::memset(&state, ~0U, sizeof(state));
-		break;
-	default:
-		break;
-	}
-}
-
-
 bool Sup::Vcpu_handler_vmx::_hw_save_state(PVM pVM, PVMCPU pVCpu)
 {
-	return vmx_save_state(_state, pVM, pVCpu);
+	return vmx_save_state(_vcpu.state(), pVM, pVCpu);
 }
 
 
 bool Sup::Vcpu_handler_vmx::_hw_load_state(PVM pVM, PVMCPU pVCpu)
 {
-	return vmx_load_state(_state, pVM, pVCpu);
+	return vmx_load_state(_vcpu.state(), pVM, pVCpu);
 }
 
 
@@ -457,22 +412,18 @@ int Sup::Vcpu_handler_vmx::_vm_exit_requires_instruction_emulation(PCPUMCTX pCtx
 Sup::Vcpu_handler_vmx::Vcpu_handler_vmx(Genode::Env &env, size_t stack_size,
                                         Genode::Affinity::Location location,
                                         unsigned int cpu_id,
-                                        Genode::Vm_connection &vm_session,
+                                        Genode::Vm_connection &vm_connection,
                                         Genode::Allocator &alloc)
 :
 	Vcpu_handler(env, stack_size, location, cpu_id),
-	_handler(_ep, *this, &Vcpu_handler_vmx::_handle_vm_exception,
-	                     &Vcpu_handler_vmx::_exit_config),
-	_vm_session(vm_session),
-	/* construct vcpu */
-	_vcpu(_vm_session.with_upgrade([&]() {
-		return _vm_session.create_vcpu(alloc, env, _handler); })),
-	/* get state of vcpu */
-	_state_ds(env.rm(), _vm_session.cpu_state(_vcpu))
+	_handler(_ep, *this, &Vcpu_handler_vmx::_handle_exit),
+	_vm_connection(vm_connection),
+	_vcpu(_vm_connection, alloc, _handler, _exit_config)
 {
-	_state = _state_ds.local_addr<Genode::Vm_state>();
+	/* FIXME get state of vcpu */
+	_state = &_vcpu.state();
 
-	_vm_session.run(_vcpu);
+	_vcpu.run();
 
 	/* sync with initial startup exception */
 	_blockade_emt.block();
@@ -482,6 +433,9 @@ Sup::Vcpu_handler_vmx::Vcpu_handler_vmx(Genode::Env &env, size_t stack_size,
 /*********************
  ** Generic handler **
  *********************/
+
+Genode::Vm_connection::Exit_config const Sup::Vcpu_handler::_exit_config { /* ... */ };
+
 
 timespec Sup::Vcpu_handler::_add_timespec_ns(timespec a, ::uint64_t ns) const
 {
@@ -512,8 +466,8 @@ void Sup::Vcpu_handler::_switch_to_hw(PCPUMCTX pCtx)
 again:
 
 	/* export FPU state */
-	AssertCompile(sizeof(Vm_state::Fpu::State) >= sizeof(X86FXSTATE));
-	_state->fpu.charge([&] (Vm_state::Fpu::State &fpu) {
+	AssertCompile(sizeof(Vcpu_state::Fpu::State) >= sizeof(X86FXSTATE));
+	_state->fpu.charge([&] (Vcpu_state::Fpu::State &fpu) {
 		::memcpy(&fpu, pCtx->pXStateR3, sizeof(fpu));
 	});
 
@@ -530,8 +484,7 @@ again:
 	_next_state = RUN;
 
 	/* import FPU state */
-	AssertCompile(sizeof(Vm_state::Fpu::State) >= sizeof(X86FXSTATE));
-	_state->fpu.with_state([&] (Vm_state::Fpu::State const &fpu) {
+	_state->fpu.with_state([&] (Vcpu_state::Fpu::State const &fpu) {
 		::memcpy(pCtx->pXStateR3, &fpu, sizeof(X86FXSTATE));
 	});
 
@@ -624,7 +577,7 @@ bool Sup::Vcpu_handler::_recall_handler()
 
 bool Sup::Vcpu_handler::_vbox_to_state(VM *pVM, PVMCPU pVCpu)
 {
-	typedef Genode::Vm_state::Range Range;
+	typedef Genode::Vcpu_state::Range Range;
 
 	PCPUMCTX pCtx  = CPUMQueryGuestCtxPtr(pVCpu);
 
@@ -662,8 +615,10 @@ bool Sup::Vcpu_handler::_vbox_to_state(VM *pVM, PVMCPU pVCpu)
 	_state->cr3.charge(pCtx->cr3);
 	_state->cr4.charge(pCtx->cr4);
 
-	_state->idtr.charge(Range{pCtx->idtr.pIdt, pCtx->idtr.cbIdt});
-	_state->gdtr.charge(Range{pCtx->gdtr.pGdt, pCtx->gdtr.cbGdt});
+	_state->idtr.charge(Range { .limit = pCtx->idtr.cbIdt,
+	                            .base  = pCtx->idtr.pIdt });
+	_state->gdtr.charge(Range { .limit = pCtx->gdtr.cbGdt,
+	                            .base  = pCtx->gdtr.pGdt });
 
 	_state->efer.charge(CPUMGetGuestEFER(pVCpu));
 

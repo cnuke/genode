@@ -2,11 +2,12 @@
  * \brief  Port of VirtualBox to Genode
  * \author Norman Feske
  * \author Alexander Boettcher
+ * \author Christian Helmuth
  * \date   2013-08-20
  */
 
 /*
- * Copyright (C) 2013-2017 Genode Labs GmbH
+ * Copyright (C) 2013-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.

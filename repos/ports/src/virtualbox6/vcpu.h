@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2013-2020 Genode Labs GmbH
+ * Copyright (C) 2013-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.
@@ -18,6 +18,7 @@
 /* Genode includes */
 #include <base/attached_dataspace.h>
 #include <vm_session/connection.h>
+#include <vm_session/handler.h>
 #include <util/noncopyable.h>
 
 /* local includes */
@@ -34,10 +35,12 @@ class Sup::Vcpu_handler : Genode::Noncopyable
 {
 	protected:
 
+		static Genode::Vm_connection::Exit_config const _exit_config;
+
 		Genode::Entrypoint  _ep;
 		Genode::Blockade    _blockade_emt { };
 		Genode::Semaphore   _sem_handler;
-		Genode::Vm_state   *_state { nullptr };
+		Genode::Vcpu_state *_state { nullptr };
 
 		bool _last_exit_triggered_by_wrmsr = false;
 
@@ -158,12 +161,10 @@ class Sup::Vcpu_handler_vmx : public Vcpu_handler
 {
 	private:
 
-		Genode::Vm_handler<Vcpu_handler_vmx>  _handler;
+		Genode::Vcpu_handler<Vcpu_handler_vmx> _handler;
 
-		Genode::Vm_connection                &_vm_session;
-		Genode::Vm_session_client::Vcpu_id    _vcpu;
-
-		Genode::Attached_dataspace            _state_ds;
+		Genode::Vm_connection       &_vm_connection;
+		Genode::Vm_connection::Vcpu  _vcpu;
 
 		/* VM exit handlers */
 		void _vmx_default();
@@ -175,23 +176,21 @@ class Sup::Vcpu_handler_vmx : public Vcpu_handler
 		template <unsigned X> void _vmx_ept();
 		__attribute__((noreturn)) void _vmx_invalid();
 
-		void _handle_vm_exception();
+		void _handle_exit();
 
-		void _run_vm()   override { _vm_session.run(_vcpu); }
-		void _pause_vm() override { _vm_session.pause(_vcpu); }
+		void _run_vm()   override { _vcpu.run(); }
+		void _pause_vm() override { _vcpu.pause(); }
 
 		bool _hw_save_state(VM * pVM, PVMCPU pVCpu) override;
 		bool _hw_load_state(VM * pVM, PVMCPU pVCpu) override;
 		int  _vm_exit_requires_instruction_emulation(PCPUMCTX pCtx) override;
-
-		void _exit_config(Genode::Vm_state &state, unsigned exit);
 
 	public:
 
 		Vcpu_handler_vmx(Genode::Env &env, size_t stack_size,
 		                 Genode::Affinity::Location location,
 		                 unsigned int cpu_id,
-		                 Genode::Vm_connection &vm_session,
+		                 Genode::Vm_connection &vm_connection,
 		                 Genode::Allocator &alloc);
 };
 
@@ -200,12 +199,10 @@ class Sup::Vcpu_handler_svm : public Vcpu_handler
 {
 	private:
 
-		Genode::Vm_handler<Vcpu_handler_svm>  _handler;
+		Genode::Vcpu_handler<Vcpu_handler_svm> _handler;
 
-		Genode::Vm_connection                &_vm_session;
-		Genode::Vm_session_client::Vcpu_id    _vcpu;
-
-		Genode::Attached_dataspace            _state_ds;
+		Genode::Vm_connection       &_vm_connection;
+		Genode::Vm_connection::Vcpu  _vcpu;
 
 		/* VM exit handlers */
 		void _svm_default();
@@ -216,23 +213,21 @@ class Sup::Vcpu_handler_svm : public Vcpu_handler
 
 		void _svm_startup();
 
-		void _handle_vm_exception();
+		void _handle_exit();
 
-		void _run_vm()   override { _vm_session.run(_vcpu); }
-		void _pause_vm() override { _vm_session.pause(_vcpu); }
+		void _run_vm()   override { _vcpu.run(); }
+		void _pause_vm() override { _vcpu.pause(); }
 
 		bool _hw_save_state(VM * pVM, PVMCPU pVCpu) override;
 		bool _hw_load_state(VM * pVM, PVMCPU pVCpu) override;
 		int  _vm_exit_requires_instruction_emulation(PCPUMCTX) override;
-
-		void _exit_config(Genode::Vm_state &state, unsigned exit);
 
 	public:
 
 		Vcpu_handler_svm(Genode::Env &env, size_t stack_size,
 		                 Genode::Affinity::Location location,
 		                 unsigned int cpu_id,
-		                 Genode::Vm_connection &vm_session,
+		                 Genode::Vm_connection &vm_connection,
 		                 Genode::Allocator &alloc);
 };
 

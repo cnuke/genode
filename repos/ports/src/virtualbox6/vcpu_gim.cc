@@ -1,6 +1,7 @@
 /*
  * \brief  Guest-interface manager support
  * \author Norman Feske
+ * \author Christian Helmuth
  * \date   2020-12-03
  *
  * The GIM KVM device is a mechanism for providing a stable time source
@@ -18,7 +19,7 @@
  */
 
 /*
- * Copyright (C) 2020 Genode Labs GmbH
+ * Copyright (C) 2020-2021 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.

@@ -1,5 +1,5 @@
 set use_net 0
-set use_ps2 [have_spec ps2]
+set use_ps2 1
 set use_usb 0
 set use_serial 1
 set use_top 1
@@ -96,18 +96,16 @@ append_if [expr $use_usb] config {
 		</config>
 	</start>}
 
-append_if [have_spec framebuffer] config {
+append_if [have_board pc] config {
 	<start name="fb_drv" priority="-1" caps="150">
 		<binary name="vesa_fb_drv"/>
 		<resource name="RAM" quantum="12M"/>}
-append_if [expr [have_spec framebuffer] && [have_include power_on/qemu]] config {
+append_if [expr [have_board pc] && [have_include power_on/qemu]] config {
 		<config width="1280" height="1024" buffered="yes"/>}
-append_if [expr [have_spec framebuffer] && [have_include power_on/qemu]] config {
-		<config buffered="yes"/>}
-append_if [have_spec framebuffer] config {
+append_if [have_board pc] config {
 	</start>}
 
-append_if [have_spec sdl] config {
+append_if [have_board linux] config {
 	<start name="fb_sdl" priority="-1" ld="no">
 		<resource name="RAM" quantum="4M"/>
 	</start>}
@@ -175,8 +173,8 @@ append config {
 
 			<report focus="yes" hover="yes" xray="yes" />
 
-			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
-			<domain name=""        layer="2" content="client" hover="always" />
+			<domain name="pointer"  layer="1" content="client" label="no" origin="pointer" />
+			<domain name=""         layer="2" content="client" hover="always" />
 
 			<policy label_prefix="pointer" domain="pointer"/>
 			<default-policy domain=""/>
@@ -196,7 +194,7 @@ append config {
 	</start>}
 
 append_if [expr $use_gui] config {
-	<start name="vbox2" priority="-2" caps="800">
+	<start name="vbox2" priority="-2" caps="1200">
 		<binary name="} $virtualbox_binary {"/>
 		<resource name="RAM" quantum="6200M"/>
 		<config vbox_file="test.vbox" vm_name="TestVM">
@@ -220,9 +218,9 @@ append_if [expr $use_gui] config {
 	</start>}
 
 append config {
-	<start name="vbox1" priority="-2" caps="800">
+	<start name="vbox1" priority="-2" caps="1200">
 		<binary name="} $virtualbox_binary {"/>
-		<resource name="RAM" quantum="448M"/>
+		<resource name="RAM" quantum="6200M"/>
 		<config vbox_file="test.vbox" vm_name="TestVM">
 			<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc">
 				 <pthread placement="single-cpu"/>
@@ -279,10 +277,10 @@ set boot_modules { test.iso bootsector.img test.vbox }
 append boot_modules $virtualbox_binary
 
 # platform-specific modules
-lappend_if [expr        $use_usb] boot_modules usb_drv
+lappend_if [expr         $use_usb] boot_modules usb_drv
 lappend_if [expr         $use_ps2] boot_modules ps2_drv
-lappend_if [have_spec framebuffer] boot_modules vesa_fb_drv
-lappend_if [have_spec       linux] boot_modules fb_sdl
+lappend_if [have_board pc] boot_modules vesa_fb_drv
+lappend_if [have_board linux] boot_modules fb_sdl
 lappend_if [have_spec         x86] boot_modules rtc_drv
 lappend_if [expr         $use_top] boot_modules top
 lappend_if [expr         $use_gui] boot_modules report_rom
