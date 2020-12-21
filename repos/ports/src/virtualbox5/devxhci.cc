@@ -16,6 +16,7 @@
 #include <base/log.h>
 #include <base/attached_rom_dataspace.h>
 #include <util/list.h>
+#include <timer_session/connection.h>
 
 /* qemu-usb includes */
 #include <qemu/usb.h>
@@ -56,7 +57,64 @@ static bool const verbose_timer = true;
 static Tracer::Id _tracer_id[16];
 static uint32_t   _max_tracer_id;
 
-#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#define ENABLE_TRACING 0
+
+#if ENABLE_TRACING
+#define TRACE(...)
+//#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#else
+#define TRACE(...)
+#endif
+
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+
+struct File_writer : Qemu::File_writer
+{
+	int _fd { -1 };
+
+	File_writer(char const *filename)
+	{
+		_fd = open(filename, O_CREAT|O_WRONLY, 0666);
+		if (_fd == -1) {
+			Genode::error("could not open '", filename, "'");
+			throw -1;
+		}
+	}
+
+	~File_writer()
+	{
+		(void)::close(_fd);
+	}
+
+	void close()
+	{
+		(void)::close(_fd);
+		_fd = -1;
+	}
+
+	size_t append(char const *src, size_t len) override
+	{
+		if (_fd == -1) {
+			return 0;
+		}
+
+		ssize_t n = ::write(_fd, src, len);
+		if (n < (size_t) len) {
+			Genode::error("write error: ", n);
+			return 0;
+		}
+		::fsync(_fd);
+		return len;
+	}
+};
 
 
 /************************
@@ -230,7 +288,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	Qemu::int64_t get_ns()
 	{
 		uint64_t const now = TMTimerGetNano(tm_timer);
-		TRACE(__func__, ": now: ", now);
+		// TRACE(__func__, ": now: ", now);
 		return now;
 	}
 
@@ -366,8 +424,11 @@ PDMBOTHCBDECL(int) xhciMmioWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
 
 	ctl->mmio_write(offset, pv, cb);
 
+#if ENABLE_TRACING
+	// increase count on doorbell writes
 	static unsigned count = 0;
-	if ((++count % 5000) == 0) {
+	count = count + (offset >= 0x2000 && offset < 0x2100);
+	if ((count % 5000) == 0) {
 
 		// auto dump = [&] (Tracer::Entry const &entry) {
 
@@ -377,11 +438,12 @@ PDMBOTHCBDECL(int) xhciMmioWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
 		// 	Genode::log(Genode::Cstring(entry.data, entry.length - ending_lf));
 		// };
 		for (uint32_t i = 0; i < _max_tracer_id; i++) {
-			Genode::log("DUMPSTART ", _tracer_id[i].value, " ", count);
+			// Genode::log("DUMPSTART ", _tracer_id[i].value, " ", count);
 			Tracer::dump_trace_buffer(_tracer_id[i]);
-			Genode::log("DUMPEND ", _tracer_id[i].value, " ", count);
+			// Genode::log("DUMPEND ", _tracer_id[i].value, " ", count);
 		}
 	}
+#endif
 	return 0;
 }
 
@@ -471,6 +533,10 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 
 	pThis->usb_ep = new Usb_ep(genode_env());
 
+	/**
+	 * Use TMCLOCK_VIRTUAL_SYNC which looks worse than TMCLOCK_VIRTUAL_SYNC
+	 * but “sounds” better but I don't know why…
+	 */
 	int rc = PDMDevHlpTMTimerCreate(pDevIns, TMCLOCK_VIRTUAL, Timer_queue::tm_timer_cb,
 	                                pThis, TMTIMER_FLAGS_NO_CRIT_SECT,
 	                                "NEC-XHCI Timer", &pThis->controller_timer);
@@ -479,10 +545,15 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 	pThis->timer_queue = &timer_queue;
 	static Pci_device pci_device(pDevIns);
 
+	time_t const t = ::time(NULL);
+	char filename[32] { };
+	(void)snprintf(filename, sizeof (filename), "in-%u.txt", (uint32_t)t);
+	static File_writer file_writer(filename);
+
 	Tracer::Config const cfg = {
-		.session_quota      = { 128u << 20 },
+		.session_quota      = { 256u << 20 },
 		.arg_buffer_quota   = { 64u  << 10 },
-		.trace_buffer_quota = { 32u  << 20 },
+		.trace_buffer_quota = { 92u  << 20 },
 	};
 
 	Tracer::init(genode_env(), cfg);
@@ -509,7 +580,7 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 		}
 	}
 
-	pThis->ctl = Qemu::usb_init(timer_queue, pci_device, *pThis->usb_ep,
+	pThis->ctl = Qemu::usb_init(timer_queue, pci_device, file_writer, *pThis->usb_ep,
 	                            vmm_heap(), genode_env());
 
 	/*

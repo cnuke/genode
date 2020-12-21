@@ -19,7 +19,12 @@ set build_components {
 	lib/trace/policy/null
 	app/pointer
 	app/usb_report_filter
+	app/top
 	virtualbox5
+}
+
+proc get_os { } {
+	return void
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -31,7 +36,7 @@ build $build_components
 create_boot_directory
 
 
-set config {
+append config {
 <config verbose="yes" prio_levels="4">
 	<parent-provides>
 		<service name="ROM"/>
@@ -54,6 +59,13 @@ set config {
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
 	</start>
+
+<!--
+	<start name="top">
+		<resource name="RAM" quantum="2M"/>
+		<config period_ms="1000" sort_time="sc"/>
+	</start>
+-->
 
 	<start name="nvme_drv" priority="-1">
 		<resource name="RAM" quantum="8M"/>
@@ -82,7 +94,7 @@ set config {
 			<vfs>
 				<rump fs="ext2fs" ram="48M"/>
 			</vfs>
-			<default-policy root="/usb_isoc/ubuntu" writeable="true"/>
+			<default-policy root="/usb_isoc/} [get_os] {" writeable="true"/>
 		</config>
 		<route>
 			<any-service><child name="part_block"/> <parent/><any-child/></any-service>
@@ -241,6 +253,8 @@ set config {
 	<device vendor_id="0x041e" product_id="0x323d"/>
 	<!-- xxx -->
 	<device vendor_id="0x8086" product_id="0x0808"/>
+	<!-- fulla 2 -->
+	<device vendor_id="0x0d8c" product_id="0x1066"/>
 </config>
 					</inline>
 				</import>
@@ -426,13 +440,14 @@ set config {
 	<start name="vbox" priority="-2" caps="800">
 
 		<binary name="virtualbox5-nova" />
-		<resource name="RAM" quantum="9460M"/>
+		<resource name="RAM" quantum="9600M"/>
 		<config ld_verbose="yes"
 		        vbox_file="machine.vbox"
 		        vm_name="ubuntu_20_04"
 		        xhci="yes" capslock="NOROM">
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe"/>
 			<vfs>
+				<rom name="machine.vbox"/>
 				<dir name="dev">
 					<log/> <rtc/>
 				</dir>
@@ -460,7 +475,7 @@ set config {
 install_config $config
 
 set boot_modules {
-	core timer init nvme_drv part_block
+	core timer init nvme_drv part_block top
 	acpi_drv report_rom platform_drv ps2_drv fs_rom usb_report_filter x86_pc_usb_host_drv rtc_drv
 	vesa_fb_drv
 	event_filter ipxe_nic_drv nitpicker pointer dynamic_rom virtualbox5-nova
@@ -472,6 +487,8 @@ set boot_modules {
 	qemu-usb.lib.so
 
 	null
+
+	machine.vbox
 }
 
 build_boot_image $boot_modules

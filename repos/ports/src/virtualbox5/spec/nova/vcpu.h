@@ -320,6 +320,7 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 		{
 			using namespace Nova;
 			using namespace Genode;
+			_vm_exits ++;
 
 			Assert(utcb->actv_state == ACTIVITY_STATE_ACTIVE);
 
@@ -934,6 +935,9 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			pthread_mutex_unlock(&_mutex);
 		}
 
+		uint64_t _vm_exit_mmio = 0;
+		uint64_t _last_vm_exit_mmio = 0;
+
 		int run_hw(PVMR0 pVMR0)
 		{
 			VM     * pVM   = reinterpret_cast<VM *>(pVMR0);
@@ -1026,6 +1030,21 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			PGMChangeMode(pVCpu, pCtx->cr0, pCtx->cr4, pCtx->msrEFER);
 
 			int rc = vm_exit_requires_instruction_emulation(pCtx);
+			if (rc == VINF_IOM_R3_MMIO_READ_WRITE) {
+					_vm_exit_mmio++;
+			}
+			if (_vm_exits % 10000 == 0) {
+				using Genode::log;
+
+				// log(_cpu_id, " exits=", _vm_exits,
+				//     " req:skip:drop,inv recall=", _recall_req, ":",
+				//     _recall_skip, ":", _recall_drop, ":",
+				//     _recall_inv, " req:inj:drop irq=",
+				//     _irq_request, ":", _irq_inject, ":",
+				//     _irq_drop, " mmio=", _vm_exit_mmio - _last_vm_exit_mmio);
+
+				_last_vm_exit_mmio = _vm_exit_mmio;
+			}
 
 			/* evaluated in VMM/include/EMHandleRCTmpl.h */
 			return rc;

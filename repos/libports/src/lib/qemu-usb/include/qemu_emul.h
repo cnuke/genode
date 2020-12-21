@@ -645,6 +645,259 @@ typedef struct VMStateDescription
  ** traces **
  ************/
 
+/* private Genode function */
+void q_trace(char const *fmt, ...);
+
+static inline void trace_usb_xhci_reset(void)
+{
+	q_trace("%s\n", __func__);
+}
+
+static inline void trace_usb_xhci_exit(void)
+{
+	q_trace("%s\n", __func__);
+}
+
+static inline void trace_usb_xhci_run(void)
+{
+	q_trace("%s\n", __func__);
+}
+
+static inline void trace_usb_xhci_stop(void)
+{
+	q_trace("%s\n", __func__);
+}
+
+static inline void trace_usb_xhci_cap_read(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_oper_read(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_port_read(uint32_t port, uint32_t off, uint32_t val)
+{
+	q_trace("%s: port: 0x%x off: 0x%x val: 0x%x\n", __func__, port, off, val);
+}
+
+static inline void trace_usb_xhci_runtime_read(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_doorbell_read(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_oper_write(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_port_write(uint32_t port, uint32_t off, uint32_t val)
+{
+	q_trace("%s: port: 0x%x off: 0x%x val: 0x%x\n", __func__, port, off, val);
+}
+
+static inline void trace_usb_xhci_runtime_write(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_doorbell_write(uint32_t off, uint32_t val)
+{
+	q_trace("%s: off: 0x%x val: 0x%x\n", __func__, off, val);
+}
+
+static inline void trace_usb_xhci_irq_intx(uint32_t level)
+{
+	q_trace("%s: level: %u\n", __func__, level);
+}
+
+static inline void trace_usb_xhci_irq_msi(uint32_t nr)
+{
+	q_trace("%s: nr: %u\n", __func__, nr);
+}
+
+static inline void trace_usb_xhci_irq_msix(uint32_t nr)
+{
+	q_trace("%s: nr: %u\n", __func__, nr);
+}
+
+static inline void trace_usb_xhci_irq_msix_use(uint32_t nr)
+{
+	q_trace("%s: nr: %u\n", __func__, nr);
+}
+
+static inline void trace_usb_xhci_irq_msix_unuse(uint32_t nr)
+{
+	q_trace("%s: nr: %u\n", __func__, nr);
+}
+
+static inline void trace_usb_xhci_queue_event(uint32_t vector, uint32_t idx, const char * trb, const char * evt, uint64_t param, uint32_t status, uint32_t control)
+{
+	q_trace("%s: vector: %u, idx: %u, %s, %s, p 0x%x s 0x%x c 0x%x\n", __func__,
+	        vector, idx, trb, evt, param, status, control);
+}
+
+static inline void trace_usb_xhci_fetch_trb(uint64_t addr, const char * name, uint64_t param, uint32_t status, uint32_t control)
+{
+	q_trace("%s: addr: 0x%x, %s, p 0x%x s 0x%x c 0x%x\n", __func__,
+	        addr, name, param, status, control);
+}
+
+static inline void trace_usb_xhci_port_reset(uint32_t port, bool warm)
+{
+	q_trace("%s: port: %u warm: %u\n", __func__, port, warm);
+}
+
+static inline void trace_usb_xhci_port_link(uint32_t port, uint32_t pls)
+{
+	q_trace("%s: port: %u pls: %u\n", __func__, port, pls);
+}
+
+static inline void trace_usb_xhci_port_notify(uint32_t port, uint32_t bits)
+{
+	q_trace("%s: port: %u bits: %u\n", __func__, port, bits);
+}
+
+static inline void trace_usb_xhci_slot_enable(uint32_t slotid)
+{
+	q_trace("%s: slotid: %u\n", __func__, slotid);
+}
+
+static inline void trace_usb_xhci_slot_disable(uint32_t slotid)
+{
+	q_trace("%s: slotid: %u\n", __func__, slotid);
+}
+
+static inline void trace_usb_xhci_slot_address(uint32_t slotid, const char * port)
+{
+	q_trace("%s: slotid: %u port: %s\n", __func__, slotid, port);
+}
+
+static inline void trace_usb_xhci_slot_configure(uint32_t slotid)
+{
+	q_trace("%s: slotid: %u\n", __func__, slotid);
+}
+
+static inline void trace_usb_xhci_slot_evaluate(uint32_t slotid)
+{
+	q_trace("%s: slotid: %u\n", __func__, slotid);
+}
+
+static inline void trace_usb_xhci_slot_reset(uint32_t slotid)
+{
+	q_trace("%s: slotid: %u\n", __func__, slotid);
+}
+
+static inline void trace_usb_xhci_ep_enable(uint32_t slotid, uint32_t epid)
+{
+	q_trace("%s: slotid: %u, epid: %u\n", __func__, slotid, epid);
+}
+
+static inline void trace_usb_xhci_ep_disable(uint32_t slotid, uint32_t epid)
+{
+	q_trace("%s: slotid: %u, epid: %u\n", __func__, slotid, epid);
+}
+
+static inline void trace_usb_xhci_ep_set_dequeue(uint32_t slotid, uint32_t epid, uint32_t streamid, uint64_t param)
+{
+	q_trace("%s: slotid: %u, epid: %u, streamid: %u, p 0x%x\n", __func__, slotid, epid,
+	        streamid, param);
+}
+
+static inline void trace_usb_xhci_ep_kick(uint32_t slotid, uint32_t epid, uint32_t streamid)
+{
+	q_trace("%s: slotid: %u, epid: %u, streamid: %u\n", __func__, slotid, epid, streamid);
+}
+
+static inline void trace_usb_xhci_ep_stop(uint32_t slotid, uint32_t epid)
+{
+	q_trace("%s: slotid: %u, epid: %u\n", __func__, slotid, epid);
+}
+
+static inline void trace_usb_xhci_ep_reset(uint32_t slotid, uint32_t epid)
+{
+	q_trace("%s: slotid: %u, epid: %u\n", __func__, slotid, epid);
+}
+
+static inline void trace_usb_xhci_ep_state(uint32_t slotid, uint32_t epid, const char * os, const char * ns)
+{
+	q_trace("%s: slotid: %u, epid: %u %s -> %s\n", __func__, slotid, epid, os, ns);
+}
+
+static inline void trace_usb_xhci_xfer_start(void * xfer, uint32_t slotid, uint32_t epid, uint32_t streamid)
+{
+	q_trace("%s: xfer: %p slotid: %u, epid: %u, streamid: %u\n", __func__, xfer, slotid, epid, streamid);
+}
+
+static inline void trace_usb_xhci_xfer_async(void * xfer)
+{
+	q_trace("%s: xfer: %p\n", __func__, xfer);
+}
+
+static inline void trace_usb_xhci_xfer_nak(void * xfer)
+{
+	q_trace("%s: xfer: %p\n", __func__, xfer);
+}
+
+static inline void trace_usb_xhci_xfer_retry(void * xfer)
+{
+	q_trace("%s: xfer: %p\n", __func__, xfer);
+}
+
+static inline void trace_usb_xhci_xfer_success(void * xfer, uint32_t bytes)
+{
+	q_trace("%s: xfer: %p bytes: %u\n", __func__, xfer, bytes);
+}
+
+static inline void trace_usb_xhci_xfer_error(void * xfer, uint32_t ret)
+{
+	q_trace("%s: xfer: %p ret: %d\n", __func__, xfer, ret);
+}
+
+static inline void trace_usb_xhci_unimplemented(const char * item, int nr)
+{
+	q_trace("%s: item: %s nr: %d\n", __func__, item, nr);
+}
+
+static inline void trace_usb_port_claim(int bus, const char * port)
+{
+	q_trace("%s: bus: %d port: %s\n", __func__, bus, port);
+}
+
+static inline void trace_usb_port_attach(int bus, const char * port, const char * devspeed, const char * portspeed)
+{
+	q_trace("%s: bus: %d port: %s devspeed: %s portspeed: %s\n", __func__, bus, port, devspeed, portspeed);
+}
+
+static inline void trace_usb_port_detach(int bus, const char * port)
+{
+	q_trace("%s: bus: %d port: %s\n", __func__, bus, port);
+}
+
+static inline void trace_usb_port_release(int bus, const char * port)
+{
+	q_trace("%s: bus: %d port: %s\n", __func__, bus, port);
+}
+
+static inline void trace_usb_packet_state_change(int bus, const char * port, int ep, void * p, const char * o, const char * n)
+{
+	q_trace("%s: bus: %d port: %s ep: %d p: %p %s -> %s\n", __func__, bus, port, ep, p, o, n);
+}
+
+static inline void trace_usb_packet_state_fault(int bus, const char * port, int ep, void * p, const char * o, const char * n)
+{
+	q_trace("%s: bus: %d port: %s ep: %d p: %p %s -> %s\n", __func__, bus, port, ep, p, o, n);
+}
+
+
+#if 0
 #define trace_usb_xhci_irq_msix_use(v)
 #define trace_usb_xhci_irq_msix_unuse(v)
 #define trace_usb_xhci_irq_msix(v)
@@ -694,6 +947,7 @@ typedef struct VMStateDescription
 #define trace_usb_port_detach(...)
 #define trace_usb_packet_state_fault(...)
 #define trace_usb_packet_state_change(...)
+#endif
 
 /***********************
  ** library interface **

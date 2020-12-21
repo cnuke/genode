@@ -26,15 +26,22 @@
 
 #include <qemu/usb.h>
 
-#define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#if ENABLE_TRACING
+#define TRACE(...) do { Genode::trace(_timer_queue->get_ns(), " ", Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#else
+#define TRACE(...)
+#endif
+
+//#define TRACEX(...) do { Genode::trace(_timer_queue->get_ns(), " ", Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#define TRACEX(...) 
 
 /*******************
  ** USB interface **
  *******************/
 
-static bool const verbose_irq  = true;
-static bool const verbose_iov  = true;
-static bool const verbose_mmio = true;
+static bool const verbose_irq  = false;
+static bool const verbose_iov  = false;
+static bool const verbose_mmio = false;
 
 extern "C" void _type_init_usb_register_types();
 extern "C" void _type_init_usb_host_register_types(Genode::Entrypoint*,
@@ -46,23 +53,68 @@ extern Genode::Mutex _mutex;
 
 Qemu::Controller *qemu_controller();
 
+static int audio_out_fd = -1;
 
 static Qemu::Timer_queue* _timer_queue;
 static Qemu::Pci_device*  _pci_device;
+static Qemu::File_writer* _file_writer;
+
+struct Buffer
+{
+	enum { FULL_THRESHOLD = 1024, };
+
+	size_t  capacity;
+	size_t  offset;
+	char   *data;
+
+	bool _dumped;
+
+	Buffer(size_t const capacity, char *data)
+	: capacity { capacity }, offset { 0 }, data { data }, _dumped { false }
+	{ }
+
+	bool almost_full() const
+	{
+		return offset + FULL_THRESHOLD > capacity;
+	}
+
+	void append(char const *src, size_t len)
+	{
+		Genode::memcpy(data + offset, src, len);
+		offset += len;
+	}
+
+	void dump(Qemu::File_writer &fw)
+	{
+		fw.append((char const*)data, offset);
+		_dumped = true;
+	}
+
+	bool dumped() const
+	{
+		return _dumped;
+	}
+};
+static Buffer* _buffer;
 
 static Genode::Allocator *_heap = nullptr;
 
-Qemu::Controller *Qemu::usb_init(Timer_queue &tq, Pci_device &pci,
+Qemu::Controller *Qemu::usb_init(Timer_queue &tq, Pci_device &pci, File_writer &fd,
                                  Genode::Entrypoint &ep,
                                  Genode::Allocator &alloc, Genode::Env &env)
 {
 	_heap = &alloc;
 	_timer_queue = &tq;
 	_pci_device  = &pci;
+	_file_writer = &fd;
 
 	_type_init_usb_register_types();
 	_type_init_xhci_register_types();
 	_type_init_usb_host_register_types(&ep, &alloc, &env);
+
+	enum { BUFFER_SIZE = 2u << 20, };
+	static Buffer buffer { BUFFER_SIZE, (char *)_heap->alloc(BUFFER_SIZE) };
+	_buffer = &buffer;
 
 	return qemu_controller();
 }
@@ -121,8 +173,9 @@ void q_printf(char const *fmt, ...)
 }
 
 
-extern "C" void q_trace(char const *fmt, ...)
+void q_trace(char const *fmt, ...)
 {
+#if ENABLE_TRACING
 	enum { BUF_SIZE = 256 };
 	char buf[BUF_SIZE] { };
 	va_list args;
@@ -131,6 +184,7 @@ extern "C" void q_trace(char const *fmt, ...)
 	sc.vprintf(fmt, args);
 	TRACE((char const*)buf);
 	va_end(args);
+#endif
 }
 
 
@@ -505,7 +559,10 @@ QEMUTimer* timer_new_ns(QEMUClockType, void (*cb)(void*), void *opaque)
 
 
 int64_t qemu_clock_get_ns(QEMUClockType) {
-	return _timer_queue->get_ns(); }
+	int64_t const now = _timer_queue->get_ns();
+	TRACE(__func__, ": now: ", now);
+	return now;
+}
 
 
 struct Controller : public Qemu::Controller
@@ -587,16 +644,19 @@ struct Controller : public Qemu::Controller
 			ptr = (void*)&Object_pool::p()->xhci_state()->ports[port];
 		}
 
-		if (verbose_mmio)
-			TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
-			            "reg: ", Hex(reg));
+		// if (verbose_mmio)
+		// 	TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
+		// 	            "reg: ", Hex(reg));
 
 		uint64_t v = mmio.ops->read(ptr, reg, size);
 		memcpy(buf, &v, Genode::min(sizeof(v), size));
 
-		if (verbose_mmio)
+		if (verbose_mmio && offset != 0x44)
 			TRACE(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
 			            "reg: ", Hex(reg), " v: ", Hex(v));
+
+		// TRACEX(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
+		//             "reg: ", Hex(reg), " v: ", Hex(v));
 
 		return 0;
 	}
@@ -617,6 +677,18 @@ struct Controller : public Qemu::Controller
 		if (offset >= (OFF_OPER + 0x400) && offset < OFF_RUNTIME) {
 			uint32_t port = (offset - 0x440) / 0x10;
 			ptr = (void*)&Object_pool::p()->xhci_state()->ports[port];
+		}
+
+		static uint32_t db_write = 0;
+		if (offset >= 0x2000 && offset < 0x2100) {
+		TRACEX(__func__, ": ", Hex(mmio.id), " name: ", mmio.name, " offset: ", Hex(offset), " "
+		            "reg: ", Hex(reg), " v: ", Hex(v));
+		}
+
+		if (!_buffer->dumped() && _buffer->almost_full()) {
+			Genode::error("dump out-buffer");
+			_buffer->dump(*_file_writer);
+			Genode::error("out-buffer dumped");
 		}
 
 		if (verbose_mmio)
@@ -760,7 +832,7 @@ void qemu_iovec_add(QEMUIOVector *qiov, void *base, size_t len)
 	}
 
 	if (verbose_iov)
-		TRACE(__func__, ": niov: ", niov, " iov_base: ",
+		TRACE(__func__, ": qiov: ", qiov, " niov: ", niov, " iov_base: ",
 		            &qiov->iov[niov].iov_base, " base: ", base, " len: ", len);
 
 	qiov->iov[niov].iov_base = base;
@@ -825,6 +897,12 @@ size_t iov_from_buf(const struct iovec *iov, unsigned int iov_cnt,
 	for (i = 0, done = 0; (offset || done < bytes) && i < iov_cnt; i++) {
 		if (offset < iov[i].iov_len) {
 			size_t len = Genode::min(iov[i].iov_len - offset, bytes - done);
+
+			/* copy ISOC IN */
+			// if (!_buffer->almost_full()) {
+			// 	(void)_buffer->append((char *)buf + done, len);
+			// }
+
 			memcpy((char*)iov[i].iov_base + offset, (char*)buf + done, len);
 			done += len;
 			offset = 0;
@@ -848,6 +926,12 @@ size_t iov_to_buf(const struct iovec *iov, const unsigned int iov_cnt,
 		if (offset < iov[i].iov_len) {
 			size_t len = Genode::min(iov[i].iov_len - offset, bytes - done);
 			memcpy((char*)buf + done, (char*)iov[i].iov_base + offset, len);
+
+			/* copy ISOC OUT */
+			// if (!_buffer->almost_full()) {
+			// 	(void)_buffer->append((char *)iov[i].iov_base + offset, len);
+			// }
+
 			done += len;
 			offset = 0;
 		} else {

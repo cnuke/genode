@@ -12,6 +12,7 @@
 #include <usb_session/connection.h>
 #include <usb/usb.h>
 #include <util/xml_node.h>
+#include <os/ring_buffer.h>
 
 #include <extern_c_begin.h>
 #include <qemu_emul.h>
@@ -19,8 +20,13 @@
 #include <extern_c_end.h>
 #include <base/debug.h>
 
+#if ENABLE_TRACING
 #define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
+#else
+#define TRACE(...)
+#endif
 
+#define TRACEX(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
 
 using namespace Genode;
 
@@ -65,6 +71,10 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 			_size (_packet.read_transfer() ? _packet.transfer.actual_size : _packet.size())
 		{ }
 
+		Isoc_packet()
+		: _packet { Usb::Packet_descriptor() }, _content { nullptr }, _size { 0 }
+		{ }
+
 		bool copy(USBPacket *usb_packet)
 		{
 			if (!valid()) return false;
@@ -98,6 +108,12 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 		unsigned packet_count() const { return _packet.transfer.number_of_packets; }
 
 		Usb::Packet_descriptor& packet() { return _packet; }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, " packet: ", _packet, " _size: ", _size,
+			                   " _offset: ", _offset);
+		}
 };
 
 
@@ -243,6 +259,9 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	Fifo<Isoc_packet>             isoc_read_queue { };
 	Reconstructible<Isoc_packet>  isoc_write_packet { Usb::Packet_descriptor(), nullptr };
 
+	Genode::Ring_buffer<Isoc_packet, 5, Genode::Ring_buffer_unsynchronized> _isoch_out_queue { };
+	unsigned _isoch_out_pending { 0 };
+
 	Entrypoint  &_ep;
 	Signal_handler<Usb_host_device> state_dispatcher { _ep, *this, &Usb_host_device::state_change };
 
@@ -332,9 +351,46 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		uint64_t ts_us { 0 };
 		Usb::Packet_descriptor pd { };
 	};
-
 	Submitted_isoc_out submitted_isoc_out { };
 
+#if 0
+	Submitted_isoc_out submitted_isoc_out[128] { };
+	uint32_t submitted_isoc_out_count { 0 };
+
+	Submitted_isoc_out &alloc_isoc_out()
+	{
+		if (submitted_isoc_out_count >= 128) {
+			throw 42;
+		}
+		Submitted_isoc_out *res = nullptr;
+		for (Submitted_isoc_out &s : submitted_isoc_out) {
+			if (s.pd.offset() == 0 && s.ts_us == 0) {
+				++submitted_isoc_out;
+				res = &s;
+				break;
+			}
+		}
+
+		return *res;
+	}
+
+	Submitted_isoc_out &lookup_pd(Usb::Packet_descriptor pd)
+	{
+		if (submitted_isoc_out_count >= 128) {
+			throw 42;
+		}
+		Submitted_isoc_out *res = nullptr;
+		for (Submitted_isoc_out &s : submitted_isoc_out) {
+			if (s.pd.offset() == 0 && s.ts_us == 0) {
+				++submitted_isoc_out;
+				res = &s;
+				break;
+			}
+		}
+
+		return *res;
+	}
+#endif
 
 	void ack_avail()
 	{
@@ -347,6 +403,8 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			Usb::Packet_descriptor packet = usb_raw.source()->get_acked_packet();
 			Completion *c = dynamic_cast<Completion *>(packet.completion);
 
+			TRACE(__func__, ": packet: ", packet, " c: ", c);
+
 			/* ISOC OUT OR CANCLED */
 			if ((packet.type == Packet_type::ISOC && !packet.read_transfer())) {
 				uint64_t diff = 0;
@@ -354,9 +412,10 @@ struct Usb_host_device : List<Usb_host_device>::Element
 					uint64_t current_ts = _timer.curr_time().trunc_to_plain_us().value;
 					diff = (current_ts - submitted_isoc_out.ts_us);
 				}
-				TRACE(__func__, ": ISO OUT: packet: ", packet, " diff: ", diff, " us");
+				TRACEX(__func__, ": ISO OUT: packet: ", packet, " diff: ", diff, " us");
 				submitted_isoc_out.pd = Usb::Packet_descriptor();
 				free_packet(packet);
+				_isoch_out_pending--;
 				continue;
 			}
 			if ((c && c->state == Completion::CANCELED)) {
@@ -414,14 +473,14 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		unsigned count = 0;
 		isoc_read_queue.for_each([&count] (Isoc_packet&) { count++; });
-		return (count + _isoc_in_pending) < 16 ? true : false;
+		return (count + _isoc_in_pending) < 4 ? true : false;
 	}
 
 	void isoc_in_packet(USBPacket *usb_packet)
 	{
-		TRACE(__func__, ": USBPacket: ", usb_packet);
+		TRACE(__func__, ": ISOC IN USBPacket: ", usb_packet);
 
-		enum { NUMBER_OF_PACKETS = 2 };
+		enum { NUMBER_OF_PACKETS = 32 };
 		isoc_read(usb_packet);
 
 		if (!isoc_new_packet())
@@ -439,14 +498,14 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			}
 
 			Completion *c = dynamic_cast<Completion *>(packet.completion);
-			TRACE(__func__, ": packet: ", packet, " completion: ", c, " (old p: ", c->p, ")");
+
+			_isoc_in_pending++;
+			TRACE(__func__, ": ISOC IN packet: ", packet, " completion: ", c, " (old p: ", c->p, ") pending: ", _isoc_in_pending);
 
 			c->p          = nullptr;
 			c->dev        = usb_packet->ep->dev;
 			c->data       = nullptr;
 			c->endpoint   = endpoint_number(usb_packet->ep);
-
-			_isoc_in_pending++;
 
 			submit(packet);
 		} catch (Packet_alloc_failed) {
@@ -475,7 +534,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	void isoc_out_packet(USBPacket *usb_packet)
 	{
-		TRACE(__func__, ": USBPacket: ", usb_packet);
+		TRACE(__func__, ": ISOC OUT USBPacket: ", usb_packet);
 
 		enum { NUMBER_OF_PACKETS = 32 };
 
@@ -483,15 +542,19 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		if (valid) {
 			isoc_write_packet->copy(usb_packet);
 
+			TRACEX(__func__, ": isoc_packet: ", *isoc_write_packet,
+			       " _isoch_out_pending: ", _isoch_out_pending);
 			if (isoc_write_packet->packet_count() < NUMBER_OF_PACKETS)
 				return;
 
 			if (submitted_isoc_out.pd.offset() == 0) {
 				submitted_isoc_out.ts_us = _timer.curr_time().trunc_to_plain_us().value;
 				submitted_isoc_out.pd = isoc_write_packet->packet();
-				TRACE(__func__, ": submitted_isoc_out.ts_us: ", submitted_isoc_out.ts_us);
+				TRACE(__func__, ": ISOC OUT submitted_isoc_out.ts_us: ", submitted_isoc_out.ts_us);
 			}
-			submit(isoc_write_packet->packet());
+
+			TRACEX(__func__, ": add to queue: ", *isoc_write_packet);
+			_isoch_out_queue.add(*&*isoc_write_packet);
 		}
 
 		size_t size = usb_packet->ep->max_packet_size * NUMBER_OF_PACKETS;
@@ -512,6 +575,18 @@ struct Usb_host_device : List<Usb_host_device>::Element
 				TRACE(__func__, ": xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
 			isoc_write_packet.construct(Usb::Packet_descriptor(), nullptr);
 			return;
+		}
+
+		TRACEX(__func__, ": avail_capacity: ", _isoch_out_queue.avail_capacity());
+		if (_isoch_out_pending == 0 && _isoch_out_queue.avail_capacity() > 1) {
+			return;
+		}
+
+		while (!_isoch_out_queue.empty()) {
+			Isoc_packet i = _isoch_out_queue.get();
+			TRACEX(__func__, ": submit: ", i);
+			submit(i.packet());
+			_isoch_out_pending++;
 		}
 	}
 
@@ -560,6 +635,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 		}
 
 		Usb::Packet_descriptor packet = usb_raw.source()->alloc_packet(length);
+		packet.type = Usb::Packet_descriptor::INVALID;
 
 		if (!completion) {
 			packet.completion = nullptr;
@@ -807,8 +883,10 @@ static void usb_host_handle_data(USBDevice *udev, USBPacket *p)
 	case USB_ENDPOINT_XFER_ISOC:
 		if (in)
 			dev->isoc_in_packet(p);
-		else
+		else {
 			dev->isoc_out_packet(p);
+			// p->actual_length = p->iov.size;
+		}
 		return;
 	default:
 		error("not supported data request");

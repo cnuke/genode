@@ -68,7 +68,7 @@ struct Trace_subject_registry
 			return nullptr;
 		}
 
-		enum { MAX_CPUS_X = 16, MAX_CPUS_Y = 4, MAX_ELEMENTS_PER_CPU = 6};
+		enum { MAX_CPUS_X = 1, MAX_CPUS_Y = 1, MAX_ELEMENTS_PER_CPU = 64};
 
 		/* accumulated execution time on all CPUs */
 		unsigned long long total_first [MAX_CPUS_X][MAX_CPUS_Y];
@@ -131,10 +131,11 @@ struct Trace_subject_registry
 				unsigned const x = e->info.affinity().xpos();
 				unsigned const y = e->info.affinity().ypos();
 				if (x >= MAX_CPUS_X || y >= MAX_CPUS_Y) {
-					Genode::error("cpu ", e->info.affinity().xpos(), ".",
-					              e->info.affinity().ypos(), " is outside "
-					              "supported range ",
-					              (int)MAX_CPUS_X, ".", (int)MAX_CPUS_Y);
+
+					// Genode::error("cpu ", e->info.affinity().xpos(), ".",
+					//               e->info.affinity().ypos(), " is outside "
+					//               "supported range ",
+					//               (int)MAX_CPUS_X, ".", (int)MAX_CPUS_Y);
 					continue;
 				}
 

@@ -181,7 +181,7 @@ namespace Genode {
 	 */
 	template <typename... ARGS>
 	void trace(ARGS && ... args) {
-		Trace_output::trace_output().output(Trace::timestamp(), ": ", args...); }
+		Trace_output::trace_output().output(Trace::timestamp(), " ", args...); }
 }
 
 #endif /* _INCLUDE__BASE__LOG_H_ */

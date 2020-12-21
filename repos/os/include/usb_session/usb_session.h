@@ -33,7 +33,7 @@ namespace Usb {
  */
 struct Usb::Packet_descriptor : Genode::Packet_descriptor
 {
-	enum Type { STRING, CTRL, BULK, IRQ, ISOC, ALT_SETTING, CONFIG, RELEASE_IF };
+	enum Type { INVALID, STRING, CTRL, BULK, IRQ, ISOC, ALT_SETTING, CONFIG, RELEASE_IF };
 	enum Iso  { MAX_PACKETS = 32 };
 
 	/* use the polling interval stated in the endpoint descriptor */
@@ -110,12 +110,16 @@ struct Usb::Packet_descriptor : Genode::Packet_descriptor
 		case Type::ALT_SETTING: str = "ALT_SETTING"; break;
 		case Type::CONFIG:      str = "CONFIG"; break;
 		case Type::RELEASE_IF:  str = "RELEASE_IF"; break;
+		case Type::INVALID:     str = "INVALID"; break;
 		default: str = "<unknown>"; break;
 		}
 
 		bool in = transfer.ep & ENDPOINT_IN;
 
-		Genode::print(out, "offset: ", offset(), " ", str, " ", in ? "IN" : "OUT");
+		Genode::print(out, "offset: ", offset(), " size: ", size(), " ", str, " ",
+		              type == Type::INVALID ? ""
+		                                    : in ? "IN"
+		                                         : "OUT");
 	}
 };
 

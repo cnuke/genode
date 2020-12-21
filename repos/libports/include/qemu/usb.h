@@ -70,6 +70,12 @@ namespace Qemu {
 	};
 
 
+	struct File_writer
+	{
+		virtual size_t append(char const *src, size_t len) = 0;
+	};
+
+
 	/*************************************
 	 ** Qemu library frontend functions **
 	 *************************************/
@@ -102,7 +108,7 @@ namespace Qemu {
 	 *
 	 * \return Pointer to Controller object that is used to access the xHCI device state
 	 */
-	Controller *usb_init(Timer_queue &tq, Pci_device &pd,
+	Controller *usb_init(Timer_queue &tq, Pci_device &pd, File_writer &fw,
 	                     Genode::Entrypoint &ep,
 	                     Genode::Allocator &, Genode::Env &);
 

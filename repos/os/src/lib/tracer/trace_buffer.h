@@ -74,6 +74,8 @@ class Trace_buffer
 			if (update) _curr = curr;
 		}
 
+		unsigned wrap_count() const { return _buffer.wrapped(); }
+
 		void * address()        const { return &_buffer; }
 };
 

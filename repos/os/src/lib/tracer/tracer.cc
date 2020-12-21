@@ -193,6 +193,11 @@ struct Local_tracer
 			if (id.value != rid.id.value) { return; }
 			valid_id = true;
 
+			unsigned const wc = rid.trace_buffer->wrap_count();
+			if (wc) {
+				Genode::warning("TRACEBUFFER ", rid.id.value, " WRAPPED: ", wc);
+			}
+
 			using E = Trace::Buffer::Entry;
 			rid.trace_buffer->for_each_new_entry([&] (E const &e) {
 
