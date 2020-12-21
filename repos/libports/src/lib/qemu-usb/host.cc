@@ -8,6 +8,7 @@
 #include <base/allocator_avl.h>
 #include <base/log.h>
 #include <base/attached_rom_dataspace.h>
+#include <os/ring_buffer.h>
 #include <usb_session/connection.h>
 #include <usb/usb.h>
 #include <util/xml_node.h>
@@ -58,6 +59,10 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 		Isoc_packet(Usb::Packet_descriptor packet, char *content)
 		: _packet(packet), _content(content),
 			_size (_packet.read_transfer() ? _packet.transfer.actual_size : _packet.size())
+		{ }
+
+		Isoc_packet()
+		: _packet { Usb::Packet_descriptor() }, _content { nullptr }, _size { 0 }
 		{ }
 
 		bool copy(USBPacket *usb_packet)
@@ -219,6 +224,12 @@ struct Usb_host_device : List<Usb_host_device>::Element
 
 	Fifo<Isoc_packet>             isoc_read_queue { };
 	Reconstructible<Isoc_packet>  isoc_write_packet { Usb::Packet_descriptor(), nullptr };
+
+	enum { NUM_ISOC_OUT = 4, };
+	using Isoc_write_queue = Genode::Ring_buffer<Isoc_packet, NUM_ISOC_OUT + 1,
+	                                             Genode::Ring_buffer_unsynchronized>;
+	Isoc_write_queue _isoc_out_queue { };
+	unsigned _isoch_out_pending { 0 };
 
 	Entrypoint  &_ep;
 	Signal_handler<Usb_host_device> state_dispatcher { _ep, *this, &Usb_host_device::state_change };
@@ -424,7 +435,7 @@ struct Usb_host_device : List<Usb_host_device>::Element
 			if (isoc_write_packet->packet_count() < NUMBER_OF_PACKETS)
 				return;
 
-			submit(isoc_write_packet->packet());
+			_isoc_out_queue.add(*&*isoc_write_packet);
 		}
 
 		size_t size = usb_packet->ep->max_packet_size * NUMBER_OF_PACKETS;
@@ -443,6 +454,21 @@ struct Usb_host_device : List<Usb_host_device>::Element
 				warning("xHCI: packet allocation failed (size ", Hex(size), "in ", __func__, ")");
 			isoc_write_packet.construct(Usb::Packet_descriptor(), nullptr);
 			return;
+		}
+
+		/*
+		 * Wait until 3 requests have build up before submitting the initial
+		 * request.
+		 */
+		bool const enough_queued = _isoc_out_queue.avail_capacity() > (NUM_ISOC_OUT - 3);
+		if (_isoch_out_pending == 0 && enough_queued) {
+			return;
+		}
+
+		while (!_isoc_out_queue.empty()) {
+			Isoc_packet i = _isoc_out_queue.get();
+			submit(i.packet());
+			_isoch_out_pending++;
 		}
 	}
 
