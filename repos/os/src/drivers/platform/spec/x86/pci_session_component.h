@@ -299,7 +299,8 @@ class Platform::Session_component : public Genode::Rpc_object<Session>
 				{ "USB"      , 0xc, 0x03, 0x0},
 				{ "VGA"      , 0x3, 0x00, 0x0},
 				{ "WIFI"     , 0x2, 0x80, 0x0},
-				{ "ISABRIDGE", 0x6, 0x01, 0x0}
+				{ "ISABRIDGE", 0x6, 0x01, 0x0},
+				{ "SYSTEM",    0x8, 0x08, 0x0}
 			};
 
 			for (unsigned i = 0; i < sizeof(aliases) / sizeof(aliases[0]); i++) {
