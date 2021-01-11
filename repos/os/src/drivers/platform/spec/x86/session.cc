@@ -76,14 +76,15 @@ void Platform::Pci_buses::scan_bus(Config_access &config_access,
 			 * between BIOS/UEFI and device, e.g. USB. Violating such protocols
 			 * lead to hard hangs on some machines.
 			 */
-			if (config.class_code() >> 8) {
-				uint16_t classcode = config.class_code() >> 16;
-				uint16_t subclass  = (config.class_code() >> 8) & 0xff;
+			// if (config.class_code() >> 8) {
+			// 	uint16_t classcode = config.class_code() >> 16;
+			// 	uint16_t subclass  = (config.class_code() >> 8) & 0xff;
 
-				if ((classcode == 0x2 && subclass == 0x00) /* ETHERNET */) {
-					config.disable_bus_master_dma(config_access);
-				}
-			}
+			// 	if ((classcode == 0x2 && subclass == 0x00) /* ETHERNET */) {
+			// 		config.disable_bus_master_dma(config_access);
+			// 	}
+			// }
+			config.disable_bus_master_dma(config_access);
 
 			if (!config.valid())
 				continue;
