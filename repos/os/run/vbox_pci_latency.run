@@ -1,0 +1,75 @@
+assert_spec x86
+
+#
+# Build
+#
+set build_components {
+	core init timer
+	drivers/pci_vbox
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+
+create_boot_directory
+
+#
+# Generate config
+#
+append config {
+<config verbose="no">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="CAP"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="SIGNAL" />
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>}
+
+append_platform_drv_config
+
+append config {
+	<start name="pci_vbox_drv">
+		<resource name="RAM" quantum="4M"/>
+		<config/>
+	</start>
+
+</config>}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+set boot_modules {
+	core init timer pci_vbox_drv
+	ld.lib.so
+}
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+append qemu_args " -nographic -m 512 "
+
+run_genode_until {.*no Vbox PCIe controller found.*} 30
