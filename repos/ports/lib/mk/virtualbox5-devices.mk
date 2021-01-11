@@ -72,6 +72,7 @@ SRC_CC += GuestHost/HGSMI/HGSMICommon.cpp
 SRC_CC += GuestHost/HGSMI/HGSMIMemAlloc.cpp
 
 SRC_CC += devxhci.cc
+SRC_CC += devpcivbox.cc
 INC_DIR += $(call select_from_repositories,src/lib/libc)
 
 INC_DIR += $(VBOX_DIR)/Devices/build
@@ -118,5 +119,6 @@ vboxssdt-cpuhotplug.hex: vbox-cpuhotplug.dsl
 
 vpath %.dsl $(VBOX_DIR)/Devices/PC
 vpath devxhci.cc $(REP_DIR)/src/virtualbox5
+vpath devpcivbox.cc $(REP_DIR)/src/virtualbox5
 
 CC_CXX_WARN_STRICT =
