@@ -1,0 +1,41 @@
+--- a/src/app/virtualbox/src/VBox/Devices/build/VBoxDD.h
++++ b/src/app/virtualbox/src/VBox/Devices/build/VBoxDD.h
+@@ -63,6 +63,7 @@
+ extern const PDMDEVREG g_DeviceOHCI;
+ extern const PDMDEVREG g_DeviceEHCI;
+ extern const PDMDEVREG g_DeviceXHCI;
++extern const PDMDEVREG g_DevicePCIVBOX;
+ extern const PDMDEVREG g_DeviceACPI;
+ extern const PDMDEVREG g_DeviceDMA;
+ extern const PDMDEVREG g_DeviceFloppyController;
+--- a/src/app/virtualbox/src/VBox/Main/src-client/BusAssignmentManager.cpp
++++ b/src/app/virtualbox/src/VBox/Main/src-client/BusAssignmentManager.cpp
+@@ -71,6 +71,7 @@
+     {"usb-ehci",      0, 11,  0, 0},
+     {"usb-xhci",      0, 12,  0, 0},
+ 
++    {"pci-vbox-ctl",  0, 28,  0, 0},
+     {"nec-xhci",      0, 29,  0, 0},
+ 
+     /* ACPI controller */
+--- a/src/app/virtualbox/src/VBox/Main/src-client/ConsoleImpl2.cpp
++++ b/src/app/virtualbox/src/VBox/Main/src-client/ConsoleImpl2.cpp
+@@ -2130,6 +2130,18 @@
+             }
+         }
+ 
++		extern bool use_pci_controller();
++		if (use_pci_controller()) {
++			/*
++			 * VBOX PCI device
++			 */
++			InsertConfigNode(pDevices, "pci-vbox-ctl", &pDev);
++			InsertConfigNode(pDev,     "0",        &pInst);
++			InsertConfigNode(pInst,    "Config",   &pCfg);
++			InsertConfigInteger(pInst, "Trusted",  1);
++			hrc = pBusMgr->assignPCIDevice("pci-vbox-ctl", pInst);                  H();
++		}
++
+         /*
+          * Storage controllers.
+          */
