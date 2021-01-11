@@ -2,9 +2,8 @@ LICENSE   := GPLv2
 VERSION   := git
 DOWNLOADS := nova.git
 
-# r10_time_20_09 branch
 URL(nova) := https://github.com/alex-ab/NOVA.git
-REV(nova) := af931a15fc6b032615f076e946b6026a31dbacaf
+REV(nova) := r10_time
 DIR(nova) := src/kernel/nova
 
 PATCHES   := $(sort $(wildcard $(REP_DIR)/patches/*.patch))
