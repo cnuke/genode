@@ -9,5 +9,7 @@ TAR_OPT(qemu) := --strip-components=1 --files-from $(REP_DIR)/src/lib/qemu-usb/f
 HASH_INPUT    += $(REP_DIR)/src/lib/qemu-usb/files.list
 
 PATCHES  := src/lib/qemu-usb/patches/xhci_state.patch \
-            src/lib/qemu-usb/patches/usb_bus_nfree.patch
+            src/lib/qemu-usb/patches/usb_bus_nfree.patch \
+            src/lib/qemu-usb/patches/xhci_bei.patch \
+            src/lib/qemu-usb/patches/xhci_ep_stall.patch
 PATCH_OPT:= -p1

@@ -1,0 +1,14 @@
+--- a/src/lib/qemu/hw/usb/hcd-xhci.c
++++ b/src/lib/qemu/hw/usb/hcd-xhci.c
+@@ -1822,6 +1825,11 @@
+     uint32_t err;
+     XHCIStreamContext *sctx;
+ 
++    bool is_isoch = (epctx->type == ET_ISO_IN || epctx->type == ET_ISO_OUT);
++    if (is_isoch) {
++        return;
++    }
++
+     if (epctx->nr_pstreams) {
+         sctx = xhci_find_stream(epctx, xfer->streamid, &err);
+         if (sctx == NULL) {

@@ -1,0 +1,86 @@
+--- a/src/lib/qemu/hw/usb/hcd-xhci.c
++++ b/src/lib/qemu/hw/usb/hcd-xhci.c
+@@ -511,7 +511,7 @@
+ static TRBCCode xhci_disable_ep(XHCIState *xhci, unsigned int slotid,
+                                 unsigned int epid);
+ static void xhci_xfer_report(XHCITransfer *xfer);
+-static void xhci_event(XHCIState *xhci, XHCIEvent *event, int v);
++static void xhci_event(XHCIState *xhci, XHCIEvent *event, int v, int bei);
+ static void xhci_write_event(XHCIState *xhci, XHCIEvent *event, int v);
+ static USBEndpoint *xhci_epid_to_usbep(XHCIState *xhci,
+                                        unsigned int slotid, unsigned int epid);
+@@ -659,7 +659,7 @@
+     XHCIState *xhci = opaque;
+     XHCIEvent wrap = { ER_MFINDEX_WRAP, CC_SUCCESS };
+ 
+-    xhci_event(xhci, &wrap, 0);
++    xhci_event(xhci, &wrap, 0, 0);
+     xhci_mfwrap_update(xhci);
+ }
+ 
+@@ -927,7 +927,7 @@
+     }
+ }
+ 
+-static void xhci_event(XHCIState *xhci, XHCIEvent *event, int v)
++static void xhci_event(XHCIState *xhci, XHCIEvent *event, int v, int bei)
+ {
+     XHCIInterrupter *intr;
+     dma_addr_t erdp;
+@@ -984,7 +984,9 @@
+         xhci_write_event(xhci, event, v);
+     }
+ 
+-    xhci_intr_raise(xhci, v);
++    if (!bei) {
++        xhci_intr_raise(xhci, v);
++    }
+ }
+ 
+ static void xhci_ring_init(XHCIState *xhci, XHCIRing *ring,
+@@ -1699,7 +1701,7 @@
+         dma_addr_t addr;
+         unsigned int chunk = 0;
+ 
+-        if (trb->control & TRB_TR_IOC) {
++        if (trb->control & TRB_TR_IOC && !(trb->control & TRB_TR_BEI)) {
+             xfer->int_req = true;
+         }
+ 
+@@ -1797,7 +1799,8 @@
+                 DPRINTF("xhci_xfer_data: EDTLA=%d\n", event.length);
+                 edtla = 0;
+             }
+-            xhci_event(xhci, &event, TRB_INTR(*trb));
++            xhci_event(xhci, &event, TRB_INTR(*trb),
++                       (trb->control & TRB_TR_BEI));
+             reported = 1;
+             if (xfer->status != CC_SUCCESS) {
+                 return;
+@@ -2818,7 +2821,7 @@
+             break;
+         }
+         event.slotid = slotid;
+-        xhci_event(xhci, &event, 0);
++        xhci_event(xhci, &event, 0, 0);
+     }
+ }
+ 
+@@ -2846,7 +2849,7 @@
+     if (!xhci_running(port->xhci)) {
+         return;
+     }
+-    xhci_event(port->xhci, &ev, 0);
++    xhci_event(port->xhci, &ev, 0, 0);
+ }
+ 
+ static void xhci_port_update(XHCIPort *port, int is_detach)
+@@ -3213,7 +3216,7 @@
+         if (xhci->crcr_low & (CRCR_CA|CRCR_CS) && (xhci->crcr_low & CRCR_CRR)) {
+             XHCIEvent event = {ER_COMMAND_COMPLETE, CC_COMMAND_RING_STOPPED};
+             xhci->crcr_low &= ~CRCR_CRR;
+-            xhci_event(xhci, &event, 0);
++            xhci_event(xhci, &event, 0, 0);
+             DPRINTF("xhci: command ring stopped (CRCR=%08x)\n", xhci->crcr_low);
+         } else {
+             dma_addr_t base = xhci_addr64(xhci->crcr_low & ~0x3f, val);
