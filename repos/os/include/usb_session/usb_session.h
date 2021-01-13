@@ -100,13 +100,77 @@ struct Usb::Packet_descriptor : Genode::Packet_descriptor
 	/**
 	 * Return true if packet is a read transfer
 	 */
-	bool read_transfer() { return transfer.ep & ENDPOINT_IN; }
+	bool read_transfer() const { return transfer.ep & ENDPOINT_IN; }
 
 	Packet_descriptor(off_t offset = 0, size_t size = 0)
 	: Genode::Packet_descriptor(offset, size) { }
 
 	Packet_descriptor(Genode::Packet_descriptor p, Type type, Completion *completion = nullptr)
 	: Genode::Packet_descriptor(p.offset(), p.size()), type(type), completion(completion) { }
+
+	char const *_type_string(Type type) const
+	{
+		switch (type) {
+		case Type::ALT_SETTING: return "ALT_SETTING";
+		case Type::BULK:        return "BULK";
+		case Type::CONFIG:      return "CONFIG";
+		case Type::CTRL:        return "CTRL";
+		case Type::IRQ:         return "IRQ";
+		case Type::ISOC:        return "ISOC";
+		case Type::RELEASE_IF:  return "RELEASE_IF";
+		case Type::STRING:      return "STRING";
+		}
+		return "INVALID";
+	}
+
+	void print(Genode::Output &out) const
+	{
+		Genode::print(out, "succeded: ",   succeded, " "
+		                   "completion: ", completion, " "
+		                   "direction: ",  read_transfer() ? "IN" : "OUT", " "
+		                   "type: ",       _type_string(type), " ");
+		switch (type) {
+		case Type::ALT_SETTING:
+			Genode::print(out, "number: ",      interface.number, " "
+			                   "alt_setting: ", interface.alt_setting);
+			break;
+		case Type::BULK:
+			Genode::print(out, "TODO");
+			break;
+		case Type::CONFIG:
+			Genode::print(out, "TODO");
+			break;
+		case Type::CTRL:
+			Genode::print(out, "request: ",      Genode::Hex(control.request), " "
+			                   "request_type: ", Genode::Hex(control.request_type), " "
+			                   "value: ",        Genode::Hex(control.value), " "
+			                   "index: ",        Genode::Hex(control.index), " "
+			                   "actual_size: ",  control.actual_size, " "
+			                   "timeout: ",      control.timeout);
+			break;
+		case Type::IRQ: [[fallthrough]];
+		case Type::ISOC:
+		{
+			size_t total_size = 0;
+			for (int i = 0; i < transfer.number_of_packets; i++) {
+				total_size += transfer.packet_size[i];
+			}
+			Genode::print(out, "ep: ",                transfer.ep,  " "
+			                   "actual_size: ",       transfer.actual_size, " "
+			                   "polling_interval: ",  transfer.polling_interval, " "
+			                   "number_of_packets: ", transfer.number_of_packets, " "
+			                   "total_size: ",        total_size);
+			break;
+		}
+		case Type::RELEASE_IF:
+			Genode::print(out, "TODO");
+			break;
+		case Type::STRING:
+			Genode::print(out, "index: ",  string.index, " "
+			                   "length: ", string.length);
+			break;
+		}
+	}
 };
 
 
