@@ -393,6 +393,13 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 				Genode::memcpy(buf, _sink->packet_content(p), p.size());
 			}
 
+			if (!ep) {
+				error("could not get ep: ", p.transfer.ep);
+				dma_free(buf);
+				p.error = Usb::Packet_descriptor::SUBMIT_ERROR;
+				return false;
+			}
+
 			urb *urb = usb_alloc_urb(p.transfer.number_of_packets, GFP_KERNEL);
 			if (!urb) {
 				error("Failed to allocate isochronous URB");
