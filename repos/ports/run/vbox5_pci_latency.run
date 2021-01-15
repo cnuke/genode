@@ -308,7 +308,7 @@ append config {
 	<start name="vbox" priority="-2" caps="800">
 
 		<binary name="virtualbox5-nova" />
-		<resource name="RAM" quantum="9600M"/>
+		<resource name="RAM" quantum="2600M"/>
 		<config ld_verbose="yes"
 		        vbox_file="machine_pci.vbox"
 		        vm_name="ubuntu_20_04"

@@ -18,7 +18,7 @@
         <HardwareVirtExUX enabled="false"/>
         <HardwareVirtForce enabled="false"/>
       </CPU>
-      <Memory RAMSize="4096"/>
+      <Memory RAMSize="2048"/>
       <HID Pointing="USBTablet"/>
       <Display VRAMSize="20"/>
       <RemoteDisplay enabled="false"/>
