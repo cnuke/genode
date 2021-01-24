@@ -13,6 +13,7 @@
 
 /* Genode includes */
 #include <base/allocator_avl.h>
+#include <base/attached_ram_dataspace.h>
 #include <base/attached_rom_dataspace.h>
 #include <base/component.h>
 #include <base/heap.h>
@@ -22,19 +23,46 @@
 #include <usb/types.h>
 #include <usb_session/connection.h>
 
-#include <trace/timestamp.h>
-
 
 static bool const verbose_intr = false;
 static bool const verbose      = false;
 static bool const debug        = false;
-static bool const dump_dt      = true;
+static bool const dump_dt      = false;
 
 
 namespace Util {
 
 	using namespace Genode;
 	using namespace Usb;
+
+	template<typename T, size_t S>
+	struct Packet_queue
+	{
+		T _elems[S] { };
+
+		unsigned _tail { 0 };
+		unsigned _head { 0 };
+		unsigned _count { 0 };
+
+		void enqueue(T &e)
+		{
+			_elems[_tail] = e;
+			_tail = (_tail + 1) % S;
+			++_count;
+		}
+
+		T dequeue()
+		{
+			unsigned const cur = _head;
+			_head = (_head + 1) % S;
+			--_count;
+			return _elems[cur];
+		}
+
+		T head() const { return _elems[_head]; }
+
+		unsigned queued() const { return _count; }
+	};
 
 	namespace Dump {
 
@@ -91,6 +119,14 @@ void Util::Dump::ep(Endpoint_descriptor &descr)
 namespace Usb {
 	using namespace Genode;
 
+	struct Packet_stream : Genode::Interface
+	{
+		virtual Usb::Packet_descriptor alloc(size_t) = 0;
+		virtual void free(Usb::Packet_descriptor &) = 0;
+		virtual void submit(Usb::Packet_descriptor &) = 0;
+		virtual char *content(Usb::Packet_descriptor &) = 0;
+	};
+
 	struct Audio;
 	struct Main;
 }
@@ -100,19 +136,22 @@ namespace Usb {
  ** USB audio implementation **
  ******************************/
 
-struct Usb::Audio
+struct Usb::Audio : Packet_stream
 {
 	Env &_env;
 
 	Attached_rom_dataspace _samples_rom { _env, "samples.raw" };
 
+	Attached_ram_dataspace _in_samples_ram { _env.ram(), _env.rm(), 4u << 20 };
+
 	struct Samples
 	{
-		char const *base;
-		size_t size;
+		char   * const base;
+		size_t const  size;
+
 		size_t current_offset;
 
-		Samples(char const *base, size_t size)
+		Samples(char * const base, size_t size)
 		:
 			base { base }, size { size }, current_offset { 0 }
 		{
@@ -120,22 +159,17 @@ struct Usb::Audio
 		}
 	};
 
-	Samples _samples { _samples_rom.local_addr<char>(), _samples_rom.size() };
+	Samples _samples {
+		_samples_rom.local_addr<char>(), _samples_rom.size() };
 
-	struct Out_transfer
-	{
-		Usb::Packet_descriptor packet;
-		bool                   pending;
-		bool                   submitted;
-	};
+	Samples _in_samples {
+		_in_samples_ram.local_addr<char>(), _in_samples_ram.size() };
+
 	enum { MAX_OUT_TRANSFERS = 25, };
-	Out_transfer _out_transfers[MAX_OUT_TRANSFERS] { };
-	int          _out_pending   { 0 };
-	int          _out_submitted { 0 };
-	unsigned     _out_tail      { 0 };
-	unsigned     _out_head      { 0 };
+	using Packet_queue =
+		Util::Packet_queue<Usb::Packet_descriptor, MAX_OUT_TRANSFERS>;
 
-	uint64_t _last_transfer = 0;
+	Packet_queue _packet_queue { };
 
 	enum {
 		// FREQ   = 48000,
@@ -145,21 +179,6 @@ struct Usb::Audio
 		CHANS  = 2,
 		BPS    = sizeof (short),
 		BPT    = (FREQ / PPS) * CHANS * BPS,
-	};
-
-	struct Iface
-	{
-		uint8_t number;
-		uint8_t alt_setting;
-		uint8_t ep;
-
-		enum State : uint8_t {
-			DISABLED,
-			ENABLE_PENDING, ENABLED,
-			CONFIGURE_PENDING, CONFIGURED,
-			USEABLE
-		};
-		State state;
 	};
 
 	void _handle_state_change()
@@ -230,6 +249,194 @@ struct Usb::Audio
 		}
 	}
 
+	struct Iface
+	{
+		uint8_t number;
+		uint8_t alt_setting;
+		uint8_t ep;
+
+		enum State : uint8_t {
+			DISABLED,
+			ENABLE_PENDING, ENABLED,
+			CONFIGURE_PENDING, CONFIGURED,
+			USEABLE, ACTIVE
+		};
+		State state;
+
+		void enable(Packet_stream &ps)
+		{
+			Usb::Packet_descriptor p = ps.alloc(0);
+			p.type                   = Usb::Packet_descriptor::ALT_SETTING;
+			p.interface.number       = number;
+			p.interface.alt_setting  = alt_setting;
+
+			Completion *c = dynamic_cast<Completion*>(p.completion);
+			c->iface = this;
+
+			state = State::ENABLE_PENDING;
+			ps.submit(p);
+		}
+
+		void configure(Packet_stream &ps, int freq)
+		{
+			enum {
+				USB_REQUEST_TO_DEVICE  = 0x00,
+				USB_REQUEST_TYPE_CLASS = 0x20,
+				USB_REQUEST_RCPT_EP    = 0x02,
+
+				USB_AUDIO_REQUEST_SET_CUR     = 0x01,
+				USB_AUDIO_REQUEST_SELECT_RATE = 0x01,
+
+				REQUEST = USB_REQUEST_TO_DEVICE | USB_REQUEST_TYPE_CLASS | USB_REQUEST_RCPT_EP,
+			};
+
+			uint8_t cmd[3] { };
+			cmd[0] = freq;
+			cmd[1] = freq >> 8;
+			cmd[2] = freq >> 16;
+
+			Usb::Packet_descriptor p = ps.alloc(sizeof(cmd));
+
+			char *data = ps.content(p);
+			Genode::memcpy(data, cmd, sizeof(cmd));
+
+			p.type                 = Usb::Packet_descriptor::CTRL;
+			p.control.request_type = REQUEST;
+			p.control.request      = USB_AUDIO_REQUEST_SET_CUR;
+			p.control.value        = (USB_AUDIO_REQUEST_SELECT_RATE) << 8;
+			p.control.index        = ep;
+			p.control.timeout      = 1000;
+
+			Completion *c = dynamic_cast<Completion*>(p.completion);
+			c->iface = this;
+
+			state = State::CONFIGURE_PENDING;
+			ps.submit(p);
+		}
+
+		void queue_in_transfer(Packet_stream &ps, Packet_queue &q)
+		{
+			Usb::Packet_descriptor p     = ps.alloc(BPT);
+			p.type                       = Usb::Packet_descriptor::ISOC;
+			p.transfer.ep                = ep;
+			p.transfer.polling_interval  = Usb::Packet_descriptor::DEFAULT_POLLING_INTERVAL;
+
+			Completion *c = dynamic_cast<Completion*>(p.completion);
+			c->iface = this;
+
+			p.transfer.number_of_packets = 10;
+
+			if (FREQ == 44100) {
+				for (int i = 0; i < p.transfer.number_of_packets - 1; i++) {
+					p.transfer.packet_size[i] = 176;
+				}
+				p.transfer.packet_size[9] = 180;
+			} else if (FREQ == 48000) {
+				for (int i = 0; i < p.transfer.number_of_packets; i++) {
+					p.transfer.packet_size[i] = 192;
+				}
+			}
+			ps.submit(p);
+			q.enqueue(p);
+		}
+
+		void complete_in_transfer(Packet_stream &ps,
+		                          Usb::Packet_descriptor &p,
+		                          Packet_queue &q, Samples &samples)
+		{
+			(void)q;
+
+			char *content = ps.content(p);
+
+			size_t length = 0;
+			for (int i = 0; i < p.transfer.number_of_packets; i++) {
+				length += p.transfer.packet_size[i];
+			}
+
+			// XXX double mapping would be easier
+			size_t leftover = 0;
+			if (samples.current_offset + length > samples.size) {
+				size_t t = samples.size - samples.current_offset;
+				leftover = length - t;
+				length = t;
+			}
+			Genode::memcpy(samples.base + samples.current_offset, content, length);
+			samples.current_offset = (samples.current_offset + length) % samples.size;
+			if (leftover) {
+				Genode::memcpy(samples.base + samples.current_offset, content + length, leftover);
+				samples.current_offset = (samples.current_offset + leftover) % samples.size;
+			}
+		}
+
+		void transfer(Packet_stream &ps, Packet_queue &q,
+		              Samples &samples, size_t length)
+		{
+			try {
+				Usb::Packet_descriptor p     = ps.alloc(length);
+				p.type                       = Usb::Packet_descriptor::ISOC;
+				p.transfer.ep                = ep;
+				p.transfer.polling_interval  = Usb::Packet_descriptor::DEFAULT_POLLING_INTERVAL;
+
+				Completion *c = dynamic_cast<Completion*>(p.completion);
+				c->iface = this;
+
+				p.transfer.number_of_packets = 10;
+
+				if (FREQ == 44100) {
+					for (int i = 0; i < p.transfer.number_of_packets - 1; i++) {
+						p.transfer.packet_size[i] = 176;
+					}
+					p.transfer.packet_size[9] = 180;
+				} else if (FREQ == 48000) {
+					for (int i = 0; i < p.transfer.number_of_packets; i++) {
+						p.transfer.packet_size[i] = 192;
+					}
+				}
+
+				char *content = ps.content(p);
+
+				// XXX double mapping would be easier
+				size_t leftover = 0;
+				if (samples.current_offset + length > samples.size) {
+					size_t t = samples.size - samples.current_offset;
+					leftover = length - t;
+					length = t;
+				}
+				Genode::memcpy(content, samples.base + samples.current_offset, length);
+				samples.current_offset = (samples.current_offset + length) % samples.size;
+				if (leftover) {
+					Genode::memcpy(content + length, samples.base + samples.current_offset, leftover);
+					samples.current_offset = (samples.current_offset + leftover) % samples.size;
+				}
+
+				q.enqueue(p);
+
+			} catch (...) {
+				error("could not fill isoc packet");
+			}
+
+			bool const active = state == State::ACTIVE;
+
+			if (active && q.queued() > 0) {
+				Usb::Packet_descriptor p = q.dequeue();
+				ps.submit(p);
+				return;
+			}
+
+			enum { THRESHOLD = 2, };
+			if (!active && q.queued() >= THRESHOLD) {
+				for (int i = 0; i < THRESHOLD; i++) {
+					Usb::Packet_descriptor p = q.dequeue();
+					ps.submit(p);
+				}
+				state = State::ACTIVE;
+				return;
+			}
+
+			state = State::USEABLE;
+		}
+	};
+
 	Usb::Config_descriptor    config_descr { };
 	Usb::Device_descriptor    device_descr { };
 	Usb::Interface_descriptor iface_descr  { };
@@ -290,10 +497,10 @@ struct Usb::Audio
 	void handle_isoc_packet(Iface &iface, Packet_descriptor &p)
 	{
 		if (!p.read_transfer()) {
-			_out_pending--;
 
-			if (iface.state == Iface::State::USEABLE) {
-				_transfer_interface(iface, BPT);
+			if (iface.state == Iface::State::USEABLE
+			   || iface.state == Iface::State::ACTIVE) {
+				iface.transfer(*this, _packet_queue, _samples, BPT);
 			}
 			return;
 		}
@@ -350,11 +557,6 @@ struct Usb::Audio
 
 		char const *name() const { return _name; }
 	};
-
-	void submit_packet(Usb::Packet_descriptor packet)
-	{
-		_usb->source()->submit_packet(packet);
-	}
 
 	void handle_string_packet(Usb::Packet_descriptor &p)
 	{
@@ -438,12 +640,11 @@ struct Usb::Audio
 			Genode::log("freq: ",   (unsigned)FREQ,   " "
 			            "period: ", (unsigned)PERIOD, " ms "
 			            "bytes: ",  (unsigned)BPT);
-			_configure_interface(iface, FREQ);
+			iface.configure(*this, FREQ);
 			break;
 		case Iface::State::CONFIGURED:
 			Genode::log("start transmitting");
-			_transfer_interface(iface, BPT);
-			_transfer_interface(iface, BPT);
+			iface.transfer(*this, _packet_queue, _samples, BPT);
 			break;
 		default:
 			break;
@@ -455,141 +656,13 @@ struct Usb::Audio
 		while (_usb->source()->ack_avail()) {
 			Usb::Packet_descriptor p = _usb->source()->get_acked_packet();
 			dynamic_cast<Completion *>(p.completion)->complete(*this, p);
-			_free_packet(p);
+			free_packet(p);
 		}
 
 		_handle_interface(_playback);
 	}
 
 	Signal_handler<Audio> _ack_avail_sigh { _env.ep(), *this, &Audio::_ack_avail };
-
-	void _enable_interface(Iface &iface)
-	{
-		Usb::Packet_descriptor p = alloc_packet(0);
-		p.type                   = Usb::Packet_descriptor::ALT_SETTING;
-		p.interface.number       = iface.number;
-		p.interface.alt_setting  = iface.alt_setting;
-
-		Completion *c = dynamic_cast<Completion*>(p.completion);
-		c->iface = &iface;
-
-		iface.state = Iface::State::ENABLE_PENDING;
-		_usb->source()->submit_packet(p);
-	}
-
-	void _configure_interface(Iface &iface, int freq)
-	{
-		enum {
-			USB_REQUEST_TO_DEVICE  = 0x00,
-			USB_REQUEST_TYPE_CLASS = 0x20,
-			USB_REQUEST_RCPT_EP    = 0x02,
-
-			USB_AUDIO_REQUEST_SET_CUR     = 0x01,
-			USB_AUDIO_REQUEST_SELECT_RATE = 0x01,
-
-			REQUEST = USB_REQUEST_TO_DEVICE | USB_REQUEST_TYPE_CLASS | USB_REQUEST_RCPT_EP,
-		};
-
-		uint8_t cmd[3] { };
-		cmd[0] = freq;
-		cmd[1] = freq >> 8;
-		cmd[2] = freq >> 16;
-
-		Usb::Packet_descriptor p = alloc_packet(sizeof(cmd));
-
-		uint8_t *data = reinterpret_cast<uint8_t*>(_usb->source()->packet_content(p));
-		Genode::memcpy(data, cmd, sizeof(cmd));
-
-		p.type                 = Usb::Packet_descriptor::CTRL;
-		p.control.request_type = REQUEST;
-		p.control.request      = USB_AUDIO_REQUEST_SET_CUR;
-		p.control.value        = (USB_AUDIO_REQUEST_SELECT_RATE) << 8;
-		p.control.index        = iface.ep;
-		p.control.timeout      = 1000;
-
-		Completion *c = dynamic_cast<Completion*>(p.completion);
-		c->iface = &iface;
-
-		iface.state = Iface::State::CONFIGURE_PENDING;
-		_usb->source()->submit_packet(p);
-	}
-
-	void _transfer_interface(Iface &iface, size_t length)
-	{
-		try {
-			Usb::Packet_descriptor p     = alloc_packet(length);
-			p.type                       = Usb::Packet_descriptor::ISOC;
-			p.transfer.ep                = iface.ep;
-			p.transfer.polling_interval  = Usb::Packet_descriptor::DEFAULT_POLLING_INTERVAL;
-
-			Completion *c = dynamic_cast<Completion*>(p.completion);
-			c->iface = &iface;
-
-			p.transfer.number_of_packets = 10;
-
-			if (FREQ == 44100) {
-				for (int i = 0; i < p.transfer.number_of_packets - 1; i++) {
-					p.transfer.packet_size[i] = 176;
-				}
-				p.transfer.packet_size[9] = 180;
-			} else if (FREQ == 48000) {
-				for (int i = 0; i < p.transfer.number_of_packets; i++) {
-					p.transfer.packet_size[i] = 192;
-				}
-			}
-
-			char *content = _usb->source()->packet_content(p);
-
-			// XXX double mapping would be easier
-			size_t leftover = 0;
-			if (_samples.current_offset + length > _samples.size) {
-				size_t t = _samples.size - _samples.current_offset;
-				leftover = length - t;
-				length = t;
-			}
-			Genode::memcpy(content, _samples.base + _samples.current_offset, length);
-			_samples.current_offset = (_samples.current_offset + length) % _samples.size;
-			if (leftover) {
-				Genode::memcpy(content + length, _samples.base + _samples.current_offset, leftover);
-				_samples.current_offset = (_samples.current_offset + leftover) % _samples.size;
-			}
-
-			_out_transfers[_out_tail] = Out_transfer {
-				.packet    = p,
-				.pending   = true,
-				.submitted = false,
-			};
-
-			_out_tail = (_out_tail + 1) % MAX_OUT_TRANSFERS;
-			_out_pending++;
-
-		} catch (...) {
-			error("could not fill isoc packet");
-		}
-
-		if (_out_submitted > 1) {
-				submit_packet(_out_transfers[_out_head].packet);
-				_out_transfers[_out_head].submitted = true;
-				_out_head = (_out_head + 1) % MAX_OUT_TRANSFERS;
-				_out_submitted++;
-
-				_last_transfer = Genode::Trace::timestamp();
-		}
-
-		if (_out_submitted == 0 && _out_pending >= 2) {
-			for (int i = 0; i < _out_pending; i++) {
-				submit_packet(_out_transfers[_out_head].packet);
-				_out_transfers[_out_head].submitted = true;
-				_out_head = (_out_head + 1) % MAX_OUT_TRANSFERS;
-				_out_submitted++;
-
-				_last_transfer = Genode::Trace::timestamp();
-			}
-		}
-
-		iface.state = Iface::State::USEABLE;
-	}
-
 
 	/* hardcoded NewBee */
 	Iface _playback { 1, 1, 1, Iface::State::DISABLED };
@@ -623,11 +696,17 @@ struct Usb::Audio
 		}
 
 		/* batch information gathering */
-		manufactorer_string.request(device_descr.manufactorer_index);
-		product_string.request(device_descr.product_index);
-		serial_number_string.request(device_descr.serial_number_index);
+		if (device_descr.manufactorer_index) {
+			manufactorer_string.request(device_descr.manufactorer_index);
+		}
+		if (device_descr.product_index) {
+			product_string.request(device_descr.product_index);
+		}
+		if (device_descr.serial_number_index) {
+			serial_number_string.request(device_descr.serial_number_index);
+		}
 
-		_enable_interface(_playback);
+		_playback.enable(*this);
 
 		return true;
 	}
@@ -646,6 +725,53 @@ struct Usb::Audio
 	struct Queue_full         : Genode::Exception { };
 	struct No_completion_free : Genode::Exception { };
 
+	/*****************************
+	 ** Packet_stream interface **
+	 *****************************/
+
+	char *content(Usb::Packet_descriptor &p) override
+	{
+		return reinterpret_cast<char*>(_usb->source()->packet_content(p));
+	}
+
+	Usb::Packet_descriptor alloc(size_t length) override
+	{
+		if (!_usb->source()->ready_to_submit()) {
+			throw Queue_full();
+		}
+
+		Usb::Packet_descriptor p = _usb->source()->alloc_packet(length);
+
+		p.completion = _alloc_completion();
+		if (!p.completion) {
+			_usb->source()->release_packet(p);
+			throw No_completion_free();
+		}
+
+		return p;
+	}
+
+	void submit(Usb::Packet_descriptor &p) override
+	{
+		_usb->source()->submit_packet(p);
+	}
+
+	void free(Usb::Packet_descriptor &p) override
+	{
+		Completion *c = dynamic_cast<Completion *>(p.completion);
+		if (c) {
+			c->state = Completion::FREE;
+			c->iface = nullptr;
+		}
+		_usb->source()->release_packet(p);
+	}
+
+	template<typename T>
+	T *packet_content(Usb::Packet_descriptor &p)
+	{
+		return reinterpret_cast<T*>(_usb->source()->packet_content(p));
+	}
+
 	Usb::Packet_descriptor alloc_packet(size_t length)
 	{
 		if (!_usb->source()->ready_to_submit()) {
@@ -663,7 +789,12 @@ struct Usb::Audio
 		return usb_packet;
 	}
 
-	void _free_packet(Usb::Packet_descriptor &packet)
+	void submit_packet(Usb::Packet_descriptor &p)
+	{
+		_usb->source()->submit_packet(p);
+	}
+
+	void free_packet(Usb::Packet_descriptor &packet)
 	{
 		Completion *c = dynamic_cast<Completion *>(packet.completion);
 		if (c) {
