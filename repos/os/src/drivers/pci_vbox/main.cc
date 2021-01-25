@@ -165,6 +165,8 @@ class Vbox::Driver : Genode::Noncopyable
 
 		Genode::Attached_rom_dataspace &_config_rom;
 
+		Genode::uint64_t _freq_mhz { 2100 };
+
 		void _handle_config_update()
 		{
 			_config_rom.update();
@@ -200,7 +202,7 @@ class Vbox::Driver : Genode::Noncopyable
 			uint64_t const t1 = Genode::Trace::timestamp();
 			fn();
 			uint64_t const t2 = Genode::Trace::timestamp();
-			Genode::log(label, ": ", (t2 - t1) / 2100, " us");
+			Genode::log(label, ": ", (t2 - t1) / _freq_mhz, " us");
 		}
 
 	public:
@@ -216,6 +218,17 @@ class Vbox::Driver : Genode::Noncopyable
 		{
 			_config_rom.sigh(_config_sigh);
 			_handle_config_update();
+
+			try {
+				Genode::Attached_rom_dataspace info { env, "platform_info"};
+
+				Genode::uint64_t result = info.xml().sub_node("hardware")
+				                          .sub_node("tsc")
+				                          .attribute_value("freq_khz", 0ULL);
+				_freq_mhz = result / 1000;
+			} catch (...) { }
+
+			log("tsc frequency: ", _freq_mhz, "MHz");
 
 			try {
 				_vbox_pci.construct(_env);
@@ -288,7 +301,7 @@ class Vbox::Driver : Genode::Noncopyable
 			_vbox_controller->clear_intr();
 
 			Exec_status es {
-				.diff_ts        = (ts - _last_ts) / 2100,
+				.diff_ts        = (ts - _last_ts) / _freq_mhz,
 				.local_ts       = ts,
 				.local_counter  = _execute_counter + 1,
 				.status         = status,
@@ -301,7 +314,7 @@ class Vbox::Driver : Genode::Noncopyable
 
 			if (_execute_counter % MAX_EXECUTES == 0) {
 				Genode::log(__func__, ": ", (unsigned)MAX_EXECUTES, " execs in: ",
-				            (ts - _last_global_ts)/2100, " us");
+				            (ts - _last_global_ts)/_freq_mhz, " us");
 				_last_global_ts = ts;
 
 				for (size_t i = 0; i < 16; i++) {
