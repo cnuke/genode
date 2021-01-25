@@ -1,0 +1,121 @@
+#
+# Smartcard test
+#
+# NOTE: The vendor id and product id of the USB card reader to be used must be
+#       configured for the application and for the USB driver.
+#
+
+if { [have_include "power_on/qemu"] || [have_spec linux] || [have_board muen] } {
+	puts "Run script does not support Qemu, Linux, and Muen"
+	exit 0
+}
+
+assert_spec x86_64
+
+#
+# Please configure your reader's vendor and product IDs here
+#
+proc libuvc_vendor_id {}  { return "0x04f2" }
+proc libuvc_product_id {} { return "0xb564" }
+
+#
+# Build
+#
+
+set build_components {
+	core init timer
+	drivers/usb_host
+	test/libuvc
+	lib/vfs/pipe
+}
+
+source ${genode_dir}/repos/base/run/platform_drv.inc
+append_platform_drv_build_components
+
+build $build_components
+
+create_boot_directory
+
+#
+# Generate config
+#
+
+append config {
+<config>
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>}
+
+append_platform_drv_config
+
+append config {
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<default-policy report="usb_drv -> devices"/>
+		</config>
+	</start>
+
+	<start name="usb_drv" caps="200">
+		<binary name="x86_pc_usb_host_drv"/>
+		<resource name="RAM" quantum="16M"/>
+		<provides><service name="Usb"/></provides>
+		<config uhci="yes" ehci="yes" xhci="yes" bios_handoff="no">
+			<report devices="yes"/>
+			<policy label="test-libuvc -> usb_device"
+			        vendor_id="} [libuvc_vendor_id] {" product_id="} [libuvc_product_id] {"/>
+		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="test-libuvc" caps="250">
+		<resource name="RAM" quantum="48M"/>
+		<config ld_verbose="yes" viewer="false">
+			<vfs>
+				<dir name="dev"> <log/> <inline name="rtc">2018-01-01 00:01</inline> </dir>
+				<dir name="pipe"> <pipe/> </dir>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe"/>
+			<env key="LIBUSB_DEBUG" value="1"/> <!-- log libusb errors -->
+		</config>
+	</start>
+</config>}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	core init timer x86_pc_usb_host_drv test-libuvc
+	ld.lib.so libuvc.lib.so libusb.lib.so jpeg.lib.so
+	libc.lib.so vfs.lib.so libm.lib.so posix.lib.so
+	vfs_pipe.lib.so
+}
+
+append_platform_drv_boot_modules
+
+build_boot_image $boot_modules
+
+run_genode_until forever
