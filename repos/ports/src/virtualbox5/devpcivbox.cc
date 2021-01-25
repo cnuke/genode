@@ -382,6 +382,17 @@ struct Controller
 	Controller(Genode::Entrypoint &ep, Pci_device &pci_dev, Tq &timer_queue, bool to_fw)
 	: _ep { ep }, _pci_dev { pci_dev }, _timer_queue { timer_queue }, _timeout_fw { to_fw }
 	{
+		try {
+			Genode::Attached_rom_dataspace info { genode_env(), "platform_info"};
+
+			Genode::uint64_t result = info.xml().sub_node("hardware")
+			                          .sub_node("tsc")
+			                          .attribute_value("freq_khz", 0ULL);
+			_freq_mhz = result / 1000;
+		} catch (...) { }
+
+		Genode::log("tsc frequency: ", _freq_mhz, "MHz");
+
 		if (to_fw) {
 			_timer.construct(genode_env(), _ep);
 			_timer_one_shot.construct(*_timer, *this, &Controller::_handle_timeout);
@@ -418,18 +429,19 @@ struct Controller
 
 	uint64_t _last_tsc { 0 };
 	uint64_t _interrupts { 0 };
+	uint64_t _freq_mhz { 2100 };
 
 	void _interrupt()
 	{
 		uint64_t const tsc = _rdtsc();
-		uint64_t const diff = (tsc - _last_tsc) / 2100;
+		uint64_t const diff = (tsc - _last_tsc) / _freq_mhz;
 		_last_tsc = tsc;
 
 		++_interrupts;
 		// Genode::error(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
 		TRACE(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
 
-		uint32_t const its = (tsc / 2100) & 0xffffffff;
+		uint32_t const its = (tsc / _freq_mhz) & 0xffffffff;
 		_mmio.write<Mmio::Status::Interrupt_timestamp>(its);
 
 		uint16_t const cnt = _mmio.read<Mmio::Status::Count>();
