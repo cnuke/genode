@@ -32,7 +32,7 @@ static PFNRTTIMER rttimer_func = nullptr;
 static void *     rttimer_obj  = nullptr;
 
 enum {
-	UPDATE_HZ  = 1000,
+	UPDATE_HZ  = 100 * 1000,
 	UPDATE_US  = 1000 * 1000 / UPDATE_HZ,
 	UPDATE_NS  = UPDATE_US * 1000,
 };
