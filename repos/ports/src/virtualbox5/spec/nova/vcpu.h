@@ -37,6 +37,7 @@
 #include "HMInternal.h" /* enable access to hm.s.* */
 #include "CPUMInternal.h" /* enable access to cpum.s.* */
 
+#include <VBox/vmm/tm.h>
 #include <VBox/vmm/vm.h>
 #include <VBox/vmm/hm_svm.h>
 #include <VBox/err.h>
@@ -74,6 +75,13 @@ static inline Genode::uint32_t sel_ar_conv_from_nova(Genode::uint16_t v)
 	return (v & 0xff) | (((uint32_t )v << 4) & 0x1f000);
 }
 
+extern "C" uint64_t _last_tsc;
+extern "C" uint64_t _last_tsc_run_hw;
+extern "C" uint64_t _lapic_exit;
+extern "C" uint64_t _ioapic_exit;
+extern "C" uint64_t _ioinstr_exit;
+extern "C" uint64_t _vm_exits;
+extern "C" uint64_t _vm_exit_irq_win;
 
 class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
                      public Genode::List<Vcpu_handler>::Element
@@ -181,7 +189,6 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 		               size_t cbWrite, RTGCUINT vbox_fault_reason,
 		               Genode::Flexpage_iterator &fli, bool &writeable);
 
-		Genode::addr_t     _vm_exits    = 0;
 		Genode::addr_t     _recall_skip = 0;
 		Genode::addr_t     _recall_req  = 0;
 		Genode::addr_t     _recall_inv  = 0;
@@ -195,6 +202,8 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			unsigned intr_state;
 			unsigned ctrl[2];
 		} next_utcb;
+
+		Genode::uint64_t _last_qual_1 = 0;
 
 		PVM          _current_vm;
 		PVMCPU       _current_vcpu;
@@ -320,6 +329,8 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 		{
 			using namespace Nova;
 			using namespace Genode;
+
+			_vm_exits ++;
 
 			Assert(utcb->actv_state == ACTIVITY_STATE_ACTIVE);
 
@@ -675,6 +686,7 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			Nova::Utcb * utcb = reinterpret_cast<Nova::Utcb *>(Thread::utcb());
 
 			_vm_exits ++;
+			_vm_exit_irq_win ++;
 
 			PVMCPU   pVCpu = _current_vcpu;
 
@@ -944,6 +956,18 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			PVMCPU   pVCpu = &pVM->aCpus[_cpu_id];
 			PCPUMCTX pCtx  = CPUMQueryGuestCtxPtr(pVCpu);
 
+			if (_last_tsc_run_hw) {
+#if 0
+				if (_last_tsc_run_hw == 1) {
+					uint64_t const tsc = Genode::Trace::timestamp();
+					uint64_t const diff = (tsc - _last_tsc) / (genode_cpu_hz() / 1000 / 1000);
+					Genode::trace(Genode::Thread::myself()->name(), ": run_hw ", diff, " us",
+					              " vm_exits=", _vm_exits, " recall=", _recall_inv);
+				}
+#endif
+				_last_tsc_run_hw ++;
+			}
+
 			Nova::Utcb *utcb = reinterpret_cast<Nova::Utcb *>(Thread::utcb());
 
 			Assert(Thread::utcb() == Thread::myself()->utcb());
@@ -1030,6 +1054,46 @@ class Vcpu_handler : public Vmm::Vcpu_dispatcher<Genode::Thread>,
 			PGMChangeMode(pVCpu, pCtx->cr0, pCtx->cr4, pCtx->msrEFER);
 
 			int rc = vm_exit_requires_instruction_emulation(pCtx);
+#if 1
+			if (_last_tsc_run_hw) {
+				bool create_trace = true;
+
+				if (exit_reason == VMX_EXIT_EPT_VIOLATION) {
+					if (0xfee00000 <= _last_qual_1 && _last_qual_1 < 0xfee01000) {
+						_lapic_exit ++;
+						create_trace = false;
+					} else
+					if (0xfec00000 <= _last_qual_1 && _last_qual_1 < 0xfec01000) {
+						_ioapic_exit ++;
+						create_trace = false;
+					}
+				}
+				if (exit_reason == VMX_EXIT_IO_INSTR) {
+					_ioinstr_exit ++;
+					create_trace = false;
+				}
+
+				if (create_trace) {
+					Genode::uint64_t const tsc = Genode::Trace::timestamp();
+					Genode::uint64_t const diff = (tsc - _last_tsc) / (genode_cpu_hz() / 1000 / 1000);
+					Genode::trace(Genode::Thread::myself()->name(),
+					              ": run_hw ",
+					              _last_tsc_run_hw < 10 ? " ": "",
+					              _last_tsc_run_hw, ". - ",
+					              diff < 100 ? " " : "",
+					              diff < 10  ? " " : "",
+					              diff, " us, "
+					              "exit=", exit_reason,
+					              (exit_reason == VMX_EXIT_EPT_VIOLATION) ? " EPT" :
+					              (exit_reason == VMX_EXIT_IO_INSTR) ? " IO"  :
+					              (exit_reason == VMX_EXIT_CPUID) ? " CPUID" :
+					              (exit_reason == VMX_EXIT_HLT) ? " HALT" :
+					              (exit_reason == RECALL) ? " RECALL"  : " (???)",
+					              (exit_reason == VMX_EXIT_EPT_VIOLATION) ?
+					              Genode::String<32>(" ept_qual[1]=", Genode::Hex(_last_qual_1)) : Genode::String<32>(""));
+				}
+			}
+#endif
 
 			/* evaluated in VMM/include/EMHandleRCTmpl.h */
 			return rc;

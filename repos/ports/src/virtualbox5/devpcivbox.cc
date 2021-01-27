@@ -51,6 +51,24 @@
 
 static Tracer::Id _tracer_id[16];
 static uint32_t   _max_tracer_id;
+static uint64_t   _last_vm_exits;
+
+extern "C" uint64_t _last_tsc_run_hw;
+extern "C" uint64_t _last_tsc;
+extern "C" uint64_t _lapic_exit;
+extern "C" uint64_t _ioapic_exit;
+extern "C" uint64_t _ioinstr_exit;
+extern "C" uint64_t _vm_exits;
+extern "C" uint64_t _vm_exit_irq_win;
+
+uint64_t _last_tsc = 0;
+uint64_t _last_tsc_run_hw = 0;
+uint64_t _lapic_exit = 0;
+uint64_t _ioapic_exit = 0;
+uint64_t _ioinstr_exit = 0;
+uint64_t _vm_exits = 0;
+uint64_t _vm_exit_irq_win = 0;
+
 
 #define ENABLE_TRACING 1
 
@@ -421,21 +439,25 @@ struct Controller
 		if (enabled && interval > 0) {
 			int64_t const ns = _timer_queue.get_ns();
 			int64_t const new_to = ns + (interval * 1000);
+//			TRACE(__func__, ": intr: ", _interrupts, " ", ns, " interval=", interval, "*1000 -> new_to=", new_to);
 			_timer_queue.activate_timer(this, new_to);
 		} else {
 			_timer_queue.deactivate_timer(this);
 		}
 	}
 
-	uint64_t _last_tsc { 0 };
 	uint64_t _interrupts { 0 };
 	uint64_t _freq_mhz { 2100 };
 
 	void _interrupt()
 	{
+		stop_measurement(__func__);
+
 		uint64_t const tsc = _rdtsc();
 		uint64_t const diff = (tsc - _last_tsc) / _freq_mhz;
 		_last_tsc = tsc;
+		_last_tsc_run_hw = 1;
+		_last_vm_exits = _vm_exits;
 
 		++_interrupts;
 		// Genode::error(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
@@ -524,6 +546,9 @@ struct Controller
 			if (_mmio.read<Mmio::Config::Enable>()) {
 				_mmio.write<Mmio::Status::Ready>(1);
 			}
+
+			TRACE(__func__, ": not called ?");
+
 			if (_timeout_fw) {
 				_handle_interval_timeout();
 			} else {
@@ -536,6 +561,8 @@ struct Controller
 			if (v & (1u << 18)) {
 				_mmio.write<Mmio::Status::Interrupt_pending>(0);
 				_pci_dev.raise_interrupt(0);
+
+//				stop_measurement(__func__);
 			}
 			// _mmio.write<Mmio::Status>(v);
 			break;
@@ -546,6 +573,26 @@ struct Controller
 	}
 
 	size_t mmio_size() const { return MMIO_SIZE; }
+
+	void stop_measurement(char const * const func)
+	{
+		uint64_t const tsc = _rdtsc();
+		uint64_t const diff = (tsc - _last_tsc) / _freq_mhz;
+		TRACE(func, ": intr: ", _interrupts, " diff: ", diff,
+		      " us _run_hw=", _last_tsc_run_hw,
+		      " vm_exits=", _vm_exits - _last_vm_exits,
+		      " (lapic=", _lapic_exit,
+		      " ioapic=", _ioapic_exit,
+		      " io=", _ioinstr_exit,
+		      " irq_win=", _vm_exit_irq_win,
+		      ")");
+
+		_last_tsc_run_hw = 0;
+		_lapic_exit = 0;
+		_ioapic_exit = 0;
+		_ioinstr_exit = 0;
+		_vm_exit_irq_win = 0;
+	}
 };
 
 
