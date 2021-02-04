@@ -198,7 +198,7 @@ append config {
 append_if [expr $use_gui] config {
 	<start name="vbox2" priority="-2" caps="800">
 		<binary name="} $virtualbox_binary {"/>
-		<resource name="RAM" quantum="448M"/>
+		<resource name="RAM" quantum="6200M"/>
 		<config vbox_file="test.vbox" vm_name="TestVM">
 			<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc"/>
 			<vfs>

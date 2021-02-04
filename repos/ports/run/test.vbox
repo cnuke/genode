@@ -25,10 +25,10 @@
         <HardwareVirtEx enabled="true"/>
         <HardwareVirtExNestedPaging enabled="true"/>
         <HardwareVirtExUX enabled="true"/>
-        <PAE enabled="false"/>
+        <PAE enabled="true"/>
         <LongMode enabled="true"/>
       </CPU>
-      <Memory RAMSize="256" PageFusion="false"/>
+      <Memory RAMSize="6000" PageFusion="false"/>
       <HID Pointing="PS2Mouse" Keyboard="PS2Keyboard"/>
       <HPET enabled="false"/>
       <Chipset type="ICH9"/>
