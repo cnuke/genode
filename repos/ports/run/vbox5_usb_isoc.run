@@ -24,7 +24,7 @@ set build_components {
 }
 
 proc get_os { } {
-	return void
+	return windows10
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -66,6 +66,7 @@ append config {
 		</route>
 	</start>
 
+<!--
 	<start name="top">
 		<resource name="RAM" quantum="2M"/>
 		<config period_ms="1000" sort_time="ec"/>
@@ -74,6 +75,7 @@ append config {
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
+-->
 
 	<!-- must be some priority as client, otherwise priority boost XXX -->
 <!--
@@ -292,6 +294,8 @@ append config {
 	<device vendor_id="0x0781" product_id="0x556b"/>
 	<!-- DTM30 -->
 	<device vendor_id="0x0951" product_id="0x1666"/>
+	<!-- sandisk usb3 -->
+	<device vendor_id="0x0781" product_id="0x5583"/>
 </config>
 					</inline>
 				</import>
