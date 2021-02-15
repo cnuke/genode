@@ -62,19 +62,20 @@ void Sup::Vcpu_handler::_update_gim_system_time()
 	/*
 	 * If we got preempted during the measurement, repeat.
 	 */
-	for (;;) {
+	for (unsigned round = 1; ; ++round) {
 
 		uTsc                      = TMCpuTickGetNoCheck(_vcpu) | UINT64_C(1);
 		uVirtNanoTS               = TMVirtualGetNoCheck(_vm)   | UINT64_C(1);
 		uint64_t const uTsc_again = TMCpuTickGetNoCheck(_vcpu) | UINT64_C(1);
 
-		enum { MAX_MEASUREMENT_DURATION = 100U };
+		enum { MAX_MEASUREMENT_DURATION = 200U };
 
 		if (uTsc_again - uTsc < MAX_MEASUREMENT_DURATION)
 			break;
 
-		warning("preemption during measurement, uTsc=", uTsc,
-		        " uTsc_again=", uTsc_again, " uVirtNanoTS=", uVirtNanoTS);
+		if (round > 3 && round % 2 == 0)
+			warning("preemption during measurement, uTsc=", uTsc,
+			        " uTsc_again=", uTsc_again, " uVirtNanoTS=", uVirtNanoTS);
 	}
 
 	for (VMCPUID idCpu = 0; idCpu < _vm->cCpus; idCpu++) {
