@@ -101,7 +101,7 @@ class Sup::Gip
 		};
 
 		enum {
-			UPDATE_HZ  = 1'000,
+			UPDATE_HZ  = 10'000,
 			UPDATE_US  = 1'000'000/UPDATE_HZ,
 			UPDATE_NS  = 1'000*UPDATE_US
 		};
