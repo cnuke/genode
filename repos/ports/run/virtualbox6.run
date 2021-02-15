@@ -26,7 +26,8 @@ create_boot_directory
 import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/init \
                   [depot_user]/src/nitpicker \
-                  [depot_user]/src/vfs_pipe
+                  [depot_user]/src/vfs_pipe \
+                  [depot_user]/src/vfs_import
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
 # override defaults of platform_drv.inc
@@ -194,7 +195,7 @@ append config {
 	</start>}
 
 append_if [expr $use_gui] config {
-	<start name="vbox2" priority="-2" caps="1200">
+	<start name="vbox2" priority="-2" caps="1500">
 		<binary name="} $virtualbox_binary {"/>
 		<resource name="RAM" quantum="6200M"/>
 		<config vbox_file="test.vbox" vm_name="TestVM">
@@ -218,7 +219,7 @@ append_if [expr $use_gui] config {
 	</start>}
 
 append config {
-	<start name="vbox1" priority="-2" caps="1200">
+	<start name="vbox1" priority="-2" caps="2000">
 		<binary name="} $virtualbox_binary {"/>
 		<resource name="RAM" quantum="6200M"/>
 		<config vbox_file="test.vbox" vm_name="TestVM">
@@ -238,6 +239,12 @@ append config {
 				<rom name="test.vbox" />
 				<rom name="test.iso" />
 				<rom name="bootsector.img" />
+				<dir name="ram">
+					<ram/>
+				</dir>
+				<import>
+					<dir name="ram"> <rom name="overlay.vdi"/> </dir>
+				</import>
 			</vfs>
 			<arg value="virtualbox"/>
 			<env key="VBOX_USER_HOME" value="/"/>
@@ -290,6 +297,7 @@ append boot_modules {
 	libc.lib.so vfs.lib.so libm.lib.so
 	libiconv.lib.so stdcxx.lib.so
 	qemu-usb.lib.so
+	overlay.vdi
 }
 
 append_if [expr $use_net]          boot_modules { ipxe_nic_drv }

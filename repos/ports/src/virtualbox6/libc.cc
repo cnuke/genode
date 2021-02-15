@@ -20,6 +20,11 @@
 #include <sched.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>      /* memset */
+#include <sys/mount.h>   /* statfs */
+#include <sys/statvfs.h> /* fstatvfs */
+#include <fcntl.h>       /* open */
 
 /* local includes */
 #include <stub_macros.h>
@@ -62,9 +67,60 @@ int lio_listio(int mode, struct aiocb *const aiocb_list[],
 
 
 
+/* Helper for VBOXSVC_LOG_DEFAULT hook in global_defs.h */
 extern "C" char const * vboxsvc_log_default_string()
 {
 	char const *vbox_log_string = getenv("VBOX_LOG");
 
 	return vbox_log_string ? vbox_log_string : "";
 }
+
+
+/* used by Shared Folders and RTFsQueryType() in media checking */
+extern "C" int statfs(const char *path, struct statfs *buf)
+{
+	if (!buf) {
+		errno = EFAULT;
+		return -1;
+	}
+
+	int fd = open(path, 0);
+
+	if (fd < 0)
+		return fd;
+
+	struct statvfs result;
+	int res = fstatvfs(fd, &result);
+
+	close(fd);
+
+	if (res)
+		return res;
+
+	memset(buf, 0, sizeof(*buf));
+
+	buf->f_bavail = result.f_bavail;
+	buf->f_bfree  = result.f_bfree;
+	buf->f_blocks = result.f_blocks;
+	buf->f_ffree  = result.f_ffree;
+	buf->f_files  = result.f_files;
+	buf->f_bsize  = result.f_bsize;
+
+	/* set file-system type to unknown to prevent application of any quirks */
+	strcpy(buf->f_fstypename, "unknown");
+
+	bool show_warning = !buf->f_bsize || !buf->f_blocks || !buf->f_bavail;
+
+	if (!buf->f_bsize)
+		buf->f_bsize = 4096;
+	if (!buf->f_blocks)
+		buf->f_blocks = 128 * 1024;
+	if (!buf->f_bavail)
+		buf->f_bavail = buf->f_blocks;
+
+	if (show_warning)
+		Genode::warning("statfs provides bogus values for '", path, "' (probably a shared folder)");
+
+	return res;
+}
+
