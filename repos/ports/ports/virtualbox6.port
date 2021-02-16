@@ -125,7 +125,7 @@ VBOX_INC += bioslogo.h scsi.h shflsvc.h vd.h vdmedia.h vd-common.h
 VBOX_INC += vd-plugin.h vd-ifs.h vd-ifs-internal.h vd-image-backend.h
 VBOX_INC += vd-cache-backend.h vd-filter-backend.h msi.h asmdefs.mac err.mac
 VBOX_INC += settings.h VBoxAuth.h VBoxTpG.h
-VBOX_INC += usb.h usbfilter.h vrdpusb.h AssertGuest.h bios.h ata.h
+VBOX_INC += usb.h usbfilter.h vrdpusb.h AssertGuest.h bios.h ata.h vscsi.h
 VBOX_INC += RemoteDesktop Graphics ExtPack/ExtPack.h VMMDevCoreTypes.h
 VBOX_INC += VBoxGuestCoreTypes.h intnet.h
 

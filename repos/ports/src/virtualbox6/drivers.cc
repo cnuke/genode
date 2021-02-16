@@ -35,6 +35,7 @@ extern "C" DECLEXPORT(int) VBoxDriversRegister(PCPDMDRVREGCB pCallbacks, uint32_
 	REGISTER(g_DrvMouseQueue);
 	REGISTER(g_DrvKeyboardQueue);
 	REGISTER(g_DrvVD);
+	REGISTER(g_DrvSCSI);
 	REGISTER(g_DrvHostDVD);
 	REGISTER(g_DrvHostInterface);
 	REGISTER(g_DrvAUDIO);

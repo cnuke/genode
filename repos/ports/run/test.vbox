@@ -92,7 +92,17 @@
       </GuestProperties>
     </Hardware>
     <StorageControllers>
+      <!--
       <StorageController name="IDE" type="PIIX4" PortCount="2" useHostIOCache="true" Bootable="true">
+        <AttachedDevice passthrough="false" tempeject="true" type="DVD" port="1" device="0">
+          <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}"/>
+        </AttachedDevice>
+        <AttachedDevice type="HardDisk" port="0" device="0">
+          <Image uuid="{3d9a9193-0fe7-4f8c-8e1b-065dbf514c82}"/>
+        </AttachedDevice>
+      </StorageController>
+      -->
+      <StorageController name="SATA" type="AHCI" PortCount="2" useHostIOCache="true" Bootable="true">
         <AttachedDevice passthrough="false" tempeject="true" type="DVD" port="1" device="0">
           <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}"/>
         </AttachedDevice>

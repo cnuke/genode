@@ -48,9 +48,7 @@ extern "C" int VBoxDevicesRegister(PPDMDEVREGCB pCallbacks, uint32_t u32Version)
 	REGISTER(DeviceVga);
 	REGISTER(DeviceVMMDev);
 	REGISTER(DevicePCNet);
-#ifdef VBOX_WITH_E1000
 	REGISTER(DeviceE1000);
-#endif
 	REGISTER(DeviceICHAC97);
 	REGISTER(DeviceHDA);
 	REGISTER(DeviceOHCI);
@@ -59,9 +57,7 @@ extern "C" int VBoxDevicesRegister(PPDMDEVREGCB pCallbacks, uint32_t u32Version)
 	REGISTER(DeviceFloppyController);
 	REGISTER(DeviceSerialPort);
 	REGISTER(DeviceParallelPort);
-#ifdef VBOX_WITH_AHCI
 	REGISTER(DeviceAHCI);
-#endif
 	REGISTER(DevicePCIBridge);
 	REGISTER(DevicePciIch9Bridge);
 	REGISTER(DeviceGIMDev);
