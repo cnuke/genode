@@ -13,6 +13,7 @@ set build_components {
 	server/part_block
 	server/report_rom
 	server/vfs
+	server/log_terminal
 	lib/vfs/pipe
 	lib/vfs/import
 	lib/vfs/rump
@@ -24,8 +25,10 @@ set build_components {
 }
 
 proc get_os { } {
-	return windows10
+	return void
 }
+
+set use_iso 1
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
 
@@ -296,6 +299,8 @@ append config {
 	<device vendor_id="0x0951" product_id="0x1666"/>
 	<!-- sandisk usb3 -->
 	<device vendor_id="0x0781" product_id="0x5583"/>
+	<!-- logitech c270 -->
+	<device vendor_id="0x046d" product_id="0x0825"/>
 </config>
 					</inline>
 				</import>
@@ -406,7 +411,7 @@ append config {
 		<binary name="report_rom"/>
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config verbose="no">
+		<config verbose="yes">
 			<policy label="usb_report_filter -> devices"        report="usb_host_drv -> devices"/>
 			<policy label="usb_report_filter -> usb_drv_config" report="usb_host_drv -> config"/>
 			<policy label="vbox -> usb_devices"                 report="usb_report_filter -> usb_devices"/>
@@ -496,6 +501,16 @@ append config {
 		</route>
 	</start>
 
+	<start name="log_terminal" priority="-1">
+		<resource name="RAM" quantum="2M"/>
+		<provides>
+			<service name="Terminal"/>
+		</provides>
+		<route>
+			<any-service> <parent /> </any-service>
+		</route>
+	</start>
+
 	<start name="vbox" priority="-2" caps="800">
 
 		<binary name="virtualbox5-nova" />
@@ -506,9 +521,13 @@ append config {
 		        xhci="yes" capslock="NOROM">
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe"/>
 			<vfs>
-				<rom name="machine.vbox"/>
+				<rom name="machine.vbox"/>}
+append_if $use_iso config {
+				<rom name="genode.iso"/>}
+
+append config {
 				<dir name="dev">
-					<log/> <rtc/>
+					<log/> <rtc/> <terminal/>
 				</dir>
 				<dir name="pipe"> <pipe/> </dir>
 				<dir name="shared">
@@ -538,7 +557,7 @@ install_config $config
 append boot_modules {
 	core timer init nvme_drv part_block top cpu_sampler cpu_sampler_platform.lib.so
 	acpi_drv report_rom platform_drv ps2_drv fs_rom usb_report_filter x86_pc_usb_host_drv rtc_drv
-	vesa_fb_drv
+	vesa_fb_drv log_terminal
 	event_filter ipxe_nic_drv nitpicker pointer dynamic_rom virtualbox5-nova
 	vfs
 	vfs_pipe.lib.so vfs_import.lib.so
@@ -551,6 +570,8 @@ append boot_modules {
 
 	machine.vbox
 }
+
+append_if $use_iso boot_modules { genode.iso }
 
 # evaluated by the run tool
 proc binary_name_cpu_sampler_platform_lib_so { } {
