@@ -95,17 +95,19 @@
   * Cleanups:         vcpu.cc - execution model
   * Upstream merges:  VM/vCPU library improvements
 
-  * Devices:          AHCI / VDI (aio?)
+  * Update:           6.1.18
+  * HidMouse
   * Guest Systems:    Ubuntu
+  * Guest Systems:    Win10 (SMP)
+
   * Guest Additions:  Display
   * Guest Additions:  Mouse Integration
   * Guest Additions:  Shared Folder
   * Devices:          Networking / TAP or custom VFS-based ?
   * Basics:           ACPI Reset/Shutdown/PowerOff
-  * Guest Systems:    Win10
   * Guest Additions:  Clipboard (investigate truncated data, interplay with file manager)
   * Guest Additions:  Caps Lock
-  * Devices:          USB raw
+  * Devices:          USB raw (Josef)
 
   * Basics:           halt in TinyCore (mwait?)
   * Basics:           sched_yield and why is it used ?

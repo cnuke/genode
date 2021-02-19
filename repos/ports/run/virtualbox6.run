@@ -198,11 +198,11 @@ append_if [expr $use_gui] config {
 	<start name="vbox2" priority="-2" caps="1500">
 		<binary name="} $virtualbox_binary {"/>
 		<resource name="RAM" quantum="6200M"/>
-		<config vbox_file="test.vbox" vm_name="TestVM">
+		<config vbox_file="virtualbox6.vbox" vm_name="TestVM">
 			<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev">
-					<log/> <rtc/>
+					<log/> <rtc/> <null/> <zero/>
 				</dir>
 				<dir name="pipe"> <pipe/> </dir>
 				<rom name="test.vbox" />
