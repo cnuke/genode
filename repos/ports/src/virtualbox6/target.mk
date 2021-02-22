@@ -12,6 +12,7 @@ SRC_CC += libc.cc unimpl.cc dummies.cc pdm.cc devices.cc nem.cc dynlib.cc
 LIBS  += base
 LIBS  += stdcxx
 LIBS  += libiconv
+LIBS  += qemu-usb
 
 CC_OPT_main = -Wno-multistatement-macros
 CC_OPT += -DProgress=ClientProgress

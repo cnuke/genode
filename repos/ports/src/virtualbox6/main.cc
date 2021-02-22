@@ -358,6 +358,7 @@ void Libc::Component::construct(Libc::Env &env)
 		}
 
 		Sup::init(env);
+		Xhci::init(env);
 
 		try {
 			static Main main(env);
