@@ -19,6 +19,7 @@
 #include <extern_c_end.h>
 #include <base/debug.h>
 
+#include <trace/timestamp.h>
 
 using namespace Genode;
 
@@ -62,7 +63,9 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 		Isoc_packet(Usb::Packet_descriptor packet, char *content)
 		: _packet(packet), _content(content),
 			_size (_packet.read_transfer() ? _packet.transfer.actual_size : _packet.size())
-		{ }
+		{
+			// Genode::warning(__func__, ": size: ", _size);
+		}
 
 		Isoc_packet()
 		: _packet { Usb::Packet_descriptor() }, _content { nullptr }, _size { 0 }
@@ -395,15 +398,23 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		unsigned count = 0;
 		isoc_read_queue.for_each([&count] (Isoc_packet&) { count++; });
-		return (count + _isoc_in_pending) < 1 ? true : false;
+		return (count + _isoc_in_pending) < 2 ? true : false;
 	}
+
+	uint64_t _last_tsc_us = 0;
 
 	void isoc_in_packet(USBPacket *usb_packet)
 	{
 		enum { NUMBER_OF_PACKETS = 32 };
-		isoc_read(usb_packet);
+		bool const read_packet = isoc_read(usb_packet);
+		bool const new_packet = isoc_new_packet();
 
-		if (!isoc_new_packet())
+		// uint64_t const tsc_us = Genode::Trace::timestamp() / 2100;
+		// uint64_t const diff = tsc_us - _last_tsc_us;
+		// _last_tsc_us = tsc_us;
+		// Genode::log(__func__, ": usb_packet: ", usb_packet, " read_packet: ", read_packet, " new_packet: ", new_packet, " diff: ", diff);
+
+		if (!new_packet)
 			return;
 
 		size_t size = usb_packet->ep->max_packet_size * NUMBER_OF_PACKETS;
