@@ -395,12 +395,12 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		unsigned count = 0;
 		isoc_read_queue.for_each([&count] (Isoc_packet&) { count++; });
-		return (count + _isoc_in_pending) < 32 ? true : false;
+		return (count + _isoc_in_pending) < 1 ? true : false;
 	}
 
 	void isoc_in_packet(USBPacket *usb_packet)
 	{
-		enum { NUMBER_OF_PACKETS = 1 };
+		enum { NUMBER_OF_PACKETS = 32 };
 		isoc_read(usb_packet);
 
 		if (!isoc_new_packet())
