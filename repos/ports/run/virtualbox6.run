@@ -1,6 +1,6 @@
 set use_net 0
 set use_ps2 1
-set use_usb 0
+set use_usb 1
 set use_serial 1
 set use_top 1
 
@@ -88,19 +88,28 @@ append_if [expr $use_ps2] config {
 	</start>}
 
 append_if [expr $use_usb] config {
-	<start name="usb_drv" priority="-1" caps="120">
-		<resource name="RAM" quantum="12M"/>}
+	<start name="usb_drv" priority="-1" caps="150">
+		<resource name="RAM" quantum="16M"/>
+		<provides> <service name="Usb"/> </provides>}
 
 append_if [expr $use_usb] config {
 		<config uhci="yes" ehci="yes" xhci="yes">
 			<hid/>
+			<raw>
+				<report devices="yes"/>
+				<policy label_prefix="vbox1" vendor_id="0x0781" product_id="0x5583"/>
+			</raw>
 		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent /> <any-child /> </any-service>
+		</route>
 	</start>}
 
 append_if [have_board pc] config {
 	<start name="fb_drv" priority="-1" caps="150">
 		<binary name="vesa_fb_drv"/>
-		<resource name="RAM" quantum="12M"/>}
+		<resource name="RAM" quantum="32M"/>}
 append_if [expr [have_board pc] && [have_include power_on/qemu]] config {
 		<config width="1280" height="1024" buffered="yes"/>}
 append_if [have_board pc] config {
@@ -155,6 +164,7 @@ append config {
 		<config>
 			<policy label="pointer -> hover" report="nitpicker -> hover"/>
 			<policy label="pointer -> xray"  report="nitpicker -> xray"/>
+			<policy label="vbox1 -> usb_devices"  report="usb_drv -> devices"/>
 		</config>
 	</start>
 
@@ -222,7 +232,7 @@ append config {
 	<start name="vbox1" priority="-2" caps="2000">
 		<binary name="} $virtualbox_binary {"/>
 		<resource name="RAM" quantum="6200M"/>
-		<config vbox_file="test.vbox" vm_name="TestVM">
+		<config vbox_file="test.vbox" vm_name="TestVM" xhci="yes">
 			<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc">
 				 <pthread placement="single-cpu"/>
 			</libc>
@@ -238,7 +248,9 @@ append_if [expr $use_serial] config {
 append config {
 				<rom name="test.vbox" />
 				<rom name="test.iso" />
+<!--
 				<rom name="bootsector.img" />
+-->
 				<dir name="ram">
 					<ram/>
 				</dir>
@@ -261,6 +273,7 @@ append_if [expr $use_bridge] config {
 append config {
 			<service name="Report" label="shape"> <child name="pointer" label="gui_fb1 -> shape"/> </service>
 			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="ROM" label="usb_devices"> <child name="report_rom"/> </service>
 			<service name="VM"> <parent diag="yes"/> </service>
 			<any-service> <parent /> <any-child /> </any-service>
 		</route>
@@ -279,7 +292,7 @@ set fd [open [run_dir]/genode/focus w]
 puts $fd "<focus label=\"vbox1 -> \"/>"
 close $fd
 
-set boot_modules { test.iso bootsector.img test.vbox }
+set boot_modules { test.iso test.vbox }
 
 append boot_modules $virtualbox_binary
 

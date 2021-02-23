@@ -8,15 +8,9 @@
 <VirtualBox xmlns="http://www.innotek.de/VirtualBox-settings" version="1.18-genode">
   <Machine uuid="{410f6221-6237-4833-b02c-a54000b7b190}" name="Tinycore" OSType="Linux26" snapshotFolder="Snapshots" lastStateChange="2014-10-30T13:26:17Z">
     <MediaRegistry>
-      <HardDisks>
-        <HardDisk uuid="{3d9a9193-0fe7-4f8c-8e1b-065dbf514c82}" location="/ram/overlay.vdi" format="VDI" autoReset="true"/>
-      </HardDisks>
       <DVDImages>
         <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}" location="test.iso"/>
       </DVDImages>
-      <FloppyImages>
-        <Image uuid="{a804c9cb-ae6d-490a-92e9-8d4605911c22}" location="bootsector.img"/>
-      </FloppyImages>
     </MediaRegistry>
     <ExtraData>
       <ExtraDataItem name="GUI/LastGuestSizeHint" value="720,400"/>
@@ -105,9 +99,6 @@
       <StorageController name="SATA" type="AHCI" PortCount="2" useHostIOCache="true" Bootable="true">
         <AttachedDevice passthrough="false" tempeject="true" type="DVD" port="1" device="0">
           <Image uuid="{81763434-9a51-49e8-9444-528a5a28c4bc}"/>
-        </AttachedDevice>
-        <AttachedDevice type="HardDisk" port="0" device="0">
-          <Image uuid="{3d9a9193-0fe7-4f8c-8e1b-065dbf514c82}"/>
         </AttachedDevice>
       </StorageController>
       <StorageController name="Floppy" type="I82078" PortCount="1" useHostIOCache="true" Bootable="true">
