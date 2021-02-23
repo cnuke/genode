@@ -35,6 +35,9 @@ extern "C" int usb_set_configuration(struct usb_device *dev, int configuration);
 constexpr bool verbose_raw = false;
 
 
+extern bool isoc_transfers_go;
+
+
 namespace Usb {
 	class  Session_component;
 	class  Root;
@@ -501,8 +504,13 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 			}
 
 			int ret = usb_submit_urb(urb, GFP_KERNEL);
-			if (ret == 0)
+			if (ret == 0) {
+				// isoc_transfers_go = true;
+				// Genode::log("ISOC: ",
+				//             "size: ", p.size(), " num: ", p.transfer.number_of_packets, " "
+				//             "interval: ", urb->interval);
 				return true;
+			}
 
 			if (ret == -ENOENT)
 				p.error = Packet_descriptor::INTERFACE_OR_ENDPOINT_ERROR;

@@ -26,8 +26,13 @@
 #include <lx_kit/irq.h>
 #include <lx_kit/scheduler.h>
 
+#include <trace/timestamp.h>
+
 
 namespace Lx_kit { class Irq; }
+
+
+bool isoc_transfers_go;
 
 
 class Lx_kit::Irq : public Lx::Irq
@@ -139,11 +144,19 @@ class Lx_kit::Irq : public Lx::Irq
 					_irq_sess.ack_irq();
 				}
 
+				uint64_t _last_tsc_us = 0;
+
 				/**
 				 * Unblock this context, e.g., as result of an IRQ signal
 				 */
 				void unblock()
 				{
+					if (isoc_transfers_go) {
+						uint64_t tsc_us = Genode::Trace::timestamp() / 2100;
+						Genode::error("irq: diff: ", tsc_us - _last_tsc_us);
+						_last_tsc_us = tsc_us;
+					}
+
 					_task.unblock();
 
 					/* kick off scheduling */

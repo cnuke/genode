@@ -1117,3 +1117,177 @@ int of_property_read_u32(const struct device_node *np, const char *propname, u32
 	if (DEBUG_DRIVER) Genode::warning("Could not find property ", propname);
 	return -EINVAL;
 }
+
+
+#include <util/mmio.h>
+
+struct Xhci_trb : Genode::Mmio
+{
+	struct Data_buffer : Register<0x0, 64>
+	{
+		struct Data_lo : Bitfield< 0, 32> { };
+		struct Data_hi : Bitfield<32, 32> { };
+	};
+
+	struct Status : Register<0x8, 32>
+	{
+		struct Transfer_length : Bitfield< 0, 16> { };
+		struct Size            : Bitfield<17,  5> { };
+		struct Intr_target     : Bitfield<22, 10> { };
+	};
+
+	struct Control : Register<0xc, 32>
+	{
+		/* TR_NORMAL */
+		struct Cc   : Bitfield< 0, 1> { };
+		struct Ent  : Bitfield< 1, 1> { };
+		struct Isp  : Bitfield< 2, 1> { };
+		struct Ns   : Bitfield< 3, 1> { };
+		struct Ch   : Bitfield< 4, 1> { };
+		struct Ioc  : Bitfield< 5, 1> { };
+		struct Idt  : Bitfield< 6, 1> { };
+		struct Bei  : Bitfield< 9, 1> { };
+		struct Sia  : Bitfield<31, 1> { };
+
+		/* TR_LINK */
+		struct Tc   : Bitfield< 1, 1> { };
+
+		enum {
+			TYPE_NORMAL = 1,
+			TYPE_SETUP  = 2,
+			TYPE_DATA   = 3,
+			TYPE_STATUS = 4,
+			TYPE_ISOCH  = 5,
+			TYPE_LINK   = 6,
+			TYPE_EVENT  = 7,
+			TYPE_NOOP   = 8,
+		};
+		struct Type : Bitfield<10, 6> { };
+
+		static char const *type_string(unsigned type)
+		{
+			switch (type) {
+			case TYPE_NORMAL: return "NORM";
+			case TYPE_SETUP:  return "SETU";
+			case TYPE_DATA:   return "DATA";
+			case TYPE_STATUS: return "STAT";
+			case TYPE_ISOCH:  return "ISOC";
+			case TYPE_LINK:   return "LINK";
+			case TYPE_EVENT:  return "EVEN";
+			case TYPE_NOOP:   return "NOOP";
+			default:          return "UNKN";
+			}
+			return "<-->";
+		}
+	};
+
+	Xhci_trb(Genode::addr_t addr) : Genode::Mmio { addr } { }
+
+	void print(Genode::Output &out) const
+	{
+		unsigned const type = read<Control::Type>();
+		Genode::print(out,
+		                   "type: ",   Control::type_string(type), " (", type, ") "
+		                   "cc: ",     read<Control::Cc>(),  " "
+		                   "ent: ",    read<Control::Ent>(), " "
+		                   "isp: ",    read<Control::Isp>(), " "
+		                   "ch: ",     read<Control::Ch>(), " "
+		                   "ioc: ",    read<Control::Ioc>(), " "
+		                   "idt: ",    read<Control::Idt>(), " "
+		                   "bei: ",    read<Control::Bei>(), " "
+		                   "sia: ",    read<Control::Sia>(), " "
+		                   "length: ", read<Status::Transfer_length>(), " "
+		                   "data: ",   Genode::Hex(read<Data_buffer>()),  " ");
+	}
+
+	bool tr_normal() const
+	{
+		return read<Control::Type>() == Control::TYPE_NORMAL;
+	};
+
+	bool tr_link() const
+	{
+		return read<Control::Type>() == Control::TYPE_LINK;
+	}
+
+	bool tc() const
+	{
+		return read<Control::Tc>();
+	}
+
+	int ccs() const
+	{
+		return read<Control::Cc>();
+	}
+
+	Genode::addr_t data_addr() const
+	{
+		return read<Data_buffer>();
+	}
+
+	size_t length() const
+	{
+		return read<Status::Transfer_length>();
+	}
+};
+
+
+struct xhci_generic_trb {
+	__le32 field[4];
+};
+
+
+static void copy_generic_trb(char *dst, size_t len, struct xhci_generic_trb *trb)
+{
+	if (len < 4 * sizeof (uint32_t)) {
+		return;
+	}
+
+	char *p = dst;
+	for (int i = 0; i < 4; i++) {
+		Genode::memcpy(p, &trb->field[i], sizeof (trb->field[i]));
+		p += sizeof (trb->field[i]);
+	}
+}
+
+
+enum Xhci_ring_type {
+	TYPE_CTRL = 0,
+	TYPE_ISOC,
+	TYPE_BULK,
+	TYPE_INTR,
+	TYPE_STREAM,
+	TYPE_COMMAND,
+	TYPE_EVENT,
+};
+
+
+extern "C" int __xhci_ring_type(struct xhci_ring *ring);
+
+
+extern "C" void __trace_xhci_queue_trb(struct xhci_ring *ring, struct xhci_generic_trb *gen_trb)
+{
+	return;
+
+	int const ring_type = __xhci_ring_type(ring);
+	switch (ring_type) {
+	case TYPE_CTRL: [[fallthrough]];
+	case TYPE_ISOC: [[fallthrough]];
+	case TYPE_BULK: [[fallthrough]];
+	case TYPE_INTR:
+		break;
+	case TYPE_STREAM:  [[fallthrough]];
+	case TYPE_COMMAND: [[fallthrough]];
+	case TYPE_EVENT:
+		/* skip those rings */
+		return;
+	}
+
+	char buffer[4*sizeof (uint32_t)] { };
+
+	copy_generic_trb(buffer, sizeof (buffer), gen_trb);
+
+	Xhci_trb const trb { (Genode::addr_t)buffer };
+
+	Genode::error(__func__, ": ring: ", ring, " trb: ", trb);
+}

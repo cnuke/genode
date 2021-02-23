@@ -1779,6 +1779,11 @@ extern int usb_add_phy_dev(struct usb_phy *);
  ** Tracing stuff **
  *******************/
 
+struct xhci_ring;
+struct xhci_generic_trb;
+
+void __trace_xhci_queue_trb(struct xhci_ring *ring, struct xhci_generic_trb *trb);
+
 #define trace_xhci_address_ctx(p1, p2, v)
 #define trace_xhci_alloc_dev(p)
 #define trace_xhci_alloc_virt_device(p)
@@ -1802,7 +1807,7 @@ extern int usb_add_phy_dev(struct usb_phy *);
 #define trace_xhci_hub_status_data(p1, p2)
 #define trace_xhci_inc_deq(p)
 #define trace_xhci_inc_enq(p)
-#define trace_xhci_queue_trb(p1, p2)
+#define trace_xhci_queue_trb(p1, p2) __trace_xhci_queue_trb(p1, p2);
 #define trace_xhci_ring_alloc(p)
 #define trace_xhci_ring_expansion(p)
 #define trace_xhci_ring_free(p)
