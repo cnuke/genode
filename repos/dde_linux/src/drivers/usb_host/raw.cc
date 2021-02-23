@@ -505,10 +505,10 @@ class Usb::Worker : public Genode::Weak_object<Usb::Worker>
 
 			int ret = usb_submit_urb(urb, GFP_KERNEL);
 			if (ret == 0) {
-				// isoc_transfers_go = true;
-				// Genode::log("ISOC: ",
-				//             "size: ", p.size(), " num: ", p.transfer.number_of_packets, " "
-				//             "interval: ", urb->interval);
+				isoc_transfers_go = true;
+				Genode::log("ISOC: ",
+				            "size: ", p.size(), " num: ", p.transfer.number_of_packets, " "
+				            "interval: ", urb->interval);
 				return true;
 			}
 

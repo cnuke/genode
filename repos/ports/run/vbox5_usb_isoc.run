@@ -75,6 +75,7 @@ append config {
 		</route>
 	</start>
 
+<!--
 	<start name="top">
 		<resource name="RAM" quantum="2M"/>
 		<config period_ms="1000" sort_time="ec"/>
@@ -83,6 +84,7 @@ append config {
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
+-->
 
 	<!-- must be some priority as client, otherwise priority boost XXX -->
 <!--
@@ -347,7 +349,7 @@ append config {
 		</route>
 	</start>
 
-	<start name="usb_host_drv" priority="-1" caps="120">
+	<start name="usb_host_drv" priority="0" caps="120">
 		<binary name="x86_pc_usb_host_drv"/>
 		<resource name="RAM" quantum="20M"/>
 		<provides> <service name="Usb"/> </provides>
