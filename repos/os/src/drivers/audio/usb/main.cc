@@ -23,6 +23,8 @@
 #include <usb/types.h>
 #include <usb_session/connection.h>
 
+#include <util/string.h>
+
 
 static bool const verbose_intr = false;
 static bool const verbose      = false;
@@ -486,11 +488,37 @@ struct Usb::Audio : Packet_stream
 
 		if (iface && (iface->state == Iface::State::CONFIGURE_PENDING)) {
 			iface->state = Iface::State::CONFIGURED;
+
+			/* stop here if iface was set */
+			return;
 		}
 
-		(void)data;
-		(void)len;
+		enum { CONFIG_DESCR = 0x0200, };
+		if (p.control.value == CONFIG_DESCR) {
+			Genode::error("CFG descriptor: ", len);
 
+			for (size_t i = 0; i < len; ) {
+				size_t const remaining = len - i;
+				size_t const consumed  = Genode::min(remaining, 16u);
+
+				uint8_t const *p = data + i;
+
+				char line_buffer[128] { };
+				size_t buffer_offset = 0;
+
+				for (size_t o = 0; o < consumed; o++) {
+					char *dst = line_buffer + buffer_offset;
+					size_t const avail_buffer = sizeof (line_buffer) - buffer_offset;
+
+					buffer_offset += Genode::snprintf(dst, avail_buffer, "0x%x, ", p[o]);
+				}
+
+				Genode::log((char const*)line_buffer);
+
+				i += consumed;
+			}
+			Genode::error("CFG descriptor dump done");
+		}
 		// TODO
 	}
 
@@ -679,8 +707,32 @@ struct Usb::Audio : Packet_stream
 
 		Usb::Packet_descriptor p = alloc_packet(0);
 
+		/* set configuration */
 		p.type   = Packet_descriptor::CONFIG;
 		p.number = 1; /* XXX read from device */
+
+		_usb->source()->submit_packet(p);
+	}
+
+	void _request_config_descriptor(Usb::Config_descriptor const &cfg)
+	{
+		size_t const total_length = cfg.total_length;
+		Usb::Packet_descriptor p = alloc_packet(total_length);
+
+		Genode::error("request CFG descriptor: ", total_length);
+
+		enum {
+			REQUEST_TYPE              = 0x80,  /* bmRequestType */
+			REQUEST_GET_DESCRIPTOR    = 0x06,  /* bRequest */
+			REQUEST_CONFIG_DESCRIPTOR = 0x02   /* wValue */
+		};
+
+		p.type                 = Usb::Packet_descriptor::CTRL;
+		p.control.request_type = REQUEST_TYPE;
+		p.control.request      = REQUEST_GET_DESCRIPTOR;
+		p.control.value        = (REQUEST_CONFIG_DESCRIPTOR << 8);
+		p.control.index        = 0;
+		p.control.timeout      = 1000; // XXX
 
 		_usb->source()->submit_packet(p);
 	}
@@ -705,6 +757,8 @@ struct Usb::Audio : Packet_stream
 		if (device_descr.serial_number_index) {
 			serial_number_string.request(device_descr.serial_number_index);
 		}
+
+		_request_config_descriptor(config_descr);
 
 		_playback.enable(*this);
 
