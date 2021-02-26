@@ -16,9 +16,36 @@
 #include <base/log.h>
 #include <log_session/connection.h>
 
+#include <timer_session/connection.h>
+
+struct Main
+{
+	Timer::Connection _timer;
+
+	void _handle_timer() { }
+
+	Genode::Signal_handler<Main> _timer_sigh;
+
+	Main(Genode::Env &env)
+	:
+		_timer      { env },
+		_timer_sigh { env.ep(), *this, &Main::_handle_timer }
+	{
+		_timer.sigh(_timer_sigh);
+	}
+
+	void start_timer()
+	{
+		Genode::log("Start periodic timer");
+		_timer.trigger_periodic(20u * 1000);
+	}
+};
+
 
 void Component::construct(Genode::Env &env)
 {
+	static Main main { env };
+
 	using namespace Genode;
 
 	log("hex range:          ", Hex_range<uint16_t>(0xe00, 0x880));
@@ -58,4 +85,6 @@ void Component::construct(Genode::Env &env)
 	log(Cstring(buf));
 
 	log("Test done.");
+
+	main.start_timer();
 }
