@@ -242,8 +242,11 @@ class Vbox::Driver : Genode::Noncopyable
 
 			_vbox_controller->init();
 
+			uint64_t const interval_us = 125;
+
+			Genode::log("Interval: ", interval_us, " us");
 			measure_time("set_interval: ", [&] () {
-				_vbox_controller->set_interval(1000);
+				_vbox_controller->set_interval(interval_us);
 			});
 
 			_vbox_pci->sigh_irq(request_sigh);
@@ -317,7 +320,7 @@ class Vbox::Driver : Genode::Noncopyable
 				            (ts - _last_global_ts)/_freq_mhz, " us");
 				_last_global_ts = ts;
 
-				for (size_t i = 0; i < 16; i++) {
+				for (size_t i = 0; i < 4; i++) {
 					Genode::log(__func__, ": ts[",i,"]: ", _execute_ts[i]);
 				}
 			}
