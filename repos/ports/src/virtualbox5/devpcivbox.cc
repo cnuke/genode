@@ -70,7 +70,7 @@ uint64_t _vm_exits = 0;
 uint64_t _vm_exit_irq_win = 0;
 
 
-#define ENABLE_TRACING 1
+#define ENABLE_TRACING 0
 
 #if ENABLE_TRACING
 #define TRACE(...) do { Genode::trace(Genode::Thread::myself()->name(), ": ", __VA_ARGS__); } while (0)
@@ -689,7 +689,7 @@ struct Pci_ep : Genode::Entrypoint
 	void _handle_pthread_registration()
 	{
 		Genode::Thread *myself = Genode::Thread::myself();
-		if (!myself || Libc::pthread_create(&_pthread, *myself)) {
+		if (!myself || Libc::pthread_create(&_pthread, *myself, &myself)) {
 			Genode::error("PCI VBOX will not work - thread for "
 			              "pthread registration invalid");
 		}
