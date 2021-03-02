@@ -27,13 +27,7 @@ namespace Genode { namespace Trace {
 	{
 		uint32_t lo, hi;
 		__asm__ __volatile__ (
-				"xorl %%eax,%%eax\n\t"
-				"cpuid\n\t"
-				:
-				:
-				: "%rax", "%rbx", "%rcx", "%rdx"
-				);
-		__asm__ __volatile__ (
+				"lfence\n\t"
 				"rdtsc" : "=a" (lo), "=d" (hi)
 				);
 
