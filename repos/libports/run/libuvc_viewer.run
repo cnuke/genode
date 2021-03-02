@@ -25,12 +25,16 @@ set build_components {
 #proc libuvc_product_id {} { return "0xb564" }
 
 # c270
-proc libuvc_vendor_id {}  { return "0x046d" }
-proc libuvc_product_id {} { return "0x0825" }
+#proc libuvc_vendor_id {}  { return "0x046d" }
+#proc libuvc_product_id {} { return "0x0825" }
 
 # quickcam
 #proc libuvc_vendor_id {}  { return "0x046d" }
 #proc libuvc_product_id {} { return "0x09c1" }
+
+# vbox wc
+proc libuvc_vendor_id {}  { return "0x80ee" }
+proc libuvc_product_id {} { return "0x0030" }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
 

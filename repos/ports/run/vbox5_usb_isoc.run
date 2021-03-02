@@ -75,7 +75,6 @@ append config {
 		</route>
 	</start>
 
-<!--
 	<start name="top">
 		<resource name="RAM" quantum="2M"/>
 		<config period_ms="1000" sort_time="ec"/>
@@ -84,7 +83,6 @@ append config {
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
--->
 
 	<!-- must be some priority as client, otherwise priority boost XXX -->
 <!--
