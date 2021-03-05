@@ -461,7 +461,7 @@ struct Controller
 
 		++_interrupts;
 		// Genode::error(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
-		TRACE(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
+		// TRACE(__func__, ": intr: ", _interrupts,  " diff: ", diff, " us");
 
 		uint32_t const its = (tsc / _freq_mhz) & 0xffffffff;
 		_mmio.write<Mmio::Status::Interrupt_timestamp>(its);
@@ -506,6 +506,10 @@ struct Controller
 		case 0x08:
 			v = _mmio.read<Mmio::Status>();
 			break;
+		case 0x0c:
+			v = _mmio.read<Mmio::Status>();
+			v >>= 32;
+			break;
 		default:
 			break;
 		}
@@ -520,6 +524,7 @@ struct Controller
 		default:
 			break;
 		}
+		// Genode::error(__func__, ": offset: ", offset, " v: ", Genode::Hex(v), " size: ", size);
 	}
 
 	void mmio_write(off_t offset, void const *buf, size_t size)
@@ -537,7 +542,7 @@ struct Controller
 			break;
 		}
 
-		// Genode::error("offset: ", offset, " v: ", Genode::Hex(v), " size: ", size);
+		// Genode::error(__func__, ": offset: ", offset, " v: ", Genode::Hex(v), " size: ", size);
 
 		switch (offset) {
 		case 0x04:
@@ -561,6 +566,8 @@ struct Controller
 			if (v & (1u << 18)) {
 				_mmio.write<Mmio::Status::Interrupt_pending>(0);
 				_pci_dev.raise_interrupt(0);
+
+				//_handle_interval_tm();
 
 //				stop_measurement(__func__);
 			}

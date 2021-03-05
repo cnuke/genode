@@ -68,7 +68,7 @@ struct Trace_subject_registry
 			return nullptr;
 		}
 
-		enum { MAX_CPUS_X = 1, MAX_CPUS_Y = 1, MAX_ELEMENTS_PER_CPU = 16};
+		enum { MAX_CPUS_X = 2, MAX_CPUS_Y = 1, MAX_ELEMENTS_PER_CPU = 8};
 
 		/* accumulated execution time on all CPUs */
 		unsigned long long total_first [MAX_CPUS_X][MAX_CPUS_Y];
