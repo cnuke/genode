@@ -2,6 +2,7 @@ _/pkg/audio_player
 _/pkg/avplay
 _/pkg/bsd_audio_drv
 _/pkg/chocolate-doom
+_/pkg/cmus
 _/pkg/fs_rom
 _/pkg/fs_log
 _/pkg/lwext4_fs
