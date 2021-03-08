@@ -21,9 +21,6 @@
 #include <vfs/readonly_value_file_system.h>
 #include <vfs/single_file_system.h>
 
-/* libc includes */
-#include <sys/soundcard.h>
-
 
 namespace Vfs { struct Oss_file_system; }
 
@@ -156,6 +153,10 @@ struct Vfs::Oss_file_system::Audio
 			}
 
 			_info.channels    = CHANNELS;
+			/* from sys/soundcard.h */
+			enum {
+				AFMT_S16_LE = 0x00000010,
+			};
 			_info.format      = (unsigned)AFMT_S16_LE;
 			_info.sample_rate = Audio_out::SAMPLE_RATE;
 			_info.queue_size  = Audio_out::QUEUE_SIZE;
