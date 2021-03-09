@@ -94,7 +94,8 @@ class Isoc_packet : Fifo<Isoc_packet>::Element
 			unsigned remaining = _packet.transfer.actual_packet_size[_packet_index];
 			/* this should not happen as there asserts in the qemu code */
 			if (remaining > usb_packet->iov.size) {
-				Genode::error("iov too small, ignoring packet content");
+				Genode::error("iov too small, ignoring packet content "
+				              "(remaining: ", remaining, " iov.size: ", usb_packet->iov.size);
 			}
 			int copy_size = min(usb_packet->iov.size, remaining);
 
@@ -395,12 +396,12 @@ struct Usb_host_device : List<Usb_host_device>::Element
 	{
 		unsigned count = 0;
 		isoc_read_queue.for_each([&count] (Isoc_packet&) { count++; });
-		return (count + _isoc_in_pending) < 32 ? true : false;
+		return (count + _isoc_in_pending) < 1 ? true : false;
 	}
 
 	void isoc_in_packet(USBPacket *usb_packet)
 	{
-		enum { NUMBER_OF_PACKETS = 1 };
+		enum { NUMBER_OF_PACKETS = 32 };
 		isoc_read(usb_packet);
 
 		if (!isoc_new_packet())
