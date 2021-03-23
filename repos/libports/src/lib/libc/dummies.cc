@@ -116,6 +116,7 @@ DUMMY(int   , -1, getrusage, (int, rusage *))
 DUMMY_SILENT(uid_t ,  0, getuid, (void))
 DUMMY_SILENT(int   ,  1, isatty, (int))
 DUMMY(int   , -1, link, (const char *, const char *))
+DUMMY(void  ,  , makecontenxt, (ucontext_t *, void (*)(void), int, ...));
 DUMMY(int   ,  0, minherit, (void *, size_t, int))
 DUMMY(int   , -1, mknod, (const char *, mode_t, dev_t))
 DUMMY(int   , -1, mprotect, (void *, size_t, int))
