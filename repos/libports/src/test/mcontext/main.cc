@@ -5,6 +5,9 @@
  */
 
 
+#include <alloc_secondary_stack.h>
+
+
 /* libC includes */
 extern "C" {
 #include <errno.h>
@@ -64,7 +67,6 @@ int main(int argc, char **argv)
 #else
 #define MEM 64000
 ucontext_t T1, T2, Main, a;
-extern "C" void *alloc_secondary_stack(char const *name, size_t stack_size);
 
 void fn1()
 {
