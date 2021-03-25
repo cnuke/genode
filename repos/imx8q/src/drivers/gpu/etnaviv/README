@@ -1,0 +1,7 @@
+- build Linux kernel in-tree (access to <generated/…> is needed)
+- disable CONFIG_JUMP_LABEL
+- disable module loading support (General setup → Enable load…)
+- check <generated/autoconf.h> for any potentially unnessary options
+  like CONFIG_DEBUG_FS or CONFIG_PCI (depending on your driver) and
+  repeat menuconfig && building
+rm /home/jws/develop/genode/repos/imx8q/src/drivers/gpu/etnaviv/generated_dummies.c; /home/jws/develop/genode/tool/dde_linux/create_dummies TARGET=drivers/gpu/etnaviv DUMMY_FILE=/home/jws/develop/genode/repos/imx8q/src/drivers/gpu/etnaviv/generated_dummies.c LINUX_KERNEL_DIR=/home/jws/src/imx8/linux-fslc-5.4-2.3.x-imx/ generate
