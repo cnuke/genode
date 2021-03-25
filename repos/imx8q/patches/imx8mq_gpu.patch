@@ -1,0 +1,121 @@
+--- a/arch/arm64/include/asm/bug.h
++++ b/arch/arm64/include/asm/bug.h
+@@ -11,8 +11,12 @@
+ 
+ #include <asm/asm-bug.h>
+ 
++#define __BUG_FLAGS(flags)
++
++#if 0
+ #define __BUG_FLAGS(flags)				\
+-	asm volatile (__stringify(ASM_BUG_FLAGS(flags)));
++asm volatile (__stringify(ASM_BUG_FLAGS(flags)));
++#endif
+ 
+ #define BUG() do {					\
+ 	__BUG_FLAGS(0);					\
+--- a/arch/arm64/include/asm/pgtable-prot.h
++++ b/arch/arm64/include/asm/pgtable-prot.h
+@@ -26,8 +26,10 @@
+ #define _PROT_DEFAULT		(PTE_TYPE_PAGE | PTE_AF | PTE_SHARED)
+ #define _PROT_SECT_DEFAULT	(PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S)
+ 
+-#define PTE_MAYBE_NG		(arm64_kernel_use_ng_mappings() ? PTE_NG : 0)
+-#define PMD_MAYBE_NG		(arm64_kernel_use_ng_mappings() ? PMD_SECT_NG : 0)
++// #define PTE_MAYBE_NG		(arm64_kernel_use_ng_mappings() ? PTE_NG : 0)
++// #define PMD_MAYBE_NG		(arm64_kernel_use_ng_mappings() ? PMD_SECT_NG : 0)
++#define PTE_MAYBE_NG		(0)
++#define PMD_MAYBE_NG		(0)
+ 
+ #define PROT_DEFAULT		(_PROT_DEFAULT | PTE_MAYBE_NG)
+ #define PROT_SECT_DEFAULT	(_PROT_SECT_DEFAULT | PMD_MAYBE_NG)
+--- a/drivers/dma-buf/dma-fence.c
++++ b/drivers/dma-buf/dma-fence.c
+@@ -490,10 +490,10 @@ dma_fence_default_wait(struct dma_fence *fence, bool intr, signed long timeout)
+ 	list_add(&cb.base.node, &fence->cb_list);
+ 
+ 	while (!test_bit(DMA_FENCE_FLAG_SIGNALED_BIT, &fence->flags) && ret > 0) {
+-		if (intr)
+-			__set_current_state(TASK_INTERRUPTIBLE);
+-		else
+-			__set_current_state(TASK_UNINTERRUPTIBLE);
++		// if (intr)
++		// 	__set_current_state(TASK_INTERRUPTIBLE);
++		// else
++		// 	__set_current_state(TASK_UNINTERRUPTIBLE);
+ 		spin_unlock_irqrestore(fence->lock, flags);
+ 
+ 		ret = schedule_timeout(ret);
+--- a/drivers/dma-buf/dma-resv.c
++++ b/drivers/dma-buf/dma-resv.c
+@@ -92,7 +92,8 @@ static void dma_resv_list_free(struct dma_resv_list *list)
+ 	for (i = 0; i < list->shared_count; ++i)
+ 		dma_fence_put(rcu_dereference_protected(list->shared[i], true));
+ 
+-	kfree_rcu(list, rcu);
++	// kfree_rcu(list, rcu);
++	kfree(list);
+ }
+ 
+ /**
+--- a/drivers/gpu/drm/etnaviv/etnaviv_gpu.c
++++ b/drivers/gpu/drm/etnaviv/etnaviv_gpu.c
+@@ -1037,7 +1037,8 @@ static void etnaviv_fence_release(struct dma_fence *fence)
+ {
+ 	struct etnaviv_fence *f = to_etnaviv_fence(fence);
+ 
+-	kfree_rcu(f, base.rcu);
++	// kfree_rcu(f, base.rcu);
++	kfree(f);
+ }
+ 
+ static const struct dma_fence_ops etnaviv_fence_ops = {
+@@ -1384,6 +1385,10 @@ static void dump_mmu_fault(struct etnaviv_gpu *gpu)
+ 	}
+ }
+ 
++
++extern void lx_fence_completion_signal(u64);
++
++
+ static irqreturn_t irq_handler(int irq, void *data)
+ {
+ 	struct etnaviv_gpu *gpu = data;
+@@ -1441,6 +1446,8 @@ static irqreturn_t irq_handler(int irq, void *data)
+ 				gpu->completed_fence = fence->seqno;
+ 			dma_fence_signal(fence);
+ 
++			lx_fence_completion_signal(fence->seqno);
++
+ 			event_free(gpu, event);
+ 		}
+ 
+--- a/drivers/gpu/drm/etnaviv/etnaviv_sched.c
++++ b/drivers/gpu/drm/etnaviv/etnaviv_sched.c
+@@ -184,7 +184,7 @@ int etnaviv_sched_init(struct etnaviv_gpu *gpu)
+ 
+ 	ret = drm_sched_init(&gpu->sched, &etnaviv_sched_ops,
+ 			     etnaviv_hw_jobs_limit, etnaviv_job_hang_limit,
+-			     msecs_to_jiffies(500), dev_name(gpu->dev));
++			     msecs_to_jiffies(5000), dev_name(gpu->dev));
+ 	if (ret)
+ 		return ret;
+ 
+--- a/include/linux/slab.h
++++ b/include/linux/slab.h
+@@ -541,6 +541,7 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
+  */
+ static __always_inline void *kmalloc(size_t size, gfp_t flags)
+ {
++#if 0
+ 	if (__builtin_constant_p(size)) {
+ #ifndef CONFIG_SLOB
+ 		unsigned int index;
+@@ -558,6 +559,7 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
+ 				flags, size);
+ #endif
+ 	}
++#endif
+ 	return __kmalloc(size, flags);
+ }
+ 
