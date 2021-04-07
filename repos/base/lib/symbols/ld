@@ -429,6 +429,16 @@ wait_for_continue T
 #
 # Keep list in sync with libports/lib/symbols/libc!
 #
+_Unwind_GetTextRelBase T
+_Unwind_Resume_or_Rethrow T
+_Unwind_RaiseException T
+_Unwind_GetLanguageSpecificData T
+_Unwind_Backtrace T
+_Unwind_GetIPInfo T
+_Unwind_SetGR T
+_Unwind_SetIP T
+_Unwind_GetRegionStart T
+_Unwind_GetDataRelBase T
 _Unwind_Complete T
 _Unwind_DeleteException T
 _Unwind_Resume T
