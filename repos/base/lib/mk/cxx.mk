@@ -23,7 +23,12 @@ LOCAL_CXX_SYMBOLS += _Znam _Znwm
 #
 # Symbols we wrap (see unwind.cc)
 #
-EH_SYMBOLS = _Unwind_Resume _Unwind_Complete _Unwind_DeleteException
+EH_SYMBOLS = _Unwind_Resume _Unwind_Complete _Unwind_DeleteException \
+             _Unwind_Backtrace _Unwind_GetDataRelBase _Unwind_GetIPInfo \
+             _Unwind_GetLanguageSpecificData _Unwind_GetRegionStart \
+             _Unwind_GetTextRelBase _Unwind_RaiseException \
+             _Unwind_Resume_or_Rethrow _Unwind_SetGR _Unwind_SetIP
+
 
 #
 # Additional functions for ARM
