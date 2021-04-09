@@ -1,3 +1,4 @@
 bfd.patch
 arm.patch
 riscv.patch
+tmp_revert_no_executable_input.patch

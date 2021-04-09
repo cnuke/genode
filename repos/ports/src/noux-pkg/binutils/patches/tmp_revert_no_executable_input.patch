@@ -1,0 +1,30 @@
+Revert "Have the linker fail if any attempt to link in an executable is made."
+
+From: Christian Prochaska <christian.prochaska@genode-labs.com>
+
+This reverts commit a87e1817a435dab6c6c042f9306497c9f13d4236.
+
+diff --git a/ld/ldelf.c b/ld/ldelf.c
+index 28974968251..c19a61a5ae3 100644
+--- a/ld/ldelf.c
++++ b/ld/ldelf.c
+@@ -1040,19 +1040,6 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
+ 
+   get_elf_backend_data (link_info.output_bfd)->setup_gnu_properties (&link_info);
+ 
+-  /* Do not allow executable files to be used as inputs to the link.  */
+-  for (abfd = link_info.input_bfds; abfd; abfd = abfd->link.next)
+-    {
+-      if (abfd->xvec->flavour == bfd_target_elf_flavour
+-	  && !bfd_input_just_syms (abfd)
+-	  && elf_tdata (abfd) != NULL
+-	  && elf_tdata (abfd)->elf_header != NULL
+-	  /* FIXME: Maybe check for other non-supportable types as well ?  */
+-	  && elf_tdata (abfd)->elf_header->e_type == ET_EXEC)
+-	einfo (_("%F%P: cannot use executable file '%pB' as input to a link\n"),
+-	       abfd);
+-    }
+-
+   if (bfd_link_relocatable (&link_info))
+     {
+       if (link_info.execstack == !link_info.noexecstack)
