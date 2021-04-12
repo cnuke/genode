@@ -30,6 +30,39 @@
 using size_t = Genode::size_t;
 
 
+/*****************
+ ** DRM session **
+ *****************/
+
+#include <drm_component.h>
+
+static Genode::Constructible<Drm::Root> _drm_root { };
+
+void lx_emul_announce_drm_session(void)
+{
+	if (!_drm_root.constructed()) {
+		_drm_root.construct(Lx_kit::env().env, Lx_kit::env().heap);
+
+		Genode::Entrypoint &ep = Lx_kit::env().env.ep();
+		Lx_kit::env().env.parent().announce(ep.manage(*_drm_root));
+	}
+}
+
+
+Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned handle)
+{
+	(void)handle;
+	return Genode::Ram_dataspace_capability();
+}
+
+
+Genode::Dataspace_capability lx_drm_object_gtt_dataspace(unsigned handle)
+{
+	(void)handle;
+	return Genode::Dataspace_capability();
+}
+
+
 /************
  ** memory **
  ************/

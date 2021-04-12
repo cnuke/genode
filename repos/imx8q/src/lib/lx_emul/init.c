@@ -13,6 +13,7 @@ void probe_platform_bus(void);
 void register_gpu_platform_device(void);
 int lx_drm_open(void);
 int lx_drm_ioctl(unsigned int, unsigned long);
+void lx_emul_announce_drm_session(void);
 
 int lx_emul_start_kernel()
 {
@@ -40,7 +41,9 @@ int lx_emul_start_kernel()
 			return err;
 		}
 
-		lx_emul_printf("%s: model: 0x%lx\n", __func__, param.value);
+		lx_emul_printf("%s: model: 0x%llx\n", __func__, param.value);
 	}
+
+	lx_emul_announce_drm_session();
 	return 0;
 }
