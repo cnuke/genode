@@ -11,6 +11,12 @@
 extern "C" {
 #endif
 
+/*****************
+ ** DRM session **
+ *****************/
+
+void lx_emul_announce_drm_session(void);
+
 
 /***********************
  ** memory management **

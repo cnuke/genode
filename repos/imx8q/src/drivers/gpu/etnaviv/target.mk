@@ -5,7 +5,8 @@ SRC_CC   = main.cc lx_emul.cc
 SRC_C    = dummies.c lx_emul_c.c
 SRC_C   += $(notdir $(wildcard $(PRG_DIR)/generated_dummies.c))
 
-INC_DIR  = $(PRG_DIR)
+INC_DIR += $(PRG_DIR)
+INC_DIR += $(PRG_DIR)/include
 
 CC_OLEVEL := -O0
 
