@@ -266,12 +266,6 @@ thermal_of_cooling_device_register(struct device_node *np,
 
 #include <linux/sched.h>
 
-struct task_struct *get_current(void)
-{
-	lx_emul_printf("%s:%d FIX shadowning\n", __func__, __LINE__);
-	return NULL;
-}
-
 int wake_up_process(struct task_struct *p)
 {
 	lx_emul_trace(__func__);

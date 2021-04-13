@@ -1037,6 +1037,17 @@ asmlinkage __visible void __sched schedule(void)
 }
 
 
+static struct task_struct _current_task;
+
+
+struct task_struct *get_current(void)
+{
+	lx_emul_printf("%s:%d from: %px\n", __func__, __LINE__,
+	               __builtin_return_address(0));
+	return &_current_task;
+}
+
+
 #include <linux/vmalloc.h>
 
 void *vzalloc(unsigned long size)
@@ -1072,3 +1083,47 @@ unsigned long find_next_zero_bit(unsigned const long *addr,
 
 	return (i * BITS_PER_LONG) + j;
 }
+
+
+#include <linux/shmem_fs.h>
+
+struct file *shmem_file_setup(char const *name, loff_t size,
+                               unsigned long flags)
+{
+	struct file *f;
+	struct address_space *f_mapping;
+
+	f = kzalloc(sizeof (struct file), 0);
+	if (!f) {
+		return (struct file*)ERR_PTR(-ENOMEM);
+	}
+
+	f_mapping = kzalloc(sizeof (struct address_space), 0);
+	if (!f_mapping) {
+		kfree(f);
+		return (struct file*)ERR_PTR(-ENOMEM);
+	}
+
+	f->f_mapping = f_mapping;
+
+	atomic_long_set(&f->f_count, 1);
+	f->f_flags = flags;
+	f->f_mode = OPEN_FMODE(flags);
+	f->f_mode |= FMODE_OPENED;
+
+	return f;
+}
+
+
+struct page * shmem_read_mapping_page_gfp(struct address_space * mapping,pgoff_t index,gfp_t gfp)
+{
+	lx_emul_trace(__func__);
+	return NULL;
+}
+
+
+#include <linux/cpu.h>
+#include <linux/cpumask.h>
+
+struct cpumask __cpu_online_mask   = { .bits[0] = 1 };
+struct cpumask __cpu_possible_mask = { .bits[0] = 1 };
