@@ -55,7 +55,7 @@ CC_C_OPT += -std=gnu89 -include $(CONTRIB_DIR)/include/linux/kconfig.h
 CC_C_OPT += -D__KERNEL__ -DCONFIG_CC_HAS_K_CONSTRAINT=1
 CC_C_OPT += -DKASAN_SHADOW_SCALE_SHIFT=3
 CC_C_OPT += -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs
-CC_C_OPT += -Werror=implicit-function-declaration -Werror=implicit-int
+#CC_C_OPT += -Werror=implicit-function-declaration -Werror=implicit-int
 CC_C_OPT += -Wno-format-security -Wno-psabi
 CC_C_OPT += -Wno-frame-address -Wno-format-truncation -Wno-format-overflow
 CC_C_OPT += -Wframe-larger-than=2048 -Wno-unused-but-set-variable -Wimplicit-fallthrough
@@ -71,7 +71,9 @@ CC_CXX_OPT += -include $(CONTRIB_DIR)/include/linux/kconfig.h \
 CC_CXX_WARN_STRICT :=
 
 #LX_OBJECTS  = $(wildcard $(CONTRIB_DIR)/drivers/of/*.o)
-LX_OBJECTS_dma := $(CONTRIB_DIR)/drivers/dma-buf/dma-fence.o)
+LX_OBJECTS_dma := \
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-fence.o) \
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-resv.o)
 LX_OBJECTS += $(LX_OBJECTS_dma)
 
 LX_OBJECTS_drm := \
@@ -91,6 +93,7 @@ LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/radix-tree.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/string.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/sort.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/bitmap.o)
+LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/refcount.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/time/time.o)
 #LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/dma/direct.o)
 LX_ASM      = $(wildcard $(CONTRIB_DIR)/arch/arm64/lib/mem*.S)

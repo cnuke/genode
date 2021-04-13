@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2021-03-30
+ * \date   2021-04-13
  */
 
 #include <lx_emul.h>
@@ -194,70 +194,6 @@ void dma_direct_sync_sg_for_device(struct device * dev,struct scatterlist * sgl,
 #include <linux/dma-mapping.h>
 
 void dma_direct_unmap_sg(struct device * dev,struct scatterlist * sgl,int nents,enum dma_data_direction dir,unsigned long attrs)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-void dma_resv_add_excl_fence(struct dma_resv * obj,struct dma_fence * fence)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-void dma_resv_add_shared_fence(struct dma_resv * obj,struct dma_fence * fence)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-void dma_resv_fini(struct dma_resv * obj)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-int dma_resv_get_fences_rcu(struct dma_resv * obj,struct dma_fence ** pfence_excl,unsigned * pshared_count,struct dma_fence *** pshared)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-void dma_resv_init(struct dma_resv * obj)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-int dma_resv_reserve_shared(struct dma_resv * obj,unsigned int num_fences)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-bool dma_resv_test_signaled_rcu(struct dma_resv * obj,bool test_all)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-resv.h>
-
-long dma_resv_wait_timeout_rcu(struct dma_resv * obj,bool wait_all,bool intr,unsigned long timeout)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -519,6 +455,22 @@ void kfree_call_rcu(struct rcu_head * head,rcu_callback_t func)
 }
 
 
+#include <linux/slab.h>
+
+void * krealloc(const void * p,size_t new_size,gfp_t flags)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+size_t ksize(const void * objp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/timekeeping.h>
 
 ktime_t ktime_get(void)
@@ -623,49 +575,12 @@ bool queue_work_on(int cpu,struct workqueue_struct * wq,struct work_struct * wor
 }
 
 
-#include <linux/refcount.h>
-
-bool refcount_dec_and_mutex_lock(refcount_t * r,struct mutex * lock)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/refcount.h>
-
-bool refcount_dec_and_test_checked(refcount_t * r)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/refcount.h>
-
-void refcount_inc_checked(refcount_t * r)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/refcount.h>
-
-bool refcount_inc_not_zero_checked(refcount_t * r)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/pagemap.h>
 
 void release_pages(struct page ** pages,int nr)
 {
 	lx_emul_trace_and_stop(__func__);
 }
-
-
-#include <linux/dma-resv.h>
-
-struct ww_class reservation_ww_class;
 
 
 #include <linux/sched.h>
@@ -727,22 +642,6 @@ void sg_free_table(struct sg_table * table)
 #include <linux/scatterlist.h>
 
 struct scatterlist * sg_next(struct scatterlist * sg)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/shmem_fs.h>
-
-struct file * shmem_file_setup(const char * name,loff_t size,unsigned long flags)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/shmem_fs.h>
-
-struct page * shmem_read_mapping_page_gfp(struct address_space * mapping,pgoff_t index,gfp_t gfp)
 {
 	lx_emul_trace_and_stop(__func__);
 }
