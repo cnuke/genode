@@ -168,6 +168,12 @@ void kmem_cache_free(struct kmem_cache *s, void *x)
 }
 
 
+void *kvmalloc_node(size_t size, gfp_t flags, int node)
+{
+	return lx_emul_kmalloc(size, flags);
+}
+
+
 #include <linux/of.h>
 
 static struct device_node _vivante_gc = {
@@ -669,9 +675,13 @@ void __sched mutex_unlock(struct mutex *lock)
 	if (!list_empty(&lock->wait_list)) {
 		waiter = list_first_entry(&lock->wait_list,
 			                      struct mutex_waiter, list);
-		waiter_task = (unsigned long)waiter->task;
-
-		lx_emul_unblock_task(waiter_task);
+		if (waiter) {
+			waiter_task = (unsigned long)waiter->task;
+			lx_emul_unblock_task(waiter_task);
+		} else {
+			lx_emul_printf("%s: lock: %px wait_list: %px not empty but waiter NULL from: %px\n",
+			               __func__, &lock->wait_list, lock, __builtin_return_address(0));
+		}
 	}
 }
 
@@ -926,6 +936,15 @@ u64 dma_get_required_mask(struct device * dev)
 }
 
 
+int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
+                      int nents, enum dma_data_direction dir,
+                      unsigned long attrs)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+
 #include <linux/workqueue.h>
 
 struct workqueue_struct *alloc_workqueue(const char *fmt, unsigned int flags,
@@ -1092,6 +1111,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 {
 	struct file *f;
 	struct address_space *f_mapping;
+	Lx_dma lx_dma;
 
 	f = kzalloc(sizeof (struct file), 0);
 	if (!f) {
@@ -1104,6 +1124,19 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 		return (struct file*)ERR_PTR(-ENOMEM);
 	}
 
+	if (lx_emul_alloc_address_space(f_mapping, size)) {
+		kfree(f_mapping);
+		kfree(f);
+		return (struct file*)ERR_PTR(-ENOMEM);
+	}
+
+	struct page *
+
+	lx_dma = lx_emul_dma_alloc_attrs(dev, size, dma_wc);
+	if (!lx_dma.vaddr && !lx_dma.paddr) {
+		return NULL;
+	}
+
 	f->f_mapping = f_mapping;
 
 	atomic_long_set(&f->f_count, 1);
@@ -1112,13 +1145,26 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode |= FMODE_OPENED;
 
 	return f;
+
+err_dma:
+
+err_as:
+	kfree(f_mapping);
+err_mapping:
+	kfree(f);
+	return
 }
 
 
-struct page * shmem_read_mapping_page_gfp(struct address_space * mapping,pgoff_t index,gfp_t gfp)
+struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
+                                         pgoff_t index, gfp_t gfp)
 {
-	lx_emul_trace(__func__);
-	return NULL;
+	struct page *p = lx_emul_look_up_address_space_page(mapping, index);
+	if (!p) {
+		lx_emul_printf("%s: could not look up page in as: %px for index: %ld\n",
+		               __func__, mapping, index);
+	}
+	return p;
 }
 
 
