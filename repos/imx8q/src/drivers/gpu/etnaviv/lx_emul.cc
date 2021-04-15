@@ -188,6 +188,7 @@ void *lx_emul_kmem_cache_alloc(void const *c)
 {
 	Kmem_cache *mc = _kmem_cache_lookup(c);
 	if (!mc) {
+		Genode::warning(__func__, ": could not lookup cache: ", c);
 		return nullptr;
 	}
 
@@ -247,6 +248,58 @@ void lx_emul_dma_free_attrs(void const *dev, unsigned long size,
 
 	Genode::error("dma_free_wc(): unknown address");
 }
+
+
+struct Mapping : Genode::Registry<Mapping>::Element
+{
+	void         *address_space;
+	size_t const  size;
+
+	Lx_dma dma;
+
+	Mapping(Genode::Registry<Mapping> &registry,
+	        void *address_space, size_t size)
+	:
+		Genode::Registry<Mapping>::Element { registry, *this },
+		address_space { address_space },
+		size          { size },
+		dma           { 0, 0 }
+	{ }
+};
+
+
+struct Mapping_registry : Genode::Registry<Mapping> { };
+
+
+static Mapping_registry &_mapping_registry()
+{
+	static Mapping_registry reg { };
+	return reg;
+}
+
+
+int lx_emul_alloc_address_space(void *as, unsigned long size)
+{
+	try {
+		new (Lx::Malloc::mem()) Mapping(_mapping_registry(), as, size);
+		return 0;
+	} catch (...) { }
+
+	return -1;
+}
+
+static Kmem_cache *_kmem_cache_lookup(void const *lx)
+{
+	Kmem_cache *c = nullptr;
+	kmem_cache_registry().for_each([&c, lx] (Kmem_cache &kc) {
+		if (kc.lx == lx) {
+			c = &kc;
+		}
+	});
+	return c;
+}
+
+
 
 
 /********************

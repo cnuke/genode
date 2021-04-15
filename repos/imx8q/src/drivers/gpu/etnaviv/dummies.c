@@ -279,3 +279,53 @@ int sched_setscheduler(struct task_struct * p,int policy,const struct sched_para
 
 	return 0;
 }
+
+#include <asm-generic/preempt.h>
+
+asmlinkage __visible void __sched notrace preempt_schedule(void)
+{
+	lx_emul_trace(__func__);
+}
+
+
+
+#include <linux/cpuhotplug.h>
+
+int __cpuhp_setup_state(enum cpuhp_state state, char const *name,
+                        bool invoke, int (*startup)(unsigned int cpu),
+                        int (*teardown)(unsigned int cpu), bool multi_instance)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <asm-generic/percpu.h>
+
+unsigned long __per_cpu_offset[NR_CPUS] = {};
+
+
+#include <linux/rwlock_api_smp.h>
+
+void __lockfunc _raw_read_lock(rwlock_t * lock)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void __lockfunc _raw_read_unlock(rwlock_t * lock)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void __lockfunc _raw_write_lock(rwlock_t * lock)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void __lockfunc _raw_write_unlock(rwlock_t * lock)
+{
+	lx_emul_trace(__func__);
+}

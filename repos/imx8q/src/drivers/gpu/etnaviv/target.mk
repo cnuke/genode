@@ -79,7 +79,9 @@ LX_OBJECTS += $(LX_OBJECTS_dma)
 LX_OBJECTS_drm := \
                   $(CONTRIB_DIR)/drivers/gpu/drm/drm_gem.o \
                   $(CONTRIB_DIR)/drivers/gpu/drm/drm_mm.o \
-                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_of.o
+                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_of.o \
+                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_vma_manager.o \
+                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_prime.o
 LX_OBJECTS += $(LX_OBJECTS_drm)
 
 LX_OBJECTS += $(CONTRIB_DIR)/drivers/base/component.o
@@ -94,6 +96,7 @@ LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/string.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/sort.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/bitmap.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/refcount.o)
+LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/scatterlist.o)
 LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/time/time.o)
 #LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/dma/direct.o)
 LX_ASM      = $(wildcard $(CONTRIB_DIR)/arch/arm64/lib/mem*.S)
