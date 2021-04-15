@@ -15,6 +15,18 @@ int lx_drm_open(void);
 int lx_drm_ioctl(unsigned int, unsigned long);
 void lx_emul_announce_drm_session(void);
 
+
+/* functions marked with __init */
+void radix_tree_init(void);
+
+int lx_emul_init_kernel()
+{
+	radix_tree_init();
+
+	return 0;
+}
+
+
 int lx_emul_start_kernel()
 {
 	int err = 0;

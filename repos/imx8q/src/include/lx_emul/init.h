@@ -12,6 +12,7 @@ extern "C" {
 
 void lx_emul_register_initcall(int (*initcall)(void), int prio);
 
+int lx_emul_init_kernel(void);
 int lx_emul_start_kernel(void);
 
 #ifdef __cplusplus

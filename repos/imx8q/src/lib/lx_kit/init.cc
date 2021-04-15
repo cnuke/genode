@@ -45,6 +45,8 @@ static void _run_linux(void *args)
 {
 	Lx_kit::Env &kit_env = *reinterpret_cast<Lx_kit::Env*>(args);
 
+	lx_emul_init_kernel();
+
 	kit_env.initcalls.execute_in_order();
 	if (lx_emul_start_kernel()) {
 		Genode::error(__func__, ": lx_emul_start_kernel failed");
@@ -80,6 +82,6 @@ void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 
 extern "C" void lx_emul_register_initcall(int (*initcall)(void), int prio)
 {
-	Genode::log(initcall);
+	Genode::error(__func__, ": ", initcall);
 	Lx_kit::env().initcalls.add(initcall, prio);
 }
