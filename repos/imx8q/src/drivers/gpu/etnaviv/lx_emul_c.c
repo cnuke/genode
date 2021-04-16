@@ -798,12 +798,13 @@ struct drm_file *_lx_drm_file;
 int lx_drm_open(void)
 {
 	int err = 0;
+	struct drm_driver *drv;
 
 	if (!_lx_drm_device) {
 		return -1;
 	}
 
-	struct drm_driver *drv = _lx_drm_device->driver;
+	drv = _lx_drm_device->driver;
 	if (!drv) {
 		return -2;
 	}
@@ -940,7 +941,24 @@ int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
                       int nents, enum dma_data_direction dir,
                       unsigned long attrs)
 {
-	lx_emul_trace_and_stop(__func__);
+	int i;
+	struct scatterlist *sg;
+	struct Lx_dma dma;
+
+	lx_emul_printf("%s: from: %p\n", __func__, __builtin_return_address(0));
+	for_each_sg(sgl, sg, nents, i) {
+		struct page *page = sg_page(sg);
+		dma = lx_emul_get_dma_address_for_page(page->mapping, page);
+		if (!dma.vaddr && !dma.paddr) {
+			BUG();
+		}
+		sg->dma_address = dma.paddr;
+		sg_dma_len(sg) = sg->length;
+		lx_emul_printf("%s: i: %d page: %px offset: %u length: %u dma_addr: 0x%llx\n",
+		               __func__, i, page, sg->offset, sg->length, sg->dma_address);
+	}
+
+	return 0;
 }
 
 
@@ -1111,7 +1129,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 {
 	struct file *f;
 	struct address_space *f_mapping;
-	Lx_dma lx_dma;
+	struct Lx_dma lx_dma;
 
 	f = kzalloc(sizeof (struct file), 0);
 	if (!f) {
@@ -1120,22 +1138,19 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 
 	f_mapping = kzalloc(sizeof (struct address_space), 0);
 	if (!f_mapping) {
-		kfree(f);
-		return (struct file*)ERR_PTR(-ENOMEM);
+		goto err_mapping;
 	}
 
 	if (lx_emul_alloc_address_space(f_mapping, size)) {
-		kfree(f_mapping);
-		kfree(f);
-		return (struct file*)ERR_PTR(-ENOMEM);
+		goto err_as;
 	}
 
-	struct page *
-
-	lx_dma = lx_emul_dma_alloc_attrs(dev, size, dma_wc);
+	lx_dma = lx_emul_dma_alloc_attrs(NULL, size, false);
 	if (!lx_dma.vaddr && !lx_dma.paddr) {
-		return NULL;
+		goto err_as;
 	}
+
+	lx_emul_add_dma_to_address_space(f_mapping, lx_dma);
 
 	f->f_mapping = f_mapping;
 
@@ -1146,13 +1161,11 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 
 	return f;
 
-err_dma:
-
 err_as:
 	kfree(f_mapping);
 err_mapping:
 	kfree(f);
-	return
+	return (struct file*)ERR_PTR(-ENOMEM);
 }
 
 
@@ -1161,8 +1174,14 @@ struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
 {
 	struct page *p = lx_emul_look_up_address_space_page(mapping, index);
 	if (!p) {
-		lx_emul_printf("%s: could not look up page in as: %px for index: %ld\n",
+		lx_emul_printf("%s: could not look up page in as: %px for index: %ld - insert new\n",
 		               __func__, mapping, index);
+		p = (struct page*)kzalloc(sizeof (struct page), 0);
+		if (!p) {
+			return (struct page*)ERR_PTR(-ENOMEM);
+		}
+		p->mapping = mapping;
+		lx_emul_insert_page_to_address_page(mapping, p, index);
 	}
 	return p;
 }

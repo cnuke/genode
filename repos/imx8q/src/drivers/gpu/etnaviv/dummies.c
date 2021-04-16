@@ -70,13 +70,13 @@ void iounmap(volatile void __iomem *addr)
 
 void __rcu_read_lock(void)
 {
-	lx_emul_trace_and_stop(__func__);
+	lx_emul_trace(__func__);
 }
 
 
 void __rcu_read_unlock(void)
 {
-	lx_emul_trace_and_stop(__func__);
+	lx_emul_trace(__func__);
 }
 
 
