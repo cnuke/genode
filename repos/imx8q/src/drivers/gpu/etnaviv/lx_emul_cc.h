@@ -22,6 +22,15 @@ void lx_emul_announce_drm_session(void);
  ** memory management **
  ***********************/
 
+struct Lx_dma
+{
+	unsigned long vaddr;
+	unsigned long paddr;
+};
+struct Lx_dma lx_emul_dma_alloc_attrs(void const *, unsigned long, int);
+void          lx_emul_dma_free_attrs(void const *, unsigned long, unsigned long, unsigned long);
+
+
 void *lx_emul_vzalloc(unsigned long);
 void  lx_emul_vfree(void const*);
 void *lx_emul_kmalloc(unsigned long, unsigned int);
@@ -37,6 +46,12 @@ struct lx_emul_kmem_cache
 int   lx_emul_kmem_cache_create(void const *, unsigned int, unsigned int);
 void  lx_emul_kmem_cache_free(void const *);
 void *lx_emul_kmem_cache_alloc(void const *);
+
+int            lx_emul_alloc_address_space(void *, unsigned long);
+int            lx_emul_add_dma_to_address_space(void *, struct Lx_dma);
+void          *lx_emul_look_up_address_space_page(void *, unsigned long);
+int            lx_emul_insert_page_to_address_page(void *, void *, unsigned long);
+struct Lx_dma  lx_emul_get_dma_address_for_page(void *, void *);
 
 
 /******************
@@ -77,13 +92,6 @@ struct clk    *lx_emul_devm_clk_get(void const *, char const *id);
 unsigned long  lx_emul_clk_get_rate(struct clk *);
 
 
-struct Lx_dma
-{
-	unsigned long vaddr;
-	unsigned long paddr;
-};
-struct Lx_dma lx_emul_dma_alloc_attrs(void const *, unsigned long, int);
-void          lx_emul_dma_free_attrs(void const *, unsigned long, unsigned long, unsigned long);
 
 #ifdef __cplusplus
 }

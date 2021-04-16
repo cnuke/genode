@@ -257,6 +257,22 @@ struct Mapping : Genode::Registry<Mapping>::Element
 
 	Lx_dma dma;
 
+	struct Page : Genode::Registry<Page>::Element
+	{
+		void          *page;
+		unsigned long  index;
+
+		Page(Genode::Registry<Page> &registry, void *page, unsigned long index)
+		:
+			Genode::Registry<Page>::Element { registry, *this },
+			page  { page },
+			index { index }
+		{ }
+	};
+
+	struct Page_registry : Genode::Registry<Page> { };
+	Page_registry _page_registry { };
+
 	Mapping(Genode::Registry<Mapping> &registry,
 	        void *address_space, size_t size)
 	:
@@ -265,6 +281,52 @@ struct Mapping : Genode::Registry<Mapping>::Element
 		size          { size },
 		dma           { 0, 0 }
 	{ }
+
+	bool valid_dma() const { return dma.vaddr && dma.paddr; }
+
+	bool insert_page(void *page, unsigned long index)
+	{
+		try {
+			new (Lx::Malloc::mem()) Page(_page_registry, page, index);
+			return true;
+		} catch (...) { }
+
+		return false;
+	}
+
+	void *lookup_page(unsigned long index)
+	{
+		void *p = nullptr;
+		_page_registry.for_each([&] (Page &page) {
+			if (page.index == index) {
+				p = &page;
+			}
+		});
+
+		return p;
+	}
+
+	Lx_dma dma_for_page(void *page)
+	{
+		Page *pp = nullptr;
+		_page_registry.for_each([&] (Page &p) {
+			if (p.page == page) {
+				pp = &p;
+			}
+		});
+
+		if (!pp) {
+			return Lx_dma { 0, 0 };
+		}
+
+		unsigned long const offset = pp->index * 4096u;
+		if (offset >= size) {
+			Genode::error("offset: ", offset, " larger than backed size: ", size);
+			return Lx_dma { 0, 0 };
+		}
+
+		return Lx_dma { dma.vaddr + offset, dma.paddr + offset };
+	}
 };
 
 
@@ -288,18 +350,77 @@ int lx_emul_alloc_address_space(void *as, unsigned long size)
 	return -1;
 }
 
-static Kmem_cache *_kmem_cache_lookup(void const *lx)
+
+int lx_emul_add_dma_to_address_space(void *as, Lx_dma dma)
 {
-	Kmem_cache *c = nullptr;
-	kmem_cache_registry().for_each([&c, lx] (Kmem_cache &kc) {
-		if (kc.lx == lx) {
-			c = &kc;
+	int ret = -1;
+
+	_mapping_registry().for_each([&ret, &dma, as] (Mapping &m) {
+		if (m.address_space != as) {
+			return;
 		}
+		if (m.valid_dma()) {
+			Genode::error("address space has alread attached DMA");
+			ret = -1;
+			return;
+		}
+		m.dma = dma;
+		ret = 0;
 	});
-	return c;
+
+	return ret;
 }
 
 
+void *lx_emul_look_up_address_space_page(void *as, unsigned long index)
+{
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return nullptr;
+	}
+
+	return mp->lookup_page(index);
+}
+
+
+int lx_emul_insert_page_to_address_page(void *as, void *page, unsigned long index)
+{
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return -1;
+	}
+
+	return mp->insert_page(page, index) ? 0 : -1;
+}
+
+
+Lx_dma lx_emul_get_dma_address_for_page(void *as, void *p)
+{
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return Lx_dma { 0, 0 };
+	}
+
+	return mp->dma_for_page(p);
+}
 
 
 /********************
