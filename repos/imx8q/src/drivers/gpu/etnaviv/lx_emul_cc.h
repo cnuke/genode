@@ -53,6 +53,8 @@ void          *lx_emul_look_up_address_space_page(void *, unsigned long);
 int            lx_emul_insert_page_to_address_page(void *, void *, unsigned long);
 struct Lx_dma  lx_emul_get_dma_address_for_page(void *, void *);
 
+unsigned long lx_emul_user_copy(void *, void const*, unsigned long);
+
 
 /******************
  ** timing stuff **

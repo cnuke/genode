@@ -89,6 +89,12 @@ int bus_register(struct bus_type *bus)
 #include <linux/mm.h>
 #include <mm/slab.h>
 #include <linux/slab.h>
+#include <linux/page-flags.h>
+
+int set_page_dirty(struct page *page)
+{
+	set_bit(PG_dirty, &page->flags);
+}
 
 
 void *__kmalloc_node_track_caller(size_t size, gfp_t gfpflags, int node,
@@ -171,6 +177,12 @@ void kmem_cache_free(struct kmem_cache *s, void *x)
 void *kvmalloc_node(size_t size, gfp_t flags, int node)
 {
 	return lx_emul_kmalloc(size, flags);
+}
+
+
+void kvfree(void const *addr)
+{
+	lx_emul_kfree(addr);
 }
 
 
@@ -735,6 +747,8 @@ int drm_dev_init(struct drm_device *dev, struct drm_driver *driver,
 	dev->dev = parent;
 	dev->driver = driver;
 
+	dev->driver_features = ~0u;
+
 	INIT_LIST_HEAD(&dev->filelist);
 	INIT_LIST_HEAD(&dev->ctxlist);
 	INIT_LIST_HEAD(&dev->vmalist);
@@ -794,6 +808,17 @@ int drm_dev_register(struct drm_device *dev, unsigned long flags)
 
 struct drm_file *_lx_drm_file;
 
+static struct file *_lx_file;
+
+static void drm_get_minor(struct drm_device *dev, struct drm_minor **minor, int type)
+{
+	struct drm_minor *new_minor = (struct drm_minor*)
+		kzalloc(sizeof(struct drm_minor), GFP_KERNEL);
+	new_minor->type = type;
+	new_minor->dev = dev;
+	new_minor->kdev = dev->dev;
+	*minor = new_minor;
+}
 
 int lx_drm_open(void)
 {
@@ -817,6 +842,19 @@ int lx_drm_open(void)
 	}
 
 	err = drv->open(_lx_drm_device, _lx_drm_file);
+	if (!err) {
+		_lx_file = (struct file*)kzalloc(sizeof (*_lx_file), 0);
+		if (!_lx_file) {
+			kfree(_lx_drm_file);
+			return -4;
+		}
+
+		drm_get_minor(_lx_drm_device, &_lx_drm_device->primary,
+		              DRM_MINOR_RENDER);
+
+		_lx_drm_file->minor = _lx_drm_device->primary;
+		_lx_file->private_data = _lx_drm_file;
+	}
 	return err;
 }
 
@@ -825,6 +863,8 @@ int lx_drm_open(void)
 
 int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 {
+	return drm_ioctl(_lx_file, cmd, arg);
+#if 0
 	unsigned int nr = DRM_IOCTL_NR(cmd);
 	struct drm_driver *drv = NULL;
 	struct drm_ioctl_desc const *ioctl = NULL;
@@ -853,6 +893,7 @@ int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 	}
 
 	return ioctl->func(_lx_drm_device, (void*)arg, _lx_drm_file);
+#endif
 }
 
 
@@ -961,6 +1002,24 @@ int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
 	return 0;
 }
 
+
+void dma_direct_unmap_sg(struct device *dev, struct scatterlist *sgl,
+                         int nents, enum dma_data_direction dir,
+                         unsigned long attrs)
+{
+	int i;
+	struct scatterlist *sg;
+
+	lx_emul_printf("%s: from: %p\n", __func__, __builtin_return_address(0));
+	for_each_sg(sgl, sg, nents, i) {
+
+		if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
+			lx_emul_printf("%s: dma_direct_sync_single_for_cpu(0x%llx) not implemented\n",
+			               __func__, sg->dma_address);
+		}
+		sg->dma_address = 0;
+	}
+}
 
 
 #include <linux/workqueue.h>
@@ -1099,6 +1158,14 @@ void vfree(void const *addr)
 }
 
 
+void vunmap(void const *addr)
+{
+	if (addr) {
+		lx_emul_trace_and_stop(__func__);
+	}
+}
+
+
 #include <asm-generic/bitops/find.h>
 
 unsigned long find_next_zero_bit(unsigned const long *addr,
@@ -1128,7 +1195,8 @@ struct file *shmem_file_setup(char const *name, loff_t size,
                                unsigned long flags)
 {
 	struct file *f;
-	struct address_space *f_mapping;
+	struct inode *inode;
+	struct address_space *mapping;
 	struct Lx_dma lx_dma;
 
 	f = kzalloc(sizeof (struct file), 0);
@@ -1136,12 +1204,17 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 		return (struct file*)ERR_PTR(-ENOMEM);
 	}
 
-	f_mapping = kzalloc(sizeof (struct address_space), 0);
-	if (!f_mapping) {
+	inode = kzalloc(sizeof (struct inode), 0);
+	if (!inode) {
+		goto err_inode;
+	}
+
+	mapping = kzalloc(sizeof (struct address_space), 0);
+	if (!mapping) {
 		goto err_mapping;
 	}
 
-	if (lx_emul_alloc_address_space(f_mapping, size)) {
+	if (lx_emul_alloc_address_space(mapping, size)) {
 		goto err_as;
 	}
 
@@ -1150,20 +1223,24 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 		goto err_as;
 	}
 
-	lx_emul_add_dma_to_address_space(f_mapping, lx_dma);
+	lx_emul_add_dma_to_address_space(mapping, lx_dma);
 
-	f->f_mapping = f_mapping;
+	inode->i_mapping = mapping;
 
 	atomic_long_set(&f->f_count, 1);
-	f->f_flags = flags;
-	f->f_mode = OPEN_FMODE(flags);
-	f->f_mode |= FMODE_OPENED;
+	f->f_inode    = inode;
+	f->f_mapping  = mapping;
+	f->f_flags    = flags;
+	f->f_mode     = OPEN_FMODE(flags);
+	f->f_mode    |= FMODE_OPENED;
 
 	return f;
 
 err_as:
-	kfree(f_mapping);
+	kfree(mapping);
 err_mapping:
+	kfree(inode);
+err_inode:
 	kfree(f);
 	return (struct file*)ERR_PTR(-ENOMEM);
 }
@@ -1180,6 +1257,7 @@ struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
 		if (!p) {
 			return (struct page*)ERR_PTR(-ENOMEM);
 		}
+		// XXX set page refcount to 1?
 		p->mapping = mapping;
 		lx_emul_insert_page_to_address_page(mapping, p, index);
 	}

@@ -26,20 +26,6 @@ int oops_in_progress;
  ** arch/arm64/include/asm/uaccess.h **
  **************************************/
 
-unsigned long __must_check __arch_copy_to_user(void __user *to, const void *from, unsigned long n)
-{
-	lx_emul_trace_and_stop(__func__);
-	return 0;
-}
-
-
-unsigned long __must_check __arch_copy_from_user(void *to, const void __user *from, unsigned long n)
-{
-	lx_emul_trace_and_stop(__func__);
-	return 0;
-}
-
-
 unsigned long __must_check __arch_clear_user(void __user *to, unsigned long n)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -328,4 +314,45 @@ void __lockfunc _raw_write_lock(rwlock_t * lock)
 void __lockfunc _raw_write_unlock(rwlock_t * lock)
 {
 	lx_emul_trace(__func__);
+}
+
+
+DEFINE_MUTEX(drm_global_mutex);
+
+
+// extern int drm_authmagic(struct drm_device * dev,void * data,struct drm_file * file_priv);
+int drm_authmagic(struct drm_device * dev,void * data,struct drm_file * file_priv)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+#include <drm/drm_drv.h>
+
+bool drm_dev_enter(struct drm_device * dev,int * idx)
+{
+	lx_emul_trace(__func__);
+	return true;
+}
+
+
+void drm_dev_exit(int idx)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/swap.h>
+
+void check_move_unevictable_pages(struct pagevec *pvec)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/pagevec.h>
+
+void __pagevec_release(struct pagevec *pvec)
+{
+	lx_emul_trace(__func__);
+	lx_emul_printf("%s: leaking pages in pvec: %p?\n", __func__, pvec);
 }
