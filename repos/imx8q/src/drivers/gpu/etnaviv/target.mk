@@ -81,7 +81,8 @@ LX_OBJECTS_drm := \
                   $(CONTRIB_DIR)/drivers/gpu/drm/drm_mm.o \
                   $(CONTRIB_DIR)/drivers/gpu/drm/drm_of.o \
                   $(CONTRIB_DIR)/drivers/gpu/drm/drm_vma_manager.o \
-                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_prime.o
+                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_prime.o \
+                  $(CONTRIB_DIR)/drivers/gpu/drm/drm_ioctl.o
 LX_OBJECTS += $(LX_OBJECTS_drm)
 
 LX_OBJECTS += $(CONTRIB_DIR)/drivers/base/component.o

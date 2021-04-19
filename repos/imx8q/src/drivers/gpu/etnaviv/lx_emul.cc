@@ -67,6 +67,13 @@ Genode::Dataspace_capability lx_drm_object_gtt_dataspace(unsigned handle)
  ** memory **
  ************/
 
+unsigned long lx_emul_user_copy(void *to, void const *from, unsigned long n)
+{
+	Genode::memcpy(to, from, n);
+	return 0;
+}
+
+
 void *lx_emul_vzalloc(unsigned long size)
 {
 	size_t const  real_size = size + sizeof (size_t);
