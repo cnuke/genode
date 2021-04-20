@@ -1,0 +1,7 @@
+LICENSE   := MIT-ish
+VERSION   := git
+DOWNLOADS := etnaviv_gpu_tests.git
+
+URL(etnaviv_gpu_tests) := https://github.com/etnaviv/etnaviv_gpu_tests.git
+REV(etnaviv_gpu_tests) := 9c0d098a8a8eb1991f96170f3a03dc9cc69e0eab
+DIR(etnaviv_gpu_tests) := src/test/etnaviv_gpu_tests
