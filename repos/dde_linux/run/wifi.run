@@ -27,8 +27,8 @@ proc wifi_psk { } {
 #   } [wifi_config 30 5 no [list "net1 WPA2 net1_psk no" "net2 WPA2 net2_psk yes"]] {
 #   </inline>}
 
-set wifi_verbose       false
-set wifi_verbose_state false
+set wifi_verbose       true
+set wifi_verbose_state true
 
 proc wifi_config { connected_scan_interval scan_interval rfkill networks } {
 	global wifi_verbose
@@ -148,13 +148,13 @@ append config {
 		<config verbose="yes">
 			<rom name="wifi_config">
 				<inline description="disconnect">
-} [wifi_config 30 5 no {}] {
+} [wifi_config 0 5 no {}] {
 				</inline>
 				<sleep milliseconds="15000"/>
 				<inline description="connect">
-} [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
+} [wifi_config 0 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
-				<sleep milliseconds="60000"/>
+				<sleep milliseconds="1800000"/>
 				<inline description="rfkill block">
 } [wifi_config 30 5 yes [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
@@ -195,8 +195,8 @@ append config {
 		</config>
 	</start>
 
-	<start name="wifi_drv" caps="200">
-		<resource name="RAM" quantum="24M"/>
+	<start name="wifi_drv" caps="250">
+		<resource name="RAM" quantum="28M"/>
 		<config ld_verbose="yes" mode="uplink_client">
 			<libc stdout="/dev/null" stderr="/dev/null" rtc="/dev/rtc"/>
 			<vfs>
