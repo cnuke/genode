@@ -899,6 +899,37 @@ int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 }
 
 
+#include <drm/drm_gem.h>
+#include <drm/drm_vma_manager.h>
+
+void *genode_lookup_mapping_from_offset(unsigned long offset,
+                                        unsigned long size)
+{
+	LX_TRACE_PRINT("%s:%d offset: 0x%lx size: %lu vma_offset_manager: %px\n", __func__, __LINE__,
+	               offset, size, _lx_drm_device->vma_offset_manager);
+
+	struct drm_vma_offset_manager *mgr = _lx_drm_device->vma_offset_manager;
+
+	drm_vma_offset_lock_lookup(mgr);
+	struct drm_vma_offset_node *node =
+		drm_vma_offset_lookup_locked(mgr, offset / PAGE_SIZE, size / PAGE_SIZE);
+	LX_TRACE_PRINT("%s:%d node: %px\n", __func__, __LINE__, node);
+	drm_vma_offset_unlock_lookup(mgr);
+
+	if (node) {
+		struct drm_gem_object *obj =
+			container_of(node, struct drm_gem_object, vma_node);
+		LX_TRACE_PRINT("%s:%d node: %px obj: %px\n", __func__, __LINE__, node, obj);
+		if (obj) {
+			LX_TRACE_PRINT("%s:%d node: %px obj: %px\n", __func__, __LINE__, node, obj);
+			struct file *f = obj->filp;
+			return f ? f->f_mapping : NULL;
+		}
+	}
+	return NULL;
+}
+
+
 #include <linux/wait.h>
 
 void __init_waitqueue_head(struct wait_queue_head *wq_head, const char *name,
@@ -1237,8 +1268,8 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode    |= FMODE_OPENED;
 
 	// XXX lookup dataspace cap later on for drm_mmap
-	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu\n",
-	               __func__, __LINE__, f, mapping, size);
+	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu dma: (0x%x, 0x%x)\n",
+	               __func__, __LINE__, f, mapping, size, lx_dma.vaddr, lx_dma.paddr);
 
 	return f;
 

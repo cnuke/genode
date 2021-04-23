@@ -30,39 +30,6 @@
 using size_t = Genode::size_t;
 
 
-/*****************
- ** DRM session **
- *****************/
-
-#include <drm_component.h>
-
-static Genode::Constructible<Drm::Root> _drm_root { };
-
-void lx_emul_announce_drm_session(void)
-{
-	if (!_drm_root.constructed()) {
-		_drm_root.construct(Lx_kit::env().env, Lx_kit::env().heap);
-
-		Genode::Entrypoint &ep = Lx_kit::env().env.ep();
-		Lx_kit::env().env.parent().announce(ep.manage(*_drm_root));
-	}
-}
-
-
-Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned handle)
-{
-	(void)handle;
-	return Genode::Ram_dataspace_capability();
-}
-
-
-Genode::Dataspace_capability lx_drm_object_gtt_dataspace(unsigned handle)
-{
-	(void)handle;
-	return Genode::Dataspace_capability();
-}
-
-
 /************
  ** memory **
  ************/
@@ -695,4 +662,51 @@ unsigned long long lx_emul_ktime_get_mono_fast_ns(void)
 void lx_emul_usleep(unsigned long us)
 {
 	Lx::timer().usleep((Genode::uint64_t)us);
+}
+
+
+/*****************
+ ** DRM session **
+ *****************/
+
+#include <drm_component.h>
+
+static Genode::Constructible<Drm::Root> _drm_root { };
+
+void lx_emul_announce_drm_session(void)
+{
+	if (!_drm_root.constructed()) {
+		_drm_root.construct(Lx_kit::env().env, Lx_kit::env().heap);
+
+		Genode::Entrypoint &ep = Lx_kit::env().env.ep();
+		Lx_kit::env().env.parent().announce(ep.manage(*_drm_root));
+	}
+}
+
+
+Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long offset, unsigned long size)
+{
+	void *as = genode_lookup_mapping_from_offset(offset, size);
+	if (!as) {
+		return Genode::Ram_dataspace_capability();
+	}
+	
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return Genode::Ram_dataspace_capability();
+	}
+
+	for (Dma_wc_dataspace *ds = _dma_wc_ds_list().first(); ds; ds = ds->next()) {
+		if (ds->local_addr<void>() == (void*)mp->dma.vaddr) {
+			return ds->cap();
+		}
+	}
+
+	return Genode::Ram_dataspace_capability();
 }

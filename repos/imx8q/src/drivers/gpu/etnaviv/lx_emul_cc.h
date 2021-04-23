@@ -30,6 +30,8 @@ struct Lx_dma
 struct Lx_dma lx_emul_dma_alloc_attrs(void const *, unsigned long, int);
 void          lx_emul_dma_free_attrs(void const *, unsigned long, unsigned long, unsigned long);
 
+void *genode_lookup_mapping_from_offset(unsigned long, unsigned long);
+
 
 void *lx_emul_vzalloc(unsigned long);
 void  lx_emul_vfree(void const*);
