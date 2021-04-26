@@ -39,14 +39,6 @@ void __drm_puts_seq_file(struct drm_printer * p,const char * str)
 }
 
 
-#include <linux/gfp.h>
-
-unsigned long __get_free_pages(gfp_t gfp_mask,unsigned int order)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/sched.h>
 
 pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_namespace * ns)
@@ -58,14 +50,6 @@ pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_n
 #include <linux/vmalloc.h>
 
 void * __vmalloc(unsigned long size,gfp_t gfp_mask,pgprot_t prot)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/wait.h>
-
-void __wake_up(struct wait_queue_head * wq_head,unsigned int mode,int nr_exclusive,void * key)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1157,20 +1141,3 @@ int wake_up_state(struct task_struct * p,unsigned int state)
 {
 	lx_emul_trace_and_stop(__func__);
 }
-
-
-#include <linux/ww_mutex.h>
-
-int __sched ww_mutex_lock_interruptible(struct ww_mutex * lock,struct ww_acquire_ctx * ctx)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/ww_mutex.h>
-
-void __sched ww_mutex_unlock(struct ww_mutex * lock)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-

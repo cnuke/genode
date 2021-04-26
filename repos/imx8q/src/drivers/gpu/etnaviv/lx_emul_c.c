@@ -90,6 +90,22 @@ int bus_register(struct bus_type *bus)
 #include <mm/slab.h>
 #include <linux/slab.h>
 #include <linux/page-flags.h>
+#include <linux/gfp.h>
+
+
+unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
+{
+	// XXX Address_to_page_mapping
+	lx_emul_trace(__func__);
+	if (order != 0) {
+		lx_emul_printf("%s: order: %u\n", __func__, order);
+	}
+
+	void *ptr = lx_emul_kmalloc((1u << order) * PAGE_SIZE, 0);
+	return (unsigned long)ptr;
+}
+
+
 
 int set_page_dirty(struct page *page)
 {
@@ -945,6 +961,10 @@ static int __wake_function(struct wait_queue_entry *wq_entry,
 {
 	LX_TRACE_PRINT("%s:%d wq_entry: %px mode: %x sync: %d key: %px called\n",
 	               __func__, __LINE__, wq_entry, mode, sync, key);
+	if (wq_entry->private) {
+		LX_TRACE_PRINT("unblock: ", wq_entry->private);
+		lx_emul_unblock_task(wq_entry->private);
+	}
 	return 0;
 }
 
@@ -971,6 +991,26 @@ long prepare_to_wait_event(struct wait_queue_head *wq_head,
 	// XXX current task state change?
 
 	return 0;
+}
+
+
+#include <linux/wait.h>
+
+void __wake_up(struct wait_queue_head *wq_head, unsigned int mode,
+               int nr_exclusive, void *key)
+{
+	wait_queue_entry_t *curr, *next;
+	lx_emul_trace(__func__);
+
+	curr = list_first_entry(&wq_head->head, wait_queue_entry_t, entry); 
+
+	if (&curr->entry == &wq_head->head)
+		return nr_exclusive;
+
+	list_for_each_entry_safe_from(curr, next, &wq_head->head, entry) {
+		unsigned flags = curr->flags;
+		int ret = curr->func(curr, mode, 0, key);
+	}
 }
 
 
