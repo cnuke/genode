@@ -609,6 +609,9 @@ void lx_emul_block_current_task(void)
 		Genode::sleep_forever();
 	}
 
+	Lx::Task *t = Lx::scheduler().current();
+	Genode::error(__func__, ": current: ", t, " '", t->name(), "' from: ", __builtin_return_address(0));
+
 	Lx::scheduler().current()->block_and_schedule();
 }
 
@@ -619,8 +622,9 @@ void lx_emul_unblock_task(unsigned long lx_task)
 		Genode::error(__func__, ": scheduler not active");
 		Genode::sleep_forever();
 	}
-
 	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
+	Genode::error(__func__, ": task: ", task, " '", task->name(), "' from: ", __builtin_return_address(0));
+
 	task->unblock();
 }
 
@@ -639,6 +643,8 @@ struct workqueue_struct *lx_emul_alloc_workqueue(char const *fmt, unsigned int f
 		return nullptr;
 	}
 
+	Genode::error(__func__, ":", __LINE__);
+
 	Genode::memset(wq, sizeof (workqueue_struct), 0);
 
 	Lx::Work *work = Lx::Work::alloc_work_queue(&Lx::Malloc::mem(), fmt);
@@ -646,6 +652,20 @@ struct workqueue_struct *lx_emul_alloc_workqueue(char const *fmt, unsigned int f
 
 	Genode::error("wq: ", wq, " work: ", work);
 	return wq;
+}
+
+
+int lx_emul_schedule_work(struct workqueue_struct *wq, void *work)
+{
+	if (wq && wq->task) {
+		wq->task->schedule(work);
+		wq->task->unblock();
+	} else {
+		Lx::Work::work_queue().schedule(work);
+		Lx::Work::work_queue().unblock();
+	}
+
+	return 1;
 }
 
 
@@ -662,6 +682,36 @@ unsigned long long lx_emul_ktime_get_mono_fast_ns(void)
 void lx_emul_usleep(unsigned long us)
 {
 	Lx::timer().usleep((Genode::uint64_t)us);
+}
+
+
+int lx_emul_mod_timer(void *timer, unsigned long expires)
+{
+	if (!Lx::timer().find(timer)) {
+		Lx::timer().add(timer, Lx::Timer::LIST);
+	}
+
+	return Lx::timer().schedule(timer, expires);
+}
+
+
+int lx_emul_del_timer(void *timer)
+{
+	int const res = Lx::timer().del(timer);
+	Lx::timer().schedule_next();
+	return res;
+}
+
+
+unsigned long lx_emul_absolute_timeout(unsigned long timeout)
+{
+	return Lx::timer().jiffies() + timeout;
+}
+
+
+signed long lx_emul_remaining_timeout(unsigned long expires)
+{
+	return expires - Lx::timer().jiffies();
 }
 
 

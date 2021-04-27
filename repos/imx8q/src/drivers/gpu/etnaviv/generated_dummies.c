@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2021-04-19
+ * \date   2021-04-27
  */
 
 #include <lx_emul.h>
@@ -10,14 +10,6 @@
 #include <linux/ratelimit.h>
 
 int ___ratelimit(struct ratelimit_state * rs,const char * func)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <asm-generic/delay.h>
-
-void __const_udelay(unsigned long xloops)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -848,14 +840,6 @@ unsigned long find_next_bit(const unsigned long * addr,unsigned long size,unsign
 }
 
 
-#include <linux/wait.h>
-
-void finish_wait(struct wait_queue_head * wq_head,struct wait_queue_entry * wq_entry)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/workqueue.h>
 
 void flush_workqueue(struct workqueue_struct * wq)
@@ -920,22 +904,6 @@ char * kstrdup(const char * s,gfp_t gfp)
 }
 
 
-#include <linux/timekeeping.h>
-
-ktime_t ktime_get(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/timekeeping.h>
-
-void ktime_get_ts64(struct timespec64 * ts)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/swap.h>
 
 void mark_page_accessed(struct page * page)
@@ -978,14 +946,6 @@ int overflowuid;
 struct bus_type pci_bus_type;
 
 
-#include <linux/printk.h>
-
-void print_hex_dump(const char * level,const char * prefix_str,int prefix_type,int rowsize,int groupsize,const void * buf,size_t len,bool ascii)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/file.h>
 
 void put_unused_fd(unsigned int fd)
@@ -994,33 +954,9 @@ void put_unused_fd(unsigned int fd)
 }
 
 
-#include <linux/workqueue.h>
-
-bool queue_delayed_work_on(int cpu,struct workqueue_struct * wq,struct delayed_work * dwork,unsigned long delay)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/workqueue.h>
-
-bool queue_work_on(int cpu,struct workqueue_struct * wq,struct work_struct * work)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/pagemap.h>
 
 void release_pages(struct page ** pages,int nr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sched.h>
-
-signed long __sched schedule_timeout(signed long timeout)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1127,17 +1063,10 @@ void * vmap(struct page ** pages,unsigned int count,unsigned long flags,pgprot_t
 }
 
 
-#include <linux/completion.h>
-
-unsigned long __sched wait_for_completion_timeout(struct completion * x,unsigned long timeout)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/sched.h>
 
 int wake_up_state(struct task_struct * p,unsigned int state)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+

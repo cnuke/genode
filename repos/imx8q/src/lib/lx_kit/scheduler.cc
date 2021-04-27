@@ -173,8 +173,6 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 
 			/* clear current as no task is running */
 			_current = nullptr;
-
-			Genode::error("return to EP");
 		}
 
 		void log_state(char const *prefix) override
