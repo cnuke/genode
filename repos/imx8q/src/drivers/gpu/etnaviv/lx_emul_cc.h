@@ -64,6 +64,10 @@ unsigned long lx_emul_user_copy(void *, void const*, unsigned long);
 
 unsigned long long lx_emul_ktime_get_mono_fast_ns(void);
 void               lx_emul_usleep(unsigned long);
+int                lx_emul_mod_timer(void *, unsigned long);
+int                lx_emul_del_timer(void *);
+unsigned long      lx_emul_absolute_timeout(unsigned long);
+signed long        lx_emul_remaining_timeout(unsigned long);
 
 
 /*******************
@@ -77,6 +81,7 @@ void          lx_emul_unblock_task(unsigned long);
 
 struct workqueue_struct;
 struct workqueue_struct *lx_emul_alloc_workqueue(char const *, unsigned int);
+int lx_emul_schedule_work(struct workqueue_struct *, void *);
 
 /********************
  ** platform stuff **

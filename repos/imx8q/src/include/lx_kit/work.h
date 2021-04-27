@@ -23,9 +23,6 @@ namespace Lx {
 }
 
 
-struct work_struct;
-
-
 class Lx::Work
 {
 	public:
@@ -53,12 +50,12 @@ class Lx::Work
 		/**
 		 * Schedule work
 		 */
-		virtual void schedule(struct ::work_struct *) = 0;
+		virtual void schedule(void *) = 0;
 
 		/**
 		 * Cancel work item
 		 */
-		virtual bool cancel_work(struct ::work_struct *, bool sync = false) = 0;
+		virtual bool cancel_work(void *, bool sync = false) = 0;
 		
 		/**
 		 * Check if work is currently queued

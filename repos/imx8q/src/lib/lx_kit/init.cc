@@ -14,6 +14,7 @@
 #include <lx_kit/timer.h>
 #include <lx_kit/irq.h>
 #include <lx_kit/scheduler.h>
+#include <lx_kit/work.h>
 
 namespace Lx_kit { class Initcalls; }
 
@@ -72,6 +73,7 @@ void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 	unsigned hz = 250; // XXX
 	Lx::timer(&env, &env.ep(), &alloc,
                      &_jiffies, &hz);
+	Lx::Work::work_queue(&alloc);
 
 	_linux.construct(_run_linux, reinterpret_cast<void*>(&kit_env),
 	                 "linux", Lx::Task::PRIORITY_0, Lx::scheduler());

@@ -49,7 +49,7 @@ class Lx_kit::Work : public Lx::Work
 				}
 			}
 
-			Context(work_struct *w)   : work(w), type(NORMAL)  { }
+			Context(void *w)   : work(w), type(NORMAL)  { }
 		};
 
 	private:
@@ -58,14 +58,6 @@ class Lx_kit::Work : public Lx::Work
 		Lx_kit::List<Context> _list;
 
 		Genode::Tslab<Context, 64 * sizeof(Context)> _work_alloc;
-
-		/**
-		 * Schedule work item
-		 */
-		template <typename WORK>
-		void _schedule(WORK *work)
-		{
-		}
 
 	public:
 
@@ -146,13 +138,13 @@ class Lx_kit::Work : public Lx::Work
 			_task.unblock();
 		}
 
-		void schedule(struct work_struct *work)
+		void schedule(void *work)
 		{
 			Context *c = new (&_work_alloc) Context(work);
 			_list.append(c);
 		}
 
-		bool cancel_work(struct work_struct *work, bool sync = false)
+		bool cancel_work(void *work, bool sync = false)
 		{
 			for (Context *c = _list.first(); c; c = c->next()) {
 				if (c->work == work) {

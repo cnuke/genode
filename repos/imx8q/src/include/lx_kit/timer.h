@@ -95,6 +95,11 @@ class Lx::Timer
 		 * Return current time in nanoseconds
 		 */
 		virtual unsigned long long nanoseconds() = 0;
+
+		/**
+		 * Return current jiffies
+		 */
+		virtual unsigned long jiffies() const = 0;
 };
 
 

@@ -157,6 +157,7 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 					/* update current before running task */
 					_current = t;
 
+					Genode::error(__func__, ": run: ", _current->name(), " ----------");
 					if ((was_run = t->run())) {
 						at_least_one = true;
 						break;

@@ -22,6 +22,7 @@
 
 namespace Lx {
 	class Console;
+	class String_console;
 	class Format_command;
 }
 
@@ -439,6 +440,48 @@ class Lx::Console
 };
 
 
+class Lx::String_console : public Lx::Console
+{
+	private:
+
+		char   *_buffer;
+		unsigned long  _size;
+		unsigned long  _idx { 0 };
+
+	protected:
+
+		void _out_char(char c)
+		{
+			if (_idx < _size) {
+				_buffer[_idx++] = c;
+			} else {
+				_idx++;
+			}
+		}
+
+		void _out_string(const char *str)
+		{
+			if (!str) {
+				return;
+			}
+
+			while (*str) {
+				_out_char(*str++);
+			}
+		}
+
+	public:
+
+		String_console(char *buffer, unsigned long size)
+		:
+			_buffer { buffer },
+			_size   { size }
+		{ }
+
+		unsigned long len() const { return _idx; }
+};
+
+
 void lx_emul_printf(char const *fmt, ...)
 {
 	va_list va;
@@ -451,4 +494,12 @@ void lx_emul_printf(char const *fmt, ...)
 void lx_emul_vprintf(char const *fmt, va_list va)
 {
 	Lx::Console::c().vprintf(fmt, va);
+}
+
+
+int lx_emul_vsnprintf(char *str, unsigned long size, const char *format, va_list args)
+{
+	Lx::String_console sc { str, size };
+	sc.vprintf(format, args);
+	return (int)sc.len();
 }
