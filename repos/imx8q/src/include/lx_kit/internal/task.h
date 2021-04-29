@@ -50,28 +50,19 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 		 *                         |
 		 *                       [run]
 		 *                         v
-		 * BLOCKED <--[block]--- RUNNING ---[mutex_block]--> MUTEX_BLOCKED
-		 *         --[unblock]->         <-[mutex_unblock]--
-		 *
-		 * Transitions between BLOCKED and MUTEX_BLOCKED are not possible.
+		 * BLOCKED <--[block]--- RUNNING
+		 *         --[unblock]->
 		 */
-		enum State { STATE_INIT, STATE_RUNNING, STATE_BLOCKED, STATE_MUTEX_BLOCKED, STATE_WAIT_BLOCKED };
-
-		/**
-		 * List element type
-		 */
-		typedef Lx_kit::List_element<Lx::Task> List_element;
-
-		/**
-		 * List type
-		 */
-		typedef Lx_kit::List<List_element> List;
+		enum State { STATE_INIT, STATE_RUNNING, STATE_BLOCKED };
 
 	private:
 
 		bool verbose = false;
 
 		State _state = STATE_INIT;
+
+		bool _parked = false;
+		bool _park   = false;
 
 		/* sub-classes may overwrite the runnable condition */
 		virtual bool _runnable() const
@@ -80,8 +71,6 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 			case STATE_INIT:          return true;
 			case STATE_RUNNING:       return true;
 			case STATE_BLOCKED:       return false;
-			case STATE_MUTEX_BLOCKED: return false;
-			case STATE_WAIT_BLOCKED:  return false;
 			}
 
 			Genode::error("state ", (int)_state, " not handled by switch");
@@ -99,12 +88,6 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 		void        *_arg;               /* argument for function */
 		char const  *_name;              /* name of task */
 
-		List_element _mutex_le { this }; /* list element for mutex_blocked state */
-
-		List         *_wait_list { 0 };
-		List_element  _wait_le { this };
-		bool          _wait_le_enqueued { false };
-
 	public:
 
 		Task(void (*func)(void*), void *arg, char const *name,
@@ -114,37 +97,6 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 
 		State    state()    const { return _state;    }
 		Priority priority() const { return _priority; }
-
-		void wait_enqueue(List *list)
-		{
-			if (_wait_le_enqueued && _wait_list == list) return;
-
-			if (_wait_le_enqueued) {
-				Genode::error(this, " already queued in ", _wait_list);
-				Genode::sleep_forever();
-			}
-
-			_wait_le_enqueued = true;
-			_wait_list = list;
-			_wait_list->append(&_wait_le);
-		}
-
-		void wait_dequeue(List *list)
-		{
-			if (!_wait_le_enqueued) {
-				Genode::error(this, " not queued");
-				Genode::sleep_forever();
-			}
-			
-			if (_wait_list != list) {
-				Genode::error("especially not in list ", list);
-				Genode::sleep_forever();
-			}
-
-			_wait_list->remove(&_wait_le);
-			_wait_list = 0;
-			_wait_le_enqueued = false;
-		}
 
 		/*******************************
 		 ** Runtime state transitions **
@@ -159,25 +111,31 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 
 		void unblock()
 		{
+			if (_parked) {
+				Genode::error(__func__, ": cannot unblock parked task: ", this);
+				return;
+			}
 			if (_state == STATE_BLOCKED) {
 				_state = STATE_RUNNING;
 			}
 		}
 
-		void mutex_block(List *list)
+		void park()
 		{
-			if (_state == STATE_RUNNING) {
-				_state = STATE_MUTEX_BLOCKED;
-				list->append(&_mutex_le);
-			}
+			_park = true;
 		}
 
-		void mutex_unblock(List *list)
+		void parked()
 		{
-			if (_state == STATE_MUTEX_BLOCKED) {
-				_state = STATE_RUNNING;
-				list->remove(&_mutex_le);
-			}
+			_park   = false;
+			_parked = true;
+		}
+
+		bool should_park() const { return _park; }
+
+		void unpark()
+		{
+			_parked = false;
 		}
 
 		/**

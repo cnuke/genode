@@ -363,6 +363,24 @@ void *lx_emul_look_up_address_space_page(void *as, unsigned long index)
 }
 
 
+void *lx_emul_address_space_vmap(void *as)
+{
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return nullptr;
+	}
+
+	Lx_dma dma = mp->dma_for_page(0);
+	return (void*)dma.vaddr;
+}
+
+
 int lx_emul_insert_page_to_address_page(void *as, void *page, unsigned long index)
 {
 	Mapping *mp = nullptr;
@@ -591,6 +609,17 @@ int lx_emul_create_task(void *lx_task, int (*threadfn)(void *args), void *args)
 }
 
 
+int lx_emul_lookup_task(void const *lx_task, unsigned long *ret_task)
+{
+	Lx::Task *t = task_registry().lookup_task((void*)lx_task);
+	if (!t) {
+		return -1;
+	}
+	*ret_task = (unsigned long)t;
+	return 0;
+}
+
+
 unsigned long lx_emul_current_task(void)
 {
 	if (!Lx::scheduler().active()) {
@@ -613,6 +642,56 @@ void lx_emul_block_current_task(void)
 	Genode::error(__func__, ": current: ", t, " '", t->name(), "' from: ", __builtin_return_address(0));
 
 	Lx::scheduler().current()->block_and_schedule();
+}
+
+
+void lx_emul_park_task(unsigned long lx_task)
+{
+	if (!Lx::scheduler().active()) {
+		Genode::error(__func__, ": scheduler not active");
+		Genode::sleep_forever();
+	}
+
+	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
+
+	task->park();
+}
+
+
+int lx_emul_should_park_task(unsigned long lx_task)
+{
+	if (!Lx::scheduler().active()) {
+		Genode::error(__func__, ": scheduler not active");
+		Genode::sleep_forever();
+	}
+
+	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
+
+	return !!task->should_park();
+}
+
+
+void lx_emul_parked_task(unsigned long lx_task)
+{
+	if (!Lx::scheduler().active()) {
+		Genode::error(__func__, ": scheduler not active");
+		Genode::sleep_forever();
+	}
+
+	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
+	task->parked();
+}
+
+
+void lx_emul_unpark_task(unsigned long lx_task)
+{
+	if (!Lx::scheduler().active()) {
+		Genode::error(__func__, ": scheduler not active");
+		Genode::sleep_forever();
+	}
+
+	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
+	task->unpark();
 }
 
 

@@ -1221,22 +1221,79 @@ struct task_struct *kthread_create_on_node(int (* threadfn)(void *data),
 }
 
 
-int kthread_park(struct task_struct * k)
+struct park_task
 {
-	lx_emul_trace_and_stop(__func__);
+	unsigned long parked_task;
+	unsigned long waiter_task;
+};
+
+
+static struct park_task _parked;
+
+
+int kthread_park(struct task_struct *k)
+{
+	int err;
+	unsigned long task;
+	unsigned long current_task;
+
+	err = lx_emul_lookup_task(k, &task);
+	if (err) {
+		return err;
+	}
+
+	if (_parked.parked_task || _parked.waiter_task) {
+		lx_emul_printf("%s:%d cannot park %px, already waiting\n",
+		               __func__, __LINE__, (void*)task);
+		lx_emul_trace_and_stop(__func__);
+	}
+
+	current_task = lx_emul_current_task();
+
+	if (task == current_task) {
+		lx_emul_printf("%s:%d cannot park myself: %px\n",
+		               __func__, __LINE__);
+		lx_emul_trace_and_stop(__func__);
+	}
+
+	lx_emul_park_task(task);
+	lx_emul_unblock_task(task);
+	_parked.parked_task = task;
+	_parked.waiter_task = current_task;
+
+	/* kthread_parkme should wake us up again */
+	lx_emul_block_current_task();
+	return 0;
 }
 
 
 void kthread_parkme(void)
 {
-	lx_emul_trace_and_stop(__func__);
+	unsigned long current_task;
+
+	current_task = lx_emul_current_task();
+
+	if (_parked.parked_task != current_task || !_parked.waiter_task) {
+		lx_emul_printf("%s:%d cannot parkme %px\n",
+		               __func__, __LINE__, (void*)current_task);
+		lx_emul_trace_and_stop(__func__);
+	}
+
+	lx_emul_unblock_task(_parked.waiter_task);
+
+	_parked.parked_task = 0;
+	_parked.waiter_task = 0;
+
+	lx_emul_parked_task(current_task);
+	lx_emul_block_current_task();
 }
 
 
 bool kthread_should_park(void)
 {
+	unsigned long current_task = lx_emul_current_task();
 	lx_emul_printf("%s: not completely implemented\n", __func__);
-	return false;
+	return lx_emul_should_park_task(current_task);
 }
 
 
@@ -1253,9 +1310,22 @@ int kthread_stop(struct task_struct * k)
 }
 
 
-void kthread_unpark(struct task_struct * k)
+void kthread_unpark(struct task_struct *k)
 {
-	lx_emul_trace_and_stop(__func__);
+	int err;
+
+	unsigned long task;
+	unsigned long current_task;
+
+	err = lx_emul_lookup_task(k, &task);
+	if (err) {
+		lx_emul_printf("%s:%d cannot unpark not registered task: %px\n",
+		               __func__, __LINE__, k);
+		lx_emul_trace_and_stop(__func__);
+	}
+
+	lx_emul_unpark_task(task);
+	lx_emul_unblock_task(task);
 }
 
 
@@ -1367,6 +1437,13 @@ signed long __sched schedule_timeout(signed long timeout)
 
 #include <linux/vmalloc.h>
 
+
+void *__vmalloc(unsigned long size, gfp_t gfp_mask, pgprot_t prot)
+{
+	return lx_emul_vzalloc(size);
+}
+
+
 void *vzalloc(unsigned long size)
 {
 	return lx_emul_vzalloc(size);
@@ -1376,6 +1453,34 @@ void *vzalloc(unsigned long size)
 void vfree(void const *addr)
 {
 	lx_emul_vfree(addr);
+}
+
+
+void *vmap(struct page **pages, unsigned int count, unsigned long flags,
+           pgprot_t prot)
+{
+	unsigned i;
+	struct page *p;
+	struct address_space *mapping;
+	pgoff_t index;
+
+	/* use for continous check */
+	mapping = pages[0]->mapping;
+	index   = pages[0]->index;
+
+	for (i = 1; i < count; i++) {
+		p = pages[i];
+
+		if (p->mapping != mapping || (p->index - 1 != index)) {
+			lx_emul_printf("%s: page[%u]: %px not continous\n", i, p);
+			lx_emul_trace_and_stop(__func__);
+		}
+
+		index = p->index;
+		// lx_emul_printf("%s: i: %u page: %px as: %px off: %ld\n", __func__, i, p, p->mapping, p->index);
+	}
+
+	return lx_emul_address_space_vmap(mapping);
 }
 
 
@@ -1484,6 +1589,7 @@ struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
 		}
 		// XXX set page refcount to 1?
 		p->mapping = mapping;
+		p->index   = index;
 		lx_emul_insert_page_to_address_page(mapping, p, index);
 	}
 	return p;

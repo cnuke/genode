@@ -39,14 +39,6 @@ pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_n
 }
 
 
-#include <linux/vmalloc.h>
-
-void * __vmalloc(unsigned long size,gfp_t gfp_mask,pgprot_t prot)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <asm-generic/bug.h>
 
 void __warn_printk(const char * fmt,...)
@@ -1050,14 +1042,6 @@ pgprot_t vm_get_page_prot(unsigned long vm_flags)
 #include <linux/mm.h>
 
 int vm_insert_page(struct vm_area_struct * vma,unsigned long addr,struct page * page)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/vmalloc.h>
-
-void * vmap(struct page ** pages,unsigned int count,unsigned long flags,pgprot_t prot)
 {
 	lx_emul_trace_and_stop(__func__);
 }
