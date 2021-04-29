@@ -58,8 +58,6 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 			case Lx::Task::STATE_INIT:          return _ansi_esc_reset();
 			case Lx::Task::STATE_RUNNING:       return _ansi_esc_red();
 			case Lx::Task::STATE_BLOCKED:       return _ansi_esc_yellow();
-			case Lx::Task::STATE_MUTEX_BLOCKED: return _ansi_esc_yellow();
-			case Lx::Task::STATE_WAIT_BLOCKED:  return _ansi_esc_yellow();
 			}
 
 			return _ansi_esc_black();
