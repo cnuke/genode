@@ -1,4 +1,4 @@
-LIBS = libc drm
+LIBS = libc libdrm-etnaviv
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 
@@ -18,7 +18,6 @@ SRC_C = etnaviv/drm/etnaviv_bo.c \
         etnaviv/drm/etnaviv_gpu.c \
         etnaviv/drm/etnaviv_perfmon.c \
         etnaviv/drm/etnaviv_pipe.c \
-        gallium/auxiliary/renderonly/renderonly.c \
         gallium/drivers/etnaviv/etnaviv_asm.c \
         gallium/drivers/etnaviv/etnaviv_blend.c \
         gallium/drivers/etnaviv/etnaviv_blt.c \
@@ -56,7 +55,7 @@ SRC_C = etnaviv/drm/etnaviv_bo.c \
         gallium/drivers/etnaviv/etnaviv_tiling.c \
         gallium/drivers/etnaviv/etnaviv_transfer.c \
         gallium/drivers/etnaviv/etnaviv_uniforms.c \
-        gallium/drivers/etnaviv/etnaviv_zsa.c \
-        gallium/winsys/etnaviv/drm/etnaviv_drm_winsys.c
+        gallium/drivers/etnaviv/etnaviv_zsa.c
+
 
 vpath %.c $(MESA_SRC_DIR)/src

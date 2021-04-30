@@ -1,5 +1,5 @@
 SHARED_LIB = yes
-LIBS       = libc blit
+LIBS       = libc blit libdrm-etnaviv
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 
@@ -26,7 +26,7 @@ SRC_C = main/eglapi.c \
 SRC_CC = genode_interface.cc
 
 CC_OPT += -D_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_GENODE \
-          -DHAVE_GENODE_PLATFORM
+          -DHAVE_GENODE_PLATFORM -DHAVE_LIBDRM
 
 vpath %.c $(MESA_SRC_DIR)/src/egl
 vpath %.c $(LIB_DIR)/egl
