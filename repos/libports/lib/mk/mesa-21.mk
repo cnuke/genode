@@ -1,5 +1,5 @@
 SHARED_LIB = yes
-LIBS       = libc stdcxx zlib expat glapi-21 softpipe mesa-21_api
+LIBS       = libc stdcxx zlib expat glapi-21 softpipe mesa-21_api libdrm-etnaviv
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 
@@ -426,6 +426,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/util/u_transfer.c \
          gallium/auxiliary/util/u_upload_mgr.c \
          gallium/auxiliary/util/u_vbuf.c \
+         gallium/frontends/dri/dri2.c \
          gallium/frontends/dri/dri_context.c \
          gallium/frontends/dri/dri_drawable.c \
          gallium/frontends/dri/dri_helpers.c \
@@ -702,7 +703,6 @@ SRC_C += compiler/glsl/glcpp/pp.c \
 
 CC_OPT += -DMAPI_ABI_HEADER=\"glapi/gen/glapi_mapi_tmp.h\" \
           -DMAPI_MODE_BRIDGE
-
 
 CC_OPT_loader/loader = -DDEFAULT_DRIVER_DIR='"/drivers"'
 CC_OPT_compiler/glsl/glsl_lexer = -include "stdint.h"

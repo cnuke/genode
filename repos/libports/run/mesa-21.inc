@@ -10,13 +10,14 @@ if {[have_include power_on/qemu] && $use_i965} {
 }
 
 create_boot_directory
-import_from_depot [depot_user]/pkg/[drivers_interactive_pkg] \
+import_from_depot [depot_user]/pkg/drivers_managed-[board] \
                   [depot_user]/src/nitpicker \
                   [depot_user]/src/demo \
-
+                  [depot_user]/src/report_rom
 
 set build_components {
 	drivers/gpu/intel
+	drivers/gpu/etnaviv
 	lib/mesa-21/softpipe
 	core init timer
 }
@@ -49,14 +50,25 @@ set config {
 		<provides><service name="Timer"/></provides>
 	</start>
 
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no"/>
+		<route>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
 	<start name="drivers" caps="1500" managing_system="yes">
 		<resource name="RAM" quantum="64M"/>
 		<binary name="init"/>
+		<provides> <service name="Platform"/> </provides>
 		<route>
 			<service name="ROM" label="config"> <parent label="drivers.config"/> </service>
 			<service name="Timer">   <child name="timer"/> </service>
 			<service name="Capture"> <child name="nitpicker"/> </service>
 			<service name="Event">   <child name="nitpicker"/> </service>
+			<service name="Report">  <child name="report_rom"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
@@ -175,6 +187,17 @@ append_if $use_i965 config {
 		</route>
 	</start>}
 
+append_if $use_etnaviv config {
+	<start name="imx8q_gpu_drv" caps="200">
+		<resource name="RAM" quantum="64M"/>
+		<provides> <service name="Drm"/> </provides>
+		<route>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Platform"> <child name="drivers"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>}
+
 append config {
 </config>}
 
@@ -193,7 +216,9 @@ append_if $use_i965 boot_modules {
 }
 
 append_if $use_etnaviv boot_modules {
-	egl_etnaviv-21.lib.so drm.lib.so
+	egl_etnaviv-21.lib.so libdrm-etnaviv.lib.so
+
+	imx8q_gpu_drv
 }
 
 append boot_modules $demo_modules

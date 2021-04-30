@@ -865,6 +865,7 @@ mesa-21.0.0/src/gallium/drivers/softpipe/sp_texture.c
 mesa-21.0.0/src/gallium/drivers/softpipe/sp_texture.h
 mesa-21.0.0/src/gallium/drivers/softpipe/sp_tile_cache.c
 mesa-21.0.0/src/gallium/drivers/softpipe/sp_tile_cache.h
+mesa-21.0.0/src/gallium/frontends/dri/dri2.c
 mesa-21.0.0/src/gallium/frontends/dri/dri_context.c
 mesa-21.0.0/src/gallium/frontends/dri/dri_context.h
 mesa-21.0.0/src/gallium/frontends/dri/dri_drawable.c
