@@ -26,6 +26,7 @@
  */
 #include <platform.h>
 
+
 static int stride(int value)
 {
 	/* 32-bit RGB888 */
@@ -111,25 +112,109 @@ dri2_genode_etnaviv_get_drawable_info(__DRIdrawable * draw,
 }
 
 
-/*
-static const __DRIetnavivLoaderExtension etnaviv_loader_extension = {
-	.base = { __DRI_SWRAST_LOADER, 1 },
-
-	.getDrawableInfo = dri2_genode_etnaviv_get_drawable_info,
-	.putImage        = dri2_genode_etnaviv_put_image,
-	.getImage        = dri2_genode_etnaviv_get_image
-};
-
-static const __DRIextension *etnaviv_loader_extensions[] = {
-	&etnaviv_loader_extension.base,
-	NULL,
-	NULL,
-};
-*/
-
-static EGLBoolean
-dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
+static __DRIbuffer *
+dri2_genode_get_buffers(__DRIdrawable * driDrawable,
+                        int *width, int *height,
+                        unsigned int *attachments, int count,
+                        int *out_count, void *loaderPrivate)
 {
+	_eglError(EGL_BAD_PARAMETER, "dri2_genode_get_buffers not implemented");
+	return NULL;
+}
+
+
+static void
+dri2_genode_flush_front_buffer(__DRIdrawable * driDrawable, void *loaderPrivate)
+{
+	_eglError(EGL_BAD_PARAMETER, "dri2_genode_flush_front_buffer not implemented");
+}
+
+
+static __DRIbuffer *
+dri2_genode_get_buffers_with_format(__DRIdrawable * driDrawable,
+                                    int *width, int *height,
+                                    unsigned int *attachments, int count,
+                                    int *out_count, void *loaderPrivate)
+{
+	_eglError(EGL_BAD_PARAMETER, "dri2_genode_get_buffers_with_format not implemented");
+	return NULL;
+}
+
+
+static const __DRIdri2LoaderExtension dri2_loader_extension = {
+	.base = { __DRI_DRI2_LOADER, 3 },
+
+	.getBuffers           = dri2_genode_get_buffers,
+	.flushFrontBuffer     = dri2_genode_flush_front_buffer,
+	.getBuffersWithFormat = NULL,
+};
+
+
+static const __DRIextension *dri2_loader_extensions[] = {
+	&dri2_loader_extension.base,
+	&image_lookup_extension.base,
+	&background_callable_extension.base,
+	NULL,
+};
+
+
+static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
+{
+	struct dri2_egl_display *dri2_dpy;
+	static int      rgb888_shifts[4] = { 16, 8, 0, 24 };
+	static unsigned rgb888_sizes[4]  = {  8, 8, 8, 8 };
+	int i;
+
+	/* initialize DRM back end */
+	genode_drm_init();
+
+	dri2_dpy = calloc(1, sizeof *dri2_dpy);
+	if (!dri2_dpy)
+		return _eglError(EGL_BAD_ALLOC, "eglInitialize");
+
+	dri2_dpy->fd          = -1;
+	dri2_dpy->driver_name = strdup("etnaviv");
+
+	disp->DriverData = (void *)dri2_dpy;
+	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
+
+	if (!dri2_load_driver(disp))
+		goto close_driver;
+
+	dri2_dpy->dri2_major = 2;
+	dri2_dpy->dri2_minor = __DRI_DRI2_VERSION;
+
+	dri2_dpy->loader_extensions = dri2_loader_extensions;
+
+	if (!dri2_create_screen(disp))
+		goto close_screen;
+
+	EGLint attrs[] = {
+		EGL_DEPTH_SIZE, 0, /* set in loop below (from DRI config) */
+		EGL_NATIVE_VISUAL_TYPE, 0,
+		EGL_NATIVE_VISUAL_ID, 0,
+		EGL_RED_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_BLUE_SIZE, 8,
+		EGL_NONE };
+
+	for (i = 0; dri2_dpy->driver_configs[i]; i++) {
+		/* set depth size in attrs */
+		attrs[1] = dri2_dpy->driver_configs[i]->modes.depthBits;
+		dri2_add_config(disp, dri2_dpy->driver_configs[i], i,
+		                EGL_WINDOW_BIT | EGL_PBUFFER_BIT, attrs,
+		                rgb888_shifts, rgb888_sizes);
+	}
+
+	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
+
+	return EGL_TRUE;
+
+close_screen:
+	dlclose(dri2_dpy->driver);
+close_driver:
+	free(dri2_dpy);
+
 	return EGL_FALSE;
 }
 
