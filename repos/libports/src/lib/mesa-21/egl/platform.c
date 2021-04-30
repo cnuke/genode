@@ -161,7 +161,7 @@ dri2_genode_destroy_surface(_EGLDisplay *disp, _EGLSurface *surf)
 
 EGLBoolean dri2_initialize_genode(_EGLDisplay *disp)
 {
-	printf("%s:%d\n", __func__, __LINE__);
+	printf("%s:%du from: %p\n", __func__, __LINE__, __builtin_return_address(0));
 	void *handle;
 
 	if (!(handle = dlopen("egl_drv.lib.so", 0))) {
@@ -169,9 +169,11 @@ EGLBoolean dri2_initialize_genode(_EGLDisplay *disp)
 		return EGL_FALSE;
 	}
 
+	printf("%s:%d\n", __func__, __LINE__);
 	typedef EGLBoolean (*genode_backend)(_EGLDisplay *);
 
 	genode_backend init = (genode_backend)dlsym(handle, "dri2_initialize_genode_backend");
+	printf("%s:%d init: %p\n", __func__, __LINE__, init);
 	if (!init) {
 		printf("Error: could not find 'dri2_initialize_genode_backend'\n");
 		return EGL_FALSE;

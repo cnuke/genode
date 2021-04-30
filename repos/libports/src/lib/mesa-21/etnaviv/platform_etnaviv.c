@@ -160,6 +160,8 @@ static const __DRIextension *dri2_loader_extensions[] = {
 
 static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 {
+	// XXX pull in frontends/dri2.c b/c: MESA-LOADER: driver does not expose __driDriverGetExtensions_etnaviv():
+
 	struct dri2_egl_display *dri2_dpy;
 	static int      rgb888_shifts[4] = { 16, 8, 0, 24 };
 	static unsigned rgb888_sizes[4]  = {  8, 8, 8, 8 };
@@ -221,5 +223,5 @@ close_driver:
 
 EGLBoolean dri2_initialize_genode_backend(_EGLDisplay *disp)
 {
-	return  EGL_FALSE;
+	return dri2_initialize_genode_etnaviv(disp);
 }
