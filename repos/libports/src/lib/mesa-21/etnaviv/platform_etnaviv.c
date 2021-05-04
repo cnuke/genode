@@ -158,6 +158,9 @@ static const __DRIextension *dri2_loader_extensions[] = {
 };
 
 
+extern  const __DRIextension **__driDriverGetExtensions_etnaviv(void);
+
+
 static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 {
 	// XXX pull in frontends/dri2.c b/c: MESA-LOADER: driver does not expose __driDriverGetExtensions_etnaviv():
@@ -167,20 +170,25 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	static unsigned rgb888_sizes[4]  = {  8, 8, 8, 8 };
 	int i;
 
+	printf("%s:%d\n", __func__, __LINE__);
+
 	/* initialize DRM back end */
 	genode_drm_init();
+
+	__driDriverGetExtensions_etnaviv();
 
 	dri2_dpy = calloc(1, sizeof *dri2_dpy);
 	if (!dri2_dpy)
 		return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
-	dri2_dpy->fd          = -1;
+	printf("%s:%d\n", __func__, __LINE__);
+	dri2_dpy->fd          = 42;
 	dri2_dpy->driver_name = strdup("etnaviv");
 
 	disp->DriverData = (void *)dri2_dpy;
-	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
 
-	if (!dri2_load_driver(disp))
+	printf("%s:%d\n", __func__, __LINE__);
+	if (!dri2_load_driver_dri3(disp))
 		goto close_driver;
 
 	dri2_dpy->dri2_major = 2;
@@ -188,16 +196,23 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 
 	dri2_dpy->loader_extensions = dri2_loader_extensions;
 
+	printf("%s:%d\n", __func__, __LINE__);
 	if (!dri2_create_screen(disp))
 		goto close_screen;
+
+#if 0
+	printf("%s:%d\n", __func__, __LINE__);
+	if (!dri2_setup_extensions(disp))
+		goto close_screen;
+
+	printf("%s:%d\n", __func__, __LINE__);
+	dri2_setup_screen(disp);
+#endif
 
 	EGLint attrs[] = {
 		EGL_DEPTH_SIZE, 0, /* set in loop below (from DRI config) */
 		EGL_NATIVE_VISUAL_TYPE, 0,
 		EGL_NATIVE_VISUAL_ID, 0,
-		EGL_RED_SIZE, 8,
-		EGL_GREEN_SIZE, 8,
-		EGL_BLUE_SIZE, 8,
 		EGL_NONE };
 
 	for (i = 0; dri2_dpy->driver_configs[i]; i++) {
@@ -210,11 +225,14 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 
 	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
 
+	printf("%s:%d\n", __func__, __LINE__);
 	return EGL_TRUE;
 
 close_screen:
+	printf("%s:%d\n", __func__, __LINE__);
 	dlclose(dri2_dpy->driver);
 close_driver:
+	printf("%s:%d\n", __func__, __LINE__);
 	free(dri2_dpy);
 
 	return EGL_FALSE;

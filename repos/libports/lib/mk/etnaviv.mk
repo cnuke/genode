@@ -12,7 +12,6 @@ INC_DIR += $(MESA_SRC_DIR)/src/compiler/nir \
 
 
 SRC_C = \
-        gallium/auxiliary/renderonly/renderonly.c \
         gallium/drivers/etnaviv/etnaviv_asm.c \
         gallium/drivers/etnaviv/etnaviv_blend.c \
         gallium/drivers/etnaviv/etnaviv_blt.c \
@@ -50,7 +49,7 @@ SRC_C = \
         gallium/drivers/etnaviv/etnaviv_tiling.c \
         gallium/drivers/etnaviv/etnaviv_transfer.c \
         gallium/drivers/etnaviv/etnaviv_uniforms.c \
-        gallium/drivers/etnaviv/etnaviv_zsa.c \
-        gallium/winsys/etnaviv/drm/etnaviv_drm_winsys.c
+        gallium/drivers/etnaviv/etnaviv_zsa.c
+
 
 vpath %.c $(MESA_SRC_DIR)/src
