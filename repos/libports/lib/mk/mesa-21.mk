@@ -1,5 +1,5 @@
 SHARED_LIB = yes
-LIBS       = libc stdcxx zlib expat glapi-21 softpipe mesa-21_api libdrm-etnaviv
+LIBS       = libc stdcxx zlib expat glapi-21 softpipe etnaviv mesa-21_api libdrm-etnaviv
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 
@@ -23,6 +23,7 @@ INC_DIR += $(MESA_GEN_DIR)/src/compiler \
            $(MESA_SRC_DIR)/src/gallium/drivers \
            $(MESA_SRC_DIR)/src/gallium/frontends/dri \
            $(MESA_SRC_DIR)/src/gallium/winsys \
+           $(MESA_SRC_DIR)/src/loader \
            $(MESA_SRC_DIR)/src/mapi \
            $(MESA_SRC_DIR)/src/mesa \
            $(MESA_SRC_DIR)/src/mesa/drivers/dri/common \
@@ -367,6 +368,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/nir/nir_to_tgsi.c \
          gallium/auxiliary/os/os_process.c \
          gallium/auxiliary/pipe-loader/pipe_loader.c \
+         gallium/auxiliary/pipe-loader/pipe_loader_drm.c \
          gallium/auxiliary/pipe-loader/pipe_loader_sw.c \
          gallium/auxiliary/postprocess/pp_celshade.c \
          gallium/auxiliary/postprocess/pp_colors.c \
@@ -380,6 +382,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/rbug/rbug_demarshal.c \
          gallium/auxiliary/rbug/rbug_shader.c \
          gallium/auxiliary/rbug/rbug_texture.c \
+         gallium/auxiliary/renderonly/renderonly.c \
          gallium/auxiliary/rtasm/rtasm_cpu.c \
          gallium/auxiliary/rtasm/rtasm_execmem.c \
          gallium/auxiliary/rtasm/rtasm_x86sse.c \
@@ -412,6 +415,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/util/u_dump_state.c \
          gallium/auxiliary/util/u_framebuffer.c \
          gallium/auxiliary/util/u_gen_mipmap.c \
+         gallium/auxiliary/util/u_hash_table.c \
          gallium/auxiliary/util/u_helpers.c \
          gallium/auxiliary/util/u_log.c \
          gallium/auxiliary/util/u_network.c \
@@ -434,6 +438,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/frontends/dri/dri_screen.c \
          gallium/frontends/dri/drisw.c \
          gallium/targets/dri/target.c \
+         gallium/winsys/etnaviv/drm/etnaviv_drm_winsys.c \
          gallium/winsys/sw/dri/dri_sw_winsys.c \
          gallium/winsys/sw/null/null_sw_winsys.c \
          gallium/winsys/sw/wrapper/wrapper_sw_winsys.c \
@@ -706,8 +711,9 @@ CC_OPT += -DMAPI_ABI_HEADER=\"glapi/gen/glapi_mapi_tmp.h\" \
 
 CC_OPT_loader/loader = -DDEFAULT_DRIVER_DIR='"/drivers"'
 CC_OPT_compiler/glsl/glsl_lexer = -include "stdint.h"
-CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader_sw = -DPIPE_SEARCH_DIR='"/pipe"' -DGALLIUM_STATIC_TARGETS=1
-CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader    = -DGALLIUM_STATIC_TARGETS=1
+CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader_sw  = -DPIPE_SEARCH_DIR='"/pipe"' -DGALLIUM_STATIC_TARGETS=1
+CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader_drm = -DGALLIUM_STATIC_TARGETS=1
+CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader     = -DGALLIUM_STATIC_TARGETS=1
 
 CC_CXX_WARN_STRICT =
 

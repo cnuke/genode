@@ -17,13 +17,13 @@ import_from_depot [depot_user]/pkg/drivers_managed-[board] \
 
 set build_components {
 	drivers/gpu/intel
-	drivers/gpu/etnaviv
 	lib/mesa-21/softpipe
 	core init timer
 }
 
 lappend_if $use_i965 build_components lib/mesa/i965
 lappend_if $use_etnaviv build_components lib/mesa-21/etnaviv
+lappend_if $use_etnaviv build_components drivers/gpu/etnaviv
 lappend build_components $demo_component
 
 build $build_components
