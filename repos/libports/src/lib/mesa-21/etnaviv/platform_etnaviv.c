@@ -175,8 +175,6 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	/* initialize DRM back end */
 	genode_drm_init();
 
-	__driDriverGetExtensions_etnaviv();
-
 	dri2_dpy = calloc(1, sizeof *dri2_dpy);
 	if (!dri2_dpy)
 		return _eglError(EGL_BAD_ALLOC, "eglInitialize");
@@ -186,9 +184,10 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	dri2_dpy->driver_name = strdup("etnaviv");
 
 	disp->DriverData = (void *)dri2_dpy;
+	dri2_dpy->driver_extensions = __driDriverGetExtensions_etnaviv();
 
 	printf("%s:%d\n", __func__, __LINE__);
-	if (!dri2_load_driver_dri3(disp))
+	if (!dri2_load_driver(disp))
 		goto close_driver;
 
 	dri2_dpy->dri2_major = 2;
@@ -200,14 +199,12 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	if (!dri2_create_screen(disp))
 		goto close_screen;
 
-#if 0
 	printf("%s:%d\n", __func__, __LINE__);
 	if (!dri2_setup_extensions(disp))
 		goto close_screen;
 
 	printf("%s:%d\n", __func__, __LINE__);
 	dri2_setup_screen(disp);
-#endif
 
 	EGLint attrs[] = {
 		EGL_DEPTH_SIZE, 0, /* set in loop below (from DRI config) */
@@ -225,7 +222,7 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 
 	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
 
-	printf("%s:%d\n", __func__, __LINE__);
+	printf("%s:%d dri2_dpy: %p dri2_dpy->dri2: %p\n", __func__, __LINE__, dri2_dpy, dri2_dpy->dri2);
 	return EGL_TRUE;
 
 close_screen:
