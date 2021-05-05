@@ -269,6 +269,7 @@ mesa-21.0.0/src/compiler/nir/nir_lower_alu.c
 mesa-21.0.0/src/compiler/nir/nir_lower_alu_to_scalar.c
 mesa-21.0.0/src/compiler/nir/nir_lower_atomics_to_ssbo.c
 mesa-21.0.0/src/compiler/nir/nir_lower_bitmap.c
+mesa-21.0.0/src/compiler/nir/nir_lower_bool_to_bitsize.c
 mesa-21.0.0/src/compiler/nir/nir_lower_bool_to_float.c
 mesa-21.0.0/src/compiler/nir/nir_lower_bool_to_int32.c
 mesa-21.0.0/src/compiler/nir/nir_lower_clamp_color_outputs.c
@@ -282,6 +283,7 @@ mesa-21.0.0/src/compiler/nir/nir_lower_flrp.c
 mesa-21.0.0/src/compiler/nir/nir_lower_frexp.c
 mesa-21.0.0/src/compiler/nir/nir_lower_global_vars_to_local.c
 mesa-21.0.0/src/compiler/nir/nir_lower_goto_ifs.c
+mesa-21.0.0/src/compiler/nir/nir_lower_idiv.c
 mesa-21.0.0/src/compiler/nir/nir_lower_indirect_derefs.c
 mesa-21.0.0/src/compiler/nir/nir_lower_int64.c
 mesa-21.0.0/src/compiler/nir/nir_lower_int_to_float.c
@@ -313,6 +315,7 @@ mesa-21.0.0/src/compiler/nir/nir_lower_vars_to_ssa.c
 mesa-21.0.0/src/compiler/nir/nir_lower_vec_to_movs.c
 mesa-21.0.0/src/compiler/nir/nir_lower_wpos_ytransform.c
 mesa-21.0.0/src/compiler/nir/nir_metadata.c
+mesa-21.0.0/src/compiler/nir/nir_move_vec_src_uses_to_dest.c
 mesa-21.0.0/src/compiler/nir/nir_opcodes_c.py
 mesa-21.0.0/src/compiler/nir/nir_opcodes_h.py
 mesa-21.0.0/src/compiler/nir/nir_opcodes.py
@@ -529,6 +532,10 @@ mesa-21.0.0/src/gallium/auxiliary/hud/hud_cpu.c
 mesa-21.0.0/src/gallium/auxiliary/hud/hud_driver_query.c
 mesa-21.0.0/src/gallium/auxiliary/hud/hud_fps.c
 mesa-21.0.0/src/gallium/auxiliary/hud/hud_private.h
+mesa-21.0.0/src/gallium/auxiliary/indices/u_indices.c
+mesa-21.0.0/src/gallium/auxiliary/indices/u_indices.h
+mesa-21.0.0/src/gallium/auxiliary/indices/u_indices_priv.h
+mesa-21.0.0/src/gallium/auxiliary/indices/u_primconvert.c
 mesa-21.0.0/src/gallium/auxiliary/indices/u_primconvert.h
 mesa-21.0.0/src/gallium/auxiliary/nir/nir_draw_helpers.c
 mesa-21.0.0/src/gallium/auxiliary/nir/nir_draw_helpers.h
@@ -1634,6 +1641,7 @@ mesa-21.0.0/src/util/ralloc.h
 mesa-21.0.0/src/util/rand_xor.c
 mesa-21.0.0/src/util/rand_xor.h
 mesa-21.0.0/src/util/rb_tree.h
+mesa-21.0.0/src/util/register_allocate.c
 mesa-21.0.0/src/util/register_allocate.h
 mesa-21.0.0/src/util/rgtc.c
 mesa-21.0.0/src/util/rgtc.h
@@ -1645,6 +1653,7 @@ mesa-21.0.0/src/util/sha1/sha1.c
 mesa-21.0.0/src/util/sha1/sha1.h
 mesa-21.0.0/src/util/simple_list.h
 mesa-21.0.0/src/util/simple_mtx.h
+mesa-21.0.0/src/util/slab.c
 mesa-21.0.0/src/util/slab.h
 mesa-21.0.0/src/util/softfloat.c
 mesa-21.0.0/src/util/softfloat.h
@@ -1684,6 +1693,7 @@ mesa-21.0.0/src/util/u_string.h
 mesa-21.0.0/src/util/u_thread.h
 mesa-21.0.0/src/util/u_vector.c
 mesa-21.0.0/src/util/u_vector.h
+mesa-21.0.0/src/util/vma.c
 mesa-21.0.0/src/util/vma.h
 mesa-21.0.0/src/util/xmlconfig.c
 mesa-21.0.0/src/util/xmlconfig.h

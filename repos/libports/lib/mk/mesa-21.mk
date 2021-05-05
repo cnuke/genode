@@ -217,6 +217,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          compiler/nir/nir_lower_alu_to_scalar.c \
          compiler/nir/nir_lower_atomics_to_ssbo.c \
          compiler/nir/nir_lower_bitmap.c \
+         compiler/nir/nir_lower_bool_to_bitsize.c \
          compiler/nir/nir_lower_bool_to_float.c \
          compiler/nir/nir_lower_bool_to_int32.c \
          compiler/nir/nir_lower_clamp_color_outputs.c \
@@ -230,6 +231,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          compiler/nir/nir_lower_frexp.c \
          compiler/nir/nir_lower_global_vars_to_local.c \
          compiler/nir/nir_lower_goto_ifs.c \
+         compiler/nir/nir_lower_idiv.c \
          compiler/nir/nir_lower_indirect_derefs.c \
          compiler/nir/nir_lower_int64.c \
          compiler/nir/nir_lower_int_to_float.c \
@@ -261,6 +263,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          compiler/nir/nir_lower_vec_to_movs.c \
          compiler/nir/nir_lower_wpos_ytransform.c \
          compiler/nir/nir_metadata.c \
+         compiler/nir/nir_move_vec_src_uses_to_dest.c \
          compiler/nir/nir_opt_access.c \
          compiler/nir/nir_opt_combine_stores.c \
          compiler/nir/nir_opt_conditional_discard.c \
@@ -364,6 +367,8 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/hud/hud_cpu.c \
          gallium/auxiliary/hud/hud_driver_query.c \
          gallium/auxiliary/hud/hud_fps.c \
+         gallium/auxiliary/indices/u_indices_gen.c \
+         gallium/auxiliary/indices/u_primconvert.c \
          gallium/auxiliary/nir/nir_draw_helpers.c \
          gallium/auxiliary/nir/nir_to_tgsi.c \
          gallium/auxiliary/os/os_process.c \
@@ -690,9 +695,11 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          util/os_time.c \
          util/ralloc.c \
          util/rand_xor.c \
+         util/register_allocate.c \
          util/rgtc.c \
          util/set.c \
          util/sha1/sha1.c \
+         util/slab.c \
          util/softfloat.c \
          util/string_buffer.c \
          util/strtod.c \
@@ -704,6 +711,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          util/u_process.c \
          util/u_queue.c \
          util/u_vector.c \
+         util/vma.c \
          util/xmlconfig.c
 
 CC_OPT += -DMAPI_ABI_HEADER=\"glapi/gen/glapi_mapi_tmp.h\" \
