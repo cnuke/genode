@@ -10,10 +10,22 @@ if {[have_include power_on/qemu] && $use_i965} {
 }
 
 create_boot_directory
-import_from_depot [depot_user]/pkg/drivers_managed-[board] \
-                  [depot_user]/src/nitpicker \
-                  [depot_user]/src/demo \
-                  [depot_user]/src/report_rom
+
+set imports { }
+
+if {[have_spec linux]} {
+lappend imports [depot_user]/pkg/drivers_interactive-[board]
+}
+
+if {$use_etnaviv} {
+lappend imports [depot_user]/pkg/drivers_managed-[board]
+}
+lappend imports [depot_user]/src/nitpicker
+lappend imports [depot_user]/src/demo
+lappend imports [depot_user]/src/report_rom
+
+
+import_from_depot $imports
 
 set build_components {
 	drivers/gpu/intel
@@ -208,6 +220,7 @@ set boot_modules {
 	egl-21.lib.so mesa-21.lib.so stdcxx.lib.so
 	expat.lib.so glapi-21.lib.so zlib.lib.so
 	core init ld.lib.so timer egl_swrast-21.lib.so
+	libdrm-etnaviv.lib.so
 }
 
 append_if $use_i965 boot_modules {
