@@ -112,16 +112,12 @@ namespace Gpt {
 	struct Entry
 	{
 		enum { NAME_LEN = 36 };
-		using Name_bytes = char[NAME_LEN * sizeof (uint16_t)];
-
 		Uuid     type;           /* partition type GUID */
 		Uuid     guid;           /* unique partition GUID */
 		uint64_t lba_start;      /* start of partition */
 		uint64_t lba_end;        /* end of partition */
 		uint64_t attributes;     /* partition attributes */
 		uint16_t name[NAME_LEN]; /* partition name in UTF-16LE */
-
-		static_assert(sizeof (name) == sizeof (Name_bytes));
 
 		bool valid() const { return type.valid(); }
 
@@ -130,13 +126,7 @@ namespace Gpt {
 		 */
 		bool read_name(char *dest, size_t dest_len) const
 		{
-			Name_bytes name_buf { };
-
-			Genode::memcpy(name_buf, name, sizeof (name));
-			Genode::size_t const num =
-				Util::extract_ascii(dest, dest_len,
-				                    (uint16_t*)name_buf, NAME_LEN);
-			return !!num;
+			return !!Util::extract_ascii(dest, dest_len, name, NAME_LEN);
 		}
 
 		/**
@@ -144,16 +134,9 @@ namespace Gpt {
 		 */
 		bool write_name(Label const &label)
 		{
-			Name_bytes name_buf { };
-
-			/* number of UTF-16LE characters */
-			Genode::size_t const num =
-				Util::convert_ascii((uint16_t*)name_buf, NAME_LEN,
-			                        (uint8_t*)label.string(),
-			                        label.length() - 1);
-			/* no-op if num zero */
-			Genode::memcpy(name, name_buf, num * sizeof (name[0]));
-			return !!num;
+			return !!Util::convert_ascii(name, NAME_LEN,
+			                             (uint8_t*)label.string(),
+			                             label.length() - 1);
 		}
 
 		uint64_t length() const { return lba_end - lba_start + 1; }
