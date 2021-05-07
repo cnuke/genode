@@ -341,6 +341,19 @@ void drm_dev_exit(int idx)
 }
 
 
+void drm_dev_get(struct drm_device * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void drm_dev_put(struct drm_device * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+
 #include <linux/swap.h>
 
 void check_move_unevictable_pages(struct pagevec *pvec)

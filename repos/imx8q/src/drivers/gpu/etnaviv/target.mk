@@ -72,6 +72,7 @@ CC_CXX_WARN_STRICT :=
 
 #LX_OBJECTS  = $(wildcard $(CONTRIB_DIR)/drivers/of/*.o)
 LX_OBJECTS_dma := \
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-buf.o) \
                   $(CONTRIB_DIR)/drivers/dma-buf/dma-fence.o) \
                   $(CONTRIB_DIR)/drivers/dma-buf/dma-resv.o)
 LX_OBJECTS += $(LX_OBJECTS_dma)

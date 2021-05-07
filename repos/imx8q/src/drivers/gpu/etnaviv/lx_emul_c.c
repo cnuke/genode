@@ -149,6 +149,12 @@ void kfree(const void *x)
 }
 
 
+size_t ksize(void const *objp)
+{
+	return lx_emul_ksize(objp);
+}
+
+
 void *kmem_cache_alloc(struct kmem_cache *s, gfp_t gfpflags)
 {
 	void *addr = lx_emul_kmem_cache_alloc(s);
@@ -1515,6 +1521,86 @@ unsigned long find_next_zero_bit(unsigned const long *addr,
 }
 
 
+#include <linux/mount.h>
+#include <linux/fs.h>
+
+struct vfsmount * kern_mount(struct file_system_type * type)
+{
+	LX_TRACE_PRINT("%s:%d\n", __func__, __LINE__);
+
+	struct vfsmount *m;
+
+	m = kzalloc(sizeof (struct vfsmount), 0);
+	if (!m) {
+		return (struct vfsmount*)ERR_PTR(-ENOMEM);
+	}
+
+	return m;
+}
+
+
+void inode_set_bytes(struct inode *inode, loff_t bytes)
+{
+	inode->i_blocks = bytes >> 9;
+	inode->i_bytes = bytes & 511;
+}
+
+
+static unsigned long _get_next_ino(void)
+{
+	static unsigned long count = 0;
+	return ++count;
+}
+
+
+struct inode *alloc_anon_inode(struct super_block *s)
+{
+	LX_TRACE_PRINT("%s:%d\n", __func__, __LINE__);
+
+	struct inode *inode;
+
+	inode = kzalloc(sizeof (struct inode), 0);
+	if (!inode) {
+		return (struct inode*)ERR_PTR(-ENOMEM);
+	}
+
+	inode->i_ino = _get_next_ino();
+
+	return inode;
+}
+
+
+#include <linux/file.h>
+
+struct file *alloc_file_pseudo(struct inode *inode, struct vfsmount *mnt,
+                               char const *name, int flags,
+                               struct file_operations const *fops)
+{
+	LX_TRACE_PRINT("%s:%d\n", __func__, __LINE__);
+
+	struct file *f;
+	struct dentry *d;
+
+	f = kzalloc(sizeof (struct file), 0);
+	if (!f) {
+		return (struct file*)ERR_PTR(-ENOMEM);
+	}
+
+	d = kzalloc(sizeof (struct dentry), 0);
+	if (!d) {
+		kfree(f);
+		return (struct file*)ERR_PTR(-ENOMEM);
+	}
+
+	f->f_inode = inode;
+	f->f_op = fops;
+	f->f_path.dentry = d;
+
+	return f;
+}
+
+
+
 #include <linux/shmem_fs.h>
 
 struct file *shmem_file_setup(char const *name, loff_t size,
@@ -1612,6 +1698,78 @@ void fput(struct file *file)
 		lx_emul_printf("%s: file: %p f_count 0, leaking\n",
 		               __func__, file);
 	}
+}
+
+
+#define FILE_FD_NUM 128
+
+struct File_fd
+{
+	struct file *file;
+	int fd;
+};
+
+
+static struct File_fd _file_fd_array[FILE_FD_NUM];
+
+
+int get_unused_fd_flags(unsigned flags)
+{
+	static int counter = 42;
+
+	int id;
+	int i;
+
+	(void)flags;
+
+	id = -1;
+
+	for (i = 0; i < FILE_FD_NUM; i++) {
+		if (_file_fd_array[i].fd) {
+			continue;
+		}
+
+		id = ++counter;
+		_file_fd_array[i].fd = id;
+		break;
+	}
+
+	return id;
+}
+
+
+void fd_install(unsigned int fd,struct file * file)
+{
+	int i;
+
+	for (i = 0; i < FILE_FD_NUM; i++) {
+		if (_file_fd_array[i].fd != fd) {
+			continue;
+		}
+
+		_file_fd_array[i].file = file;
+		break;
+	}
+}
+
+
+struct file *fget(unsigned int fd)
+{
+	struct file *f;
+	int i;
+
+	f = NULL;
+
+	for (i = 0; i < FILE_FD_NUM; i++) {
+		if (_file_fd_array[i].fd != fd) {
+			continue;
+		}
+
+		f = _file_fd_array[i].file;
+		break;
+	}
+
+	return f;
 }
 
 

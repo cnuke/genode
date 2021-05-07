@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2021-04-27
+ * \date   2021-05-17
  */
 
 #include <lx_emul.h>
@@ -39,9 +39,41 @@ pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_n
 }
 
 
+#include <linux/wait.h>
+
+void __wake_up_locked_key(struct wait_queue_head * wq_head,unsigned int mode,void * key)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <asm-generic/bug.h>
 
 void __warn_printk(const char * fmt,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/spinlock_api_smp.h>
+
+void __lockfunc _raw_spin_lock_irq(raw_spinlock_t * lock)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/spinlock_api_smp.h>
+
+void __lockfunc _raw_spin_unlock_irq(raw_spinlock_t * lock)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/dma-mapping.h>
+
+void arch_setup_dma_ops(struct device * dev,u64 dma_base,u64 size,const struct iommu_ops * iommu,bool coherent)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -58,6 +90,14 @@ bool cancel_delayed_work_sync(struct delayed_work * dwork)
 #include <linux/capability.h>
 
 bool capable(int cap)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/debugfs.h>
+
+void debugfs_remove_recursive(struct dentry * dentry)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -87,89 +127,9 @@ void dev_coredumpv(struct device * dev,void * data,size_t datalen,gfp_t gfp)
 }
 
 
-#include <linux/dma-buf.h>
+#include <linux/device.h>
 
-struct dma_buf_attachment * dma_buf_attach(struct dma_buf * dmabuf,struct device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-void dma_buf_detach(struct dma_buf * dmabuf,struct dma_buf_attachment * attach)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-struct dma_buf * dma_buf_export(const struct dma_buf_export_info * exp_info)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-int dma_buf_fd(struct dma_buf * dmabuf,int flags)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-struct dma_buf * dma_buf_get(int fd)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-struct sg_table * dma_buf_map_attachment(struct dma_buf_attachment * attach,enum dma_data_direction direction)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-int dma_buf_mmap(struct dma_buf * dmabuf,struct vm_area_struct * vma,unsigned long pgoff)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-void dma_buf_put(struct dma_buf * dmabuf)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-void dma_buf_unmap_attachment(struct dma_buf_attachment * attach,struct sg_table * sg_table,enum dma_data_direction direction)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-void * dma_buf_vmap(struct dma_buf * dmabuf)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-buf.h>
-
-void dma_buf_vunmap(struct dma_buf * dmabuf,void * vaddr)
+void device_initialize(struct device * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -223,22 +183,6 @@ int drm_crtc_queue_sequence_ioctl(struct drm_device * dev,void * data,struct drm
 #include <drm/drm_debugfs.h>
 
 int drm_debugfs_create_files(const struct drm_info_list * files,int count,struct dentry * root,struct drm_minor * minor)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <drm/drm_drv.h>
-
-void drm_dev_get(struct drm_device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <drm/drm_drv.h>
-
-void drm_dev_put(struct drm_device * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -816,9 +760,9 @@ int drm_wait_vblank_ioctl(struct drm_device * dev,void * data,struct drm_file * 
 }
 
 
-#include <linux/file.h>
+#include <linux/dcache.h>
 
-void fd_install(unsigned int fd,struct file * file)
+char * dynamic_dname(struct dentry * dentry,char * buffer,int buflen,const char * fmt,...)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -848,17 +792,25 @@ void free_pages(unsigned long addr,unsigned int order)
 }
 
 
-#include <linux/file.h>
+#include <linux/mm.h>
 
-int get_unused_fd_flags(unsigned flags)
+int get_user_pages_fast(unsigned long start,int nr_pages,unsigned int gup_flags,struct page ** pages)
 {
 	lx_emul_trace_and_stop(__func__);
 }
 
 
-#include <linux/mm.h>
+#include <linux/pseudo_fs.h>
 
-int get_user_pages_fast(unsigned long start,int nr_pages,unsigned int gup_flags,struct page ** pages)
+struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magic)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/fs.h>
+
+void iput(struct inode * inode)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -872,9 +824,9 @@ void kfree_call_rcu(struct rcu_head * head,rcu_callback_t func)
 }
 
 
-#include <linux/slab.h>
+#include <linux/fs.h>
 
-void * krealloc(const void * p,size_t new_size,gfp_t flags)
+void kill_anon_super(struct super_block * sb)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -882,7 +834,7 @@ void * krealloc(const void * p,size_t new_size,gfp_t flags)
 
 #include <linux/slab.h>
 
-size_t ksize(const void * objp)
+void * krealloc(const void * p,size_t new_size,gfp_t flags)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -997,6 +949,14 @@ int single_open(struct file * file,int (* show)(struct seq_file *,void *),void *
 #include <linux/seq_file.h>
 
 int single_release(struct inode * inode,struct file * file)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/string.h>
+
+char * strndup_user(const char __user * s,long n)
 {
 	lx_emul_trace_and_stop(__func__);
 }

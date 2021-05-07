@@ -33,10 +33,11 @@ void          lx_emul_dma_free_attrs(void const *, unsigned long, unsigned long,
 void *genode_lookup_mapping_from_offset(unsigned long, unsigned long);
 
 
-void *lx_emul_vzalloc(unsigned long);
-void  lx_emul_vfree(void const*);
-void *lx_emul_kmalloc(unsigned long, unsigned int);
-void  lx_emul_kfree(void const*);
+void          *lx_emul_vzalloc(unsigned long);
+void           lx_emul_vfree(void const*);
+void          *lx_emul_kmalloc(unsigned long, unsigned int);
+void           lx_emul_kfree(void const*);
+unsigned long  lx_emul_ksize(void const*);
 
 struct lx_emul_kmem_cache
 {
