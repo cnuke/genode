@@ -75,9 +75,9 @@ _create_surface(_EGLDisplay *disp,
 	config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
 	                             dri2_surf->base.GLColorspace);
 
-	if (dri2_dpy->dri2) {
-		dri2_surf->dri_drawable = (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
-		                                                               dri2_surf);
+	printf("%s:%d\n", __func__, __LINE__);
+	if (dri2_dpy->image_driver) {
+	printf("%s:%d\n", __func__, __LINE__);
 		/* create back buffer image */
 		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
@@ -86,7 +86,26 @@ _create_surface(_EGLDisplay *disp,
 		                                                     dri2_dpy->is_different_gpu ?
 		                                                     0 : __DRI_IMAGE_USE_SHARE,
 		                                                     NULL);
+	printf("%s:%d\n", __func__, __LINE__);
+		dri2_surf->dri_drawable =
+			dri2_dpy->image_driver->createNewDrawable(dri2_dpy->dri_screen, config,
+			                                          dri2_surf);
+	} else if (dri2_dpy->dri2) {
+	printf("%s:%d\n", __func__, __LINE__);
+		dri2_surf->dri_drawable = (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
+		                                                               dri2_surf);
+	printf("%s:%d is_different_gpu: %u\n", __func__, __LINE__, dri2_dpy->is_different_gpu);
+		/* create back buffer image */
+		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+		                                                     dri2_surf->base.Width,
+		                                                     dri2_surf->base.Height,
+		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
+		                                                     dri2_dpy->is_different_gpu ?
+		                                                     0 : __DRI_IMAGE_USE_SHARE,
+		                                                     NULL);
+	printf("%s:%d\n", __func__, __LINE__);
 	} else {
+	printf("%s:%d\n", __func__, __LINE__);
 		assert(dri2_dpy->swrast);
 		dri2_surf->dri_drawable =
 		   (*dri2_dpy->swrast->createNewDrawable)(dri2_dpy->dri_screen,
