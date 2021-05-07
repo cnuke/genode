@@ -88,6 +88,18 @@ void *lx_emul_kmalloc(unsigned long size, unsigned int flags)
 }
 
 
+unsigned long lx_emul_ksize(void const *p)
+{
+	if (p && Lx::Malloc::mem().inside((Genode::addr_t)p)) {
+		return Lx::Malloc::mem().size(p);
+	}
+
+	Genode::error(__func__, ": cannot query size of unknown address: ",
+	              p, " from: ", __builtin_return_address(0));
+	return 0;
+}
+
+
 void lx_emul_kfree(void const *p)
 {
 	if (!p) return;
