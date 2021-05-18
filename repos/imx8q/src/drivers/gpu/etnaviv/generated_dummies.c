@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2021-05-17
+ * \date   2021-05-18
  */
 
 #include <lx_emul.h>
@@ -114,14 +114,6 @@ void delayed_work_timer_fn(struct timer_list * t)
 #include <linux/workqueue.h>
 
 void destroy_workqueue(struct workqueue_struct * wq)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/devcoredump.h>
-
-void dev_coredumpv(struct device * dev,void * data,size_t datalen,gfp_t gfp)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -768,14 +760,6 @@ char * dynamic_dname(struct dentry * dentry,char * buffer,int buflen,const char 
 }
 
 
-#include <asm-generic/bitops/find.h>
-
-unsigned long find_next_bit(const unsigned long * addr,unsigned long size,unsigned long offset)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/workqueue.h>
 
 void flush_workqueue(struct workqueue_struct * wq)
@@ -811,14 +795,6 @@ struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magi
 #include <linux/fs.h>
 
 void iput(struct inode * inode)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/rcutree.h>
-
-void kfree_call_rcu(struct rcu_head * head,rcu_callback_t func)
 {
 	lx_emul_trace_and_stop(__func__);
 }

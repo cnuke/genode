@@ -56,13 +56,13 @@ void iounmap(volatile void __iomem *addr)
 
 void __rcu_read_lock(void)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __rcu_read_unlock(void)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -141,26 +141,26 @@ u64 vabits_actual;
 
 void __lockfunc _raw_spin_lock(raw_spinlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 unsigned long __lockfunc _raw_spin_lock_irqsave(raw_spinlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
 
 void __lockfunc _raw_spin_unlock(raw_spinlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __lockfunc _raw_spin_unlock_irqrestore(raw_spinlock_t * lock,unsigned long flags)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -225,14 +225,6 @@ int __pm_runtime_suspend(struct device * dev,int rpmflags)
 #include <linux/platform_device.h>
 
 void platform_driver_unregister(struct platform_driver *drv)
-{
-	lx_emul_trace(__func__);
-}
-
-
-#include <drm/drm_print.h>
-
-void drm_dbg(unsigned int category,const char * format,...)
 {
 	lx_emul_trace(__func__);
 }
@@ -330,26 +322,26 @@ int drm_authmagic(struct drm_device * dev,void * data,struct drm_file * file_pri
 
 bool drm_dev_enter(struct drm_device * dev,int * idx)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return true;
 }
 
 
 void drm_dev_exit(int idx)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void drm_dev_get(struct drm_device * dev)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void drm_dev_put(struct drm_device * dev)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -375,12 +367,20 @@ void __pagevec_release(struct pagevec *pvec)
 
 int __sched ww_mutex_lock_interruptible(struct ww_mutex * lock,struct ww_acquire_ctx * ctx)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
 
 void __sched ww_mutex_unlock(struct ww_mutex * lock)
+{
+	// lx_emul_trace(__func__);
+}
+
+
+#include <linux/devcoredump.h>
+
+void dev_coredumpv(struct device * dev,void * data,size_t datalen,gfp_t gfp)
 {
 	lx_emul_trace(__func__);
 }
