@@ -766,6 +766,17 @@ bool mutex_is_locked(struct mutex *lock)
  ** DRM implementation **
  ************************/
 
+#include <drm/drm_print.h>
+
+void drm_dbg(unsigned int category, char const *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	lx_emul_vprintf(fmt, args);
+	va_end(args);
+}
+
+
 #include <drm/drm_drv.h>
 
 unsigned int drm_debug = 0xffffffff;
@@ -1072,6 +1083,9 @@ void *dma_alloc_attrs(struct device *dev, size_t size, dma_addr_t *dma_handle,
 	if (!lx_dma.vaddr && !lx_dma.paddr) {
 		return NULL;
 	}
+
+	lx_emul_printf("%s:%d paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
+	               lx_dma.paddr, lx_dma.vaddr);
 
 	*dma_handle = lx_dma.paddr;
 	return (void*)lx_dma.vaddr;
@@ -1389,8 +1403,8 @@ asmlinkage __visible void __sched schedule(void)
 
 struct task_struct *get_current(void)
 {
-	lx_emul_printf("%s:%d from: %px\n", __func__, __LINE__,
-	               __builtin_return_address(0));
+	// lx_emul_printf("%s:%d from: %px\n", __func__, __LINE__,
+	//                __builtin_return_address(0));
 	// XXX for now assume there is no code that accesses task_struct fields directly
 	return (struct task_struct*)lx_emul_current_task();
 }
@@ -1497,7 +1511,7 @@ void vunmap(void const *addr)
 	}
 }
 
-
+#if 0
 #include <asm-generic/bitops/find.h>
 
 unsigned long find_next_zero_bit(unsigned const long *addr,
@@ -1519,6 +1533,7 @@ unsigned long find_next_zero_bit(unsigned const long *addr,
 
 	return (i * BITS_PER_LONG) + j;
 }
+#endif
 
 
 #include <linux/mount.h>
@@ -1634,6 +1649,9 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	if (!lx_dma.vaddr && !lx_dma.paddr) {
 		goto err_as;
 	}
+
+	lx_emul_printf("%s:%d paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
+	               lx_dma.paddr, lx_dma.vaddr);
 
 	lx_emul_add_dma_to_address_space(mapping, lx_dma);
 
@@ -1779,4 +1797,14 @@ void call_rcu(struct rcu_head *head, rcu_callback_t func)
 {
 	lx_emul_trace(__func__);
 	func(head);
+}
+
+
+#include <linux/rcutree.h>
+
+void kfree_call_rcu(struct rcu_head *head, rcu_callback_t func)
+{
+	lx_emul_printf("%s: ignore head: %px func: %px from: %px\n",
+	                __func__, head, func, __builtin_return_address(0));
+	// call_rcu(head, func);
 }
