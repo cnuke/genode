@@ -31,7 +31,7 @@ void backend_alloc_init(Genode::Env&, Genode::Ram_allocator&,
 
 
 Genode::Ram_dataspace_capability
-Lx::backend_alloc(Genode::addr_t size, Genode::Cache_attribute cached) {
+Lx::backend_alloc(Genode::addr_t size, Genode::Cache cached) {
 	return Lx_kit::env().env.ram().alloc(size, cached); }
 
 

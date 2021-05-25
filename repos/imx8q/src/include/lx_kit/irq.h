@@ -18,7 +18,7 @@
 
 /* Genode includes */
 #include <base/allocator.h>
-#include <platform_device/platform_device.h>
+#include <platform_device/device.h>
 
 
 namespace Lx { class Irq; }
