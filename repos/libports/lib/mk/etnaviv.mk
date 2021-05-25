@@ -11,7 +11,13 @@ INC_DIR += $(MESA_SRC_DIR)/src/compiler/nir \
            $(MESA_PORT_DIR)/include/drm-uapi
 
 
-SRC_C = \
+SRC_C = etnaviv/drm/etnaviv_bo.c \
+        etnaviv/drm/etnaviv_bo_cache.c \
+        etnaviv/drm/etnaviv_cmd_stream.c \
+        etnaviv/drm/etnaviv_device.c \
+        etnaviv/drm/etnaviv_gpu.c \
+        etnaviv/drm/etnaviv_perfmon.c \
+        etnaviv/drm/etnaviv_pipe.c \
         gallium/drivers/etnaviv/etnaviv_asm.c \
         gallium/drivers/etnaviv/etnaviv_blend.c \
         gallium/drivers/etnaviv/etnaviv_blt.c \
