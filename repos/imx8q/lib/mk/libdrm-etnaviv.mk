@@ -8,7 +8,9 @@ include $(call select_from_repositories,lib/import/import-libdrm-etnaviv.mk)
 LIBS        := libc
 SHARED_LIB  := yes
 
-SRC_C := $(addprefix etnaviv/,$(notdir $(wildcard $(DRM_SRC_DIR)/etnaviv/*.c))) \
+# $(addprefix etnaviv/,$(notdir $(wildcard $(DRM_SRC_DIR)/etnaviv/*.c)))
+
+SRC_C := \
          xf86drm.c \
          xf86drmHash.c \
          xf86drmMode.c \
