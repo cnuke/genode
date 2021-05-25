@@ -48,7 +48,7 @@ class Lx_kit::Slab_backend_alloc : public Lx::Slab_backend_alloc,
 		};
 
 		addr_t                           _base;              /* virt. base address */
-		Genode::Cache_attribute          _cached;            /* non-/cached RAM */
+		Genode::Cache                    _cached;            /* non-/cached RAM */
 		Genode::Ram_dataspace_capability _ds_cap[ELEMENTS];  /* dataspaces to put in VM */
 		addr_t                           _ds_phys[ELEMENTS]; /* physical bases of dataspaces */
 		int                              _index;             /* current index in ds_cap */
@@ -81,7 +81,7 @@ class Lx_kit::Slab_backend_alloc : public Lx::Slab_backend_alloc,
 	public:
 
 		Slab_backend_alloc(Genode::Env &env, Genode::Allocator &md_alloc,
-		                   Genode::Cache_attribute cached)
+		                   Genode::Cache cached)
 		:
 			Rm_connection(env),
 			Region_map_client(Rm_connection::create(VM_SIZE)),
@@ -170,7 +170,7 @@ class Lx_kit::Malloc : public Lx::Malloc
 
 		Slab_backend_alloc                &_back_allocator;
 		Genode::Constructible<Slab_alloc>  _allocator[NUM_SLABS];
-		Genode::Cache_attribute            _cached; /* cached or un-cached memory */
+		Genode::Cache                      _cached; /* cached or un-cached memory */
 		addr_t                             _start;  /* VM region of this allocator */
 		addr_t                             _end;
 
@@ -217,7 +217,7 @@ class Lx_kit::Malloc : public Lx::Malloc
 
 	public:
 
-		Malloc(Slab_backend_alloc &alloc, Genode::Cache_attribute cached)
+		Malloc(Slab_backend_alloc &alloc, Genode::Cache cached)
 		:
 			_back_allocator(alloc), _cached(cached), _start(alloc.start()),
 			_end(alloc.end())

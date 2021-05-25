@@ -189,7 +189,7 @@ struct Dma_wc_dataspace : Genode::Attached_ram_dataspace,
 	: Genode::Attached_ram_dataspace(Lx_kit::env().env.ram(),
 	                                 Lx_kit::env().env.rm(),
 	                                 size,
-	                                 Genode::Cache_attribute::WRITE_COMBINED) { }
+	                                 Genode::Cache::WRITE_COMBINED) { }
 };
 
 
@@ -434,9 +434,36 @@ Lx_dma lx_emul_get_dma_address_for_page(void *as, void *p)
 #include <lx_kit/irq.h>
 
 #include <base/attached_dataspace.h>
-#include <platform_session/connection.h>
+#include <platform_session/device.h>
 
 enum Device_id { DEV_UNKNOWN, DEV_GPU3D, };
+
+
+namespace Platform { struct Device_client; }
+
+
+struct Platform::Device_client : Rpc_client<Device_interface>
+{
+	Device_client(Capability<Device_interface> cap)
+		: Rpc_client<Device_interface>(cap) { }
+
+	Irq_session_capability irq(unsigned id = 0)
+	{
+		return call<Rpc_irq>(id);
+	}
+
+	Io_mem_session_capability io_mem(unsigned id, Range &range, Cache cache)
+	{
+		return call<Rpc_io_mem>(id, range, cache);
+	}
+
+	Dataspace_capability io_mem_dataspace(unsigned id = 0)
+	{
+		Range range { };
+		return Io_mem_session_client(io_mem(id, range, UNCACHED)).dataspace();
+	}
+};
+
 
 namespace Lx_kit {
 	Platform::Connection    & platform_connection();
@@ -455,8 +482,7 @@ Platform::Device_client & Lx_kit::platform_device(Device_id id)
 {
 	if (id == DEV_GPU3D) {
 		static Platform::Device_client gpu3d {
-			platform_connection().device_by_property("compatible",
-			                                         "vivante,gc") };
+			platform_connection().device_by_type("vivante,gc") };
 			platform_connection().update();
 		return gpu3d;
 	}
