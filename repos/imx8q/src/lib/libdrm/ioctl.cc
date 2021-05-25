@@ -285,6 +285,11 @@ class Drm_call
 				size += payload_size;
 			}
 
+			if (device_number(request) == DRM_ETNAVIV_GEM_CPU_PREP) {
+				struct drm_etnaviv_gem_cpu_prep *v = reinterpret_cast<struct drm_etnaviv_gem_cpu_prep*>(arg);
+				Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_CPU_PREP: handle: ", v->handle);
+			}
+
 			/* submit */
 			Drm::Session::Tx::Source &src = *_drm_session.tx();
 			Drm::Packet_descriptor p { src.alloc_packet(size), lx_request };
@@ -317,6 +322,11 @@ class Drm_call
 				Genode::log(__func__, ":", __LINE__, ": OUT request: ", command_name(request),
 				            " size: ", size, " arg: ", arg);
 				Genode::memcpy(arg, src.packet_content(p), size);
+
+				if (device_number(request) == DRM_ETNAVIV_GEM_NEW) {
+					struct drm_etnaviv_gem_new *v = reinterpret_cast<struct drm_etnaviv_gem_new*>(arg);
+					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_NEW: handle: ", v->handle);
+				}
 			}
 
 			src.release_packet(p);
