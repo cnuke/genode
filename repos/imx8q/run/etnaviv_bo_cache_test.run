@@ -1,0 +1,34 @@
+source ${genode_dir}/repos/imx8q/run/imx8q_gpu.inc
+
+append config {
+
+	<start name="test-etnaviv_bo_cache_test" caps="100">
+		<resource name="RAM" quantum="4M"/>
+		<config ld_verbose="yes">
+			<libc stdout="/dev/log" stdin="/dev/null" stderr="/dev/log"/>
+			<arg value="etnaviv_bo_cache_test"/>
+			<arg value="/dev/dri/render0"/>
+			<vfs>
+				<dir name="dev"> <log/> <null/> </dir>
+			</vfs>
+		</config>
+		<route>
+			<service name="Drm"> <child name="imx8q_gpu_drv"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+</config>}
+
+append build_components {
+	test/etnaviv_bo_cache_test
+}
+
+append boot_modules {
+	test-etnaviv_bo_cache_test
+}
+
+build $build_components
+install_config $config
+build_boot_image $boot_modules
+run_genode_until forever
