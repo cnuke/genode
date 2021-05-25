@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <lx_emul_cc.h>
+
 #include_next <asm/uaccess.h>
 
 #undef access_ok
