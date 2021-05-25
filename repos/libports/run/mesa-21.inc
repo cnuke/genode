@@ -220,7 +220,7 @@ set boot_modules {
 	egl-21.lib.so mesa-21.lib.so stdcxx.lib.so
 	expat.lib.so glapi-21.lib.so zlib.lib.so
 	core init ld.lib.so timer egl_swrast-21.lib.so
-	libdrm-etnaviv.lib.so
+	drm.lib.so
 }
 
 append_if $use_i965 boot_modules {

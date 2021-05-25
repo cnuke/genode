@@ -1,5 +1,5 @@
-SHARED_LIB = yes
-LIBS       = libc stdcxx zlib expat glapi-21 softpipe etnaviv mesa-21_api libdrm-etnaviv
+SHARED_LIB := yes
+LIBS       += libc stdcxx zlib expat glapi-21 softpipe mesa-21_api
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 
@@ -444,7 +444,6 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/frontends/dri/dri_screen.c \
          gallium/frontends/dri/drisw.c \
          gallium/targets/dri/target.c \
-         gallium/winsys/etnaviv/drm/etnaviv_drm_winsys.c \
          gallium/winsys/sw/dri/dri_sw_winsys.c \
          gallium/winsys/sw/null/null_sw_winsys.c \
          gallium/winsys/sw/wrapper/wrapper_sw_winsys.c \
