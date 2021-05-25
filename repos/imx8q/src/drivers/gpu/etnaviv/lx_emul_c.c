@@ -762,8 +762,10 @@ int drm_dev_init(struct drm_device *dev, struct drm_driver *driver,
 	mutex_init(&dev->ctxlist_mutex);
 	mutex_init(&dev->master_mutex);
 
-	// if (drm_gem_init(dev) != 0)
-	// 	DRM_ERROR("Cannot initialize graphics execution manager (GEM)\n");
+	if (drm_gem_init(dev)) {
+		lx_emul_printf("Error: cannot initialize GEM\n");
+		return -1;
+	}
 
 	return 0;
 }
@@ -1234,6 +1236,10 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode     = OPEN_FMODE(flags);
 	f->f_mode    |= FMODE_OPENED;
 
+	// XXX lookup dataspace cap later on for drm_mmap
+	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu\n",
+	               __func__, __LINE__, f, mapping, size);
+
 	return f;
 
 err_as:
@@ -1270,3 +1276,24 @@ struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
 
 struct cpumask __cpu_online_mask   = { .bits[0] = 1 };
 struct cpumask __cpu_possible_mask = { .bits[0] = 1 };
+
+
+#include <linux/file.h>
+
+void fput(struct file *file)
+{
+	lx_emul_trace(__func__);
+	if (atomic_long_sub_and_test(1, &file->f_count)) {
+		lx_emul_printf("%s: file: %p f_count 0, leaking\n",
+		               __func__, file);
+	}
+}
+
+
+#include <linux/rcupdate.h>
+
+void call_rcu(struct rcu_head *head, rcu_callback_t func)
+{
+	lx_emul_trace(__func__);
+	func(head);
+}

@@ -79,14 +79,6 @@ void __warn_printk(const char * fmt,...)
 }
 
 
-#include <linux/rcupdate.h>
-
-void call_rcu(struct rcu_head * head,rcu_callback_t func)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/workqueue.h>
 
 bool cancel_delayed_work_sync(struct delayed_work * dwork)
@@ -883,14 +875,6 @@ void finish_wait(struct wait_queue_head * wq_head,struct wait_queue_entry * wq_e
 #include <linux/workqueue.h>
 
 void flush_workqueue(struct workqueue_struct * wq)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/file.h>
-
-void fput(struct file * file)
 {
 	lx_emul_trace_and_stop(__func__);
 }
