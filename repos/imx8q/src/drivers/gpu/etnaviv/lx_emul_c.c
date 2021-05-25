@@ -801,6 +801,9 @@ struct drm_device *drm_dev_alloc(struct drm_driver *driver,
 }
 
 
+#include <drivers/gpu/drm/drm_internal.h>
+
+
 int drm_dev_init(struct drm_device *dev, struct drm_driver *driver,
                  struct device *parent)
 {
@@ -1007,8 +1010,8 @@ static int __wake_function(struct wait_queue_entry *wq_entry,
 	LX_TRACE_PRINT("%s:%d wq_entry: %px mode: %x sync: %d key: %px called\n",
 	               __func__, __LINE__, wq_entry, mode, sync, key);
 	if (wq_entry->private) {
-		LX_TRACE_PRINT("unblock: ", (void*)wq_entry->private);
-		lx_emul_unblock_task(wq_entry->private);
+		LX_TRACE_PRINT("unblock: %px", (void*)wq_entry->private);
+		lx_emul_unblock_task((unsigned long)wq_entry->private);
 	}
 	return 0;
 }
@@ -1060,11 +1063,11 @@ void __wake_up(struct wait_queue_head *wq_head, unsigned int mode,
 	curr = list_first_entry(&wq_head->head, wait_queue_entry_t, entry); 
 
 	if (&curr->entry == &wq_head->head)
-		return nr_exclusive;
+		return; //nr_exclusive;
 
 	list_for_each_entry_safe_from(curr, next, &wq_head->head, entry) {
 		unsigned flags = curr->flags;
-		int ret = curr->func(curr, mode, 0, key);
+		(void)curr->func(curr, mode, 0, key);
 	}
 }
 
@@ -1272,7 +1275,7 @@ int kthread_park(struct task_struct *k)
 
 	if (task == current_task) {
 		lx_emul_printf("%s:%d cannot park myself: %px\n",
-		               __func__, __LINE__);
+		               __func__, __LINE__, (void*)task);
 		lx_emul_trace_and_stop(__func__);
 	}
 
@@ -1492,7 +1495,7 @@ void *vmap(struct page **pages, unsigned int count, unsigned long flags,
 		p = pages[i];
 
 		if (p->mapping != mapping || (p->index - 1 != index)) {
-			lx_emul_printf("%s: page[%u]: %px not continous\n", i, p);
+			lx_emul_printf("%s: page[%u]: %px not continous\n", __func__, i, p);
 			lx_emul_trace_and_stop(__func__);
 		}
 
@@ -1665,7 +1668,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode    |= FMODE_OPENED;
 
 	// XXX lookup dataspace cap later on for drm_mmap
-	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu dma: (0x%x, 0x%x)\n",
+	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu dma: (0x%lx, 0x%lx)\n",
 	               __func__, __LINE__, f, mapping, size, lx_dma.vaddr, lx_dma.paddr);
 
 	return f;
