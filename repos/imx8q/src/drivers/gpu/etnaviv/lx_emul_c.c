@@ -1087,8 +1087,8 @@ void *dma_alloc_attrs(struct device *dev, size_t size, dma_addr_t *dma_handle,
 		return NULL;
 	}
 
-	lx_emul_printf("%s:%d paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
-	               lx_dma.paddr, lx_dma.vaddr);
+	lx_emul_printf("%s:%d size: %zu paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
+	               size, lx_dma.paddr, lx_dma.vaddr);
 
 	*dma_handle = lx_dma.paddr;
 	return (void*)lx_dma.vaddr;

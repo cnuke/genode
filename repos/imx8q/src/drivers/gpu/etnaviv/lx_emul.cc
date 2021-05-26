@@ -189,7 +189,7 @@ struct Dma_wc_dataspace : Genode::Attached_ram_dataspace,
 	: Genode::Attached_ram_dataspace(Lx_kit::env().env.ram(),
 	                                 Lx_kit::env().env.rm(),
 	                                 size,
-	                                 Genode::Cache::WRITE_COMBINED) { }
+	                                 Genode::Cache::UNCACHED) { }
 };
 
 
@@ -202,10 +202,7 @@ static Genode::List<Dma_wc_dataspace> &_dma_wc_ds_list()
 
 Lx_dma lx_emul_dma_alloc_attrs(void const *dev, unsigned long size, int wc)
 {
-	if (!wc) {
-		Genode::warning("non write-combined DMA memory requested, from: ",
-		                __builtin_return_address(0));
-	}
+	(void)wc;
 
 	try {
 		Dma_wc_dataspace *dma_wc_ds = new (Lx::Malloc::mem()) Dma_wc_dataspace(size);
