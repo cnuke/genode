@@ -179,43 +179,56 @@ void Drm::serialize(drm_etnaviv_gem_submit *submit, char *content)
 	offset += sizeof (*submit);
 
 	/* next are the buffer-objects */
-	start = reinterpret_cast<__u64>(content) + offset;
-	auto copy_bos = [&] (drm_etnaviv_gem_submit_bo const *bo) {
-		char * const dst = content + offset;
-		Genode::memcpy(dst, bo, sizeof (*bo));
-		offset += sizeof (*bo);
-	};
-	for_each_object((drm_etnaviv_gem_submit_bo*)submit->bos,
-	                submit->nr_bos, copy_bos);
-	submit->bos = reinterpret_cast<__u64>(start);
+	if (submit->nr_bos) {
+		start = reinterpret_cast<__u64>(content) + offset;
+		auto copy_bos = [&] (drm_etnaviv_gem_submit_bo const *bo) {
+			Genode::warning("bo: ", bo, " presumed: ", Genode::Hex(bo->presumed));
+			char * const dst = content + offset;
+			Genode::memcpy(dst, bo, sizeof (*bo));
+			offset += sizeof (*bo);
+		};
+		for_each_object((drm_etnaviv_gem_submit_bo*)submit->bos,
+		                submit->nr_bos, copy_bos);
+		Genode::warning("nr_bos: ", submit->nr_bos, " bos: ", Genode::Hex(submit->bos), " -> ", Genode::Hex(start));
+		submit->bos = reinterpret_cast<__u64>(start);
+	}
 
 	/* next are the relocs */
-	start = reinterpret_cast<__u64>(content) + offset;
-	auto copy_relocs = [&] (drm_etnaviv_gem_submit_reloc const *reloc) {
-		char * const dst = content + offset;
-		Genode::memcpy(dst, reloc, sizeof (*reloc));
-		offset += sizeof (*reloc);
-	};
-	for_each_object((drm_etnaviv_gem_submit_reloc*)submit->relocs,
-	                submit->nr_relocs, copy_relocs);
-	submit->relocs = reinterpret_cast<__u64>(start);
+	if (submit->nr_relocs) {
+		start = reinterpret_cast<__u64>(content) + offset;
+		auto copy_relocs = [&] (drm_etnaviv_gem_submit_reloc const *reloc) {
+			Genode::warning("reloc: ", reloc, " submit_offset: ", Genode::Hex(reloc->submit_offset),
+			                "reloc_offset: ", Genode::Hex(reloc->reloc_offset));
+			char * const dst = content + offset;
+			Genode::memcpy(dst, reloc, sizeof (*reloc));
+			offset += sizeof (*reloc);
+		};
+		for_each_object((drm_etnaviv_gem_submit_reloc*)submit->relocs,
+		                submit->nr_relocs, copy_relocs);
+		Genode::warning("nr_relocs: ", submit->nr_relocs, " relocs: ", Genode::Hex(submit->relocs), " -> ", Genode::Hex(start));
+		submit->relocs = reinterpret_cast<__u64>(start);
+	}
 
 	/* next are the pmrs */
-	start = reinterpret_cast<__u64>(content) + offset;
-	auto copy_pmrs = [&] (drm_etnaviv_gem_submit_pmr const *pmr) {
-		char * const dst = content + offset;
-		Genode::memcpy(dst, pmr, sizeof (*pmr));
-		offset += sizeof (*pmr);
-	};
-	for_each_object((drm_etnaviv_gem_submit_pmr*)submit->pmrs,
-	                submit->nr_pmrs, copy_pmrs);
-	submit->pmrs = reinterpret_cast<__u64>(start);
+	if (submit->nr_pmrs) {
+		start = reinterpret_cast<__u64>(content) + offset;
+		auto copy_pmrs = [&] (drm_etnaviv_gem_submit_pmr const *pmr) {
+			char * const dst = content + offset;
+			Genode::memcpy(dst, pmr, sizeof (*pmr));
+			offset += sizeof (*pmr);
+		};
+		for_each_object((drm_etnaviv_gem_submit_pmr*)submit->pmrs,
+		                submit->nr_pmrs, copy_pmrs);
+		Genode::warning("pmrs: ", Genode::Hex(submit->pmrs), " -> ", Genode::Hex(start));
+		submit->pmrs = reinterpret_cast<__u64>(start);
+	}
 
 	/* next is the cmd stream */
 	start = reinterpret_cast<__u64>(content) + offset;
 	char * const dst = content + offset;
 	Genode::memcpy(dst, reinterpret_cast<void const*>(submit->stream), submit->stream_size);
 	offset += submit->stream_size;
+	Genode::warning("stream_size: ", submit->stream_size, " stream: ", Genode::Hex(submit->stream), " -> ", Genode::Hex(start));
 	submit->stream = reinterpret_cast<__u64>(start);
 
 	/* copy submit object last but into the front
@@ -299,10 +312,9 @@ class Drm_call
 			 * addresses in the submit object.
 			 */
 			if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
-				Genode::error(__func__, ": serialize submit buffer");
-
 				drm_etnaviv_gem_submit *submit =
 					reinterpret_cast<drm_etnaviv_gem_submit*>(arg);
+				Genode::error(__func__, ": serialize submit buffer fence: ", submit->fence, " fence_fd: ", submit->fence_fd);
 				char *content = src.packet_content(p);
 				Drm::serialize(submit, content);
 			} else
@@ -311,6 +323,11 @@ class Drm_call
 				Genode::log(__func__, ":", __LINE__, ": IN request: ", command_name(request),
 				            " size: ", size, " arg: ", arg);
 				Genode::memcpy(src.packet_content(p), arg, size);
+
+				if (device_number(request) == DRM_ETNAVIV_GEM_INFO) {
+					struct drm_etnaviv_gem_info *v = reinterpret_cast<struct drm_etnaviv_gem_info*>(arg);
+					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_INFO: handle: ", v->handle);
+				}
 			}
 
 			src.submit_packet(p);
@@ -323,9 +340,22 @@ class Drm_call
 				            " size: ", size, " arg: ", arg);
 				Genode::memcpy(arg, src.packet_content(p), size);
 
+				if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
+
+					drm_etnaviv_gem_submit *submit =
+						reinterpret_cast<drm_etnaviv_gem_submit*>(arg);
+					Genode::error(__func__, ": deserialize submit buffer fence: ",
+					submit->fence, " fence_fd: ", submit->fence_fd);
+				}
+
 				if (device_number(request) == DRM_ETNAVIV_GEM_NEW) {
 					struct drm_etnaviv_gem_new *v = reinterpret_cast<struct drm_etnaviv_gem_new*>(arg);
 					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_NEW: handle: ", v->handle);
+				}
+				if (device_number(request) == DRM_ETNAVIV_GEM_INFO) {
+					struct drm_etnaviv_gem_info *v = reinterpret_cast<struct drm_etnaviv_gem_info*>(arg);
+					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_INFO: handle: ", v->handle,
+					            " offset: ", Genode::Hex(v->offset));
 				}
 			}
 
