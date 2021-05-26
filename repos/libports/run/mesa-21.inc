@@ -71,8 +71,8 @@ set config {
 		</route>
 	</start>
 
-	<start name="drivers" caps="1500" managing_system="yes">
-		<resource name="RAM" quantum="64M"/>
+	<start name="drivers" caps="2500" managing_system="yes">
+		<resource name="RAM" quantum="128M"/>
 		<binary name="init"/>
 		<provides> <service name="Platform"/> </provides>
 		<route>
