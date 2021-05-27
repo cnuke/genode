@@ -20,6 +20,8 @@
 /* local includes */
 #include <lx_emul.h>
 
+#include <lx_kit/scheduler.h>
+
 namespace Lx {
 	class Console;
 	class String_console;
@@ -309,8 +311,32 @@ class Lx::Console
 			return _inst;
 		}
 
+		unsigned backtrace()
+		{
+			unsigned depth = 0;
+			unsigned long *fp;
+			asm volatile ("mov %0, x29" : "=r"(fp) ::);
+
+			while (fp) {
+				unsigned long ip = fp[1];
+				fp = (unsigned long*) fp[0];
+
+				depth++;
+			}
+			return depth;
+		}
+
+
 		void vprintf(const char *format, va_list list)
 		{
+			if (Lx::scheduler().current()) {
+				_out_string(Lx::scheduler().current()->name());
+			}
+			unsigned const d = backtrace();
+			for (unsigned i = 0; i < d; i++) {
+				_out_char(' ');
+			}
+
 			while (*format) {
 
 				/* eat and output plain characters */

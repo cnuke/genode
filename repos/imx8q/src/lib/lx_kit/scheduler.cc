@@ -106,7 +106,7 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 		{
 			if (!_current) {
 				Genode::error("BUG: _current is zero!");
-				Genode::sleep_forever();
+				// Genode::sleep_forever();
 			}
 
 			return _current;
