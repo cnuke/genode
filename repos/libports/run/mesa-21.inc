@@ -205,6 +205,7 @@ append_if $use_etnaviv config {
 		<provides> <service name="Drm"/> </provides>
 		<route>
 			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Gui"> <child name="nitpicker"/> </service>
 			<service name="Platform"> <child name="drivers"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
