@@ -1,5 +1,5 @@
 SHARED_LIB = yes
-LIBS       = base libc egl-21
+LIBS       = base libc egl-21 libdrm-etnaviv
 
 include $(REP_DIR)/lib/mk/mesa-common-21.inc
 

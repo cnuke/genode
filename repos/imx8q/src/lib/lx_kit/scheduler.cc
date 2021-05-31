@@ -105,7 +105,7 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 		Lx::Task *current() override
 		{
 			if (!_current) {
-				Genode::error("BUG: _current is zero!");
+				// Genode::error("BUG: _current is zero!");
 				// Genode::sleep_forever();
 			}
 
@@ -155,7 +155,7 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 					/* update current before running task */
 					_current = t;
 
-					Genode::error(__func__, ": run: ", _current->name(), " ----------");
+					// Genode::error(__func__, ": run: ", _current->name(), " ----------");
 					if ((was_run = t->run())) {
 						at_least_one = true;
 						break;
@@ -173,7 +173,7 @@ class Lx_kit::Scheduler : public Lx::Scheduler
 			/* clear current as no task is running */
 			_current = nullptr;
 
-			Genode::error("return to EP");
+			// Genode::error("return to EP");
 		}
 
 		void log_state(char const *prefix) override

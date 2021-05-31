@@ -21,6 +21,7 @@ if {$use_etnaviv} {
 lappend imports [depot_user]/pkg/drivers_managed-[board]
 }
 lappend imports [depot_user]/src/nitpicker
+lappend imports [depot_user]/src/gui_fb
 lappend imports [depot_user]/src/demo
 lappend imports [depot_user]/src/report_rom
 
@@ -102,10 +103,10 @@ set config {
 	<start name="pointer">
 		<resource name="RAM" quantum="1M"/>
 	</start>
-	<start name="liquid_fb" caps="200">
+	<start name="gui_fb" caps="200">
 		<resource name="RAM" quantum="16M"/>
 		<provides> <service name="Framebuffer"/> <service name="Input"/> </provides>
-		<config resize_handle="off" animate="off" title="gears" width="600" height="600" xpos="100" ypos="100"/>
+		<config resize_handle="off" animate="off" title="gears" width="600" height="600" xpos="800" ypos="100"/>
 		<route>
 		<any-service> <parent/> <any-child/> </any-service>
 		</route>

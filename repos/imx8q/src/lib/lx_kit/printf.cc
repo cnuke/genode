@@ -510,16 +510,16 @@ class Lx::String_console : public Lx::Console
 
 void lx_emul_printf(char const *fmt, ...)
 {
-	va_list va;
-	va_start(va, fmt);
-	Lx::Console::c().vprintf(fmt, va);
-	va_end(va);
+	// va_list va;
+	// va_start(va, fmt);
+	// Lx::Console::c().vprintf(fmt, va);
+	// va_end(va);
 }
 
 
 void lx_emul_vprintf(char const *fmt, va_list va)
 {
-	Lx::Console::c().vprintf(fmt, va);
+	// Lx::Console::c().vprintf(fmt, va);
 }
 
 

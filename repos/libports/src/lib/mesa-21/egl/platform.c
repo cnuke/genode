@@ -26,11 +26,13 @@
 EGLBoolean dri2_genode_swap_interval(_EGLDisplay *disp,
                                      _EGLSurface *surf, EGLint interval)
 {
+	EGLint orig_interval = interval;
 	if (interval > surf->Config->MaxSwapInterval)
 		interval = surf->Config->MaxSwapInterval;
 	else if (interval < surf->Config->MinSwapInterval)
 		interval = surf->Config->MinSwapInterval;
 
+	printf("%s:%d interval: %d -> %d\n", __func__, __LINE__, orig_interval, interval);
 	surf->SwapInterval = interval;
 
 	return EGL_TRUE;
@@ -43,6 +45,7 @@ _create_surface(_EGLDisplay *disp,
                 const EGLint *attrib_list,
                 enum Surface_type type)
 {
+	printf("%s:%d START\n", __func__, __LINE__);
 	struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
 	struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
 	struct Genode_egl_window  *window = native_window;
@@ -77,7 +80,7 @@ _create_surface(_EGLDisplay *disp,
 
 	printf("%s:%d\n", __func__, __LINE__);
 	if (dri2_dpy->image_driver) {
-	printf("%s:%d\n", __func__, __LINE__);
+		printf("%s:%d image_driver\n", __func__, __LINE__);
 		/* create back buffer image */
 		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
@@ -86,7 +89,7 @@ _create_surface(_EGLDisplay *disp,
 		                                                     dri2_dpy->is_different_gpu ?
 		                                                     0 : __DRI_IMAGE_USE_SHARE,
 		                                                     NULL);
-	printf("%s:%d\n", __func__, __LINE__);
+		printf("%s:%d\n", __func__, __LINE__);
 		dri2_surf->dri_drawable =
 			dri2_dpy->image_driver->createNewDrawable(dri2_dpy->dri_screen, config,
 			                                          dri2_surf);
@@ -121,6 +124,7 @@ _create_surface(_EGLDisplay *disp,
 	dri2_genode_swap_interval(disp, &dri2_surf->base,
 	                          dri2_dpy->default_swap_interval);
 
+	printf("%s:%d END\n", __func__, __LINE__);
 	return &dri2_surf->base;
 
 cleanup_dri_drawable:
@@ -139,6 +143,7 @@ dri2_genode_create_window_surface(_EGLDisplay *disp,
                                   _EGLConfig *conf, void *native_window,
                                   const EGLint *attrib_list)
 {
+	printf("%s:%d\n", __func__, __LINE__);
 	return _create_surface(disp, conf, native_window, attrib_list, WINDOW);
 }
 
@@ -148,6 +153,7 @@ dri2_genode_create_pixmap_surface(_EGLDisplay *dpy,
                                   _EGLConfig *conf, void *native_pixmap,
                                   const EGLint *attrib_list)
 {
+	printf("%s:%d\n", __func__, __LINE__);
 	return _create_surface(dpy, conf, native_pixmap, attrib_list, PIXMAP);
 }
 

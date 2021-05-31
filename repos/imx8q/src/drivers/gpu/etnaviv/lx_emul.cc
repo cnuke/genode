@@ -848,12 +848,64 @@ void lx_emul_announce_drm_session(void)
 }
 
 
+static void *bo_vaddr;
+
+
+extern "C" void *viewer_fb_addr(void);
+extern "C" void viewer_refresh(void);
+
+
+extern "C" void copy_bo_to_viewer(void)
+{
+	static unsigned long offset = 0;
+	void *dst = viewer_fb_addr();
+	if (!dst || !bo_vaddr) {
+		Genode::error(__func__, ": invalid pointer <<<< ", bo_vaddr, " dst: ", dst);
+		return;
+	}
+	// Genode::memset(dst, 0xa5, 600 * 600 * 4);
+	// Genode::memcpy(dst, bo_vaddr, 600 * 598 * 4);
+
+#if 1
+	size_t const target_size = 600 * 600 * 4;
+	for (offset = 0; offset < 6291456; offset += target_size) {
+		size_t const copy_size = 6291456 - offset;
+
+		Genode::error(__func__, ": bo_vaddr: ", bo_vaddr, " offset: ", offset, " copy: ", bo_vaddr + offset, " dst: ", dst,
+					  " copy_size: ", copy_size);
+		// Genode::memset(dst, 0xa5, target_size);
+		Genode::memcpy(dst, bo_vaddr + offset, target_size > copy_size ? copy_size : target_size);
+		// offset += target_size;
+		// if (offset >= 6291456) {
+		// 	offset = 0;
+		// }
+		viewer_refresh();
+		lx_emul_usleep(20*1000);
+	}
+#endif
+}
+
+
 Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long offset, unsigned long size)
 {
 	void *as = genode_lookup_mapping_from_offset(offset, size);
 	if (!as) {
 		return Genode::Ram_dataspace_capability();
 	}
+
+	(void)viewer_fb_addr();
+
+	Genode::error(__func__, ": offset: ", Genode::Hex(offset));
+
+	// 4
+	// bool map_fb_bo = offset == 0x100081000;
+	// 6
+	// bool map_fb_bo = offset == 0x100541000;
+	// 7 for triangle
+	bool map_fb_bo = offset == 0x100b41000;
+	// 9 for gears
+	// bool map_fb_bo = offset == 0x100c61000;
+
 	
 	Mapping *mp = nullptr;
 	_mapping_registry().for_each([&mp, as] (Mapping &m) {
@@ -868,6 +920,9 @@ Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long offset, u
 
 	for (Dma_wc_dataspace *ds = _dma_wc_ds_list().first(); ds; ds = ds->next()) {
 		if (ds->local_addr<void>() == (void*)mp->dma.vaddr) {
+			if (map_fb_bo) {
+				bo_vaddr = ds->local_addr<void>();
+			}
 			return ds->cap();
 		}
 	}

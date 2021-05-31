@@ -26,6 +26,23 @@
  */
 #include <platform.h>
 
+// #include <GL/internal/dri_interface.h>
+// #include <etnaviv/drm/etnaviv_drmif.h>
+
+// void *genode_map_image(__DRIimage *image)
+// {
+// 	/* map read only */
+// 	void *buf = etna_bo_map(image->bo);
+// 	etna_bo_cpu_prep(image->bo, DRM_ETNA_PREP_READ);
+// 	return buf;
+// }
+
+
+// void genode_unmap_image(__DRIimage *image)
+// {
+// 	etna_bo_cpu_fini(image->bo);
+// }
+
 
 static int stride(int value)
 {
@@ -34,10 +51,56 @@ static int stride(int value)
 }
 
 
+static void
+dri2_genode_etnaviv_put_image(__DRIdrawable * draw, int op,
+                             int x, int y, int w, int h,
+                             char *data, void *loaderPrivate)
+{
+	printf("%s:%d\n", __func__, __LINE__);
+	struct dri2_egl_surface *dri2_surf  = loaderPrivate;
+	struct dri2_egl_display *dri2_dpy   = dri2_egl_display(dri2_surf->base.Resource.Display);
+	struct Genode_egl_window  *window   = dri2_surf->g_win;
+	unsigned char *dst                 = window->addr;
+
+	int src_stride;
+	int dst_stride = stride(dri2_surf->base.Width);
+	dri2_dpy->image->queryImage(dri2_surf->back_image, __DRI_IMAGE_ATTRIB_STRIDE, &src_stride);
+
+	memcpy(dst, data, 600*600*4);
+	/* copy to frame buffer and refresh */
+	// tiled_to_linear(0, dst_stride,
+	//                 0, h,
+	//                 (char *)dst, data,
+	//                 dst_stride, src_stride,
+	//                 false, 1, memcpy);
+}
+
+
+extern void dump_backtrace(void);
+
+static char _data[600*600*4];
+
 static EGLBoolean
 dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 {
-	return EGL_FALSE;
+	printf("%s:%d\n", __func__, __LINE__);
+	dump_backtrace();
+
+	struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
+
+	// // genode_drm_complete();
+	
+	static unsigned char c = 0x30;
+	memset(_data, c, sizeof (_data));
+	c = c + 10;
+
+	// void *data = genode_map_image(dri2_surf->back_image);
+	dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
+		dri2_surf->base.Width, dri2_surf->base.Height,
+		(char *)_data, (void *)dri2_surf);
+
+	// genode_unmap_image(dri2_surf->back_image);
+	return EGL_TRUE;
 }
 
 
@@ -57,6 +120,7 @@ dri2_genode_etnaviv_get_image(__DRIdrawable * read,
                              int x, int y, int w, int h,
                              char *data, void *loaderPrivate)
 {
+	printf("%s:%d\n", __func__, __LINE__);
 	struct dri2_egl_surface *dri2_surf  = loaderPrivate;
 	struct Genode_egl_window  *window   = dri2_surf->g_win;
 	unsigned char * src                 = window->addr;
@@ -81,14 +145,6 @@ dri2_genode_etnaviv_get_image(__DRIdrawable * read,
 
 	/* copy to surface */
 	genode_blit(src, src_stride, data, dst_stride, copy_width, h);
-}
-
-
-static void
-dri2_genode_etnaviv_put_image(__DRIdrawable * draw, int op,
-                             int x, int y, int w, int h,
-                             char *data, void *loaderPrivate)
-{
 }
 
 

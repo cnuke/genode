@@ -25,11 +25,19 @@ extern "C" {
 #include <etnaviv_drm.h>
 #include <libdrm_macros.h>
 
+#include <os/backtrace.h>
+
 #define DRM_NUMBER(req) ((req) & 0xff)
 }
 
 
 enum { verbose_ioctl = true };
+
+
+extern "C" void dump_backtrace(void)
+{
+	Genode::backtrace();
+}
 
 
 /**
@@ -327,6 +335,12 @@ class Drm_call
 				if (device_number(request) == DRM_ETNAVIV_GEM_INFO) {
 					struct drm_etnaviv_gem_info *v = reinterpret_cast<struct drm_etnaviv_gem_info*>(arg);
 					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_INFO: handle: ", v->handle);
+				}
+
+				if (device_number(request) == DRM_ETNAVIV_GEM_NEW) {
+					struct drm_etnaviv_gem_new *v = reinterpret_cast<struct drm_etnaviv_gem_new*>(arg);
+					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_NEW: size: ", v->size,
+					            " flags: ", Genode::Hex(v->flags));
 				}
 			}
 
