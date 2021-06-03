@@ -193,32 +193,32 @@ Sup::Handle_exit_result Sup::Svm::handle_exit(Vcpu_state &state)
 	case SVM_EXIT_WBINVD:
 		Assert(state.actv_state.value() == VMX_VMCS_GUEST_ACTIVITY_ACTIVE);
 		Assert(!VMX_EXIT_INT_INFO_IS_VALID(state.inj_info.value()));
-		return { Exit_state::DEFAULT, VINF_EM_RAW_EMULATE_INSTR };
+		return { Exit_state::DEFAULT, exit, VINF_EM_RAW_EMULATE_INSTR };
 
 	case SVM_EXIT_VINTR:
-		return { Exit_state::IRQ_WINDOW, VINF_SUCCESS };
+		return { Exit_state::IRQ_WINDOW, exit, VINF_SUCCESS };
 
 	case VCPU_SVM_NPT:
-		return { Exit_state::NPT_EPT, VINF_EM_RAW_EMULATE_INSTR };
+		return { Exit_state::NPT_EPT, exit, VINF_EM_RAW_EMULATE_INSTR };
 
 	case VCPU_PAUSED:
-		return { Exit_state::PAUSED, VINF_SUCCESS };
+		return { Exit_state::PAUSED, exit, VINF_SUCCESS };
 
 	case VCPU_STARTUP:
-		return { Exit_state::STARTUP, VINF_SUCCESS };
+		return { Exit_state::STARTUP, exit, VINF_SUCCESS };
 
 	/* error conditions */
 
 	case VCPU_SVM_INVALID:
 		error("invalid SVM guest state - dead");
-		return { Exit_state::ERROR, VERR_EM_GUEST_CPU_HANG };
+		return { Exit_state::ERROR, exit, VERR_EM_GUEST_CPU_HANG };
 
 	case SVM_EXIT_SHUTDOWN:
 		error("unexpected SVM exit shutdown - dead");
-		return { Exit_state::ERROR, VERR_EM_GUEST_CPU_HANG };
+		return { Exit_state::ERROR, exit, VERR_EM_GUEST_CPU_HANG };
 
 	default:
-		return { Exit_state::ERROR, VERR_EM_GUEST_CPU_HANG };
+		return { Exit_state::ERROR, exit, VERR_EM_GUEST_CPU_HANG };
 	}
 }
 
