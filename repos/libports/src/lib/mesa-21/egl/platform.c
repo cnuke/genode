@@ -101,22 +101,22 @@ _create_surface(_EGLDisplay *disp,
 	printf("%s:%d is_different_gpu: %u\n", __func__, __LINE__, dri2_dpy->is_different_gpu);
 		/* create back buffer image */
 		unsigned flags = 0;
-		//flags |= __DRI_IMAGE_USE_SCANOUT; // <-- leads to pf because screen is not set
-		// flags |= __DRI_IMAGE_USE_LINEAR;
+		// flags |= __DRI_IMAGE_USE_SCANOUT; // <-- leads to pf because screen is not set
+		flags |= __DRI_IMAGE_USE_LINEAR;
 		flags |= (__DRI_IMAGE_USE_SHARE | __DRI_IMAGE_USE_BACKBUFFER);
 		dri2_surf->back_image[0] = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
-		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
+		                                                     __DRI_IMAGE_FORMAT_XRGB8888,
 															 flags,
 		                                                     NULL);
 		dri2_surf->back_image[1] = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
-		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
+		                                                     __DRI_IMAGE_FORMAT_XRGB8888,
 															 flags,
 		                                                     NULL);
-		dri2_surf->current = dri2_surf->back_image[0];
+		dri2_surf->current = dri2_surf->back_image[1];
 	printf("%s:%d back_image: [0]: %p [1]: %p\n", __func__, __LINE__, dri2_surf->back_image[0], dri2_surf->back_image[1]);
 	} else {
 	printf("%s:%d\n", __func__, __LINE__);

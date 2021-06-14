@@ -287,6 +287,31 @@ dri2_genode_get_buffers_with_format(__DRIdrawable * driDrawable,
 }
 
 
+static int
+dri2_genode_image_get_buffers(__DRIdrawable *driDrawable,
+                              unsigned int format,
+                              uint32_t *stamp,
+                              void *loaderPrivate,
+                              uint32_t buffer_mask,
+                              struct __DRIimageList *buffers)
+{
+   struct dri2_egl_surface *dri2_surf = loaderPrivate;
+   struct dri2_egl_display *dri2_dpy =
+      dri2_egl_display(dri2_surf->base.Resource.Display);
+
+   buffers->image_mask = 0;
+   buffers->front = NULL;
+   buffers->back = NULL;
+
+   printf("%s:%d\n", __func__, __LINE__);
+
+   // buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
+
+   buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
+   buffers->back = dri2_surf->current;
+
+   return 1;
+}
 
 
 static const __DRIdri2LoaderExtension dri2_loader_extension = {
@@ -298,8 +323,15 @@ static const __DRIdri2LoaderExtension dri2_loader_extension = {
 };
 
 
+static const __DRIimageLoaderExtension image_loader_extension = {
+   .base             = { __DRI_IMAGE_LOADER, 1 },
+   .getBuffers       = dri2_genode_image_get_buffers,
+   .flushFrontBuffer = dri2_genode_flush_front_buffer,
+};
+
 static const __DRIextension *dri2_loader_extensions[] = {
 	&dri2_loader_extension.base,
+	&image_loader_extension.base,
 	&image_lookup_extension.base,
 	&background_callable_extension.base,
 	NULL,
