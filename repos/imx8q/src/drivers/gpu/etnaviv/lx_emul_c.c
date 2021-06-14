@@ -149,6 +149,19 @@ void kfree(const void *x)
 }
 
 
+void *krealloc(const void *p, size_t new_size, gfp_t flags)
+{
+	lx_printk("%s: p: %px size: %zu new_size: %zu\n", __func__, p, ksize(p), new_size);
+	void *np = lx_emul_kmalloc(new_size, flags);
+	if (!np) {
+		return NULL;
+	}
+	memcpy(np, np, new_size);
+	kfree(p);
+	return np;
+}
+
+
 size_t ksize(void const *objp)
 {
 	return lx_emul_ksize(objp);
