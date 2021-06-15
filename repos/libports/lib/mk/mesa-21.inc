@@ -371,6 +371,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/indices/u_primconvert.c \
          gallium/auxiliary/nir/nir_draw_helpers.c \
          gallium/auxiliary/nir/nir_to_tgsi.c \
+         gallium/auxiliary/nir/tgsi_to_nir.c \
          gallium/auxiliary/os/os_process.c \
          gallium/auxiliary/pipe-loader/pipe_loader.c \
          gallium/auxiliary/pipe-loader/pipe_loader_drm.c \
@@ -398,6 +399,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          gallium/auxiliary/tgsi/tgsi_from_mesa.c \
          gallium/auxiliary/tgsi/tgsi_info.c \
          gallium/auxiliary/tgsi/tgsi_iterate.c \
+         gallium/auxiliary/tgsi/tgsi_lowering.c \
          gallium/auxiliary/tgsi/tgsi_parse.c \
          gallium/auxiliary/tgsi/tgsi_sanity.c \
          gallium/auxiliary/tgsi/tgsi_scan.c \
