@@ -100,11 +100,14 @@ _create_surface(_EGLDisplay *disp,
 		                                                               dri2_surf);
 	printf("%s:%d is_different_gpu: %u\n", __func__, __LINE__, dri2_dpy->is_different_gpu);
 		/* create back buffer image */
+		unsigned flags = 0;
+		// flags |= __DRI_IMAGE_USE_SCANOUT;
+		flags |= __DRI_IMAGE_USE_LINEAR;
 		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
 		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
-															 0,
+															 flags,
 		                                                     NULL);
 	printf("%s:%d back_image: %p\n", __func__, __LINE__, dri2_surf->back_image);
 	} else {
