@@ -143,6 +143,8 @@ void _eglutNativeFiniWindow(struct eglut_window *win)
 void _eglutNativeEventLoop()
 {
 	while (true) {
+		Genode::log(__func__, ":", __LINE__);
+
 		struct eglut_window *win =_eglut->current;
 
 		if (eglut_win->mode_change_pending) {
@@ -157,9 +159,13 @@ void _eglutNativeEventLoop()
 			win->display_cb();
 
 		if (eglut_win.constructed()) {
+		Genode::log(__func__, ":", __LINE__, " wait");
 			eglWaitClient();
+		Genode::log(__func__, ":", __LINE__, " wait done, swap");
 			eglSwapBuffers(_eglut->dpy, win->surface);
+			Genode::log(__func__, ":", __LINE__, " swap done, refresh");
 			eglut_win->refresh();
+			Genode::log(__func__, ":", __LINE__, " refresh done");
 		}
 	}
 }
