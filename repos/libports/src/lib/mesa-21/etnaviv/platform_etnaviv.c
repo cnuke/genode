@@ -53,16 +53,16 @@ dri2_genode_etnaviv_put_image(__DRIdrawable * draw, int op,
 
 	size_t const size = w*h*4;
 
-	printf("%s:%d geom: %dx%d dst: [%p,%p) data: [%p,%p)\n", __func__, __LINE__, w, h, dst, dst + size, data, data + size);
-	memcpy(dst, data, size);
+	// printf("%s:%d geom: %dx%d dst: [%p,%p) data: [%p,%p)\n", __func__, __LINE__, w, h, dst, dst + size, data, data + size);
+	// memcpy(dst, data, size);
 
 	// memcpy(dst, data + (600*600*4), 600*600*4);
 
-	// printf("%s:%d dst: %p data: %p src_stride: %d dst_stride: %d\n",
-	//        __func__, __LINE__, dst, data, src_stride, dst_stride);
-	// etna_texture_untile(dst, data , 0, 0,
-                    // src_stride, 600, 600,
-                    // dst_stride, 4);
+	printf("%s:%d dst: %p data: %p src_stride: %d dst_stride: %d\n",
+	       __func__, __LINE__, dst, data, src_stride, dst_stride);
+	etna_texture_untile(dst, data , 0, 0,
+                    src_stride, w, h,
+                    dst_stride, 4);
 }
 
 
@@ -86,9 +86,9 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 
 	// // genode_drm_complete();
 	
-	static unsigned char c = 0x30;
-	memset(_data, c, sizeof (_data));
-	c = c + 10;
+	// static unsigned char c = 0x30;
+	// memset(_data, c, sizeof (_data));
+	// c = c + 10;
 
 	// void *data = genode_map_image(dri2_surf->back_image);
 	// dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
