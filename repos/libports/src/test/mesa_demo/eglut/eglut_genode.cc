@@ -27,6 +27,7 @@
  */
 
 #include <base/heap.h>
+#include <base/sleep.h>
 #include <base/debug.h>
 #include <framebuffer_session/connection.h>
 #include <libc/component.h>
@@ -142,7 +143,7 @@ void _eglutNativeFiniWindow(struct eglut_window *win)
 
 void _eglutNativeEventLoop()
 {
-	while (true) {
+	do {
 		Genode::log(__func__, ":", __LINE__);
 
 		struct eglut_window *win =_eglut->current;
@@ -167,7 +168,9 @@ void _eglutNativeEventLoop()
 			eglut_win->refresh();
 			Genode::log(__func__, ":", __LINE__, " refresh done");
 		}
-	}
+	} while (true);
+
+	Genode::sleep_forever();
 }
 
 
