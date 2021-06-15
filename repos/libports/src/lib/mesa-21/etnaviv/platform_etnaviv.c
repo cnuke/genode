@@ -26,112 +26,76 @@
  */
 #include <platform.h>
 
+
 static int stride(int value)
 {
 	/* 32-bit RGB888 */
 	return value * 4;
 }
 
-extern void etna_texture_untile(void *dest, void *src, unsigned basex, unsigned basey,
-                    unsigned src_stride, unsigned width, unsigned height,
-                    unsigned dst_stride, unsigned elmtsize);
 
 static void
 dri2_genode_etnaviv_put_image(__DRIdrawable * draw, int op,
                              int x, int y, int w, int h,
                              char *data, void *loaderPrivate)
 {
-	printf("%s:%d\n", __func__, __LINE__);
 	struct dri2_egl_surface *dri2_surf  = loaderPrivate;
 	struct dri2_egl_display *dri2_dpy   = dri2_egl_display(dri2_surf->base.Resource.Display);
 	struct Genode_egl_window  *window   = dri2_surf->g_win;
-	unsigned char *dst                 = window->addr;
+	unsigned char *dst                  = window->addr;
 
 	int src_stride;
 	int dst_stride = stride(dri2_surf->base.Width);
-	dri2_dpy->image->queryImage(dri2_surf->current, __DRI_IMAGE_ATTRIB_STRIDE, &src_stride);
+	dri2_dpy->image->queryImage(dri2_surf->back_image, __DRI_IMAGE_ATTRIB_STRIDE, &src_stride);
 
-	size_t const size = w*h*4;
+	int copy_width = src_stride;
+	int x_offset = stride(x);
 
-	printf("%s:%d geom: %dx%d dst: [%p,%p) data: [%p,%p)\n", __func__, __LINE__, w, h, dst, dst + size, data, data + size);
-	memcpy(dst, data, size);
+	dst += x_offset;
+	dst += y * dst_stride;
 
-	// memcpy(dst, data + (600*600*4), 600*600*4);
+	/* copy width over stride boundary */
+	if (copy_width > dst_stride - x_offset)
+		copy_width = dst_stride - x_offset;
 
-	// printf("%s:%d dst: %p data: %p src_stride: %d dst_stride: %d\n",
-	//        __func__, __LINE__, dst, data, src_stride, dst_stride);
-	// etna_texture_untile(dst, data , 0, 0,
-                    // src_stride, w, h,
-                    // dst_stride, 4);
+	/* limit height */
+	if (h > dri2_surf->base.Height - y)
+		h = dri2_surf->base.Height - y;
+
+	/* copy to frame buffer and refresh */
+	genode_blit(data, src_stride, dst, dst_stride, copy_width, h);
 }
 
-
-extern void dump_backtrace(void);
-
-static char _data[600*600*4];
-
-#include <etnaviv/drm/etnaviv_priv.h>
-#include <etnaviv/drm/etnaviv_drmif.h>
-
-extern struct etna_bo *_frambuffer_bo;
 
 static EGLBoolean
 dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 {
-	printf("%s:%d\n", __func__, __LINE__);
-	dump_backtrace();
-
 	struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
 	struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
 
-	printf("%s:%d flush drawable\n", __func__, __LINE__);
 	dri2_flush_drawable_for_swapbuffers(disp, draw);
 	dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
-	printf("%s:%d flush drawable done\n", __func__, __LINE__);
 
 
-	// // genode_drm_complete();
-	
-	// static unsigned char c = 0x30;
-	// memset(_data, c, sizeof (_data));
-	// c = c + 10;
-
-	// void *data = genode_map_image(dri2_surf->back_image);
-	// dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
-	// 	dri2_surf->base.Width, dri2_surf->base.Height,
-	// 	(char *)_data, (void *)dri2_surf);
-	// genode_unmap_image(dri2_surf->back_image);
-
-	// if (_frambuffer_bo) {
-	// 	void *data = etna_bo_map(_frambuffer_bo);
-	// 	dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
-	// 		dri2_surf->base.Width, dri2_surf->base.Height,
-	// 		(char *)data, (void *)dri2_surf);
-	// }
+	// genode_drm_complete();
 
 	_EGLContext *ctx = _eglGetCurrentContext();
 	struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
 	void *map_data = NULL;
 	int stride;
 	void *data =
-		dri2_dpy->image->mapImage(dri2_ctx->dri_context, dri2_surf->current,
+		dri2_dpy->image->mapImage(dri2_ctx->dri_context, dri2_surf->back_image,
 		                          0, 0,
 		                          dri2_surf->base.Width,
 		                          dri2_surf->base.Height,
 		                          __DRI_IMAGE_TRANSFER_READ, &stride,
                                   &map_data);
-	printf("%s:%d stride: %d\n", __func__, __LINE__, stride);
 	if (data) {
 		dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
 			dri2_surf->base.Width, dri2_surf->base.Height,
 			(char *)data, (void *)dri2_surf);
 	}
-	dri2_dpy->image->unmapImage(dri2_ctx->dri_context, dri2_surf->current, map_data);
-
-	if (dri2_surf->current == dri2_surf->back_image[0])
-		dri2_surf->current = dri2_surf->back_image[1];
-	else if (dri2_surf->current == dri2_surf->back_image[1])
-		dri2_surf->current = dri2_surf->back_image[0];
+	dri2_dpy->image->unmapImage(dri2_ctx->dri_context, dri2_surf->back_image, map_data);
 
 	return EGL_TRUE;
 }
@@ -153,7 +117,6 @@ dri2_genode_etnaviv_get_image(__DRIdrawable * read,
                              int x, int y, int w, int h,
                              char *data, void *loaderPrivate)
 {
-	printf("%s:%d x: %d y: %d\n", __func__, __LINE__);
 	struct dri2_egl_surface *dri2_surf  = loaderPrivate;
 	struct Genode_egl_window  *window   = dri2_surf->g_win;
 	unsigned char * src                 = window->addr;
@@ -220,70 +183,15 @@ dri2_genode_flush_front_buffer(__DRIdrawable * driDrawable, void *loaderPrivate)
 }
 
 
-static void
-back_bo_to_dri_buffer(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
-{
-	static int query_once = 0;
-
-	struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
-	__DRIimage *image;
-	static int name;
-	static int pitch;
-
-	image = dri2_surf->current;
-
-	printf("%s:%d image: %p\n", __func__, __LINE__, image);
-
-	/* use dmabuf-fd as render nodes may not use GEM_FLINK */
-	dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &name);
-	dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &pitch);
-
-	printf("%s:%d image: %p name: %d\n", __func__, __LINE__, image, name);
-	buffer->attachment = __DRI_BUFFER_BACK_LEFT;
-	buffer->name = name;
-	buffer->pitch = pitch;
-	buffer->cpp = 4;
-	buffer->flags = 0;
-}
-
-
 static __DRIbuffer *
 dri2_genode_get_buffers_with_format(__DRIdrawable * driDrawable,
                                     int *width, int *height,
                                     unsigned int *attachments, int count,
                                     int *out_count, void *loaderPrivate)
 {
-	printf("%s:%d\n", __func__, __LINE__);
-
-	struct dri2_egl_surface *dri2_surf = loaderPrivate;
-	int i, j;
-
-	for (i = 0, j = 0; i < 2 * count; i += 2, j++) {
-		switch (attachments[i]) {
-		case __DRI_BUFFER_BACK_LEFT:
-			printf("%s:%d i: %d j: %d\n", __func__, __LINE__, i, j);
-			back_bo_to_dri_buffer(dri2_surf, &dri2_surf->buffers[j]);
-			break;
-		default:
-//			if (get_aux_bo(dri2_surf, attachments[i], attachments[i + 1],
-//			               &dri2_surf->buffers[j]) < 0) {
-//				_eglError(EGL_BAD_ALLOC, "failed to allocate aux buffer");
-//				return NULL;
-//			}
-			printf("ERROR: not implemented\n");
-			while (1);
-			break;
-		}
-	}
-
-	*out_count = j;
-	if (j == 0)
-		return NULL;
-
-	*width = dri2_surf->base.Width;
-	*height = dri2_surf->base.Height;
-
-	return dri2_surf->buffers;
+	_eglError(EGL_BAD_PARAMETER, "dri2_genode_get_buffers_with_format not implemented");
+	*out_count = 0;
+	return NULL;
 }
 
 
@@ -303,12 +211,8 @@ dri2_genode_image_get_buffers(__DRIdrawable *driDrawable,
    buffers->front = NULL;
    buffers->back = NULL;
 
-   printf("%s:%d\n", __func__, __LINE__);
-
-   // buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
-
    buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
-   buffers->back = dri2_surf->current;
+   buffers->back = dri2_surf->back_image;
 
    return 1;
 }
@@ -343,14 +247,10 @@ extern  const __DRIextension **__driDriverGetExtensions_etnaviv(void);
 
 static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 {
-	// XXX pull in frontends/dri2.c b/c: MESA-LOADER: driver does not expose __driDriverGetExtensions_etnaviv():
-
 	struct dri2_egl_display *dri2_dpy;
 	static int      rgb888_shifts[4] = { 16, 8, 0, 24 };
 	static unsigned rgb888_sizes[4]  = {  8, 8, 8, 8 };
 	int i;
-
-	printf("%s:%d\n", __func__, __LINE__);
 
 	/* initialize DRM back end */
 	genode_drm_init();
@@ -359,17 +259,12 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	if (!dri2_dpy)
 		return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
-	printf("%s:%d\n", __func__, __LINE__);
 	dri2_dpy->fd          = 42;
 	dri2_dpy->driver_name = strdup("etnaviv");
 
 	disp->DriverData = (void *)dri2_dpy;
-	printf("%s:%d\n", __func__, __LINE__);
 	if (!dri2_load_driver_dri3(disp))
 		goto close_driver;
-	// printf("%s:%d\n", __func__, __LINE__);
-	// if (!dri2_load_driver(disp))
-	// 	goto close_driver;
 
 	dri2_dpy->dri2_major = 2;
 	dri2_dpy->dri2_minor = __DRI_DRI2_VERSION;
@@ -379,15 +274,12 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	dri2_dpy->driver_extensions = __driDriverGetExtensions_etnaviv();
 	dri2_dpy->dri2 = dri2_dpy->driver_extensions[2];
 
-	printf("%s:%d\n", __func__, __LINE__);
 	if (!dri2_create_screen(disp))
 		goto close_screen;
 
-	printf("%s:%d\n", __func__, __LINE__);
 	if (!dri2_setup_extensions(disp))
 		goto close_screen;
 
-	printf("%s:%d\n", __func__, __LINE__);
 	dri2_setup_screen(disp);
 
 	EGLint attrs[] = {
@@ -406,14 +298,11 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 
 	dri2_dpy->vtbl   = &dri2_genode_display_vtbl;
 
-	printf("%s:%d dri2_dpy: %p dri2_dpy->dri2: %p\n", __func__, __LINE__, dri2_dpy, dri2_dpy->dri2);
 	return EGL_TRUE;
 
 close_screen:
-	printf("%s:%d\n", __func__, __LINE__);
 	dlclose(dri2_dpy->driver);
 close_driver:
-	printf("%s:%d\n", __func__, __LINE__);
 	free(dri2_dpy);
 
 	return EGL_FALSE;
