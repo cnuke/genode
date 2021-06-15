@@ -542,6 +542,7 @@ mesa-21.0.0/src/gallium/auxiliary/nir/nir_draw_helpers.h
 mesa-21.0.0/src/gallium/auxiliary/nir/nir_to_tgsi.c
 mesa-21.0.0/src/gallium/auxiliary/nir/nir_to_tgsi.h
 mesa-21.0.0/src/gallium/auxiliary/nir/nir_to_tgsi_info.h
+mesa-21.0.0/src/gallium/auxiliary/nir/tgsi_to_nir.c
 mesa-21.0.0/src/gallium/auxiliary/nir/tgsi_to_nir.h
 mesa-21.0.0/src/gallium/auxiliary/os/os_mman.h
 mesa-21.0.0/src/gallium/auxiliary/os/os_process.c
@@ -622,6 +623,7 @@ mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_info.h
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_info_opcodes.h
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_iterate.c
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_iterate.h
+mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_lowering.c
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_lowering.h
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_opcode_tmp.h
 mesa-21.0.0/src/gallium/auxiliary/tgsi/tgsi_parse.c
