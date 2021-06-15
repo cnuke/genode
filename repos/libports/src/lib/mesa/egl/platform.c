@@ -83,10 +83,13 @@ _create_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
 	                             dri2_surf->base.GLColorspace);
 
+	printf("%s:%d\n", __func__, __LINE__);
 	if (dri2_dpy->dri2) {
+		printf("%s:%d createNewDrawable\n", __func__, __LINE__);
 		dri2_surf->dri_drawable = (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
 		                                                               dri2_surf);
 		/* create back buffer image */
+		printf("%s:%d createNewDrawable done, createImage\n", __func__, __LINE__);
 		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
@@ -94,6 +97,7 @@ _create_surface(_EGLDriver *drv, _EGLDisplay *disp,
 		                                                     dri2_dpy->is_different_gpu ?
 		                                                     0 : __DRI_IMAGE_USE_SHARE,
 		                                                     NULL);
+		printf("%s:%d createImage done\n", __func__, __LINE__);
 	} else {
 		assert(dri2_dpy->swrast);
 		dri2_surf->dri_drawable =
@@ -107,9 +111,11 @@ _create_surface(_EGLDriver *drv, _EGLDisplay *disp,
 		 goto cleanup_dri_drawable;
 	}
 
+	printf("%s:%d swap interval\n", __func__, __LINE__);
 	dri2_genode_swap_interval(drv, disp, &dri2_surf->base,
 	                          dri2_dpy->default_swap_interval);
 
+	printf("%s:%d\n", __func__, __LINE__);
 	return &dri2_surf->base;
 
 cleanup_dri_drawable:
