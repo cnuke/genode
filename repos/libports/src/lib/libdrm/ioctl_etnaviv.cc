@@ -451,6 +451,10 @@ extern "C" int genode_ioctl(int /* fd */, unsigned long request, void *arg)
 	if (0)
 		dump_ioctl(request);
 
+	if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
+		Genode::error(__func__, ": form: ", __builtin_return_address(0));
+	}
+
 	try {
 		int ret = _drm->ioctl(request, arg);
 
