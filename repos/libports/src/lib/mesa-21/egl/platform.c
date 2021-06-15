@@ -84,7 +84,7 @@ _create_surface(_EGLDisplay *disp,
 		/* create back buffer image */
 		unsigned flags = 0;
 		// flags |= __DRI_IMAGE_USE_SCANOUT;
-		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+		dri2_surf->back_image[0] = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
 		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
@@ -101,15 +101,23 @@ _create_surface(_EGLDisplay *disp,
 	printf("%s:%d is_different_gpu: %u\n", __func__, __LINE__, dri2_dpy->is_different_gpu);
 		/* create back buffer image */
 		unsigned flags = 0;
-		// flags |= __DRI_IMAGE_USE_SCANOUT;
-		flags |= __DRI_IMAGE_USE_LINEAR;
-		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+		//flags |= __DRI_IMAGE_USE_SCANOUT; // <-- leads to pf because screen is not set
+		// flags |= __DRI_IMAGE_USE_LINEAR;
+		flags |= (__DRI_IMAGE_USE_SHARE | __DRI_IMAGE_USE_BACKBUFFER);
+		dri2_surf->back_image[0] = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
 		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
 															 flags,
 		                                                     NULL);
-	printf("%s:%d back_image: %p\n", __func__, __LINE__, dri2_surf->back_image);
+		dri2_surf->back_image[1] = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+		                                                     dri2_surf->base.Width,
+		                                                     dri2_surf->base.Height,
+		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
+															 flags,
+		                                                     NULL);
+		dri2_surf->current = dri2_surf->back_image[0];
+	printf("%s:%d back_image: [0]: %p [1]: %p\n", __func__, __LINE__, dri2_surf->back_image[0], dri2_surf->back_image[1]);
 	} else {
 	printf("%s:%d\n", __func__, __LINE__);
 		assert(dri2_dpy->swrast);
@@ -174,8 +182,11 @@ dri2_genode_destroy_surface(_EGLDisplay *disp, _EGLSurface *surf)
 
 	dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
 
-	if (dri2_surf->back_image)
-		dri2_dpy->image->destroyImage(dri2_surf->back_image);
+	if (dri2_surf->back_image[0])
+		dri2_dpy->image->destroyImage(dri2_surf->back_image[0]);
+	if (dri2_surf->back_image[1])
+		dri2_dpy->image->destroyImage(dri2_surf->back_image[1]);
+
 
 	if (window->type == PIXMAP)
 		free(window);
