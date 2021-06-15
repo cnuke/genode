@@ -49,20 +49,20 @@ dri2_genode_etnaviv_put_image(__DRIdrawable * draw, int op,
 
 	int src_stride;
 	int dst_stride = stride(dri2_surf->base.Width);
-	dri2_dpy->image->queryImage(dri2_surf->back_image, __DRI_IMAGE_ATTRIB_STRIDE, &src_stride);
+	dri2_dpy->image->queryImage(dri2_surf->current, __DRI_IMAGE_ATTRIB_STRIDE, &src_stride);
 
 	size_t const size = w*h*4;
 
-	// printf("%s:%d geom: %dx%d dst: [%p,%p) data: [%p,%p)\n", __func__, __LINE__, w, h, dst, dst + size, data, data + size);
-	// memcpy(dst, data, size);
+	printf("%s:%d geom: %dx%d dst: [%p,%p) data: [%p,%p)\n", __func__, __LINE__, w, h, dst, dst + size, data, data + size);
+	memcpy(dst, data, size);
 
 	// memcpy(dst, data + (600*600*4), 600*600*4);
 
-	printf("%s:%d dst: %p data: %p src_stride: %d dst_stride: %d\n",
-	       __func__, __LINE__, dst, data, src_stride, dst_stride);
-	etna_texture_untile(dst, data , 0, 0,
-                    src_stride, w, h,
-                    dst_stride, 4);
+	// printf("%s:%d dst: %p data: %p src_stride: %d dst_stride: %d\n",
+	//        __func__, __LINE__, dst, data, src_stride, dst_stride);
+	// etna_texture_untile(dst, data , 0, 0,
+                    // src_stride, w, h,
+                    // dst_stride, 4);
 }
 
 
@@ -83,6 +83,12 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 
 	struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
 	struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
+
+	printf("%s:%d flush drawable\n", __func__, __LINE__);
+	dri2_flush_drawable_for_swapbuffers(disp, draw);
+	dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
+	printf("%s:%d flush drawable done\n", __func__, __LINE__);
+
 
 	// // genode_drm_complete();
 	
@@ -108,7 +114,7 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 	void *map_data = NULL;
 	int stride;
 	void *data =
-		dri2_dpy->image->mapImage(dri2_ctx->dri_context, dri2_surf->back_image,
+		dri2_dpy->image->mapImage(dri2_ctx->dri_context, dri2_surf->current,
 		                          0, 0,
 		                          dri2_surf->base.Width,
 		                          dri2_surf->base.Height,
@@ -120,12 +126,12 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 			dri2_surf->base.Width, dri2_surf->base.Height,
 			(char *)data, (void *)dri2_surf);
 	}
-	dri2_dpy->image->unmapImage(dri2_ctx->dri_context, dri2_surf->back_image, map_data);
+	dri2_dpy->image->unmapImage(dri2_ctx->dri_context, dri2_surf->current, map_data);
 
-	printf("%s:%d flush drawable\n", __func__, __LINE__);
-	dri2_flush_drawable_for_swapbuffers(disp, draw);
-	dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
-	printf("%s:%d flush drawable done\n", __func__, __LINE__);
+	if (dri2_surf->current == dri2_surf->back_image[0])
+		dri2_surf->current = dri2_surf->back_image[1];
+	else if (dri2_surf->current == dri2_surf->back_image[1])
+		dri2_surf->current = dri2_surf->back_image[0];
 
 	return EGL_TRUE;
 }
@@ -217,17 +223,22 @@ dri2_genode_flush_front_buffer(__DRIdrawable * driDrawable, void *loaderPrivate)
 static void
 back_bo_to_dri_buffer(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
 {
+	static int query_once = 0;
+
 	struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
 	__DRIimage *image;
-	int name, pitch;
+	static int name;
+	static int pitch;
 
-	image = dri2_surf->back_image;
+	image = dri2_surf->current;
 
 	printf("%s:%d image: %p\n", __func__, __LINE__, image);
+
 	/* use dmabuf-fd as render nodes may not use GEM_FLINK */
 	dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FD, &name);
 	dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &pitch);
 
+	printf("%s:%d image: %p name: %d\n", __func__, __LINE__, image, name);
 	buffer->attachment = __DRI_BUFFER_BACK_LEFT;
 	buffer->name = name;
 	buffer->pitch = pitch;
@@ -250,7 +261,7 @@ dri2_genode_get_buffers_with_format(__DRIdrawable * driDrawable,
 	for (i = 0, j = 0; i < 2 * count; i += 2, j++) {
 		switch (attachments[i]) {
 		case __DRI_BUFFER_BACK_LEFT:
-			printf("%s:%d\n", __func__, __LINE__);
+			printf("%s:%d i: %d j: %d\n", __func__, __LINE__, i, j);
 			back_bo_to_dri_buffer(dri2_surf, &dri2_surf->buffers[j]);
 			break;
 		default:
