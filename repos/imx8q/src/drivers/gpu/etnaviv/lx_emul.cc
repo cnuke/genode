@@ -81,8 +81,7 @@ void *lx_emul_kmalloc(unsigned long size, unsigned int flags)
 	if ((Genode::addr_t)addr & 0x3)
 		Genode::error("unaligned kmalloc ", (Genode::addr_t)addr);
 
-	// if (flags & __GFP_ZERO)
-	// 	Genode::memset(addr, 0, size);
+	Genode::memset(addr, 0, size);
 
 	return addr;
 }
