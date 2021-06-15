@@ -339,6 +339,8 @@ class Drm_call
 
 				if (command_number(request) == DRM_IOCTL_PRIME_HANDLE_TO_FD) {
 					drm_prime_handle *v = reinterpret_cast<drm_prime_handle*>(arg);
+					/* remove DRM_CLOEXEC */
+					v->flags = 0;
 					Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_HANDLE_TO_FD: handle: ", v->handle);
 				}
 
