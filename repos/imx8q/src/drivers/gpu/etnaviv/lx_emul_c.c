@@ -1010,7 +1010,7 @@ static int __wake_function(struct wait_queue_entry *wq_entry,
 	LX_TRACE_PRINT("%s:%d wq_entry: %px mode: %x sync: %d key: %px called\n",
 	               __func__, __LINE__, wq_entry, mode, sync, key);
 	if (wq_entry->private) {
-		LX_TRACE_PRINT("unblock: %px", (void*)wq_entry->private);
+		LX_TRACE_PRINT("unblock: %px\n", (void*)wq_entry->private);
 		lx_emul_unblock_task((unsigned long)wq_entry->private);
 	}
 	return 0;
