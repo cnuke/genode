@@ -79,15 +79,16 @@ _create_surface(_EGLDisplay *disp,
 	                             dri2_surf->base.GLColorspace);
 
 	printf("%s:%d\n", __func__, __LINE__);
-	if (dri2_dpy->image_driver) {
+	if (0 /*dri2_dpy->image_driver*/) {
 		printf("%s:%d image_driver\n", __func__, __LINE__);
 		/* create back buffer image */
+		unsigned flags = 0;
+		// flags |= __DRI_IMAGE_USE_SCANOUT;
 		dri2_surf->back_image = dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
 		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
-		                                                     dri2_dpy->is_different_gpu ?
-		                                                     0 : __DRI_IMAGE_USE_SHARE,
+		                                                     flags,
 		                                                     NULL);
 		printf("%s:%d\n", __func__, __LINE__);
 		dri2_surf->dri_drawable =
@@ -103,10 +104,9 @@ _create_surface(_EGLDisplay *disp,
 		                                                     dri2_surf->base.Width,
 		                                                     dri2_surf->base.Height,
 		                                                     __DRI_IMAGE_FORMAT_ARGB8888,
-		                                                     dri2_dpy->is_different_gpu ?
-		                                                     0 : __DRI_IMAGE_USE_SHARE,
+															 0,
 		                                                     NULL);
-	printf("%s:%d\n", __func__, __LINE__);
+	printf("%s:%d back_image: %p\n", __func__, __LINE__, dri2_surf->back_image);
 	} else {
 	printf("%s:%d\n", __func__, __LINE__);
 		assert(dri2_dpy->swrast);
