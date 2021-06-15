@@ -32,6 +32,8 @@ set build_components {
 	drivers/gpu/intel
 	lib/mesa-21/softpipe
 	core init timer
+
+	server/dummy_log
 }
 
 lappend_if $use_i965 build_components lib/mesa/i965
@@ -201,12 +203,22 @@ append_if $use_i965 config {
 	</start>}
 
 append_if $use_etnaviv config {
+	<start name="dummy_log" caps="100">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="LOG"/> </provides>
+		<route>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
 	<start name="imx8q_gpu_drv" caps="200">
 		<resource name="RAM" quantum="64M"/>
 		<provides> <service name="Drm"/> </provides>
+		<config ld_verbose="yes"/>
 		<route>
 			<service name="Timer"> <child name="timer"/> </service>
 			<service name="Platform"> <child name="drivers"/> </service>
+			<!-- <service name="LOG"> <child name="dummy_log"/> </service> -->
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>}
@@ -221,6 +233,8 @@ set boot_modules {
 	egl-21.lib.so mesa-21.lib.so stdcxx.lib.so
 	expat.lib.so glapi-21.lib.so zlib.lib.so
 	core init ld.lib.so timer egl_swrast-21.lib.so
+
+	dummy_log
 }
 
 append_if $use_i965 boot_modules {
