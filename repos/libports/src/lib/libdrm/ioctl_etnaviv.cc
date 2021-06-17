@@ -17,6 +17,7 @@
 #include <base/log.h>
 #include <base/debug.h>
 #include <gpu/connection.h>
+#include <util/string.h>
 
 extern "C" {
 #include <fcntl.h>
@@ -162,8 +163,11 @@ namespace Drm {
 
 	void serialize(drm_etnaviv_gem_submit *submit, char *content);
 
-} /* anonymous namespace */
+	size_t get_payload_size(drm_version const &version);
+	void serialize(drm_version *version, char *content);
+	void deserialize(drm_version *version, char *content);
 
+} /* anonymous namespace */
 
 
 size_t Drm::get_payload_size(drm_etnaviv_gem_submit const &submit)
@@ -245,6 +249,52 @@ void Drm::serialize(drm_etnaviv_gem_submit *submit, char *content)
 }
 
 
+size_t Drm::get_payload_size(drm_version const &version)
+{
+	size_t size = 0;
+	size += version.name_len;
+	size += version.date_len;
+	size += version.desc_len;
+	return size;
+}
+
+
+void Drm::serialize(drm_version *version, char *content)
+{
+	size_t offset = 0;
+	char *start = 0;
+	offset += sizeof (*version);
+
+	start = content + offset;
+	version->name = start;
+	offset += version->name_len;
+
+	start = content + offset;
+	version->date = start;
+	offset += version->date_len;
+
+	start = content + offset;
+	version->desc = start;
+	offset += version->desc_len;
+
+	Genode::memcpy(content, version, sizeof (*version));
+}
+
+
+void Drm::deserialize(drm_version *version, char *content)
+{
+	drm_version *cversion = reinterpret_cast<drm_version*>(content);
+
+	version->version_major      = cversion->version_major;
+	version->version_minor      = cversion->version_minor;
+	version->version_patchlevel = cversion->version_patchlevel;
+
+	Genode::copy_cstring(version->name, cversion->name, version->name_len);
+	Genode::copy_cstring(version->date, cversion->date, version->date_len);
+	Genode::copy_cstring(version->desc, cversion->desc, version->desc_len);
+}
+
+
 class Drm_call
 {
 	private:
@@ -254,44 +304,16 @@ class Drm_call
 		Genode::Allocator_avl _drm_alloc { &_heap };
 		Drm::Connection       _drm_session { _env, &_drm_alloc, 1024*1024 };
 
-		int _gem_mmap(void *arg)
-		{
-			(void)arg;
-			return -1;
-#if 0
-			drm_i915_gem_mmap *data = (drm_i915_gem_mmap *)arg;
-
-			Genode::Ram_dataspace_capability ds = _drm_session.object_dataspace(data->handle);
-			data->addr_ptr = (__u64)_env.rm().attach(ds);
-			return 0;
-#endif
-		}
-
-		int _gem_mmap_gtt(void *arg)
-		{
-			(void)arg;
-			return -1;
-#if 0
-			drm_i915_gem_mmap_gtt *data = (drm_i915_gem_mmap_gtt *)arg;
-
-			Genode::Dataspace_capability ds = _drm_session.object_dataspace_gtt(data->handle);
-			data->offset = (__u64)_env.rm().attach(ds);
-			return 0;
-#endif
-		}
-
 	public:
 
 		Drm_call(Genode::Env &env) : _env(env) { }
 
 		int ioctl(unsigned long request, void *arg)
 		{
-			(void)arg;
-
 			size_t size = IOCPARM_LEN(request);
 
-			// Genode::log(__func__, ":", __LINE__, ": request: ", command_name(request),
-			//             " size: ", size, " arg: ", arg);
+			Genode::log(__func__, ":", __LINE__, ": request: ", command_name(request),
+			            " size: ", size, " arg: ", arg, " foo: ", command_number(request) == DRM_IOCTL_VERSION);
 
 			bool const in  = req_in(request);
 			bool const out = req_out(request);
@@ -303,6 +325,14 @@ class Drm_call
 				drm_etnaviv_gem_submit *submit =
 					reinterpret_cast<drm_etnaviv_gem_submit*>(arg);
 				size_t const payload_size = Drm::get_payload_size(*submit);
+				size += payload_size;
+			}
+
+			if (command_number(request) == DRM_IOCTL_VERSION) {
+				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+				drm_version *version =
+					reinterpret_cast<drm_version*>(arg);
+				size_t const payload_size = Drm::get_payload_size(*version);
 				size += payload_size;
 			}
 
@@ -325,6 +355,14 @@ class Drm_call
 				Genode::error(__func__, ": serialize submit buffer fence: ", submit->fence, " fence_fd: ", submit->fence_fd);
 				char *content = src.packet_content(p);
 				Drm::serialize(submit, content);
+			} else
+
+			if (command_number(request) == DRM_IOCTL_VERSION) {
+				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+				drm_version *version =
+					reinterpret_cast<drm_version*>(arg);
+				char *content = src.packet_content(p);
+				Drm::serialize(version, content);
 			} else
 
 			if (in) {
@@ -373,7 +411,17 @@ class Drm_call
 			if (out && arg) {
 				Genode::log(__func__, ":", __LINE__, ": OUT request: ", command_name(request),
 				            " size: ", size, " arg: ", arg);
-				Genode::memcpy(arg, src.packet_content(p), size);
+				if (command_number(request) == DRM_IOCTL_VERSION) {
+				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+					drm_version *version =
+						reinterpret_cast<drm_version*>(arg);
+						char *content = src.packet_content(p);
+					Drm::deserialize(version, content);
+
+				} else {
+					// XXX handle unserializaton in a better way
+					Genode::memcpy(arg, src.packet_content(p), size);
+				}
 
 				if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
 
