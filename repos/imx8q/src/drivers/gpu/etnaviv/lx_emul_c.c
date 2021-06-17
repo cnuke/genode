@@ -16,7 +16,11 @@
 #include <lx_emul_cc.h>
 #include <lx_emul_c.h>
 
+#ifdef LX_DEBUG
 #define LX_TRACE_PRINT(...) do { lx_emul_printf(__VA_ARGS__); } while (0)
+#else
+#define LX_TRACE_PRINT(...)
+#endif
 
 
 #include <linux/printk.h>
@@ -109,8 +113,7 @@ int bus_register(struct bus_type *bus)
 
 unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 {
-	// XXX Address_to_page_mapping
-	lx_emul_trace(__func__);
+	// XXX __get_free_pages Address_to_page_mapping
 	if (order != 0) {
 		lx_emul_printf("%s: order: %u\n", __func__, order);
 	}
@@ -124,6 +127,7 @@ unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 int set_page_dirty(struct page *page)
 {
 	set_bit(PG_dirty, &page->flags);
+	return 0;
 }
 
 
@@ -151,7 +155,6 @@ void kfree(const void *x)
 
 void *krealloc(const void *p, size_t new_size, gfp_t flags)
 {
-	lx_printk("%s: p: %px size: %zu new_size: %zu\n", __func__, p, ksize(p), new_size);
 	void *np = lx_emul_kmalloc(new_size, flags);
 	if (!np) {
 		return NULL;
@@ -219,7 +222,7 @@ struct kmem_cache *kmem_cache_create(const char *name, unsigned int size,
 
 void kmem_cache_free(struct kmem_cache *s, void *x)
 {
-	lx_emul_kmem_cache_free(s);
+	lx_emul_kmem_cache_free(s, x);
 }
 
 
@@ -783,16 +786,18 @@ bool mutex_is_locked(struct mutex *lock)
 
 void drm_dbg(unsigned int category, char const *fmt, ...)
 {
+#if 0
 	va_list args;
 	va_start(args, fmt);
 	lx_emul_vprintf(fmt, args);
 	va_end(args);
+#endif
 }
 
 
 #include <drm/drm_drv.h>
 
-unsigned int drm_debug = 0xffffffff;
+unsigned int drm_debug = 0x0;
 
 struct drm_device *drm_dev_alloc(struct drm_driver *driver,
 				 struct device *parent)
@@ -853,8 +858,6 @@ struct drm_device *_lx_drm_device;
 
 int drm_dev_register(struct drm_device *dev, unsigned long flags)
 {
-	// drm_get_minor(dev, &dev->primary, DRM_MINOR_PRIMARY);
-
 	int ret = 0;
 
 	if (_lx_drm_device) {
@@ -870,14 +873,6 @@ int drm_dev_register(struct drm_device *dev, unsigned long flags)
 		if (ret)
 			return ret;
 	}
-
-	// if (drm_core_check_feature(dev, DRIVER_MODESET))
-	// 	drm_modeset_register_all(dev);
-
-	// DRM_INFO("Initialized %s %d.%d.%d %s on minor %d\n",
-	// 	 dev->driver->name, dev->driver->major, dev->driver->minor,
-	// 	 dev->driver->patchlevel, dev->driver->date,
-	// 	 dev->primary->index);
 
 	return 0;
 }
@@ -943,36 +938,6 @@ int lx_drm_open(void)
 int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 {
 	return drm_ioctl(_lx_file, cmd, arg);
-#if 0
-	unsigned int nr = DRM_IOCTL_NR(cmd);
-	struct drm_driver *drv = NULL;
-	struct drm_ioctl_desc const *ioctl = NULL;
-	bool driver_ioctl = false;
-
-	if (!_lx_drm_file) {
-		return -1;
-	}
-
-	drv = _lx_drm_device->driver;
-
-	driver_ioctl = nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
-	if (driver_ioctl) {
-		/* driver ioctl */
-		unsigned int index = nr - DRM_COMMAND_BASE;
-
-		if (index >= drv->num_ioctls) {
-			return -2;
-		}
-
-		ioctl = &drv->ioctls[index];
-	} else {
-		lx_emul_printf("%s:%d core I/O controls not handled yet\n",
-		               __func__, __LINE__);
-		return -3;
-	}
-
-	return ioctl->func(_lx_drm_device, (void*)arg, _lx_drm_file);
-#endif
 }
 
 
@@ -1058,7 +1023,7 @@ long prepare_to_wait_event(struct wait_queue_head *wq_head,
 void finish_wait(struct wait_queue_head *wq_head,
                  struct wait_queue_entry *wq_entry)
 {
-	lx_emul_printf("%s:%d wq_head: %px wq_entry: %px\n", __func__,
+	LX_TRACE_PRINT("%s:%d wq_head: %px wq_entry: %px\n", __func__,
 	               __LINE__, wq_head, wq_entry);
 
 	if (!list_empty_careful(&wq_entry->entry)) {
@@ -1071,7 +1036,7 @@ void __wake_up(struct wait_queue_head *wq_head, unsigned int mode,
                int nr_exclusive, void *key)
 {
 	wait_queue_entry_t *curr, *next;
-	lx_emul_printf("%s:%d wq_head: %px\n", __func__, __LINE__, wq_head);
+	LX_TRACE_PRINT("%s:%d wq_head: %px\n", __func__, __LINE__, wq_head);
 
 	curr = list_first_entry(&wq_head->head, wait_queue_entry_t, entry); 
 
@@ -1100,7 +1065,7 @@ void *dma_alloc_attrs(struct device *dev, size_t size, dma_addr_t *dma_handle,
 		return NULL;
 	}
 
-	lx_emul_printf("%s:%d size: %zu paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
+	LX_TRACE_PRINT("%s:%d size: %zu paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
 	               size, lx_dma.paddr, lx_dma.vaddr);
 
 	*dma_handle = lx_dma.paddr;
@@ -1120,7 +1085,7 @@ void dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 u64 dma_get_required_mask(struct device * dev)
 {
 	enum { DMA_MASK = 0xbfffffffUL, }; // XXX query board?
-	lx_emul_printf("%s: return 0x%x\n", __func__, DMA_MASK);
+	LX_TRACE_PRINT("%s: return 0x%x\n", __func__, DMA_MASK);
 	return DMA_MASK;
 }
 
@@ -1133,7 +1098,6 @@ int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
 	struct scatterlist *sg;
 	struct Lx_dma dma;
 
-	lx_emul_printf("%s: from: %p\n", __func__, __builtin_return_address(0));
 	for_each_sg(sgl, sg, nents, i) {
 		struct page *page = sg_page(sg);
 		dma = lx_emul_get_dma_address_for_page(page->mapping, page);
@@ -1142,8 +1106,8 @@ int dma_direct_map_sg(struct device *dev, struct scatterlist *sgl,
 		}
 		sg->dma_address = dma.paddr;
 		sg_dma_len(sg) = sg->length;
-		// lx_emul_printf("%s: i: %d page: %px offset: %u length: %u dma_addr: 0x%llx\n",
-		//                __func__, i, page, sg->offset, sg->length, sg->dma_address);
+		LX_TRACE_PRINT("%s: i: %d page: %px offset: %u length: %u dma_addr: 0x%llx\n",
+		               __func__, i, page, sg->offset, sg->length, sg->dma_address);
 	}
 
 	return 0;
@@ -1157,7 +1121,6 @@ void dma_direct_unmap_sg(struct device *dev, struct scatterlist *sgl,
 	int i;
 	struct scatterlist *sg;
 
-	lx_emul_printf("%s: from: %p\n", __func__, __builtin_return_address(0));
 	for_each_sg(sgl, sg, nents, i) {
 
 		if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
@@ -1187,16 +1150,13 @@ void genode_emul_execute_work(void *w)
 
 bool cancel_delayed_work(struct delayed_work *dwork)
 {
-	lx_emul_printf("%s: dwork: %p not completely implemented\n",
-	               __func__, dwork);
-	return false;
+	return lx_emul_del_timer(&dwork->timer);
 }
 
 
 bool queue_work_on(int cpu, struct workqueue_struct *wq,
                    struct work_struct *work)
 {
-	// work->wq = wq;
 	if (!work || !work->func) {
 		lx_emul_printf("%s:%d invalid work from: %px\n",
 		               __func__, __LINE__, __builtin_return_address(0));
@@ -1217,9 +1177,6 @@ static void delayed_work_timer_func(struct timer_list *list)
 bool queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
                            struct delayed_work *dwork, unsigned long delay)
 {
-	lx_emul_printf("%s:%d wq: %px dwork: %px delay: %lu\n",
-	               __func__, __LINE__, wq, dwork, delay);
-
 	dwork->wq = wq;
 
 	if (delay == 0) {
@@ -1328,14 +1285,14 @@ void kthread_parkme(void)
 bool kthread_should_park(void)
 {
 	unsigned long current_task = lx_emul_current_task();
-	lx_emul_printf("%s: not completely implemented\n", __func__);
+	LX_TRACE_PRINT("%s: not completely implemented\n", __func__);
 	return lx_emul_should_park_task(current_task);
 }
 
 
 bool kthread_should_stop(void)
 {
-	lx_emul_trace(__func__);
+	LX_TRACE_PRINT("%s: not completely implemented\n", __func__);
 	return false;
 }
 
@@ -1387,7 +1344,7 @@ void __sched usleep_range(unsigned long min, unsigned long max)
 void complete(struct completion *x)
 {
 	x->done++;
-	lx_emul_printf("%s: done: %u -- wake up not implemented yet\n",
+	LX_TRACE_PRINT("%s: done: %u -- wake up not implemented yet\n",
 	               __func__, x->done);
 }
 
@@ -1419,8 +1376,6 @@ asmlinkage __visible void __sched schedule(void)
 
 struct task_struct *get_current(void)
 {
-	// lx_emul_printf("%s:%d from: %px\n", __func__, __LINE__,
-	//                __builtin_return_address(0));
 	// XXX for now assume there is no code that accesses task_struct fields directly
 	return (struct task_struct*)lx_emul_current_task();
 }
@@ -1456,7 +1411,7 @@ signed long __sched schedule_timeout(signed long timeout)
 
 	(void)lx_emul_mod_timer(&to.timer, expires);
 
-	lx_emul_printf("%s:%d timeout: %ld expires: %lu\n", __func__, __LINE__,
+	LX_TRACE_PRINT("%s:%d timeout: %ld expires: %lu\n", __func__, __LINE__,
 	               timeout, expires);
 
 	lx_emul_block_current_task();
@@ -1465,9 +1420,19 @@ signed long __sched schedule_timeout(signed long timeout)
 
 	timeout = lx_emul_remaining_timeout(expires);
 
-	lx_emul_printf("%s:%d timeout: %ld \n", __func__, __LINE__, timeout);
+	LX_TRACE_PRINT("%s:%d timeout: %ld \n", __func__, __LINE__, timeout);
 
 	return timeout < 0 ? 0 : timeout;
+}
+
+
+int wake_up_state(struct task_struct *p, unsigned int state)
+{
+	/*
+	 * AFAICT this is only used for waking up the 'drm_worker' task
+	 */
+	lx_emul_unblock_task(p);
+	return 1;
 }
 
 
@@ -1513,7 +1478,7 @@ void *vmap(struct page **pages, unsigned int count, unsigned long flags,
 		}
 
 		index = p->index;
-		// lx_emul_printf("%s: i: %u page: %px as: %px off: %ld\n", __func__, i, p, p->mapping, p->index);
+		LX_TRACE_PRINT("%s: i: %u page: %px as: %px off: %ld\n", __func__, i, p, p->mapping, p->index);
 	}
 
 	return lx_emul_address_space_vmap(mapping);
@@ -1526,30 +1491,6 @@ void vunmap(void const *addr)
 		lx_emul_trace_and_stop(__func__);
 	}
 }
-
-#if 0
-#include <asm-generic/bitops/find.h>
-
-unsigned long find_next_zero_bit(unsigned const long *addr,
-                                 unsigned       long  size,
-                                 unsigned       long  offset)
-{
-	unsigned long i, j;
-
-	for (i = offset; i < (size / BITS_PER_LONG); i++)
-		if (addr[i] != ~0UL)
-			break;
-
-	if (i == size)
-		return size;
-
-	for (j = 0; j < BITS_PER_LONG; j++)
-		if ((~addr[i]) & (1UL << j))
-			break;
-
-	return (i * BITS_PER_LONG) + j;
-}
-#endif
 
 
 #include <linux/mount.h>
@@ -1586,8 +1527,6 @@ static unsigned long _get_next_ino(void)
 
 struct inode *alloc_anon_inode(struct super_block *s)
 {
-	LX_TRACE_PRINT("%s:%d\n", __func__, __LINE__);
-
 	struct inode *inode;
 
 	inode = kzalloc(sizeof (struct inode), 0);
@@ -1607,8 +1546,6 @@ struct file *alloc_file_pseudo(struct inode *inode, struct vfsmount *mnt,
                                char const *name, int flags,
                                struct file_operations const *fops)
 {
-	LX_TRACE_PRINT("%s:%d\n", __func__, __LINE__);
-
 	struct file *f;
 	struct dentry *d;
 
@@ -1666,7 +1603,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 		goto err_as;
 	}
 
-	lx_emul_printf("%s:%d paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
+	LX_TRACE_PRINT("%s:%d paddr: 0x%lx vaddr: 0x%lx\n", __func__, __LINE__,
 	               lx_dma.paddr, lx_dma.vaddr);
 
 	lx_emul_add_dma_to_address_space(mapping, lx_dma);
@@ -1681,7 +1618,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode    |= FMODE_OPENED;
 
 	// XXX lookup dataspace cap later on for drm_mmap
-	lx_emul_printf("%s:%d f: %px mapping: %px size: %llu dma: (0x%lx, 0x%lx)\n",
+	LX_TRACE_PRINT("%s:%d f: %px mapping: %px size: %llu dma: (0x%lx, 0x%lx)\n",
 	               __func__, __LINE__, f, mapping, size, lx_dma.vaddr, lx_dma.paddr);
 
 	return f;
@@ -1701,8 +1638,8 @@ struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
 {
 	struct page *p = lx_emul_look_up_address_space_page(mapping, index);
 	if (!p) {
-		// lx_emul_printf("%s: could not look up page in as: %px for index: %ld - insert new\n",
-		//                __func__, mapping, index);
+		LX_TRACE_PRINT("%s: could not look up page in as: %px for index: %ld - insert new\n",
+		               __func__, mapping, index);
 		p = (struct page*)kzalloc(sizeof (struct page), 0);
 		if (!p) {
 			return (struct page*)ERR_PTR(-ENOMEM);
@@ -1811,7 +1748,6 @@ struct file *fget(unsigned int fd)
 
 void call_rcu(struct rcu_head *head, rcu_callback_t func)
 {
-	lx_emul_trace(__func__);
 	func(head);
 }
 
@@ -1820,7 +1756,8 @@ void call_rcu(struct rcu_head *head, rcu_callback_t func)
 
 void kfree_call_rcu(struct rcu_head *head, rcu_callback_t func)
 {
-	lx_emul_printf("%s: ignore head: %px func: %px from: %px\n",
-	                __func__, head, func, __builtin_return_address(0));
+	// XXX kfree_call_rcu needs to implement but func pointer is part of NULL obj
+	// lx_emul_printf("%s: ignore head: %px func: %px from: %px\n",
+	//                 __func__, head, func, __builtin_return_address(0));
 	// call_rcu(head, func);
 }

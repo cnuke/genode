@@ -154,18 +154,20 @@ static Kmem_cache *_kmem_cache_lookup(void const *lx)
 int lx_emul_kmem_cache_create(void const *c, unsigned int size, unsigned int align)
 {
 	new (Lx::Malloc::mem()) Kmem_cache(kmem_cache_registry(), c, size, false);
+	Genode::error(__func__, ": create kmem cache: ", c, " from: ", __builtin_return_address(0));
 	return 0;
 }
 
 
-void lx_emul_kmem_cache_free(void const *c)
+void lx_emul_kmem_cache_free(void const *c, void *p)
 {
 	Kmem_cache *mc = _kmem_cache_lookup(c);
 	if (!c) {
-		// warning invalid kmem_cache
+		Genode::warning(__func__, ": could not lookup cache: ", c, " leaking obj: ", p);
+		return;
 	}
 
-	Genode::destroy(Lx::Malloc::mem(), mc);
+	mc->free(p);
 }
 
 
@@ -173,7 +175,7 @@ void *lx_emul_kmem_cache_alloc(void const *c)
 {
 	Kmem_cache *mc = _kmem_cache_lookup(c);
 	if (!mc) {
-		Genode::warning(__func__, ": could not lookup cache: ", c);
+		Genode::error(__func__, ": could not lookup cache: ", c);
 		return nullptr;
 	}
 
@@ -673,8 +675,6 @@ void lx_emul_block_current_task(void)
 	}
 
 	Lx::Task *t = Lx::scheduler().current();
-	Genode::error(__func__, ": current: ", t, " '", t->name(), "' from: ", __builtin_return_address(0));
-
 	Lx::scheduler().current()->block_and_schedule();
 }
 
@@ -687,7 +687,6 @@ void lx_emul_park_task(unsigned long lx_task)
 	}
 
 	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
-
 	task->park();
 }
 
@@ -700,7 +699,6 @@ int lx_emul_should_park_task(unsigned long lx_task)
 	}
 
 	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
-
 	return !!task->should_park();
 }
 
@@ -736,7 +734,7 @@ void lx_emul_unblock_task(unsigned long lx_task)
 		Genode::sleep_forever();
 	}
 	Lx::Task *task = reinterpret_cast<Lx::Task*>(lx_task);
-	Genode::error(__func__, ": task: ", task, " '", task->name(), "' from: ", __builtin_return_address(0));
+	// Genode::error(__func__, ": task: ", task, " '", task->name(), "' from: ", __builtin_return_address(0));
 
 	task->unblock();
 }
@@ -818,12 +816,17 @@ int lx_emul_del_timer(void *timer)
 
 unsigned long lx_emul_absolute_timeout(unsigned long timeout)
 {
-	return Lx::timer().jiffies() + timeout;
+	Lx::timer_update_jiffies();
+
+	unsigned long now = Lx::timer().jiffies();
+	// Genode::error(__func__, ": now: ", now, ": timeout: ", timeout, " => ", now + timeout);
+	return now + timeout;
 }
 
 
 signed long lx_emul_remaining_timeout(unsigned long expires)
 {
+	Lx::timer_update_jiffies();
 	return expires - Lx::timer().jiffies();
 }
 

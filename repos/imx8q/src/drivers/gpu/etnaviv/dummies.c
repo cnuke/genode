@@ -210,14 +210,14 @@ void __pm_runtime_disable(struct device * dev,bool check_resume)
 
 int __pm_runtime_resume(struct device * dev,int rpmflags)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
 
 int __pm_runtime_suspend(struct device * dev,int rpmflags)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
@@ -287,25 +287,25 @@ unsigned long __per_cpu_offset[NR_CPUS] = {};
 
 void __lockfunc _raw_read_lock(rwlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __lockfunc _raw_read_unlock(rwlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __lockfunc _raw_write_lock(rwlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __lockfunc _raw_write_unlock(rwlock_t * lock)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 

@@ -973,12 +973,3 @@ int vm_insert_page(struct vm_area_struct * vma,unsigned long addr,struct page * 
 {
 	lx_emul_trace_and_stop(__func__);
 }
-
-
-#include <linux/sched.h>
-
-int wake_up_state(struct task_struct * p,unsigned int state)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-

@@ -47,7 +47,7 @@ struct lx_emul_kmem_cache
 };
 
 int   lx_emul_kmem_cache_create(void const *, unsigned int, unsigned int);
-void  lx_emul_kmem_cache_free(void const *);
+void  lx_emul_kmem_cache_free(void const *, void *);
 void *lx_emul_kmem_cache_alloc(void const *);
 
 int            lx_emul_alloc_address_space(void *, unsigned long);
