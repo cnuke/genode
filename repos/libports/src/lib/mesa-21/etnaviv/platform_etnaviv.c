@@ -76,8 +76,7 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 	dri2_flush_drawable_for_swapbuffers(disp, draw);
 	dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
-
-	// genode_drm_complete();
+	genode_drm_complete();
 
 	_EGLContext *ctx = _eglGetCurrentContext();
 	struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
