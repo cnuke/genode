@@ -146,8 +146,6 @@ class Lx_kit::Irq : public Lx::Irq
 				 */
 				void unblock()
 				{
-					Genode::error(__func__, ": got IRQ");
-
 					_task.unblock();
 
 					/* kick off scheduling */
