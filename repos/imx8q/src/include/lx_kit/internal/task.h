@@ -112,7 +112,7 @@ class Lx::Task : public Lx_kit::List<Lx::Task>::Element
 		void unblock()
 		{
 			if (_parked) {
-				Genode::error(__func__, ": cannot unblock parked task: ", this);
+				Genode::error(__func__, ": cannot unblock parked task: '", name(), "' (", this, ")");
 				return;
 			}
 			if (_state == STATE_BLOCKED) {
