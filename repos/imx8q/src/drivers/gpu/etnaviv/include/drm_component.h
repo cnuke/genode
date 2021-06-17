@@ -38,13 +38,36 @@ class Drm::Session_component : public Session_rpc_object
 	private:
 
 		Env                               &_env;
+
+		Genode::Mutex _object_mutex { };
+		struct Object_request
+		{
+			Genode::Ram_dataspace_capability cap;
+			unsigned long offset;
+			unsigned long size;
+			bool pending;
+
+			bool request_valid() const { return offset && size; }
+
+			bool request_resolved() const { return !pending; }
+		};
+
+		struct Task_args
+		{
+			Object_request obj;
+			Tx::Sink *sink;
+		};
+
+		Task_args _task_args {
+			.obj = { Genode::Ram_dataspace_capability(), 0, 0, false},
+			.sink = tx_sink() };
+
 		Signal_handler<Session_component> _packet_avail { _env.ep(), *this,
 			&Session_component::_handle_signal };
 		Signal_handler<Session_component> _ready_to_ack { _env.ep(), *this,
 			&Session_component::_handle_signal };
-		Lx::Task                          _worker { _run, tx_sink(), "drm_worker",
-			Lx::Task::PRIORITY_2, Lx::scheduler() };
-
+		Lx::Task                          _worker { _run, &_task_args,
+			"drm_worker", Lx::Task::PRIORITY_2, Lx::scheduler() };
 
 		static void _drm_request(Tx::Sink &sink)
 		{
@@ -58,11 +81,21 @@ class Drm::Session_component : public Session_rpc_object
 			}
 		}
 
-		static void _run(void *tx_sink)
+		static void _run(void *task_args)
 		{
-			Tx::Sink *sink = static_cast<Tx::Sink *>(tx_sink);
+			Task_args *args = static_cast<Task_args*>(task_args);
+
+			Tx::Sink       &sink = *args->sink;
+			Object_request &obj  = args->obj;
+
 			while (true) {
-				_drm_request(*sink);
+				_drm_request(sink);
+				if (obj.request_valid() && !obj.request_resolved()) {
+					obj.cap = lx_drm_object_dataspace(obj.offset, obj.size);
+					obj.pending = false;
+					obj.offset  = 0;
+					obj.size =   0;
+				}
 				Lx::scheduler().current()->block_and_schedule();
 			}
 		}
@@ -87,8 +120,20 @@ class Drm::Session_component : public Session_rpc_object
 		Ram_dataspace_capability object_dataspace(unsigned long offset,
 		                                          unsigned long size) override
 		{
-			Genode::error("offset: ", Genode::Hex(offset));
-			return lx_drm_object_dataspace(offset, size);
+			Genode::Mutex::Guard mutex_guard(_object_mutex);
+
+			Object_request &obj = _task_args.obj;
+			obj.pending = true;
+			obj.offset  = offset;
+			obj.size    = size;
+
+			_worker.unblock();
+			Lx::scheduler().schedule();
+
+			Genode::Ram_dataspace_capability cap = obj.cap;
+			obj.cap = Genode::Ram_dataspace_capability();
+
+			return cap;
 		}
 };
 
