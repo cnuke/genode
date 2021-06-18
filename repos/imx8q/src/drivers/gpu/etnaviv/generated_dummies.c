@@ -760,14 +760,6 @@ void flush_workqueue(struct workqueue_struct * wq)
 }
 
 
-#include <linux/gfp.h>
-
-void free_pages(unsigned long addr,unsigned int order)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/mm.h>
 
 int get_user_pages_fast(unsigned long start,int nr_pages,unsigned int gup_flags,struct page ** pages)

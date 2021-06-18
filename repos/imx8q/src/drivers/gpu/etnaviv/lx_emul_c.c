@@ -119,9 +119,16 @@ unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 	}
 
 	void *ptr = lx_emul_kmalloc((1u << order) * PAGE_SIZE, 0);
+	lx_emul_printf("%s: ptr: %px order: %u\n", __func__, ptr, order);
 	return (unsigned long)ptr;
 }
 
+
+void free_pages(unsigned long addr, unsigned int order)
+{
+	lx_emul_printf("%s: ptr: %px order: %u\n", __func__, (void const*)addr, order);
+	lx_emul_kfree((void const *)addr);
+}
 
 
 int set_page_dirty(struct page *page)
