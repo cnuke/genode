@@ -195,14 +195,6 @@ int drm_dropmaster_ioctl(struct drm_device * dev,void * data,struct drm_file * f
 }
 
 
-#include <drm/drm_print.h>
-
-void drm_err(const char * format,...)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern int drm_getmagic(struct drm_device * dev,void * data,struct drm_file * file_priv);
 int drm_getmagic(struct drm_device * dev,void * data,struct drm_file * file_priv)
 {

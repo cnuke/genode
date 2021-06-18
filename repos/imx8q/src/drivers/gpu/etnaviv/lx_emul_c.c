@@ -795,6 +795,15 @@ void drm_dbg(unsigned int category, char const *fmt, ...)
 }
 
 
+void drm_err(char const *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	lx_emul_vprintf(fmt, args);
+	va_end(args);
+}
+
+
 #include <drm/drm_drv.h>
 
 unsigned int drm_debug = 0x0;
@@ -934,10 +943,101 @@ int lx_drm_open(void)
 
 
 #include <drm/drm_ioctl.h>
+#include <uapi/drm/drm.h>
+#include <uapi/drm/etnaviv_drm.h>
+
+static void lx_drm_gem_submit_in(struct drm_etnaviv_gem_submit *submit)
+{
+	submit->bos    += (unsigned long)submit;
+	submit->relocs += (unsigned long)submit;
+	submit->pmrs   += (unsigned long)submit;
+	submit->stream += (unsigned long)submit;
+}
+
+
+static void lx_drm_version_in(struct drm_version *version)
+{
+	/* set proper pointer value from offset */
+	version->name += (unsigned long)version;
+	version->date += (unsigned long)version;
+	version->desc += (unsigned long)version;
+}
+
+
+static lx_drm_version_out(struct drm_version *version)
+{
+	/* set proper offset value from pointer */
+	version->name -= (unsigned long)version;
+	version->date -= (unsigned long)version;
+	version->desc -= (unsigned long)version;
+}
+
+
+static int lx_drm_in(unsigned int cmd, unsigned long arg)
+{
+	unsigned int const nr = DRM_IOCTL_NR(cmd);
+	bool const is_driver_ioctl =
+		nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
+
+	if (is_driver_ioctl) {
+		unsigned const int dnr = nr - DRM_COMMAND_BASE;
+
+		switch (dnr) {
+		case DRM_ETNAVIV_GEM_SUBMIT:
+			lx_drm_gem_submit_in((struct drm_etnaviv_gem_submit*)arg);
+			break;
+		default:
+			break;
+		}
+	} else {
+		switch (nr) {
+		case DRM_IOCTL_NR(DRM_IOCTL_VERSION):
+			lx_drm_version_in((struct drm_version*)arg);
+			break;
+		default:
+			break;
+		}
+	}
+	return 0;
+}
+
+
+static int lx_drm_out(unsigned int cmd, unsigned long arg)
+{
+	unsigned int const nr = DRM_IOCTL_NR(cmd);
+	bool const is_driver_ioctl =
+		nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
+
+	if (is_driver_ioctl) {
+		unsigned const int dnr = nr - DRM_COMMAND_BASE;
+
+		switch (dnr) {
+		default:
+			break;
+		}
+	} else {
+		switch (nr) {
+		case DRM_IOCTL_NR(DRM_IOCTL_VERSION):
+			lx_drm_version_out((struct drm_version*)arg);
+			break;
+		default:
+			break;
+		}
+	}
+	return 0;
+}
+
 
 int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 {
-	return drm_ioctl(_lx_file, cmd, arg);
+	if (cmd & IOC_IN) {
+		lx_drm_in(cmd, arg);
+	}
+	int ioctl_res = drm_ioctl(_lx_file, cmd, arg);
+	if (cmd & IOC_OUT) {
+		lx_drm_out(cmd, arg);
+	}
+	return ioctl_res;
 }
 
 
