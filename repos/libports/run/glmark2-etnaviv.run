@@ -90,7 +90,7 @@ set config {
 
 	<start name="glmark2" caps="500">
 		<resource name="RAM" quantum="160M"/>
-		<config>
+		<config ld_verbose="yes">
 			<vfs>
 				<dir name="dev">
 					<log/>
@@ -111,11 +111,14 @@ set config {
 				<parent label="egl_etnaviv-21.lib.so"/>
 			</service>
 			<service name="ROM" label="libEGL.so">
-				<parent label="egl-21.lib.so"/>
+				<!--<parent label="egl-21.lib.so"/>-->
+				<!-- workaround current egl/egl-etnaviv fsck up -->
+				<parent label="egl_etnaviv-21.lib.so"/>
 			</service>
 			<service name="ROM" label="libGLESv2.so">
 				<parent label="mesa-21.lib.so"/>
 			</service>
+			<!-- <service name="LOG"> <child name="dummy_log"/> </service> -->
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
