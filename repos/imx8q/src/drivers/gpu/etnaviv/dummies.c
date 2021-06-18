@@ -346,23 +346,6 @@ void drm_dev_put(struct drm_device * dev)
 
 
 
-#include <linux/swap.h>
-
-void check_move_unevictable_pages(struct pagevec *pvec)
-{
-	lx_emul_trace(__func__);
-}
-
-
-#include <linux/pagevec.h>
-
-void __pagevec_release(struct pagevec *pvec)
-{
-	lx_emul_trace(__func__);
-	lx_emul_printf("%s: leaking pages in pvec: %p?\n", __func__, pvec);
-}
-
-
 #include <linux/ww_mutex.h>
 
 int __sched ww_mutex_lock_interruptible(struct ww_mutex * lock,struct ww_acquire_ctx * ctx)

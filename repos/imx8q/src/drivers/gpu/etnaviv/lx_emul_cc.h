@@ -54,6 +54,7 @@ int            lx_emul_alloc_address_space(void *, unsigned long);
 int            lx_emul_add_dma_to_address_space(void *, struct Lx_dma);
 void          *lx_emul_look_up_address_space_page(void *, unsigned long);
 int            lx_emul_insert_page_to_address_page(void *, void *, unsigned long);
+int            lx_emul_remove_page_to_address_page(void *, void *, unsigned long);
 struct Lx_dma  lx_emul_get_dma_address_for_page(void *, void *);
 void          *lx_emul_address_space_vmap(void *);
 

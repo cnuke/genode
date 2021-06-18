@@ -278,6 +278,18 @@ struct Mapping : Genode::Registry<Mapping>::Element
 		return false;
 	}
 
+	bool remove_page(void *page, unsigned long index)
+	{
+		bool result = false;
+		_page_registry.for_each([&] (Page &p) {
+			if (p.index == index && p.page == page) {
+				Genode::destroy(Lx::Malloc::mem(), &p);
+				result = true;
+			}
+		});
+		return result;
+	}
+
 	void *lookup_page(unsigned long index)
 	{
 		void *p = nullptr;
@@ -405,6 +417,23 @@ int lx_emul_insert_page_to_address_page(void *as, void *page, unsigned long inde
 	}
 
 	return mp->insert_page(page, index) ? 0 : -1;
+}
+
+
+int lx_emul_remove_page_to_address_page(void *as, void *page, unsigned long index)
+{
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return -1;
+	}
+
+	return mp->remove_page(page, index) ? 0 : -1;
 }
 
 

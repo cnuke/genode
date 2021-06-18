@@ -243,6 +243,38 @@ void kvfree(void const *addr)
 }
 
 
+#include <linux/pagevec.h>
+
+void __pagevec_release(struct pagevec *pvec)
+{
+	unsigned i;
+	unsigned nr = pagevec_count(pvec);
+	for (i = 0 ; i < nr; i++) {
+		struct page *page = pvec->pages[i];
+		int res = lx_emul_remove_page_to_address_page(page->mapping, page, page->index);
+		if (res) {
+			lx_emul_printf("%s: could not remove page: %p (index: %lu) from as: %p\n",
+			               __func__, page, page->index, page->mapping);
+		}
+		kfree(page);
+	}
+	pagevec_reinit(pvec);
+}
+
+
+#include <linux/swap.h>
+
+void check_move_unevictable_pages(struct pagevec *pvec)
+{
+	/* intentionally left blank */
+
+	/*
+	 * This functions is called from drm_gem_check_release_pagevec WRT
+	 * to pagevec_release (see above).
+	 */
+}
+
+
 #include <linux/of.h>
 
 static struct device_node _vivante_gc = {
