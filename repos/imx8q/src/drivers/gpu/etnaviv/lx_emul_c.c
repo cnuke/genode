@@ -1001,7 +1001,7 @@ static void lx_drm_version_in(struct drm_version *version)
 }
 
 
-static lx_drm_version_out(struct drm_version *version)
+static void lx_drm_version_out(struct drm_version *version)
 {
 	/* set proper offset value from pointer */
 	version->name -= (unsigned long)version;
