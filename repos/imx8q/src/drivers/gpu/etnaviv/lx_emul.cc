@@ -674,7 +674,6 @@ void lx_emul_block_current_task(void)
 		Genode::sleep_forever();
 	}
 
-	Lx::Task *t = Lx::scheduler().current();
 	Lx::scheduler().current()->block_and_schedule();
 }
 

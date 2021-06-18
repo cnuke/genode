@@ -1231,7 +1231,7 @@ void dma_direct_unmap_sg(struct device *dev, struct scatterlist *sgl,
 	for_each_sg(sgl, sg, nents, i) {
 
 		if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
-			lx_emul_printf("%s: dma_direct_sync_single_for_cpu(0x%llx) not implemented\n",
+			LX_TRACE_PRINT("%s: dma_direct_sync_single_for_cpu(0x%llx) not implemented\n",
 			               __func__, sg->dma_address);
 		}
 		sg->dma_address = 0;
