@@ -51,7 +51,9 @@ void  lx_emul_kmem_cache_free(void const *, void *);
 void *lx_emul_kmem_cache_alloc(void const *);
 
 int            lx_emul_alloc_address_space(void *, unsigned long);
+int            lx_emul_free_address_space(void *, unsigned long);
 int            lx_emul_add_dma_to_address_space(void *, struct Lx_dma);
+struct Lx_dma  lx_emul_get_dma_from_address_space(void *);
 void          *lx_emul_look_up_address_space_page(void *, unsigned long);
 int            lx_emul_insert_page_to_address_page(void *, void *, unsigned long);
 int            lx_emul_remove_page_to_address_page(void *, void *, unsigned long);

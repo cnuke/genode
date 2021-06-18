@@ -1799,12 +1799,28 @@ struct cpumask __cpu_possible_mask = { .bits[0] = 1 };
 
 #include <linux/file.h>
 
+static void _free_file(struct file *file)
+{
+	struct inode *inode;
+	struct address_space *mapping;
+	struct Lx_dma lx_dma;
+
+	LX_TRACE_PRINT("%s: file: %p f_count 0\n", __func__, file);
+
+	mapping = file->f_mapping;
+	inode   = file->f_inode;
+	lx_dma  = lx_emul_get_dma_from_address_space(mapping);
+
+	lx_emul_dma_free_attrs(NULL, 0, lx_dma.vaddr, lx_dma.paddr);
+	lx_emul_free_address_space(mapping, 0);
+	kfree(inode);
+}
+
+
 void fput(struct file *file)
 {
-	lx_emul_trace(__func__);
 	if (atomic_long_sub_and_test(1, &file->f_count)) {
-		lx_emul_printf("%s: file: %p f_count 0, leaking\n",
-		               __func__, file);
+		_free_file(file);
 	}
 }
 

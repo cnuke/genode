@@ -266,6 +266,19 @@ struct Mapping : Genode::Registry<Mapping>::Element
 		dma           { 0, 0 }
 	{ }
 
+	~Mapping()
+	{
+		bool pages = false;
+		_page_registry.for_each([&] (Page &p) {
+				Genode::destroy(Lx::Malloc::mem(), &p);
+				pages = true;
+		});
+
+		if (pages) {
+			Genode::warning("mapping destroyed with pages\n");
+		}
+	}
+
 	bool valid_dma() const { return dma.vaddr && dma.paddr; }
 
 	bool insert_page(void *page, unsigned long index)
@@ -347,6 +360,22 @@ int lx_emul_alloc_address_space(void *as, unsigned long size)
 }
 
 
+int lx_emul_free_address_space(void *as, unsigned long)
+{
+	if (!as) {
+		return -1;
+	}
+
+	_mapping_registry().for_each([&as] (Mapping &m) {
+		if (m.address_space == as) {
+			Genode::destroy(Lx::Malloc::mem(), &m);
+		}
+	});
+
+	return 0;
+}
+
+
 int lx_emul_add_dma_to_address_space(void *as, Lx_dma dma)
 {
 	int ret = -1;
@@ -365,6 +394,21 @@ int lx_emul_add_dma_to_address_space(void *as, Lx_dma dma)
 	});
 
 	return ret;
+}
+
+
+Lx_dma lx_emul_get_dma_from_address_space(void *as)
+{
+	Lx_dma dma;
+
+	_mapping_registry().for_each([&dma, as] (Mapping &m) {
+		if (m.address_space != as) {
+			return;
+		}
+		dma = m.dma;
+	});
+
+	return dma;
 }
 
 
