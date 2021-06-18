@@ -25,20 +25,10 @@ extern "C" {
 #include <drm.h>
 #include <etnaviv_drm.h>
 #include <libdrm_macros.h>
-
-#include <os/backtrace.h>
-
-#define DRM_NUMBER(req) ((req) & 0xff)
 }
 
 
-enum { verbose_ioctl = true };
-
-
-extern "C" void dump_backtrace(void)
-{
-	Genode::backtrace();
-}
+enum { verbose_ioctl = false };
 
 
 /**
@@ -46,7 +36,7 @@ extern "C" void dump_backtrace(void)
  */
 static unsigned long constexpr command_number(unsigned long request)
 {
-	return request & 0xff;
+	return request & 0xffu;
 }
 
 
@@ -127,7 +117,7 @@ static unsigned long to_linux(unsigned long request)
 	/*
 	 * FreeBSD and Linux have swapped IN/OUT values.
 	 */
-	unsigned long lx = request & 0x0fffffff;
+	unsigned long lx = request & 0x0fffffffu;
 	if (req_out(request)) { lx |= IOC_IN; }
 	if (req_in (request)) { lx |= IOC_OUT; }
 
@@ -140,9 +130,9 @@ static void dump_ioctl(unsigned long request)
 	using namespace Genode;
 
 	log("ioctl(request=", Hex(request),
-	    (request & 0xe0000000) == IOC_OUT   ? " out"   :
-	    (request & 0xe0000000) == IOC_IN    ? " in"    :
-	    (request & 0xe0000000) == IOC_INOUT ? " inout" : " void",
+	    (request & 0xe0000000u) == IOC_OUT   ? " out"   :
+	    (request & 0xe0000000u) == IOC_IN    ? " in"    :
+	    (request & 0xe0000000u) == IOC_INOUT ? " inout" : " void",
 	    " len=", IOCPARM_LEN(request),
 	    " cmd=", command_name(request), " (", Hex(command_number(request)), ")");
 }
@@ -185,45 +175,46 @@ size_t Drm::get_payload_size(drm_etnaviv_gem_submit const &submit)
 void Drm::serialize(drm_etnaviv_gem_submit *submit, char *content)
 {
 	size_t offset = 0;
-	__u64 start = 0;
 
 	/* leave place for object itself first */
 	offset += sizeof (*submit);
 
 	/* next are the buffer-objects */
 	if (submit->nr_bos) {
-		start = reinterpret_cast<__u64>(content) + offset;
+		size_t const new_start = offset;
+
 		auto copy_bos = [&] (drm_etnaviv_gem_submit_bo const *bo) {
-			Genode::warning("bo: ", bo, " handle: ", bo->handle, " presumed: ", Genode::Hex(bo->presumed));
+			// Genode::warning("bo: ", bo, " handle: ", bo->handle, " presumed: ", Genode::Hex(bo->presumed));
 			char * const dst = content + offset;
 			Genode::memcpy(dst, bo, sizeof (*bo));
 			offset += sizeof (*bo);
 		};
 		for_each_object((drm_etnaviv_gem_submit_bo*)submit->bos,
 		                submit->nr_bos, copy_bos);
-		Genode::warning("nr_bos: ", submit->nr_bos, " bos: ", Genode::Hex(submit->bos), " -> ", Genode::Hex(start));
-		submit->bos = reinterpret_cast<__u64>(start);
+		// Genode::warning("nr_bos: ", submit->nr_bos, " bos: ", Genode::Hex(submit->bos), " -> ", Genode::Hex(start));
+		submit->bos = reinterpret_cast<__u64>(new_start);
 	}
 
 	/* next are the relocs */
 	if (submit->nr_relocs) {
-		start = reinterpret_cast<__u64>(content) + offset;
+		size_t const new_start = offset;
+
 		auto copy_relocs = [&] (drm_etnaviv_gem_submit_reloc const *reloc) {
-			Genode::warning("reloc: ", reloc, " submit_offset: ", Genode::Hex(reloc->submit_offset),
-			                "reloc_offset: ", Genode::Hex(reloc->reloc_offset));
+			// Genode::warning("reloc: ", reloc, " submit_offset: ", Genode::Hex(reloc->submit_offset),
+			//                 "reloc_offset: ", Genode::Hex(reloc->reloc_offset));
 			char * const dst = content + offset;
 			Genode::memcpy(dst, reloc, sizeof (*reloc));
 			offset += sizeof (*reloc);
 		};
 		for_each_object((drm_etnaviv_gem_submit_reloc*)submit->relocs,
 		                submit->nr_relocs, copy_relocs);
-		Genode::warning("nr_relocs: ", submit->nr_relocs, " relocs: ", Genode::Hex(submit->relocs), " -> ", Genode::Hex(start));
-		submit->relocs = reinterpret_cast<__u64>(start);
+		// Genode::warning("nr_relocs: ", submit->nr_relocs, " relocs: ", Genode::Hex(submit->relocs), " -> ", Genode::Hex(start));
+		submit->relocs = reinterpret_cast<__u64>(new_start);
 	}
 
 	/* next are the pmrs */
 	if (submit->nr_pmrs) {
-		start = reinterpret_cast<__u64>(content) + offset;
+		size_t const new_start = offset;
 		auto copy_pmrs = [&] (drm_etnaviv_gem_submit_pmr const *pmr) {
 			char * const dst = content + offset;
 			Genode::memcpy(dst, pmr, sizeof (*pmr));
@@ -231,17 +222,20 @@ void Drm::serialize(drm_etnaviv_gem_submit *submit, char *content)
 		};
 		for_each_object((drm_etnaviv_gem_submit_pmr*)submit->pmrs,
 		                submit->nr_pmrs, copy_pmrs);
-		Genode::warning("pmrs: ", Genode::Hex(submit->pmrs), " -> ", Genode::Hex(start));
-		submit->pmrs = reinterpret_cast<__u64>(start);
+		// Genode::warning("pmrs: ", Genode::Hex(submit->pmrs), " -> ", Genode::Hex(start));
+		submit->pmrs = reinterpret_cast<__u64>(new_start);
 	}
 
 	/* next is the cmd stream */
-	start = reinterpret_cast<__u64>(content) + offset;
-	char * const dst = content + offset;
-	Genode::memcpy(dst, reinterpret_cast<void const*>(submit->stream), submit->stream_size);
-	offset += submit->stream_size;
-	Genode::warning("stream_size: ", submit->stream_size, " stream: ", Genode::Hex(submit->stream), " -> ", Genode::Hex(start));
-	submit->stream = reinterpret_cast<__u64>(start);
+	{
+		size_t const new_start = offset;
+
+		char * const dst = content + offset;
+		Genode::memcpy(dst, reinterpret_cast<void const*>(submit->stream), submit->stream_size);
+		offset += submit->stream_size;
+		// Genode::warning("stream_size: ", submit->stream_size, " stream: ", Genode::Hex(submit->stream), " -> ", Genode::Hex(start));
+		submit->stream = reinterpret_cast<__u64>(new_start);
+	}
 
 	/* copy submit object last but into the front
  	 * XXX content + bos = start would work as well... */
@@ -265,15 +259,15 @@ void Drm::serialize(drm_version *version, char *content)
 	char *start = 0;
 	offset += sizeof (*version);
 
-	start = content + offset;
+	start = (char*)offset;
 	version->name = start;
 	offset += version->name_len;
 
-	start = content + offset;
+	start = (char*)offset;
 	version->date = start;
 	offset += version->date_len;
 
-	start = content + offset;
+	start = (char*)offset;
 	version->desc = start;
 	offset += version->desc_len;
 
@@ -289,9 +283,17 @@ void Drm::deserialize(drm_version *version, char *content)
 	version->version_minor      = cversion->version_minor;
 	version->version_patchlevel = cversion->version_patchlevel;
 
-	Genode::copy_cstring(version->name, cversion->name, version->name_len);
-	Genode::copy_cstring(version->date, cversion->date, version->date_len);
-	Genode::copy_cstring(version->desc, cversion->desc, version->desc_len);
+	version->name += (unsigned long)version;
+	version->date += (unsigned long)version;
+	version->desc += (unsigned long)version;
+
+	cversion->name += (unsigned long)cversion;
+	cversion->date += (unsigned long)cversion;
+	cversion->desc += (unsigned long)cversion;
+
+	Genode::copy_cstring(version->name, cversion->name, cversion->name_len);
+	Genode::copy_cstring(version->date, cversion->date, cversion->date_len);
+	Genode::copy_cstring(version->desc, cversion->desc, cversion->desc_len);
 }
 
 
@@ -312,34 +314,42 @@ class Drm_call
 		{
 			size_t size = IOCPARM_LEN(request);
 
-			Genode::log(__func__, ":", __LINE__, ": request: ", command_name(request),
-			            " size: ", size, " arg: ", arg, " foo: ", command_number(request) == DRM_IOCTL_VERSION);
+			// Genode::log(__func__, ":", __LINE__, ": request: ", command_name(request),
+			//             " size: ", size, " arg: ", arg, " foo: ", command_number(request) == DRM_IOCTL_VERSION);
 
 			bool const in  = req_in(request);
 			bool const out = req_out(request);
 
 			unsigned long const lx_request = to_linux(request);
 
+			/*
+			 * Adjust packet size for flatten arrays.
+			 */
 			if (command_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
 				/* account for the arrays */
 				drm_etnaviv_gem_submit *submit =
 					reinterpret_cast<drm_etnaviv_gem_submit*>(arg);
 				size_t const payload_size = Drm::get_payload_size(*submit);
 				size += payload_size;
-			}
+			} else
 
-			if (command_number(request) == DRM_IOCTL_VERSION) {
-				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+			/*
+			 * Adjust packet size for user pointer storage.
+			 */
+			if (command_number(request) == command_number(DRM_IOCTL_VERSION)) {
+				// Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
 				drm_version *version =
 					reinterpret_cast<drm_version*>(arg);
 				size_t const payload_size = Drm::get_payload_size(*version);
 				size += payload_size;
 			}
 
+#if 0
 			if (device_number(request) == DRM_ETNAVIV_GEM_CPU_PREP) {
 				struct drm_etnaviv_gem_cpu_prep *v = reinterpret_cast<struct drm_etnaviv_gem_cpu_prep*>(arg);
-				Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_CPU_PREP: handle: ", v->handle);
+				// Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_CPU_PREP: handle: ", v->handle);
 			}
+#endif
 
 			/* submit */
 			Drm::Session::Tx::Source &src = *_drm_session.tx();
@@ -352,55 +362,64 @@ class Drm_call
 			if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
 				drm_etnaviv_gem_submit *submit =
 					reinterpret_cast<drm_etnaviv_gem_submit*>(arg);
-				Genode::error(__func__, ": serialize submit buffer fence: ", submit->fence, " fence_fd: ", submit->fence_fd);
+				// Genode::error(__func__, ": serialize submit buffer fence: ", submit->fence, " fence_fd: ", submit->fence_fd);
 				char *content = src.packet_content(p);
 				Drm::serialize(submit, content);
 			} else
 
-			if (command_number(request) == DRM_IOCTL_VERSION) {
-				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+			/*
+			 * Copy and adjust user pointer in DRM version object.
+			 */
+			if (command_number(request) == command_number(DRM_IOCTL_VERSION)) {
+				// Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
 				drm_version *version =
 					reinterpret_cast<drm_version*>(arg);
 				char *content = src.packet_content(p);
 				Drm::serialize(version, content);
 			} else
 
+			/*
+			 * The remaining ioctls get the memcpy treament. Hopefully there no
+			 * user pointers left...
+			 */
 			if (in) {
-				Genode::log(__func__, ":", __LINE__, ": IN request: ", command_name(request),
-				            " size: ", size, " arg: ", arg);
+				// Genode::log(__func__, ":", __LINE__, ": IN request: ", command_name(request),
+				//             " size: ", size, " arg: ", arg);
 				Genode::memcpy(src.packet_content(p), arg, size);
 
+#if 0
 				if (device_number(request) == DRM_ETNAVIV_GEM_INFO) {
 					struct drm_etnaviv_gem_info *v = reinterpret_cast<struct drm_etnaviv_gem_info*>(arg);
-					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_INFO: handle: ", v->handle);
+					// Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_INFO: handle: ", v->handle);
 				}
 
 				if (command_number(request) == DRM_IOCTL_PRIME_HANDLE_TO_FD) {
 					drm_prime_handle *v = reinterpret_cast<drm_prime_handle*>(arg);
 					/* remove DRM_CLOEXEC */
 					v->flags = 0;
-					Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_HANDLE_TO_FD: handle: ", v->handle);
+					// Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_HANDLE_TO_FD: handle: ", v->handle);
 				}
 
 				if (command_number(request) == DRM_IOCTL_PRIME_FD_TO_HANDLE) {
 					drm_prime_handle *v = reinterpret_cast<drm_prime_handle*>(arg);
-					Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_FD_TO_HANDLE: ",
-								"fd: ", v->fd);
+					// Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_FD_TO_HANDLE: ",
+					// 			"fd: ", v->fd);
 				}
 
 				if (device_number(request) == DRM_ETNAVIV_GEM_NEW) {
 					struct drm_etnaviv_gem_new *v = reinterpret_cast<struct drm_etnaviv_gem_new*>(arg);
-					Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_NEW: size: ", v->size,
-					            " flags: ", Genode::Hex(v->flags));
+					// Genode::log(__func__, ":", __LINE__, ": DRM_ETNAVIV_GEM_NEW: size: ", v->size,
+					//             " flags: ", Genode::Hex(v->flags));
 				}
 
 				if (device_number(request) == DRM_ETNAVIV_WAIT_FENCE) {
 
 					drm_etnaviv_wait_fence *fence =
 						reinterpret_cast<drm_etnaviv_wait_fence*>(arg);
-					Genode::error(__func__, ": DRM_ETNAVIV_WAIT_FENCE fence: ",
-					fence->fence);
+					// Genode::error(__func__, ": DRM_ETNAVIV_WAIT_FENCE fence: ",
+					// fence->fence);
 				}
+#endif
 			}
 
 			src.submit_packet(p);
@@ -409,10 +428,14 @@ class Drm_call
 			p = src.get_acked_packet();
 
 			if (out && arg) {
-				Genode::log(__func__, ":", __LINE__, ": OUT request: ", command_name(request),
-				            " size: ", size, " arg: ", arg);
-				if (command_number(request) == DRM_IOCTL_VERSION) {
-				Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
+				// Genode::log(__func__, ":", __LINE__, ": OUT request: ", command_name(request),
+				//             " size: ", size, " arg: ", arg);
+
+				/*
+				 * Adjust user pointers back to make the client happy.
+				 */
+				if (command_number(request) == command_number(DRM_IOCTL_VERSION)) {
+				// Genode::log(__func__, ":", __LINE__, ": handle DRM_IOCTL_VERSION");
 					drm_version *version =
 						reinterpret_cast<drm_version*>(arg);
 						char *content = src.packet_content(p);
@@ -423,6 +446,7 @@ class Drm_call
 					Genode::memcpy(arg, src.packet_content(p), size);
 				}
 
+#if 0
 				if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
 
 					drm_etnaviv_gem_submit *submit =
@@ -451,7 +475,7 @@ class Drm_call
 					Genode::log(__func__, ":", __LINE__, ": DRM_IOCTL_PRIME_FD_TO_HANDLE: ",
 								" handle: ", v->handle, " fd: ", v->fd);
 				}
-
+#endif
 			}
 
 			src.release_packet(p);
@@ -490,20 +514,15 @@ void drm_init(Genode::Env &env)
 
 void drm_complete()
 {
-	Genode::error(__func__, ": called, not implemented yet");
+	// TODO
+	// Genode::error(__func__, ": called, not implemented yet");
 }
 
 
 extern "C" int genode_ioctl(int /* fd */, unsigned long request, void *arg)
 {
-	// Genode::error(__func__, ": from: ", __builtin_return_address(0));
-
-	if (0)
+	if (verbose_ioctl)
 		dump_ioctl(request);
-
-	if (device_number(request) == DRM_ETNAVIV_GEM_SUBMIT) {
-		Genode::error(__func__, ": form: ", __builtin_return_address(0));
-	}
 
 	try {
 		int ret = _drm->ioctl(request, arg);
@@ -526,8 +545,8 @@ void *drm_mmap(void *addr, size_t length, int prot, int flags,
 	(void)flags;
 	(void)fd;
 
-	Genode::warning(__func__, ": addr: ", addr, " length: ", length, " prot: ", Genode::Hex(prot),
-	                " flags: ", Genode::Hex(flags), " fd: ", fd, " offset: ", Genode::Hex(offset));
+	// Genode::warning(__func__, ": addr: ", addr, " length: ", length, " prot: ", Genode::Hex(prot),
+	//                 " flags: ", Genode::Hex(flags), " fd: ", fd, " offset: ", Genode::Hex(offset));
 	return _drm->mmap(offset, length);
 }
 
@@ -535,7 +554,7 @@ void *drm_mmap(void *addr, size_t length, int prot, int flags,
 int drm_munmap(void *addr, size_t length)
 {
 	(void)length;
-	Genode::warning(__func__, ": addr: ", addr, " length: ", length);
+	// Genode::warning(__func__, ": addr: ", addr, " length: ", length);
 	_drm->munmap(addr);
 
 	return 0;
