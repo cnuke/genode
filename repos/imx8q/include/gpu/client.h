@@ -49,7 +49,6 @@ class Drm::Session_client : public Genode::Rpc_client<Session>
 
 		Genode::Ram_dataspace_capability object_dataspace(unsigned long offset, unsigned long size) override
 		{
-			Genode::log("offset: ", Genode::Hex(offset));
 			return call<Rpc_object_ds_cap>(offset, size);
 		}
 };
