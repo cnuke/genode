@@ -123,7 +123,11 @@ dri2_genode_create_window_surface(_EGLDisplay *disp,
                                   _EGLConfig *conf, void *native_window,
                                   const EGLint *attrib_list)
 {
-	return _create_surface(disp, conf, native_window, attrib_list, WINDOW);
+	_EGLSurface *surf = _create_surface(disp, conf, native_window, attrib_list, WINDOW);
+	if (surf) {
+		_eglGetSurface(surf);
+	}
+	return surf;
 }
 
 
