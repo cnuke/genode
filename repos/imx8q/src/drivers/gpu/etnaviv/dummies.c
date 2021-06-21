@@ -345,7 +345,6 @@ void drm_dev_put(struct drm_device * dev)
 }
 
 
-
 #include <linux/ww_mutex.h>
 
 int __sched ww_mutex_lock_interruptible(struct ww_mutex * lock,struct ww_acquire_ctx * ctx)

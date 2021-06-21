@@ -58,6 +58,7 @@ static void _run_linux(void *args)
 	}
 }
 
+extern "C" void dump_quota(int, int);
 
 void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 {
@@ -65,6 +66,7 @@ void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 
 
 	Lx_kit::Env & kit_env = Lx_kit::env(&env);
+	dump_quota(0, 0);
 	env.exec_static_constructors();
 
 	Lx::malloc_init(env, alloc);
@@ -78,7 +80,11 @@ void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 	_linux.construct(_run_linux, reinterpret_cast<void*>(&kit_env),
 	                 "linux", Lx::Task::PRIORITY_0, Lx::scheduler());
 
+	Genode::error(__func__, ": quota before schedule");
+	dump_quota(0, 0);
 	Lx::scheduler().schedule();
+	Genode::error(__func__, ": quota after schedule");
+	dump_quota(0, 0);
 }
 
 
