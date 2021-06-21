@@ -104,6 +104,8 @@ set config {
 			<!-- <arg value="\-\-debug"/> -->
 			<arg value="-b"/>
 			<arg value=":duration=2.0"/>
+			<arg value="-s"/>
+			<arg value="800x600"/>
 		</config>
 		<route>
 			<service name="Gui"> <child name="nitpicker"/> </service>
@@ -131,8 +133,8 @@ set config {
 		</route>
 	</start>
 
-	<start name="imx8q_gpu_drv" caps="200">
-		<resource name="RAM" quantum="64M"/>
+	<start name="imx8q_gpu_drv" caps="500">
+		<resource name="RAM" quantum="128M"/>
 		<provides> <service name="Drm"/> </provides>
 		<config ld_verbose="yes"/>
 		<route>
