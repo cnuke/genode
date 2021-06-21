@@ -137,8 +137,6 @@ class Drm::Session_component : public Session_rpc_object
 		}
 };
 
-extern "C" void dump_quota(int, int);
-
 
 class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients>
 {
@@ -155,13 +153,6 @@ class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients
 				Arg_string::find_arg(args, "tx_buf_size").ulong_value(0);
 
 				return new (_alloc) Session_component(_env, _env.ram().alloc(tx_buf_size));
-		}
-
-		void _destroy_session(Session_component *s) override
-		{
-			dump_quota(0, 0);
-			Genode::destroy(_alloc, s);
-			dump_quota(0, 1);
 		}
 
 	public:

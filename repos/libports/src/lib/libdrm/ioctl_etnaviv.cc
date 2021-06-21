@@ -545,11 +545,9 @@ void *drm_mmap(void *addr, size_t length, int prot, int flags,
 	(void)flags;
 	(void)fd;
 
-	void *mapped_addr = _drm->mmap(offset, length);
 	// Genode::warning(__func__, ": addr: ", addr, " length: ", length, " prot: ", Genode::Hex(prot),
-	//                 " flags: ", Genode::Hex(flags), " fd: ", fd, " offset: ", Genode::Hex(offset),
-	//                 " mapped_addr: ", mapped_addr);
-	return mapped_addr;
+	//                 " flags: ", Genode::Hex(flags), " fd: ", fd, " offset: ", Genode::Hex(offset));
+	return _drm->mmap(offset, length);
 }
 
 

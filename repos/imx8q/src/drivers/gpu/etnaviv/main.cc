@@ -19,7 +19,6 @@ namespace Framebuffer {
 	struct Main;
 }
 
-extern "C" void dump_quota(int, int);
 
 struct Framebuffer::Main
 {
@@ -30,7 +29,6 @@ struct Framebuffer::Main
 	Main(Env & env) : env(env)
 	{
 		Lx_kit::initialize(env, heap);
-		dump_quota(0, 0);
 	}
 };
 

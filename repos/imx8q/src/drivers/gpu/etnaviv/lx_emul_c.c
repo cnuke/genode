@@ -794,7 +794,7 @@ void __sched mutex_unlock(struct mutex *lock)
 			waiter_task = (unsigned long)waiter->task;
 			lx_emul_unblock_task(waiter_task);
 		} else {
-			LX_TRACE_PRINT("%s: lock: %px wait_list: %px not empty but waiter NULL from: %px\n",
+			lx_emul_printf("%s: lock: %px wait_list: %px not empty but waiter NULL from: %px\n",
 			               __func__, &lock->wait_list, lock, __builtin_return_address(0));
 		}
 	}
@@ -1010,8 +1010,6 @@ static void lx_drm_version_out(struct drm_version *version)
 }
 
 
-extern void dump_quota(int, int);
-
 static int lx_drm_in(unsigned int cmd, unsigned long arg)
 {
 	unsigned int const nr = DRM_IOCTL_NR(cmd);
@@ -1020,14 +1018,6 @@ static int lx_drm_in(unsigned int cmd, unsigned long arg)
 
 	if (is_driver_ioctl) {
 		unsigned const int dnr = nr - DRM_COMMAND_BASE;
-
-		if (dnr == DRM_ETNAVIV_GEM_NEW) {
-			// lx_emul_dump_dma_allocations();
-			struct drm_etnaviv_gem_new const *g =
-				(struct drm_etnaviv_gem_new const*)arg;
-			lx_emul_printf("%s: GEM_NEW: size: %llu\n", __func__, g->size);
-			dump_quota(0, 0);
-		}
 
 		switch (dnr) {
 		case DRM_ETNAVIV_GEM_SUBMIT:
@@ -1044,12 +1034,6 @@ static int lx_drm_in(unsigned int cmd, unsigned long arg)
 		default:
 			break;
 		}
-
-		if (nr == DRM_IOCTL_NR(DRM_IOCTL_GEM_CLOSE)) {
-			struct drm_gem_close const *g =
-				(struct drm_gem_close const*)arg;
-			lx_emul_printf("%s: GEM_CLOSE: handle: %u\n", __func__, g->handle);
-		}
 	}
 	return 0;
 }
@@ -1064,13 +1048,6 @@ static int lx_drm_out(unsigned int cmd, unsigned long arg)
 	if (is_driver_ioctl) {
 		unsigned const int dnr = nr - DRM_COMMAND_BASE;
 
-		if (dnr == DRM_ETNAVIV_GEM_NEW) {
-			// lx_emul_dump_dma_allocations();
-			struct drm_etnaviv_gem_new const *g =
-				(struct drm_etnaviv_gem_new const*)arg;
-			lx_emul_printf("%s: GEM_NEW: size: %llu handle: %u\n", __func__, g->size, g->handle);
-		}
-
 		switch (dnr) {
 		default:
 			break;
@@ -1083,17 +1060,9 @@ static int lx_drm_out(unsigned int cmd, unsigned long arg)
 		default:
 			break;
 		}
-
-		// if (nr == DRM_IOCTL_NR(DRM_IOCTL_GEM_CLOSE)) {
-		// 	lx_emul_dump_dma_allocations();
-		// }
 	}
-
 	return 0;
 }
-
-
-extern void lx_emul_dump_dma_allocations(void);
 
 
 int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
@@ -1105,7 +1074,6 @@ int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 	if (cmd & IOC_OUT) {
 		lx_drm_out(cmd, arg);
 	}
-
 	return ioctl_res;
 }
 
