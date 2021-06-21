@@ -210,62 +210,12 @@ Lx_dma lx_emul_dma_alloc_attrs(void const *dev, unsigned long size, int wc)
 
 		_dma_wc_ds_list().insert(dma_wc_ds);
 
-		Lx_dma lx_dma {
+		return Lx_dma {
 			.vaddr = (unsigned long)dma_wc_ds->local_addr<void>(),
 			.paddr = (unsigned long)Genode::Dataspace_client(dma_wc_ds->cap()).phys_addr()
 		};
-		Genode::error("DMA: alloc: size: ", size, " addr: ", Genode::Hex(lx_dma.vaddr), "/",
-		              Genode::Hex(lx_dma.paddr));
-		return lx_dma;
 	} catch (...) { }
 	return Lx_dma { .vaddr = 0, .paddr = 0 };
-}
-
-
-extern "C" void lx_emul_dump_dma_allocations(void)
-{
-	for (Dma_wc_dataspace *ds = _dma_wc_ds_list().first(); ds; ds = ds->next()) {
-		void const *vaddr = ds->local_addr<void const>();
-		size_t const size = Genode::Dataspace_client(ds->cap()).size();
-		Genode::error("DMA: dump: ", vaddr, " size: ", size);
-	}
-}
-
-
-extern "C" void dump_quota(int base_line, int diff)
-{
-	static Genode::Cap_quota _used_caps;
-	static Genode::Cap_quota _avail_caps;
-	static Genode::Ram_quota _used_ram;
-	static Genode::Ram_quota _avail_ram;
-
-	Genode::Cap_quota used_caps = Lx_kit::env().env.pd().used_caps();
-	Genode::Cap_quota avail_caps = Lx_kit::env().env.pd().avail_caps();
-	Genode::Ram_quota used_ram = Lx_kit::env().env.pd().used_ram();
-	Genode::Ram_quota avail_ram = Lx_kit::env().env.pd().avail_ram();
-	if (base_line) {
-		_used_caps = used_caps;
-		_avail_caps = avail_caps;
-		_used_ram = used_ram;
-		_avail_ram = avail_ram;
-	}
-
-	Genode::error("quota: ",
-	              used_caps.value, "/", avail_caps.value, "/", avail_caps.value + used_caps.value, " ",
-	              used_ram.value, "/", avail_ram.value, "/", avail_ram.value + used_ram.value);
-	if (diff) {
-		signed long const cused  = (signed long)used_caps.value - _used_caps.value;
-		signed long const cavail = (signed long)avail_caps.value - _avail_caps.value;
-		signed long const rused  = (signed long)used_ram.value - _used_ram.value;
-		signed long const ravail = (signed long)avail_ram.value - _avail_ram.value;
-
-		Genode::error("quota-diff: ",
-		              cused, "/", cavail, "/", cavail + cused, " ",
-		              rused, "/", ravail, "/", ravail + rused);
-
-
-		lx_emul_dump_dma_allocations();
-	}
 }
 
 
@@ -274,13 +224,8 @@ void lx_emul_dma_free_attrs(void const *dev, unsigned long size,
 {
 	for (Dma_wc_dataspace *ds = _dma_wc_ds_list().first(); ds; ds = ds->next()) {
 		if (ds->local_addr<void>() == (void*)cpu_addr) {
-			void const *vaddr = ds->local_addr<void const>();
-			size_t const size = Genode::Dataspace_client(ds->cap()).size();
-			Genode::error("DMA: free: size: ", size, " addr: ", vaddr);
-
 			_dma_wc_ds_list().remove(ds);
 			destroy(Lx::Malloc::mem(), ds);
-
 			return;
 		}
 	}
