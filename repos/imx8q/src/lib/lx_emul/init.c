@@ -27,6 +27,8 @@ int lx_emul_init_kernel()
 }
 
 
+extern void dump_quota(int, int);
+
 int lx_emul_start_kernel()
 {
 	int err = 0;
@@ -56,6 +58,8 @@ int lx_emul_start_kernel()
 		lx_emul_printf("%s: model: 0x%llx\n", __func__, param.value);
 	}
 
+	lx_emul_printf("%s: announce DRM session\n", __func__);
 	lx_emul_announce_drm_session();
+	dump_quota(1, 0);
 	return 0;
 }
