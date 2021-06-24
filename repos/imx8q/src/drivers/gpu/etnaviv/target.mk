@@ -25,7 +25,7 @@ SRC_CC  += lx_kit/irq.cc
 SRC_CC  += lx_kit/scheduler.cc
 SRC_CC  += lx_kit/timer.cc
 SRC_CC  += lx_kit/work.cc
-SRC_S   += lx_kit/spec/arm_64/platform.cc
+SRC_CC  += lx_kit/spec/arm_64/platform.cc
 SRC_S   += lx_kit/spec/arm_64/setjmp.S
 INC_DIR += $(REP_DIR)/src/include
 INC_DIR += $(REP_DIR)/src/include/spec/arm_64
@@ -38,8 +38,10 @@ vpath % $(REP_DIR)/src/lib
 # Linux kernel definitions
 #
 
-#CONTRIB_DIR := $(call select_from_ports,dde_linux)/src/drivers/gpu/etnaviv
-CONTRIB_DIR := /home/jws/src/imx8/linux-fslc-5.4-2.3.x-imx
+CONTRIB_DIR := $(call select_from_ports,imx8mq_gpu)/src/drivers/gpu/etnaviv
+
+INC_DIR  += $(REP_DIR)/src/include/generated
+INC_DIR  += $(REP_DIR)/src/include/generated/uapi
 
 INC_DIR  += $(CONTRIB_DIR)/arch/arm64/include
 INC_DIR  += $(CONTRIB_DIR)/arch/arm64/include/generated
@@ -70,11 +72,10 @@ CC_CXX_OPT += -include $(CONTRIB_DIR)/include/linux/kconfig.h \
 
 CC_CXX_WARN_STRICT :=
 
-#LX_OBJECTS  = $(wildcard $(CONTRIB_DIR)/drivers/of/*.o)
 LX_OBJECTS_dma := \
-                  $(CONTRIB_DIR)/drivers/dma-buf/dma-buf.o) \
-                  $(CONTRIB_DIR)/drivers/dma-buf/dma-fence.o) \
-                  $(CONTRIB_DIR)/drivers/dma-buf/dma-resv.o)
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-buf.o \
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-fence.o \
+                  $(CONTRIB_DIR)/drivers/dma-buf/dma-resv.o
 LX_OBJECTS += $(LX_OBJECTS_dma)
 
 LX_OBJECTS_drm := \
@@ -88,27 +89,41 @@ LX_OBJECTS += $(LX_OBJECTS_drm)
 
 LX_OBJECTS += $(CONTRIB_DIR)/drivers/base/component.o
 LX_OBJECTS += $(CONTRIB_DIR)/drivers/base/devres.o
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/drivers/gpu/drm/scheduler/*.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/*.o)
-#LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/fdt*.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/idr*.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/rbtree.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/radix-tree.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/string.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/sort.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/bitmap.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/refcount.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/scatterlist.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/hexdump.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/ctype.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/lib/find_bit.o)
-LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/time/time.o)
-#LX_OBJECTS += $(wildcard $(CONTRIB_DIR)/kernel/dma/direct.o)
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/scheduler/sched_entity.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/scheduler/sched_fence.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/scheduler/sched_main.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_buffer.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_cmd_parser.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_cmdbuf.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_drv.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_dump.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_gem.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_gem_prime.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_gem_submit.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_gpu.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_hwdb.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_iommu.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_iommu_v2.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_mmu.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_perfmon.o
+LX_OBJECTS += $(CONTRIB_DIR)/drivers/gpu/drm/etnaviv/etnaviv_sched.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/idr.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/rbtree.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/radix-tree.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/string.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/sort.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/bitmap.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/refcount.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/scatterlist.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/hexdump.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/ctype.o
+LX_OBJECTS += $(CONTRIB_DIR)/lib/find_bit.o
+LX_OBJECTS += $(CONTRIB_DIR)/kernel/time/time.o
 LX_ASM      = $(wildcard $(CONTRIB_DIR)/arch/arm64/lib/mem*.S)
 LX_ASM     += $(wildcard $(CONTRIB_DIR)/arch/arm64/lib/str*.S)
 
 LX_REL_OBJ = $(LX_OBJECTS:$(CONTRIB_DIR)/%=%)
-SRC_C     += $(LX_REL_OBJ:%.o=%.c))
+SRC_C     += $(LX_REL_OBJ:%.o=%.c)
 SRC_S     += $(LX_ASM:$(CONTRIB_DIR)/%=%)
 
 define CC_OPT_LX_RULES =
