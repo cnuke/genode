@@ -1,6 +1,6 @@
 base
 blit
-drm
+libdrm
 expat
 gpu_session
 libc
