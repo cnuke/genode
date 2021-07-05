@@ -153,7 +153,7 @@ set boot_modules {
 
 	dummy_log
 
-	egl_etnaviv-21.lib.so libdrm-etnaviv.lib.so
+	egl_etnaviv-21.lib.so libdrm.lib.so
 	imx8q_gpu_drv
 
 	glmark2 jpeg.lib.so libpng.lib.so
