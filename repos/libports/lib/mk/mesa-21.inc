@@ -696,6 +696,7 @@ SRC_C += compiler/glsl/glcpp/pp.c \
          util/disk_cache.c \
          util/disk_cache_os.c \
          util/double.c \
+         util/fast_idiv_by_const.c \
          util/format/u_format_bptc.c \
          util/format/u_format.c \
          util/format/u_format_etc.c \
