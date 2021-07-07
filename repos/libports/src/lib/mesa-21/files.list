@@ -252,10 +252,12 @@ mesa-21.0.0/src/compiler/nir/nir_from_ssa.c
 mesa-21.0.0/src/compiler/nir/nir_gather_info.c
 mesa-21.0.0/src/compiler/nir/nir_gather_ssa_types.c
 mesa-21.0.0/src/compiler/nir/nir_gather_xfb_info.c
+mesa-21.0.0/src/compiler/nir/nir_gs_count_vertices.c
 mesa-21.0.0/src/compiler/nir/nir.h
 mesa-21.0.0/src/compiler/nir/nir_inline_functions.c
 mesa-21.0.0/src/compiler/nir/nir_instr_set.c
 mesa-21.0.0/src/compiler/nir/nir_instr_set.h
+mesa-21.0.0/src/compiler/nir/nir_lower_interpolation.c
 mesa-21.0.0/src/compiler/nir/nir_intrinsics_c.py
 mesa-21.0.0/src/compiler/nir/nir_intrinsics_h.py
 mesa-21.0.0/src/compiler/nir/nir_intrinsics_indices_h.py
@@ -286,6 +288,7 @@ mesa-21.0.0/src/compiler/nir/nir_lower_flrp.c
 mesa-21.0.0/src/compiler/nir/nir_lower_frexp.c
 mesa-21.0.0/src/compiler/nir/nir_lower_global_vars_to_local.c
 mesa-21.0.0/src/compiler/nir/nir_lower_goto_ifs.c
+mesa-21.0.0/src/compiler/nir/nir_lower_gs_intrinsics.c
 mesa-21.0.0/src/compiler/nir/nir_lower_idiv.c
 mesa-21.0.0/src/compiler/nir/nir_lower_indirect_derefs.c
 mesa-21.0.0/src/compiler/nir/nir_lower_int64.c
