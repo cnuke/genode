@@ -46,10 +46,6 @@ SRC_C = gallium/drivers/iris/iris_batch.c \
         gallium/drivers/iris/iris_screen.c \
         gallium/winsys/iris/drm/iris_drm_winsys.c
 
-SRC_C += util/register_allocate.c \
-         util/slab.c \
-         util/vma.c
-
 SRC_C += $(addprefix intel/blorp/, $(notdir $(wildcard $(MESA_SRC_DIR)/src/intel/blorp/*.c)))
 
 SRC_C += $(addprefix intel/perf/, $(notdir $(wildcard $(MESA_SRC_DIR)/src/intel/perf/*.c)))
