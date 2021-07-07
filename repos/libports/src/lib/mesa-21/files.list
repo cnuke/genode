@@ -1604,6 +1604,7 @@ mesa-21.0.0/src/util/double.c
 mesa-21.0.0/src/util/double.h
 mesa-21.0.0/src/util/driconf.h
 mesa-21.0.0/src/util/enum_operators.h
+mesa-21.0.0/src/util/fast_idiv_by_const.c
 mesa-21.0.0/src/util/fast_idiv_by_const.h
 mesa-21.0.0/src/util/fast_urem_by_const.h
 mesa-21.0.0/src/util/format_r11g11b10f.h
