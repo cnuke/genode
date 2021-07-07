@@ -1,4 +1,4 @@
-LIBS += libdrm-iris iris
+LIBS += libdrm iris
 
 CC_OPT += -DGALLIUM_IRIS
 

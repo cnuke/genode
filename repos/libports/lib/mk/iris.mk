@@ -1,4 +1,4 @@
-LIBS = libc libdrm-iris \
+LIBS = libc libdrm \
        iris_gen80 iris_gen90 iris_gen110 iris_gen120 iris_gen125 \
        isl_gen80  isl_gen90  isl_gen110  isl_gen120  isl_gen125
 
