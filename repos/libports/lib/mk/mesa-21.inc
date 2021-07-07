@@ -736,8 +736,6 @@ SRC_C += compiler/glsl/glcpp/pp.c \
 CC_OPT += -DMAPI_ABI_HEADER=\"glapi/gen/glapi_mapi_tmp.h\" \
           -DMAPI_MODE_BRIDGE
 
-CC_OPT_gallium/targets/dri/target += -DGALLIUM_IRIS=1
-
 CC_OPT_loader/loader = -DDEFAULT_DRIVER_DIR='"/drivers"'
 CC_OPT_compiler/glsl/glsl_lexer = -include "stdint.h"
 CC_OPT_gallium/auxiliary/pipe-loader/pipe_loader_sw  = -DPIPE_SEARCH_DIR='"/pipe"' -DGALLIUM_STATIC_TARGETS=1
