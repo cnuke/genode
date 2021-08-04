@@ -41,7 +41,7 @@ class Lx_kit::Slab_backend_alloc : public Lx::Slab_backend_alloc,
 	private:
 
 		enum {
-			VM_SIZE    = 16 * 1024 * 1024,       /* size of VM region to reserve */
+			VM_SIZE    = 32 * 1024 * 1024,       /* size of VM region to reserve */
 			P_BLOCK_SIZE  = 2 * 1024 * 1024,     /* 2 MB physical contiguous */
 			V_BLOCK_SIZE  = P_BLOCK_SIZE * 2,    /* 2 MB virtual used, 2 MB virtual left free to avoid that Allocator_avl merges virtual contiguous regions which are physically non-contiguous */
 			ELEMENTS   = VM_SIZE / V_BLOCK_SIZE, /* MAX number of dataspaces in VM */
@@ -60,6 +60,8 @@ class Lx_kit::Slab_backend_alloc : public Lx::Slab_backend_alloc,
 				Genode::error("slab backend exhausted!");
 				return false;
 			}
+
+			Genode::log(__func__, ": index: ", _index);
 
 			try {
 				_ds_cap[_index] = Lx::backend_alloc(P_BLOCK_SIZE, _cached);
