@@ -28,6 +28,15 @@ namespace Drm {
 
 
 extern "C" int lx_drm_ioctl(unsigned int, unsigned long);
+
+extern "C" int          lx_drm_check_gem_new(unsigned int);
+extern "C" unsigned int lx_drm_get_gem_new_handle(unsigned long);
+
+extern "C" int          lx_drm_check_gem_close(unsigned int);
+extern "C" unsigned int lx_drm_get_gem_close_handle(unsigned long);
+
+extern "C" int lx_drm_close_handle(unsigned int);
+
 Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long, unsigned long);
 
 
@@ -39,7 +48,9 @@ class Drm::Session_component : public Session_rpc_object
 
 	private:
 
-		Env                               &_env;
+		Env &_env;
+
+		Genode::Heap _alloc { _env.ram(), _env.rm() };
 
 		Genode::Mutex _object_mutex { };
 		struct Object_request
@@ -54,15 +65,108 @@ class Drm::Session_component : public Session_rpc_object
 			bool request_resolved() const { return !pending; }
 		};
 
+		struct Handle : Genode::Registry<Handle>::Element
+		{
+			uint32_t const handle;
+
+			Handle(Genode::Registry<Handle> &registry, uint32_t handle)
+			:
+				Genode::Registry<Handle>::Element { registry, *this },
+				handle { handle }
+			{ }
+		};
+
+		struct Handle_registry : Genode::Registry<Handle>
+		{
+			Genode::Allocator &_alloc;
+
+			Handle_registry(Genode::Allocator &alloc)
+			: _alloc { alloc }
+			{ }
+
+			~Handle_registry()
+			{
+				/* assert registry is empty */
+				bool empty = true;
+
+				for_each([&] (Handle &h) {
+					empty = false;
+				});
+
+				if (!empty) {
+					Genode::error("handle registry not empty, leaking GEM objects");
+				}
+			}
+
+			void add(uint32_t handle)
+			{
+				bool found = false;
+				for_each([&] (Handle const &h) {
+					if (h.handle == handle) {
+						found = true;
+					}
+				});
+
+				if (found) {
+					Genode::error("handle ", handle, " already present in registry");
+					return;
+				}
+
+				new (&_alloc) Handle(*this, handle);
+			}
+
+			void remove(uint32_t handle)
+			{
+				bool removed = false;
+				for_each([&] (Handle &h) {
+					if (h.handle == handle) {
+						Genode::destroy(_alloc, &h);
+						removed = true;
+					}
+				});
+
+				if (!removed) {
+					Genode::error("could not remove handle ", handle,
+					              " - not present in registry");
+				}
+			}
+
+			void cleanup()
+			{
+				for_each([&] (Handle &h) {
+
+					/*
+					 * Close here instead of in the handle object because
+					 * handle might have been closed already and during cleanup
+					 * only leftovers are handled.
+					 */
+					if (lx_drm_close_handle(h.handle)) {
+						Genode::error("could not close handle ", h.handle,
+					                  " - leaking resources");
+					}
+					Genode::destroy(_alloc, &h);
+				});
+			}
+
+		};
+
+		Handle_registry _handle_reg { _alloc };
+
 		struct Task_args
 		{
 			Object_request obj;
 			Tx::Sink *sink;
+
+			Handle_registry *handle_reg;
+			bool cleanup;
 		};
 
 		Task_args _task_args {
 			.obj = { Genode::Ram_dataspace_capability(), 0, 0, false},
-			.sink = tx_sink() };
+			.sink = tx_sink(),
+			.handle_reg = &_handle_reg,
+			.cleanup = false,
+		};
 
 		Signal_handler<Session_component> _packet_avail { _env.ep(), *this,
 			&Session_component::_handle_signal };
@@ -71,13 +175,24 @@ class Drm::Session_component : public Session_rpc_object
 		Lx::Task                          _worker { _run, &_task_args,
 			"drm_worker", Lx::Task::PRIORITY_2, Lx::scheduler() };
 
-		static void _drm_request(Tx::Sink &sink)
+		static void _drm_request(Handle_registry &handle_reg, Tx::Sink &sink)
 		{
 			while (sink.packet_avail() && sink.ready_to_ack()) {
 				Packet_descriptor pkt = sink.get_packet();
 
 				void *arg = sink.packet_content(pkt);
 				int err = lx_drm_ioctl((unsigned int)pkt.request(), (unsigned long)arg);
+				if (!err) {
+					if (lx_drm_check_gem_new((unsigned int)pkt.request())) {
+						uint32_t const handle = lx_drm_get_gem_new_handle((unsigned long)arg);
+						handle_reg.add(handle);
+					} else
+
+					if (lx_drm_check_gem_close((unsigned int)pkt.request())) {
+						uint32_t const handle = lx_drm_get_gem_close_handle((unsigned long)arg);
+						handle_reg.remove(handle);
+					}
+				}
 				pkt.error(err);
 				sink.acknowledge_packet(pkt);
 			}
@@ -90,8 +205,15 @@ class Drm::Session_component : public Session_rpc_object
 			Tx::Sink       &sink = *args->sink;
 			Object_request &obj  = args->obj;
 
+			Handle_registry &handle_reg = *args->handle_reg;
+
 			while (true) {
-				_drm_request(sink);
+
+				if (args->cleanup) {
+					handle_reg.cleanup();
+				}
+
+				_drm_request(handle_reg, sink);
 				if (obj.request_valid() && !obj.request_resolved()) {
 					obj.cap = lx_drm_object_dataspace(obj.offset, obj.size);
 					obj.pending = false;
@@ -117,6 +239,14 @@ class Drm::Session_component : public Session_rpc_object
 		{
 			_tx.sigh_packet_avail(_packet_avail);
 			_tx.sigh_ready_to_ack(_ready_to_ack);
+		}
+
+		~Session_component()
+		{
+			/* wake up worker for cleanup */
+			_task_args.cleanup = true;
+			_worker.unblock();
+			Lx::scheduler().schedule();
 		}
 
 		Ram_dataspace_capability object_dataspace(unsigned long offset,
@@ -155,6 +285,11 @@ class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients
 				Arg_string::find_arg(args, "tx_buf_size").ulong_value(0);
 
 				return new (_alloc) Session_component(_env, _env.ram().alloc(tx_buf_size));
+		}
+
+		void _destroy_session(Session_component *s) override
+		{
+			Genode::destroy(md_alloc(), s);
 		}
 
 	public:

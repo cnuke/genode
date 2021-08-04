@@ -1075,6 +1075,66 @@ int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
 }
 
 
+int lx_drm_check_gem_new(unsigned int cmd)
+{
+	unsigned int const nr = DRM_IOCTL_NR(cmd);
+
+	bool const is_driver_ioctl =
+		nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
+
+	if (!is_driver_ioctl) {
+		return 0;
+	}
+
+	unsigned const int dnr = nr - DRM_COMMAND_BASE;
+
+	return dnr == DRM_ETNAVIV_GEM_NEW ? 1 : 0;
+}
+
+
+unsigned int lx_drm_get_gem_new_handle(unsigned long arg)
+{
+	struct drm_etnaviv_gem_new const *p =
+		(struct drm_etnaviv_gem_new const *)arg;
+
+	return p->handle;
+}
+
+
+int lx_drm_check_gem_close(unsigned int cmd)
+{
+	unsigned int const nr = DRM_IOCTL_NR(cmd);
+
+	bool const is_driver_ioctl =
+		nr >= DRM_COMMAND_BASE && nr < DRM_COMMAND_END;
+
+	if (is_driver_ioctl) {
+		return 0;
+	}
+
+	return nr == DRM_IOCTL_NR(DRM_IOCTL_GEM_CLOSE) ? 1 : 0;
+}
+
+
+unsigned int lx_drm_get_gem_close_handle(unsigned long arg)
+{
+	struct drm_gem_close const *p =
+		(struct drm_gem_close const *)arg;
+
+	return p->handle;
+}
+
+
+int lx_drm_close_handle(unsigned int handle)
+{
+	struct drm_gem_close arg = {
+		.handle = handle
+	};
+
+	return drm_ioctl(_lx_file, DRM_IOCTL_GEM_CLOSE, &arg);
+}
+
+
 #include <drm/drm_gem.h>
 #include <drm/drm_vma_manager.h>
 
