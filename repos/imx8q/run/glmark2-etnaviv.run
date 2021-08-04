@@ -17,6 +17,7 @@ set build_components {
 	lib/mesa-21/etnaviv
 
 	app/glmark2
+	test/mesa_demo/gears-21
 
 	server/dummy_log
 }
@@ -77,14 +78,74 @@ set config {
 			<capture/> <event/>
 			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
 			<domain name="default" layer="2" content="client" label="no" focus="click" hover="always" />
+			<domain name="glmark2" layer="2" xpos="1000" content="client" label="no" focus="click" hover="always" />
+			<domain name="gears" layer="2" xpos="800" ypos="300" content="client" label="no" focus="click" hover="always" />
 			<policy label_prefix="pointer" domain="pointer"/>
 			<default-policy                domain="default"/>
+			<policy label_prefix="glmark2-2" domain="glmark2"/>
+			<policy label_prefix="gears" domain="gears"/>
 		</config>
 		<route><any-service><parent/><any-child/></any-service></route>
 	</start>
 	<start name="pointer">
 		<resource name="RAM" quantum="1M"/>
 	</start>
+
+	<start name="gears" caps="500">
+		<binary name="gears-21"/>
+		<resource name="RAM" quantum="160M"/>
+		<config ld_verbose="true">
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" />
+			<vfs>
+				<dir name="dev">
+					<log/> <inline name="rtc">2000-01-01 00:00</inline>
+				</dir>
+			</vfs>
+		</config>
+		<route>
+			<service name="Gui"> <child name="nitpicker"/> </service>
+			<service name="ROM" label="egl_drv.lib.so">
+				<parent label="egl_etnaviv-21.lib.so"/>
+			</service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+<!--
+	<start name="glmark2-2" caps="500">
+		<binary name="glmark2"/>
+		<resource name="RAM" quantum="160M"/>
+		<config ld_verbose="yes">
+			<vfs>
+				<dir name="dev">
+					<log/>
+				</dir>
+				<dir name="data">
+					<tar name="glmark2_assets.tar"/>
+				</dir>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log"/>
+			<arg value="glmark2"/>
+			<arg value="-b"/>
+			<arg value=":duration=2.0"/>
+			<arg value="-s"/>
+			<arg value="800x600"/>
+		</config>
+		<route>
+			<service name="Gui"> <child name="nitpicker"/> </service>
+			<service name="ROM" label="egl_drv.lib.so">
+				<parent label="egl_etnaviv-21.lib.so"/>
+			</service>
+			<service name="ROM" label="libEGL.so">
+				<parent label="mesa-21.lib.so"/>
+			</service>
+			<service name="ROM" label="libGLESv2.so">
+				<parent label="mesa-21.lib.so"/>
+			</service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+-->
 
 	<start name="glmark2" caps="500">
 		<resource name="RAM" quantum="160M"/>
@@ -157,6 +218,7 @@ set boot_modules {
 	imx8q_gpu_drv
 
 	glmark2 jpeg.lib.so libpng.lib.so
+	gears-21
 }
 
 build_boot_image $boot_modules
