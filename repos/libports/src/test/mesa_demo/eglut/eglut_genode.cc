@@ -26,9 +26,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <base/attached_dataspace.h>
 #include <base/heap.h>
 #include <base/debug.h>
-#include <framebuffer_session/connection.h>
+#include <gui_session/connection.h>
 #include <libc/component.h>
 #include <libc/args.h>
 
@@ -50,66 +51,65 @@ Genode::Entrypoint &genode_entrypoint()
 
 struct Window : Genode_egl_window
 {
-	Genode::Env                                   &env;
-	Genode::Constructible<Framebuffer::Connection> framebuffer;
-	Genode::Io_signal_handler<Window>              mode_dispatcher;
-	bool                                           mode_change_pending = false;
+	using View_handle = Gui::Session::View_handle;
+	using Command = Gui::Session::Command;
+
+	Genode::Env      &env;
+	Framebuffer::Mode mode;
+	Gui::Connection   gui { env };
+	Genode::Constructible<Genode::Attached_dataspace> ds { };
+	View_handle       view { };
 
 	Window(Genode::Env &env, int w, int h)
 	:
-		env(env),
-		mode_dispatcher(*signal_ep, *this, &Window::mode_handler)
+		env(env), mode { .area = Gui::Area(w, h) }
 	{
 		width  = w;
 		height = h;
+		type   = WINDOW;
 
-		Framebuffer::Mode const mode { .area = { (unsigned)width, (unsigned)height } };
-
-		framebuffer.construct(env, mode);
-		addr = env.rm().attach(framebuffer->dataspace());
-
-		framebuffer->mode_sigh(mode_dispatcher);
-
+		gui.buffer(mode, false);
+		view = gui.create_view();
 		mode_change();
-	}
 
-	void mode_handler()
-	{
-		mode_change_pending = true;
-	}
-
-	void update()
-	{
-		env.rm().detach(addr);
-		addr = env.rm().attach(framebuffer->dataspace());
+		gui.enqueue<Command::Title>(view, "eglut");
+		gui.enqueue<Command::To_front>(view, View_handle());
+		gui.execute();
 	}
 
 	void mode_change()
 	{
-		Framebuffer::Mode mode = framebuffer->mode();
+		if (ds.constructed())
+			ds.destruct();
 
-		eglut_window *win  = _eglut->current;
-		if (win) {
-			win->native.width  = mode.area.w();
-			win->native.height = mode.area.h();
-			width  = mode.area.w();
-			height = mode.area.h();
+		ds.construct(env.rm(), gui.framebuffer()->dataspace());
 
-			if (win->reshape_cb)
-				win->reshape_cb(win->native.width, win->native.height);
-		}
-	
-		update();
-		mode_change_pending = false;
+		addr = ds->local_addr<unsigned char>();
+
+		Gui::Rect rect { Gui::Point { 0, 0 }, mode.area };
+		gui.enqueue<Command::Geometry>(view, rect);
+		gui.execute();
+
+		// eglut_window *win  = _eglut->current;
+		// if (win) {
+		// 	win->native.width  = mode.area.w();
+		// 	win->native.height = mode.area.h();
+		// 	width  = mode.area.w();
+		// 	height = mode.area.h();
+
+		// 	if (win->reshape_cb)
+		// 		win->reshape_cb(win->native.width, win->native.height);
+		// }
 	}
 
 	void refresh()
 	{
-		framebuffer->refresh(0, 0, width, height);
+		gui.framebuffer()->refresh(0, 0, mode.area.w(), mode.area.h());
 	}
 };
 
-Genode::Constructible<Window> eglut_win;
+
+static Genode::Constructible<Window> eglut_win;
 
 
 void _eglutNativeInitDisplay()
@@ -146,9 +146,9 @@ void _eglutNativeEventLoop()
 	while (true) {
 		struct eglut_window *win =_eglut->current;
 
-		if (eglut_win->mode_change_pending) {
-			eglut_win->mode_change();
-		}
+		// if (eglut_win->mode_change_pending) {
+		// 	eglut_win->mode_change();
+		// }
 
 		if (_eglut->idle_cb)
 			_eglut->idle_cb();
