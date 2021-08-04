@@ -32,10 +32,10 @@ int lx_emul_start_kernel()
 	register_gpu_platform_device();
 	probe_platform_bus();
 
-	err = lx_drm_open();
-	if (err) {
-		return err;
-	}
+	// err = lx_drm_open();
+	// if (err) {
+	// 	return err;
+	// }
 
 	lx_emul_announce_drm_session();
 	return 0;
