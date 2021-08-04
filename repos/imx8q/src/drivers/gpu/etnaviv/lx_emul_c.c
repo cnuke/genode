@@ -1872,7 +1872,7 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 	f->f_mode    |= FMODE_OPENED;
 
 	// XXX lookup dataspace cap later on for drm_mmap
-	LX_TRACE_PRINT("%s:%d f: %px mapping: %px size: %llu dma: (0x%lx, 0x%lx)\n",
+	LX_TRACE_PRINT("AA %s:%d f: %px mapping: %px size: %llu dma: 0x%lx / 0x%lx\n",
 	               __func__, __LINE__, f, mapping, size, lx_dma.vaddr, lx_dma.paddr);
 
 	return f;
@@ -1922,11 +1922,12 @@ static void _free_file(struct file *file)
 	struct address_space *mapping;
 	struct Lx_dma lx_dma;
 
-	LX_TRACE_PRINT("%s: file: %p f_count 0\n", __func__, file);
-
 	mapping = file->f_mapping;
 	inode   = file->f_inode;
 	lx_dma  = lx_emul_get_dma_from_address_space(mapping);
+
+	LX_TRACE_PRINT("FF %s:%d f: %px mapping: %px dma: 0x%lx / 0x%lx\n",
+	               __func__, __LINE__, file, mapping, lx_dma.vaddr, lx_dma.paddr);
 
 	lx_emul_dma_free_attrs(NULL, 0, lx_dma.vaddr, lx_dma.paddr);
 	lx_emul_free_address_space(mapping, 0);
