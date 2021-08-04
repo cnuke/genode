@@ -921,9 +921,12 @@ int drm_dev_register(struct drm_device *dev, unsigned long flags)
 
 #include <drm/drm_file.h>
 
-struct drm_file *_lx_drm_file;
+struct Drm_session
+{
+	struct drm_file *drm_file;
+	struct file     *file;
+};
 
-static struct file *_lx_file;
 
 static void drm_get_minor(struct drm_device *dev, struct drm_minor **minor, int type)
 {
@@ -935,42 +938,56 @@ static void drm_get_minor(struct drm_device *dev, struct drm_minor **minor, int 
 	*minor = new_minor;
 }
 
-int lx_drm_open(void)
+
+void *lx_drm_open(void)
 {
-	int err = 0;
+	int err;
 	struct drm_driver *drv;
+	struct Drm_session *session;
 
 	if (!_lx_drm_device) {
-		return -1;
+		return NULL;
 	}
 
 	drv = _lx_drm_device->driver;
 	if (!drv) {
-		return -2;
+		return NULL;
 	}
 
-	if (!_lx_drm_file) {
-		_lx_drm_file = (struct drm_file*)kzalloc(sizeof (*_lx_drm_file), 0);
-		if (!_lx_drm_file) {
-			return -3;
-		}
+	session = (struct Drm_session*)kzalloc(sizeof (struct Drm_session), 0);
+	if (!session) {
+		return NULL;
 	}
 
-	err = drv->open(_lx_drm_device, _lx_drm_file);
-	if (!err) {
-		_lx_file = (struct file*)kzalloc(sizeof (*_lx_file), 0);
-		if (!_lx_file) {
-			kfree(_lx_drm_file);
-			return -4;
-		}
-
-		drm_get_minor(_lx_drm_device, &_lx_drm_device->primary,
-		              DRM_MINOR_RENDER);
-
-		_lx_drm_file->minor = _lx_drm_device->primary;
-		_lx_file->private_data = _lx_drm_file;
+	session->drm_file = (struct drm_file*)kzalloc(sizeof (struct drm_file), 0);
+	if (!session->drm_file) {
+		goto free_session;
 	}
-	return err;
+
+	err = drv->open(_lx_drm_device, session->drm_file);
+	if (err) {
+		goto free_drm_file;
+	}
+
+	session->file = (struct file*)kzalloc(sizeof (struct file), 0);
+	if (!session->file) {
+		goto free_file;
+	}
+
+	drm_get_minor(_lx_drm_device, &_lx_drm_device->primary,
+	              DRM_MINOR_RENDER);
+
+	session->drm_file->minor = _lx_drm_device->primary;
+	session->file->private_data = session->drm_file;
+	return session;
+
+free_file:
+	kfree(session->file);
+free_drm_file:
+	kfree(session->drm_file);
+free_session:
+	kfree(session);
+	return NULL;
 }
 
 
@@ -1060,14 +1077,17 @@ static int lx_drm_out(unsigned int cmd, unsigned long arg)
 }
 
 
-int lx_drm_ioctl(unsigned int cmd, unsigned long arg)
+int lx_drm_ioctl(void *p, unsigned int cmd, unsigned long arg)
 {
-	int res = -1;
+	struct Drm_session *session;
+	int res;
+
+	session = (struct Drm_session*)p;
 
 	if (cmd & IOC_IN) {
 		lx_drm_in(cmd, arg);
 	}
-	res = drm_ioctl(_lx_file, cmd, arg);
+	res = drm_ioctl(session->file, cmd, arg);
 	if (cmd & IOC_OUT) {
 		lx_drm_out(cmd, arg);
 	}
@@ -1125,13 +1145,17 @@ unsigned int lx_drm_get_gem_close_handle(unsigned long arg)
 }
 
 
-int lx_drm_close_handle(unsigned int handle)
+int lx_drm_close_handle(void *p, unsigned int handle)
 {
+	struct Drm_session *session;
+
 	struct drm_gem_close arg = {
 		.handle = handle
 	};
 
-	return drm_ioctl(_lx_file, DRM_IOCTL_GEM_CLOSE, &arg);
+	session = (struct Drm_session*)p;
+
+	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, &arg);
 }
 
 
@@ -1851,8 +1875,10 @@ struct file *shmem_file_setup(char const *name, loff_t size,
 		goto err_as;
 	}
 
+	bool const alloc_uc = size < (2u << 20);
+
 	/* XXX for now map uncached */
-	lx_dma = lx_emul_dma_alloc_attrs(NULL, size, 1);
+	lx_dma = lx_emul_dma_alloc_attrs(NULL, size, alloc_uc);
 	if (!lx_dma.vaddr && !lx_dma.paddr) {
 		goto err_as;
 	}

@@ -27,7 +27,8 @@ namespace Drm {
 }
 
 
-extern "C" int lx_drm_ioctl(unsigned int, unsigned long);
+extern "C" void *lx_drm_open(void);
+extern "C" int lx_drm_ioctl(void *, unsigned int, unsigned long);
 
 extern "C" int          lx_drm_check_gem_new(unsigned int);
 extern "C" unsigned int lx_drm_get_gem_new_handle(unsigned long);
@@ -35,7 +36,7 @@ extern "C" unsigned int lx_drm_get_gem_new_handle(unsigned long);
 extern "C" int          lx_drm_check_gem_close(unsigned int);
 extern "C" unsigned int lx_drm_get_gem_close_handle(unsigned long);
 
-extern "C" int lx_drm_close_handle(unsigned int);
+extern "C" int lx_drm_close_handle(void *,unsigned int);
 
 Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long, unsigned long);
 
@@ -131,29 +132,18 @@ class Drm::Session_component : public Session_rpc_object
 				}
 			}
 
-			void cleanup()
+			Genode::Allocator* alloc()
 			{
-				for_each([&] (Handle &h) {
-
-					/*
-					 * Close here instead of in the handle object because
-					 * handle might have been closed already and during cleanup
-					 * only leftovers are handled.
-					 */
-					if (lx_drm_close_handle(h.handle)) {
-						Genode::error("could not close handle ", h.handle,
-					                  " - leaking resources");
-					}
-					Genode::destroy(_alloc, &h);
-				});
+				return &_alloc;
 			}
-
 		};
 
 		Handle_registry _handle_reg { _alloc };
 
 		struct Task_args
 		{
+			void *drm_session;
+
 			Object_request obj;
 			Tx::Sink *sink;
 
@@ -162,6 +152,7 @@ class Drm::Session_component : public Session_rpc_object
 		};
 
 		Task_args _task_args {
+			.drm_session = nullptr,
 			.obj = { Genode::Ram_dataspace_capability(), 0, 0, false},
 			.sink = tx_sink(),
 			.handle_reg = &_handle_reg,
@@ -175,13 +166,13 @@ class Drm::Session_component : public Session_rpc_object
 		Lx::Task                          _worker { _run, &_task_args,
 			"drm_worker", Lx::Task::PRIORITY_2, Lx::scheduler() };
 
-		static void _drm_request(Handle_registry &handle_reg, Tx::Sink &sink)
+		static void _drm_request(void *drm_session, Handle_registry &handle_reg, Tx::Sink &sink)
 		{
 			while (sink.packet_avail() && sink.ready_to_ack()) {
 				Packet_descriptor pkt = sink.get_packet();
 
 				void *arg = sink.packet_content(pkt);
-				int err = lx_drm_ioctl((unsigned int)pkt.request(), (unsigned long)arg);
+				int err = lx_drm_ioctl(drm_session, (unsigned int)pkt.request(), (unsigned long)arg);
 				if (!err) {
 					if (lx_drm_check_gem_new((unsigned int)pkt.request())) {
 						uint32_t const handle = lx_drm_get_gem_new_handle((unsigned long)arg);
@@ -209,11 +200,34 @@ class Drm::Session_component : public Session_rpc_object
 
 			while (true) {
 
-				if (args->cleanup) {
-					handle_reg.cleanup();
+				if (!args->drm_session) {
+					args->drm_session = lx_drm_open();
+					if (!args->drm_session) {
+
+						Genode::error("lx_drm_open failed");
+						while (true) {
+							Lx::scheduler().current()->block_and_schedule();
+						}
+					}
 				}
 
-				_drm_request(handle_reg, sink);
+				if (args->cleanup) {
+					handle_reg.for_each([&] (Handle &h) {
+
+						/*
+						 * Close here instead of in the handle object because
+						 * handle might have been closed already and during cleanup
+						 * only leftovers are handled.
+						 */
+						if (lx_drm_close_handle(args->drm_session, h.handle)) {
+							Genode::error("could not close handle ", h.handle,
+							              " - leaking resources");
+						}
+						Genode::destroy(handle_reg.alloc(), &h);
+					});
+				}
+
+				_drm_request(args->drm_session, handle_reg, sink);
 				if (obj.request_valid() && !obj.request_resolved()) {
 					obj.cap = lx_drm_object_dataspace(obj.offset, obj.size);
 					obj.pending = false;
