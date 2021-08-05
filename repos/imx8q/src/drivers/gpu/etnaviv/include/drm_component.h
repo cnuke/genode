@@ -161,12 +161,13 @@ class Drm::Session_component : public Session_rpc_object
 			.cleanup = false,
 		};
 
+		char const *_name;
+
 		Signal_handler<Session_component> _packet_avail { _env.ep(), *this,
 			&Session_component::_handle_signal };
 		Signal_handler<Session_component> _ready_to_ack { _env.ep(), *this,
 			&Session_component::_handle_signal };
-		Lx::Task                          _worker { _run, &_task_args,
-			"drm_worker", Lx::Task::PRIORITY_2, Lx::scheduler() };
+		Lx::Task                          _worker;
 
 		static void _drm_request(void *drm_session, Handle_registry &handle_reg, Tx::Sink &sink)
 		{
@@ -261,9 +262,12 @@ class Drm::Session_component : public Session_rpc_object
 
 	public:
 
-		Session_component(Env &env, Dataspace_capability tx_ds_cap)
+		Session_component(Env &env, Dataspace_capability tx_ds_cap,
+		                  char const *name)
 		:
-		  Session_rpc_object(env.rm(), tx_ds_cap, env.ep().rpc_ep()), _env(env)
+		  Session_rpc_object(env.rm(), tx_ds_cap, env.ep().rpc_ep()), _env(env),
+		  _name { name },
+		  _worker { _run, &_task_args, _name, Lx::Task::PRIORITY_2, Lx::scheduler() }
 		{
 			_tx.sigh_packet_avail(_packet_avail);
 			_tx.sigh_ready_to_ack(_ready_to_ack);
@@ -276,6 +280,8 @@ class Drm::Session_component : public Session_rpc_object
 			_worker.unblock();
 			Lx::scheduler().schedule();
 		}
+
+		char const *name() const { return _name; }
 
 		Ram_dataspace_capability object_dataspace(unsigned long offset,
 		                                          unsigned long size) override
@@ -305,6 +311,8 @@ class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients
 		Env       &_env;
 		Allocator &_alloc;
 
+		uint32_t  _session_id;
+
 	protected:
 
 		Session_component *_create_session(char const *args) override
@@ -312,11 +320,18 @@ class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients
 			size_t tx_buf_size =
 				Arg_string::find_arg(args, "tx_buf_size").ulong_value(0);
 
-				return new (_alloc) Session_component(_env, _env.ram().alloc(tx_buf_size));
+			char *name = (char*)_alloc.alloc(64);
+			Genode::String<64> tmp("drm_worker-", ++_session_id);
+			Genode::memcpy(name, tmp.string(), tmp.length());
+
+			return new (_alloc) Session_component(_env, _env.ram().alloc(tx_buf_size), name);
 		}
 
 		void _destroy_session(Session_component *s) override
 		{
+			char const *name = s->name();
+
+			Genode::destroy(_alloc, const_cast<char*>(name));
 			Genode::destroy(md_alloc(), s);
 		}
 
@@ -324,7 +339,7 @@ class Drm::Root : public Root_component<Drm::Session_component, Multiple_clients
 
 		Root(Env &env, Allocator &alloc)
 		: Root_component<Session_component, Genode::Multiple_clients>(env.ep(), alloc),
-			_env(env), _alloc(alloc)
+			_env(env), _alloc(alloc), _session_id { 0 }
 		{ }
 };
 
