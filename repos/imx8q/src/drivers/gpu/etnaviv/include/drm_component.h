@@ -28,6 +28,8 @@ namespace Drm {
 
 
 extern "C" void *lx_drm_open(void);
+extern "C" void  lx_drm_close(void *);
+
 extern "C" int lx_drm_ioctl(void *, unsigned int, unsigned long);
 
 extern "C" int          lx_drm_check_gem_new(unsigned int);
@@ -212,6 +214,9 @@ class Drm::Session_component : public Session_rpc_object
 				}
 
 				if (args->cleanup) {
+
+					lx_drm_close(args->drm_session);
+
 					handle_reg.for_each([&] (Handle &h) {
 
 						/*
@@ -219,9 +224,18 @@ class Drm::Session_component : public Session_rpc_object
 						 * handle might have been closed already and during cleanup
 						 * only leftovers are handled.
 						 */
-						if (lx_drm_close_handle(args->drm_session, h.handle)) {
+						int const err =
+							lx_drm_close_handle(args->drm_session, h.handle);
+						/*
+						 * EINVAL is returned in case the handle does not
+						 * point to a object any longer. This may happen when
+						 * the object was already taken care of, so ignore
+						 * this case. Our cleanup, after all, is merely a
+						 * rudimentary leakage * prevention.
+						 */
+						if (err != -22) {
 							Genode::error("could not close handle ", h.handle,
-							              " - leaking resources");
+							              " - leaking resources: ", err);
 						}
 						Genode::destroy(handle_reg.alloc(), &h);
 					});

@@ -991,6 +991,26 @@ free_session:
 }
 
 
+void lx_drm_close(void *p)
+{
+	struct Drm_session *session;
+	struct drm_driver *drv;
+
+	session = (struct Drm_session*)p;
+	drv = _lx_drm_device->driver;
+
+	drm_gem_release(_lx_drm_device, session->drm_file);
+
+	if (drv->postclose) {
+		drv->postclose(_lx_drm_device, session->drm_file);
+	}
+
+	kfree(session->file);
+	kfree(session->drm_file);
+	kfree(session);
+}
+
+
 #include <drm/drm_ioctl.h>
 #include <uapi/drm/drm.h>
 #include <uapi/drm/etnaviv_drm.h>
@@ -1841,9 +1861,10 @@ struct file *alloc_file_pseudo(struct inode *inode, struct vfsmount *mnt,
 	f->f_op = fops;
 	f->f_path.dentry = d;
 
+	atomic_long_set(&f->f_count, 1);
+
 	return f;
 }
-
 
 
 #include <linux/shmem_fs.h>
@@ -1957,7 +1978,11 @@ static void _free_file(struct file *file)
 
 	lx_emul_dma_free_attrs(NULL, 0, lx_dma.vaddr, lx_dma.paddr);
 	lx_emul_free_address_space(mapping, 0);
+
+	kfree(mapping);
 	kfree(inode);
+	kfree(file->f_path.dentry);
+	kfree(file);
 }
 
 
