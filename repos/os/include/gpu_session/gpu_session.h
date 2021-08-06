@@ -42,6 +42,12 @@ struct Gpu::Info
 	size_t     aperture_size;
 	Context_id ctx_id;
 
+	/*
+	 * Size the array based on the list of params in
+	 * etnaviv_drm.h that allow for 1:1 access.
+	 */
+	uint64_t etnaviv_param[32] { };
+
 	struct Execution_buffer_sequence {
 		Genode::uint64_t id;
 	} last_completed;
