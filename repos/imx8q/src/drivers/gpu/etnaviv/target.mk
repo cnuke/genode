@@ -1,7 +1,7 @@
 TARGET   = imx8q_gpu_drv
 REQUIRES = arm_v8a
 LIBS     = base
-SRC_CC   = main.cc lx_emul.cc
+SRC_CC   = main.cc lx_emul.cc gpu.cc
 SRC_C    = dummies.c lx_emul_c.c
 SRC_C   += $(notdir $(wildcard $(PRG_DIR)/generated_dummies.c))
 
