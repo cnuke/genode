@@ -200,7 +200,7 @@ Lx::Task::Task(void (*func)(void*), void *arg, char const *name,
 {
 	scheduler.add(this);
 
-	// if (verbose)
+	if (verbose)
 		Genode::log("name: '", name, "' " "func: ", func, " "
 		            "arg: ",   arg, " prio: ", (int)priority, " t: ", this,
 		             " from: ", __builtin_return_address(0));

@@ -16,6 +16,8 @@
 #include <lx_emul_cc.h>
 #include <lx_emul_c.h>
 
+#include "lx_drm.h"
+
 #ifdef LX_DEBUG
 #define LX_TRACE_PRINT(...) do { lx_emul_printf(__VA_ARGS__); } while (0)
 #else
@@ -205,7 +207,7 @@ struct kmem_cache *kmem_cache_create(const char *name, unsigned int size,
 
 	if (!cache_name) {
 		kfree(cache);
-		return 0;
+		return NULL;
 	}
 	cache_name[len] = 0;
 
@@ -315,12 +317,6 @@ int of_dma_configure(struct device *dev, struct device_node *np,
 	LX_TRACE_PRINT("%s: dev: %p np: %p force_dma: %d\n", __func__,
 	               dev, np, force_dma);
 	return 0;
-}
-
-
-void of_node_put(struct device_node *node)
-{
-	lx_emul_trace(__func__);
 }
 
 
@@ -438,6 +434,9 @@ int __platform_driver_register(struct platform_driver *drv, struct module *mod)
 
 	lx_emul_printf("Register: %s\n", drv->driver.name);
 	driver = (struct Lx_driver*)kzalloc(sizeof (struct Lx_driver), 0);
+	if (!driver) {
+		return -1;
+	}
 	//driver->driver = &drv->driver;
 	driver->pdriver = drv;
 	list_add(&driver->list, &driver_list_head);
@@ -996,6 +995,10 @@ void lx_drm_close(void *p)
 	struct Drm_session *session;
 	struct drm_driver *drv;
 
+	if (!p) {
+		return;
+	}
+
 	session = (struct Drm_session*)p;
 	drv = _lx_drm_device->driver;
 
@@ -1126,9 +1129,7 @@ int lx_drm_check_gem_new(unsigned int cmd)
 		return 0;
 	}
 
-	unsigned const int dnr = nr - DRM_COMMAND_BASE;
-
-	return dnr == DRM_ETNAVIV_GEM_NEW ? 1 : 0;
+	return (nr - DRM_COMMAND_BASE) == DRM_ETNAVIV_GEM_NEW ? 1 : 0;
 }
 
 
@@ -1175,7 +1176,160 @@ int lx_drm_close_handle(void *p, unsigned int handle)
 
 	session = (struct Drm_session*)p;
 
-	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, &arg);
+	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, (unsigned long)&arg);
+}
+
+
+/*
+ * The next functions are used by the Gpu session to perform I/O controls.
+ */
+
+void lx_fence_completion_signal(u64 fence_id)
+{
+	genode_completion_signal(fence_id);
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
+                                   unsigned long long *value)
+{
+	int err;
+	struct drm_etnaviv_param req = {
+		.pipe = 0,
+		.param = param,
+		.value = 0,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GET_PARAM, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	*value = req.value;
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned long arg,
+                                    unsigned int *fence)
+{
+	int err;
+	struct drm_etnaviv_gem_submit *submit;
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_SUBMIT, arg);
+	if (err) {
+		return -1;
+	}
+
+	submit = (struct drm_etnaviv_gem_submit*)arg;
+
+	*fence = submit->fence;
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_wait_fence(void *session, unsigned int fence)
+{
+	int err;
+
+	struct drm_etnaviv_wait_fence req = {
+		.pipe = 0,
+		.fence = fence,
+		.flags = ETNA_WAIT_NONBLOCK,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_WAIT_FENCE,
+	                   (unsigned long) &req);
+
+	return err;
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_new(void *session, unsigned long size,
+                                 unsigned int *handle)
+{
+	int err;
+	struct drm_etnaviv_gem_new req = {
+		.size = size,
+		.flags = ETNA_BO_WC,
+		.handle = 0,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_NEW, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	*handle = req.handle;
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_info(void *session, unsigned int handle,
+                                  unsigned long long *offset)
+{
+	int err;
+	struct drm_etnaviv_gem_info req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_INFO, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	*offset = req.offset;
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_cpu_prep(void *session, unsigned int handle, int op)
+{
+	int err;
+	struct drm_etnaviv_gem_cpu_prep req = {
+		.handle = handle,
+		.op     = op,
+		// .timeout = ...
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_CPU_PREP, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_cpu_fini(void *session, unsigned int handle)
+{
+	int err;
+	struct drm_etnaviv_gem_cpu_fini req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_CPU_FINI, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int lx_drm_ioctl_gem_close(void *session, unsigned int handle)
+{
+	int err;
+	struct drm_gem_close req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_GEM_CLOSE, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
 }
 
 
