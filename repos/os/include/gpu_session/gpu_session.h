@@ -21,6 +21,7 @@ namespace Gpu {
 	using addr_t = Genode::uint64_t;
 
 	struct Info;
+	struct Handle;
 	struct Session;
 }
 
@@ -41,6 +42,14 @@ struct Gpu::Info
 	Features   features;
 	size_t     aperture_size;
 	Context_id ctx_id;
+
+	/*
+	 * Size the array based on the list of params in
+	 * etnaviv_drm.h that allow for 1:1 access.
+	 */
+	enum { MAX_ETNAVIV_PARAMS = 32, };
+	using Etnaviv_param = Genode::uint64_t;
+	Etnaviv_param etnaviv_param[MAX_ETNAVIV_PARAMS] { };
 
 	struct Execution_buffer_sequence {
 		Genode::uint64_t id;
@@ -66,6 +75,33 @@ struct Gpu::Info
 		eus(eu),
 		subslices(subslice)
 	{ }
+
+	Info()
+	:
+		chip_id { Chip_id { 0 } },
+		features { Features { 0 } },
+		aperture_size { 0 },
+		ctx_id { Context_id { 0 } },
+		last_completed { Execution_buffer_sequence { 0 } },
+		revision { Revision { 0 } },
+		slice_mask { Slice_mask { 0 } },
+		subslice_mask { Subslice_mask { 0 } },
+		eus { Eu_total { 0 } },
+		subslices { Subslices { 0 } }
+	{ }
+};
+
+
+struct Gpu::Handle
+{
+	bool _valid;
+
+	Genode::uint32_t value;
+
+	bool valid() const
+	{
+		return _valid;
+	}
 };
 
 
@@ -107,6 +143,15 @@ struct Gpu::Session : public Genode::Session
 	virtual Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
 
 	/**
+	 * Check if given fence is completed
+	 *
+	 * \param fence  to wait for
+	 *
+	 * \return true if fence is completed, false otherwise
+	 */
+	virtual bool wait_fence(Genode::uint32_t fence) = 0;
+
+	/**
 	 * Register completion signal handler
 	 *
 	 * \param sigh  signal handler that is called when the execution
@@ -132,6 +177,13 @@ struct Gpu::Session : public Genode::Session
 	virtual void free_buffer(Genode::Dataspace_capability ds) = 0;
 
 	/**
+	 * Get local handle for buffer
+	 *
+	 * \param ds  dataspace capability for buffer
+	 */
+	virtual Handle buffer_handle(Genode::Dataspace_capability ds) = 0;
+
+	/**
 	 * Map buffer
 	 *
 	 * \param ds        dataspace capability for buffer
@@ -139,9 +191,13 @@ struct Gpu::Session : public Genode::Session
 	 *                  GGTT window, otherwise create PPGTT mapping
 	 *
 	 * \throw Mapping_buffer_failed
+	 * \param write     if true, writeable mapping is created, otherwise
+	 *                  a readable mapping is created
 	 */
+	enum class Mapping_type { UNKNOWN, READ, WRITE, NOSYNC };
 	virtual Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability ds,
-	                                                bool aperture) = 0;
+	                                                bool aperture,
+	                                                Mapping_type mt = Mapping_type::UNKNOWN) = 0;
 
 	/**
 	 * Unmap buffer
@@ -185,15 +241,19 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Genode::Dataspace_capability, Genode::size_t);
+	GENODE_RPC(Rpc_wait_fence, bool, wait_fence,
+	           Genode::uint32_t);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,
 	           Genode::Signal_context_capability);
 	GENODE_RPC_THROW(Rpc_alloc_buffer, Genode::Dataspace_capability, alloc_buffer,
 	                 GENODE_TYPE_LIST(Out_of_ram),
 	                 Genode::size_t);
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Genode::Dataspace_capability);
+	GENODE_RPC(Rpc_buffer_handle, Handle, buffer_handle, Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_ram),
-	                 Genode::Dataspace_capability, bool);
+	                 Genode::Dataspace_capability, bool,
+	                 Session::Mapping_type);
 	GENODE_RPC(Rpc_unmap_buffer, void, unmap_buffer,
 	           Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
@@ -204,9 +264,10 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Genode::Dataspace_capability, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
-	                     Rpc_free_buffer, Rpc_map_buffer, Rpc_unmap_buffer,
+	                     Rpc_free_buffer, Rpc_buffer_handle,
+	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
 	                     Rpc_set_tiling);
 };
