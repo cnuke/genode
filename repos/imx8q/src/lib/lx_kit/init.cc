@@ -30,9 +30,7 @@ void Lx_kit::Initcalls::execute_in_order()
 	for (unsigned i = PURE; i < MAX; i++) {
 		for (E * entry = _call_list.first(); entry; entry = entry->next()) {
 			if (entry->prio == i) {
-				Genode::log("Call: ", entry->call);
 				entry->call();
-				Genode::log("Call: ", entry->call, " done");
 			}
 		}
 	}
@@ -84,6 +82,5 @@ void Lx_kit::initialize(Genode::Env & env, Genode::Allocator &alloc)
 
 extern "C" void lx_emul_register_initcall(int (*initcall)(void), int prio)
 {
-	Genode::error(__func__, ": ", initcall);
 	Lx_kit::env().initcalls.add(initcall, prio);
 }

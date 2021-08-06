@@ -107,7 +107,6 @@ DECLARE_BITMAP(cpu_hwcaps, ARM64_NCAPS);
 
 struct dentry *debugfs_create_dir(const char *name, struct dentry *parent)
 {
-	lx_emul_trace(__func__);
 	return (void*)0;
 }
 
@@ -116,14 +115,12 @@ struct dentry *debugfs_create_file(const char *name, umode_t mode,
                                    struct dentry *parent, void *data,
                                    const struct file_operations *fops)
 {
-	lx_emul_trace(__func__);
 	return (void*)0;
 }
 
 
 void debugfs_remove(struct dentry *dentry)
 {
-	lx_emul_trace(__func__);
 }
 
 
@@ -175,7 +172,7 @@ void __lockfunc _raw_spin_unlock_irqrestore(raw_spinlock_t * lock,unsigned long 
 
 void platform_device_put(struct platform_device * pdev)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -183,9 +180,14 @@ void platform_device_put(struct platform_device * pdev)
 
 struct device_node * of_node_get(struct device_node * node)
 {
-	lx_emul_trace(__func__);
-	lx_emul_printf("%s: from: %p\n", __func__, __builtin_return_address(0));
+	// lx_emul_trace(__func__);
 	return node;
+}
+
+
+void of_node_put(struct device_node *node)
+{
+	// lx_emul_trace(__func__);
 }
 
 
@@ -193,25 +195,25 @@ struct device_node * of_node_get(struct device_node * node)
 
 void pm_runtime_enable(struct device *dev)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void pm_runtime_set_autosuspend_delay(struct device *dev, int delay)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __pm_runtime_use_autosuspend(struct device * dev,bool use)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
 void __pm_runtime_disable(struct device * dev,bool check_resume)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -233,7 +235,7 @@ int __pm_runtime_suspend(struct device * dev,int rpmflags)
 
 void platform_driver_unregister(struct platform_driver *drv)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -244,7 +246,7 @@ thermal_of_cooling_device_register(struct device_node *np,
                                    const char *type, void *devdata,
                                    const struct thermal_cooling_device_ops *ops)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return NULL;
 }
 
@@ -253,7 +255,7 @@ thermal_of_cooling_device_register(struct device_node *np,
 
 int wake_up_process(struct task_struct *p)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
@@ -269,7 +271,7 @@ int sched_setscheduler(struct task_struct * p,int policy,const struct sched_para
 
 asmlinkage __visible void __sched notrace preempt_schedule(void)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -280,7 +282,7 @@ int __cpuhp_setup_state(enum cpuhp_state state, char const *name,
                         bool invoke, int (*startup)(unsigned int cpu),
                         int (*teardown)(unsigned int cpu), bool multi_instance)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 	return 0;
 }
 
@@ -374,7 +376,7 @@ void __sched ww_mutex_unlock(struct ww_mutex * lock)
 
 void dev_coredumpv(struct device * dev,void * data,size_t datalen,gfp_t gfp)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
 }
 
 
@@ -382,5 +384,6 @@ void dev_coredumpv(struct device * dev,void * data,size_t datalen,gfp_t gfp)
 
 int ___ratelimit(struct ratelimit_state * rs,const char * func)
 {
-	lx_emul_trace(__func__);
+	// lx_emul_trace(__func__);
+	return 0;
 }
