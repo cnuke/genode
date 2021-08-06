@@ -6,6 +6,7 @@ lappend imports [depot_user]/pkg/drivers_managed-[board]
 lappend imports [depot_user]/src/nitpicker
 lappend imports [depot_user]/src/report_rom
 lappend imports [depot_user]/raw/glmark2
+lappend imports [depot_user]/pkg/fonts_fs
 
 
 import_from_depot $imports
@@ -18,6 +19,10 @@ set build_components {
 
 	app/glmark2
 	test/mesa_demo/gears-21
+
+	app/top_view
+	app/menu_view
+	server/report_rom
 
 	server/dummy_log
 }
@@ -35,11 +40,14 @@ set config {
 		<service name="PD"/>
 		<service name="RM"/>
 		<service name="ROM"/>
+		<service name="TRACE"/>
 	</parent-provides>
 	<default caps="100"/>
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
+
+	<affinity-space width="4" height="1"/>
 
 	<start name="timer">
 		<resource name="RAM" quantum="1M"/>
@@ -74,16 +82,18 @@ set config {
 		<provides>
 			<service name="Gui"/> <service name="Capture"/> <service name="Event"/>
 		</provides>
-		<config>
+		<config verbose="yes">
 			<capture/> <event/>
-			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
-			<domain name="default" layer="2" content="client" label="no" focus="click" hover="always" />
-			<domain name="glmark2" layer="2" xpos="1000" content="client" label="no" focus="click" hover="always" />
-			<domain name="gears" layer="2" xpos="800" ypos="300" content="client" label="no" focus="click" hover="always" />
+			<domain name="pointer" layer="1" xpos="1100" ypos="0" content="client" label="no" origin="pointer" />
+			<domain name="menu_view" layer="2" xpos="10" ypos="540" content="client" label="no" focus="click" hover="always" />
+			<domain name="default" layer="3" content="client" label="no" focus="click" hover="always" />
+			<domain name="glmark2" layer="3" xpos="1000" content="client" label="no" focus="click" hover="always" />
+			<domain name="gears" layer="3" xpos="800" ypos="300" content="client" label="no" focus="click" hover="always" />
 			<policy label_prefix="pointer" domain="pointer"/>
 			<default-policy                domain="default"/>
 			<policy label_prefix="glmark2-2" domain="glmark2"/>
 			<policy label_prefix="gears" domain="gears"/>
+			<policy label_prefix="menu_view" domain="menu_view"/>
 		</config>
 		<route><any-service><parent/><any-child/></any-service></route>
 	</start>
@@ -92,6 +102,7 @@ set config {
 	</start>
 
 	<start name="gears" caps="500">
+		<affinity xpos="2" width="1"/>
 		<binary name="gears-21"/>
 		<resource name="RAM" quantum="160M"/>
 		<config ld_verbose="true">
@@ -101,6 +112,7 @@ set config {
 					<log/> <inline name="rtc">2000-01-01 00:00</inline>
 				</dir>
 			</vfs>
+			<env key="GALLIUM_HUD" value="fps,draw-calls"/>
 		</config>
 		<route>
 			<service name="Gui"> <child name="nitpicker"/> </service>
@@ -113,6 +125,7 @@ set config {
 
 <!--
 	<start name="glmark2-2" caps="500">
+		<affinity xpos="3" width="1"/>
 		<binary name="glmark2"/>
 		<resource name="RAM" quantum="160M"/>
 		<config ld_verbose="yes">
@@ -148,6 +161,7 @@ set config {
 -->
 
 	<start name="glmark2" caps="500">
+		<affinity xpos="1" width="1"/>
 		<resource name="RAM" quantum="160M"/>
 		<config ld_verbose="yes">
 			<vfs>
@@ -160,11 +174,11 @@ set config {
 			</vfs>
 			<libc stdout="/dev/log" stderr="/dev/log"/>
 			<arg value="glmark2"/>
-			<!-- <arg value="\-\-debug"/> -->
 			<arg value="-b"/>
 			<arg value=":duration=2.0"/>
 			<arg value="-s"/>
 			<arg value="800x600"/>
+			<env key="GALLIUM_HUD" value="fps,draw-calls"/>
 		</config>
 		<route>
 			<service name="Gui"> <child name="nitpicker"/> </service>
@@ -177,7 +191,6 @@ set config {
 			<service name="ROM" label="libGLESv2.so">
 				<parent label="mesa-21.lib.so"/>
 			</service>
-			<!-- <service name="LOG"> <child name="dummy_log"/> </service> -->
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
@@ -202,11 +215,94 @@ set config {
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
+
+<!-- TOP VIEW -->
+
+	<start name="report_rom_hover">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<policy label="top_view -> hover" report="menu_view -> hover"/>
+		</config>
+	</start>
+
+	<start name="fonts_fs" caps="300">
+		<resource name="RAM" quantum="8M"/>
+		<binary name="vfs"/>
+		<route>
+			<service name="ROM" label="config"> <parent label="fonts_fs.config"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+		<provides> <service name="File_system"/> </provides>
+	</start>
+
+	<start name="report_rom_dialog">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<policy label="menu_view -> dialog" report="top_view -> dialog"/>
+		</config>
+	</start>
+
+	<start name="report_rom_graph">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no">
+			<policy label="graph -> graph" report="top_view -> graph"/>
+		</config>
+	</start>
+
+	<start name="menu_view" caps="200" priority="-1">
+		<affinity xpos="3" width="1"/>
+		<resource name="RAM" quantum="16M"/>
+		<config xpos="200" ypos="100">
+			<report hover="yes"/>
+			<libc stderr="/dev/log"/>
+			<vfs>
+				<tar name="menu_view_styles.tar" />
+				<dir name="dev"> <log/> </dir>
+				<dir name="fonts"> <fs label="fonts"/> </dir>
+			</vfs>
+		</config>
+		<route>
+			<service name="ROM" label="dialog"> <child name="report_rom_dialog" /> </service>
+			<service name="Report" label="hover"> <child name="report_rom_hover"/> </service>
+			<service name="File_system" label="fonts"> <child name="fonts_fs"/> </service>
+			<service name="Gui"> <child name="nitpicker"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="top_view" priority="0">
+		<affinity xpos="3" width="1"/>
+		<resource name="RAM" quantum="2M"/>
+		<config view_ms="1000" trace_ms="1000" report="yes" log="no"
+		        store="no" report_config="no"
+		        view="list" list="threads">
+
+			<cpu xpos="0" ypos="0" show="true" threads="8"/>
+			<cpu xpos="1" ypos="0" show="true" threads="5"/>
+			<cpu xpos="2" ypos="0" show="true" threads="5"/>
+			<cpu xpos="3" ypos="0" show="true" threads="5"/>
+		</config>
+
+		<route>
+			<service name="ROM"    label="hover"> <child name="report_rom_hover" /> </service>
+			<service name="Report" label="dialog"> <child name="report_rom_dialog" /> </service>
+			<service name="Report" label="graph"> <child name="report_rom_graph" /> </service>
+			<service name="Report" label="config"> <child name="report_rom_config" /> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
 </config>}
 
 install_config $config
 
-set boot_modules {
+append boot_modules {
 	libc.lib.so vfs.lib.so libm.lib.so
 	egl-21.lib.so mesa-21.lib.so stdcxx.lib.so
 	expat.lib.so glapi-21.lib.so zlib.lib.so
@@ -219,6 +315,9 @@ set boot_modules {
 
 	glmark2 jpeg.lib.so libpng.lib.so
 	gears-21
+
+	report_rom
+	menu_view menu_view_styles.tar top_view
 }
 
 build_boot_image $boot_modules
