@@ -16,6 +16,8 @@
 #include <lx_emul_cc.h>
 #include <lx_emul_c.h>
 
+#include "lx_drm.h"
+
 #ifdef LX_DEBUG
 #define LX_TRACE_PRINT(...) do { lx_emul_printf(__VA_ARGS__); } while (0)
 #else
@@ -1176,6 +1178,46 @@ int lx_drm_close_handle(void *p, unsigned int handle)
 	session = (struct Drm_session*)p;
 
 	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, &arg);
+}
+
+
+/*
+ * The next functions are used by the Gpu session to perform I/O controls.
+ */
+
+int lx_drm_ioctl_etnaviv_gem_param(void *, unsigned char, unsigned long long*)
+{
+	return -1;
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_submit(void *, unsigned int, unsigned long long*)
+{
+	return -1;
+}
+
+
+int lx_drm_ioctl_etnaviv_gem_new(void *, unsigned long, unsigned int *)
+{
+	return -1;
+}
+
+
+int lx_drm_ioctl_etnaviv_prep_cpu(void *, unsigned int)
+{
+	return -1;
+}
+
+
+int lx_drm_ioctl_etnaviv_fini_cpu(void *, unsigned int)
+{
+	return -1;
+}
+
+
+int lx_drm_ioctl_gem_close(void *, unsigned int)
+{
+	return -1;
 }
 
 

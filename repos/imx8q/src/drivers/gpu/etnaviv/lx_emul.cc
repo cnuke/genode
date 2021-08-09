@@ -965,3 +965,19 @@ Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long offset, u
 
 	return Genode::Ram_dataspace_capability();
 }
+
+
+/*****************
+ ** Gpu session **
+ *****************/
+
+Genode::Dataspace_capability genode_lookup_cap(void *, unsigned int)
+{
+	return Genode::Dataspace_capability();
+}
+
+
+unsigned int genode_lookup_handle(void *, Genode::Dataspace_capability)
+{
+	return ~0u;
+}

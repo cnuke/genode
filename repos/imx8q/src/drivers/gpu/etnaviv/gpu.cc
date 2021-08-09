@@ -12,16 +12,26 @@
  */
 
 /* Genode includes */
+#include <base/session_object.h>
 #include <root/component.h>
 #include <session/session.h>
+#include <gpu_session/gpu_session.h>
 
 /* Linux emulation */
+#include <lx_kit/env.h>
 #include <lx_emul_cc.h>
 
+// XXX move execution of lx_drm calls into drm-worker task
+#include <lx_drm.h>
 
-Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long, unsigned long);
+// Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long, unsigned long);
+
+extern Genode::Dataspace_capability genode_lookup_cap(void *, unsigned int);
+extern unsigned int                 genode_lookup_handle(void *, Genode::Dataspace_capability);
 
 namespace Gpu {
+
+	using namespace Genode;
 
 	struct Session_component;
 	struct Root;
@@ -29,14 +39,20 @@ namespace Gpu {
 	using Root_component = Genode::Root_component<Session_component, Genode::Multiple_clients>;
 }
 
-struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
+struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 {
 	private:
 
-		Gpu::Info _info { 0, 0, 0, 0, 0 };
+		void *_drm_session { nullptr };
+
+		Gpu::Info _info { 0, 0, 0, 0, Gpu::Info::Execution_buffer_sequence { 0 } };
 
 		int _populate_info(void *drm, Gpu::Info &info)
 		{
+			for (Gpu::Info::Etnaviv_param &p : _info.etnaviv_param) {
+				p = 0;
+			}
+
 			uint8_t params[] = {
 				0xff, /* 0x00 inv */
 				0x01, /* ETNAVIV_PARAM_GPU_MODEL      */
@@ -88,6 +104,8 @@ struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
 
 	public:
 
+		struct Could_not_open_drm : Genode::Exception { };
+
 		/**
 		 * Constructor
 		 */
@@ -97,9 +115,19 @@ struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
 		                  Diag                diag)
 		:
 			Session_object { ep, resources, label, diag }
-		{ }
+		{
+			_drm_session = lx_drm_open();
+			if (!_drm_session) {
+				throw Could_not_open_drm();
+			}
 
-		~Session_component() { }
+			_populate_info(_drm_session, _info);
+		}
+
+		~Session_component()
+		{
+			lx_drm_close(_drm_session);
+		}
 
 		/******************************
 		 ** Session object interface **
@@ -120,14 +148,23 @@ struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
 		}
 
 		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap,
-		                                                 Genode::size_t size) override
+		                                                 Genode::size_t /* size */) override
 		{
-			(void)cap;
-			(void)size;
+			Gpu::Info::Execution_buffer_sequence seq { .id = 0 };
 
-			// lx_drm_ioctl_etnaviv_gem_submit
+			unsigned int const handle = genode_lookup_handle(_drm_session, cap);
+			if (handle == ~0u) {
+				// XXX check value of err
+				throw Gpu::Session::Invalid_state();
+			}
 
-			return 0;
+			int const err = lx_drm_ioctl_etnaviv_gem_submit(_drm_session, handle, &seq.id);
+			if (err) {
+				// XXX check value of err
+				throw Gpu::Session::Invalid_state();
+			}
+
+			return seq;
 		}
 
 		void completion_sigh(Genode::Signal_context_capability sigh) override
@@ -137,46 +174,64 @@ struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
 
 		Genode::Dataspace_capability alloc_buffer(Genode::size_t size) override
 		{
-			(void)size;
+			uint32_t handle;
 
-			// lx_drm_ioctl_etnaviv_gem_new
+			int const err = lx_drm_ioctl_etnaviv_gem_new(_drm_session, size, &handle);
+			if (err) {
+				// XXX check value of err
+				throw Gpu::Session::Out_of_ram();
+			}
 
-			return Genode::Dataspace_capability();
+			Genode::Dataspace_capability cap = genode_lookup_cap(_drm_session, handle);
+			if (!cap.valid()) {
+				// XXX check value of err
+				throw Gpu::Session::Out_of_ram();
+			}
+
+			return cap;
 		}
 
 		void free_buffer(Genode::Dataspace_capability cap) override
 		{
-			(void)cap;
+			unsigned int const handle = genode_lookup_handle(_drm_session, cap);
+			if (handle == ~0u) {
+				return;
+			}
 
-			// lx_drm_ioctl_gem_close
+			(void)lx_drm_ioctl_gem_close(_drm_session, handle);
 		}
 
-		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability cap
-		                                        bool aperture) override
+		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability cap,
+		                                        bool /* aperture */) override
 		{
 			(void)cap;
-			(void)aperture;
 
-			// lx_drm_ioctl_etnaviv_prep_cpu
+			unsigned int const handle = genode_lookup_handle(_drm_session, cap);
+			if (handle == ~0u) {
+				return Genode::Dataspace_capability();
+			}
 
-			return Genode::Dataspace_capability();
+			int const err = lx_drm_ioctl_etnaviv_prep_cpu(_drm_session, handle);
+			if (err) {
+				return Genode::Dataspace_capability();
+			}
+
+			return cap;
 		}
 
 		void unmap_buffer(Genode::Dataspace_capability cap) override
 		{
-			(void)cap;
+			unsigned int const handle = genode_lookup_handle(_drm_session, cap);
+			if (handle == ~0u) {
+				return;
+			}
 
-			// lx_drm_ioctl_etnaviv_fini_cpu
+			(void)lx_drm_ioctl_etnaviv_fini_cpu(_drm_session, handle);
 		}
 
-		bool map_buffer_ppgtt(Genode::Dataspace_capability cap,
-		                      Gpu::addr_t va) override
+		bool map_buffer_ppgtt(Genode::Dataspace_capability /* cap */,
+		                      Gpu::addr_t /* va */) override
 		{
-			(void)cap;
-			(void)va;
-
-			// lx_drm_ioctl_etnaviv_prep_cpu
-
 			return false;
 		}
 };
@@ -185,6 +240,8 @@ struct Gpu::Session_component : Genode::Session_object<Gpu::Session>
 struct Gpu::Root : Gpu::Root_component
 {
 	private:
+
+		Genode::Env &_env;
 
 		/*
 		 * Noncopyable
@@ -198,7 +255,7 @@ struct Gpu::Root : Gpu::Root_component
 		{
 			(void)args;
 
-			throw Server_denied;
+			throw Genode::Service_denied();
 		}
 
 		void _upgrade_session(Session_component *s, char const *args) override
