@@ -24,6 +24,7 @@
 extern "C" {
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <drm.h>
 #include <etnaviv_drm.h>
@@ -563,6 +564,8 @@ class Drm_call
 
 		int _drm_etnaviv_wait_fence(drm_etnaviv_wait_fence &arg)
 		{
+			usleep(1);
+
 			// XXX ignore timeout for now
 			_wait_for_completion(arg.fence);
 			return 0;
