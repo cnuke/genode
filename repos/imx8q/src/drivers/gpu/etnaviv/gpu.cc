@@ -202,7 +202,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 		}
 
 		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability cap,
-		                                        bool /* aperture */) override
+		                                        bool /* aperture */,
+		                                        Mapping_type /* mt */) override
 		{
 			(void)cap;
 
@@ -282,7 +283,7 @@ struct Gpu::Root : Gpu::Root_component
 static Genode::Constructible<Gpu::Root> _gpu_root { };
 
 
-void lx_emul_announce_gpu_session(void)
+extern "C" void lx_emul_announce_gpu_session(void)
 {
 	if (!_gpu_root.constructed()) {
 		_gpu_root.construct(Lx_kit::env().env, Lx_kit::env().heap);

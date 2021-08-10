@@ -38,5 +38,6 @@ int lx_emul_start_kernel()
 	// }
 
 	lx_emul_announce_drm_session();
+	lx_emul_announce_gpu_session();
 	return 0;
 }

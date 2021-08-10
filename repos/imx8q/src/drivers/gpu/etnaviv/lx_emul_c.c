@@ -1185,37 +1185,40 @@ int lx_drm_close_handle(void *p, unsigned int handle)
  * The next functions are used by the Gpu session to perform I/O controls.
  */
 
-int lx_drm_ioctl_etnaviv_gem_param(void *, unsigned char, unsigned long long*)
+int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
+                                   unsigned long long *value)
 {
 	return -1;
 }
 
 
-int lx_drm_ioctl_etnaviv_gem_submit(void *, unsigned int, unsigned long long*)
+int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned int handle,
+                                    unsigned long long *fence)
 {
 	return -1;
 }
 
 
-int lx_drm_ioctl_etnaviv_gem_new(void *, unsigned long, unsigned int *)
+int lx_drm_ioctl_etnaviv_gem_new(void *session, unsigned long size,
+                                 unsigned int *handle)
 {
 	return -1;
 }
 
 
-int lx_drm_ioctl_etnaviv_prep_cpu(void *, unsigned int)
+int lx_drm_ioctl_etnaviv_prep_cpu(void *session, unsigned int handle)
 {
 	return -1;
 }
 
 
-int lx_drm_ioctl_etnaviv_fini_cpu(void *, unsigned int)
+int lx_drm_ioctl_etnaviv_fini_cpu(void *session, unsigned int handle)
 {
 	return -1;
 }
 
 
-int lx_drm_ioctl_gem_close(void *, unsigned int)
+int lx_drm_ioctl_gem_close(void *session, unsigned int handle)
 {
 	return -1;
 }
