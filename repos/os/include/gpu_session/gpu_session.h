@@ -46,7 +46,9 @@ struct Gpu::Info
 	 * Size the array based on the list of params in
 	 * etnaviv_drm.h that allow for 1:1 access.
 	 */
-	uint64_t etnaviv_param[32] { };
+	enum { MAX_ETNAVIV_PARAMS = 32, };
+	using Etnaviv_param = Genode::uint64_t;
+	Etnaviv_param etnaviv_param[MAX_ETNAVIV_PARAMS] { };
 
 	struct Execution_buffer_sequence {
 		Genode::uint64_t id;
