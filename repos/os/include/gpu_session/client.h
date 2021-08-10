@@ -54,8 +54,9 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 			call<Rpc_free_buffer>(ds); }
 
 		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability ds,
-		                                        bool aperture) override {
-			return call<Rpc_map_buffer>(ds, aperture); }
+		                                        bool aperture,
+		                                        Gpu::Session::Mapping_type mt) override {
+			return call<Rpc_map_buffer>(ds, aperture, mt); }
 
 		void unmap_buffer(Genode::Dataspace_capability ds) override {
 			call<Rpc_unmap_buffer>(ds); }

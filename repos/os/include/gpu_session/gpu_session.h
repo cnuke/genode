@@ -132,9 +132,13 @@ struct Gpu::Session : public Genode::Session
 	 * \param ds        dataspace capability for buffer
 	 * \param aperture  if true create CPU accessible mapping through
 	 *                  GGTT window, otherwise create PPGTT mapping
+	 * \param write     if true, writeable mapping is created, otherwise
+	 *                  a readable mapping is created
 	 */
+	enum class Mapping_type { UNKNOWN, READ, WRITE, NOSYNC };
 	virtual Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability ds,
-	                                                bool aperture) = 0;
+	                                                bool aperture,
+	                                                Mapping_type mt = Mapping_type::UNKNOWN) = 0;
 
 	/**
 	 * Unmap buffer
@@ -183,7 +187,8 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Out_of_ram),
-	                 Genode::Dataspace_capability, bool);
+	                 Genode::Dataspace_capability, bool,
+	                 Session::Mapping_type);
 	GENODE_RPC(Rpc_unmap_buffer, void, unmap_buffer,
 	           Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
