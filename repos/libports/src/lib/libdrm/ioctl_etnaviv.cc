@@ -13,13 +13,16 @@
  */
 
 /* Genode includes */
+#include <base/attached_dataspace.h>
+#include <base/debug.h>
 #include <base/heap.h>
 #include <base/log.h>
-#include <base/debug.h>
 #include <gpu/connection.h>
+#include <gpu_session/connection.h>
 #include <util/string.h>
 
 extern "C" {
+#include <errno.h>
 #include <fcntl.h>
 
 #include <drm.h>
@@ -163,6 +166,7 @@ size_t Drm::get_payload_size(drm_etnaviv_gem_submit const &submit)
 	size += sizeof (drm_etnaviv_gem_submit_reloc) * submit.nr_relocs;
 	size += sizeof (drm_etnaviv_gem_submit_bo) * submit.nr_bos;
 	size += sizeof (drm_etnaviv_gem_submit_pmr) * submit.nr_pmrs;
+	size += submit.stream_size;
 
 	return size;
 }
@@ -289,16 +293,379 @@ class Drm_call
 {
 	private:
 
+		/*
+		 * Noncopyable
+		 */
+		Drm_call(Drm_call const &) = delete;
+		Drm_call &operator=(Drm_call const &) = delete;
+
 		Genode::Env          &_env;
 		Genode::Heap          _heap { _env.ram(), _env.rm() };
+
+		/*****************
+		 ** Gpu session **
+		 *****************/
+
+		Genode::Constructible<Gpu::Connection> _gpu_session { };
+		Gpu::Info                              _gpu_info { };
+
+		/* apparently glmark2 submits araound 110 KiB at some point */
+		enum { EXEC_BUFFER_SIZE = 256u << 10 };
+		Genode::Dataspace_capability  _exec_buffer_cap   { };
+		char                         *_local_exec_buffer { nullptr };
+
+		Genode::Blockade                 _completion_blockade { };
+		Genode::Signal_handler<Drm_call> _completion_sigh;
+
+		void _handle_completion()
+		{
+			_completion_blockade.wakeup();
+		}
+
+		void _wait_for_completion(uint32_t fence)
+		{
+			do {
+				Gpu::Info const info { _gpu_session->info() };
+
+				if (_gpu_session->wait_fence(fence)) {
+					break;
+				}
+
+				_completion_blockade.block();
+			} while (true);
+		}
+
+		struct Buffer_handle;
+		using Handle    = Genode::Id_space<Buffer_handle>::Element;
+		using Handle_id = Genode::Id_space<Buffer_handle>::Id;
+
+		struct Buffer_handle
+		{
+			struct Invalid_capability : Genode::Exception { };
+
+			Genode::Dataspace_capability const cap;
+			Genode::size_t               const size;
+			Handle                       const handle;
+
+			Gpu::Info::Execution_buffer_sequence seqno;
+
+			Genode::Constructible<Genode::Attached_dataspace> _attached_buffer { };
+
+			Buffer_handle(Genode::Id_space<Buffer_handle> &space,
+			              Genode::Dataspace_capability cap,
+			              Genode::uint32_t handle,
+			              Genode::size_t size)
+			:
+				cap { cap }, size { size },
+				handle { *this, space, Handle_id { .value = handle } },
+				seqno { .id = 0 }
+			{
+				if (!cap.valid()) {
+					throw Invalid_capability();
+				}
+			}
+
+			~Buffer_handle() { }
+
+			bool mmap(Genode::Env &env)
+			{
+				if (!_attached_buffer.constructed()) {
+					_attached_buffer.construct(env.rm(), cap);
+				}
+
+				return _attached_buffer.constructed();
+			}
+
+			Genode::addr_t mmap_addr()
+			{
+				using addr_t = Genode::addr_t;
+				return reinterpret_cast<addr_t>(_attached_buffer->local_addr<addr_t>());
+			}
+		};
+
+		Genode::Id_space<Buffer_handle> _buffer_handles { };
+
+		template <typename FUNC>
+		bool _apply_buffer(Handle_id const &id, FUNC const &fn)
+		{
+			bool found = false;
+
+			_buffer_handles.apply<Buffer_handle>(id, [&](Buffer_handle &bh) {
+				fn(bh);
+				found = true;
+			});
+
+			return found;
+		}
+
+		Genode::Dataspace_capability _lookup_cap_from_handle(uint32_t handle)
+		{
+			Handle_id const id { .value = handle };
+
+			Genode::Dataspace_capability cap { };
+			auto lookup_cap = [&] (Buffer_handle const &bh) {
+				cap = bh.cap;
+			};
+
+			return _apply_buffer(id, lookup_cap) ? cap : Genode::Dataspace_capability();
+		}
+
+		/******************************
+		 ** Device DRM I/O controls **
+		 ******************************/
+
+		int _drm_etnaviv_gem_cpu_fini(drm_etnaviv_gem_cpu_fini &arg)
+		{
+			Genode::Dataspace_capability const cap = _lookup_cap_from_handle(arg.handle);
+			if (!cap.valid()) {
+				return -1;
+			}
+
+			_gpu_session->unmap_buffer(cap);
+			return 0;
+		}
+
+		int _drm_etnaviv_gem_cpu_prep(drm_etnaviv_gem_cpu_prep &arg)
+		{
+			Genode::Dataspace_capability const cap = _lookup_cap_from_handle(arg.handle);
+			if (!cap.valid()) {
+				return -1;
+			}
+
+			Gpu::Session::Mapping_type mt { Gpu::Session::Mapping_type::UNKNOWN };
+			switch (arg.op) {
+			case ETNA_PREP_READ:   mt = Gpu::Session::Mapping_type::READ; break;
+			case ETNA_PREP_WRITE:  mt = Gpu::Session::Mapping_type::WRITE; break;
+			case ETNA_PREP_NOSYNC: mt = Gpu::Session::Mapping_type::NOSYNC; break;
+			default: break;
+			}
+
+			Genode::Dataspace_capability const map_cap =
+				_gpu_session->map_buffer(cap, false, mt);
+			return map_cap.valid() ? 0 : -1;
+		}
+
+		int _drm_etnaviv_gem_info(drm_etnaviv_gem_info &arg)
+		{
+			Handle_id const id { .value = arg.handle };
+
+			auto lookup_and_attach = [&] (Buffer_handle &bh) {
+				if (!bh.mmap(_env)) {
+					return;
+				}
+				arg.offset = (uint64_t) bh.mmap_addr();
+			};
+			return _apply_buffer(id, lookup_and_attach) ? 0 : -1;
+		}
+
+		Genode::Dataspace_capability _alloc_buffer(Genode::size_t const size)
+		{
+			Genode::size_t donate = size;
+
+			try {
+				return Genode::retry<Gpu::Session::Out_of_ram>(
+				[&] () { return _gpu_session->alloc_buffer(size); },
+				[&] () {
+					_gpu_session->upgrade_ram(donate);
+					donate >>= 2;
+				}, 8);
+			} catch (Gpu::Session::Out_of_ram) { }
+
+			return Genode::Dataspace_capability();
+		}
+
+		int _drm_etnaviv_gem_new(drm_etnaviv_gem_new &arg)
+		{
+			Genode::size_t const size = arg.size;
+
+			Genode::Dataspace_capability cap = _alloc_buffer(size);
+			if (!cap.valid()) {
+				return -1;
+			}
+
+			Gpu::Handle const handle { _gpu_session->buffer_handle(cap) };
+			if (!handle.valid()) {
+				_gpu_session->free_buffer(cap);
+				return -1;
+			}
+
+			try {
+				Buffer_handle *buffer =
+					new (&_heap) Buffer_handle(_buffer_handles, cap, handle.value, size);
+				arg.handle = buffer->handle.id().value;
+				return 0;
+			} catch (...) {
+				_gpu_session->free_buffer(cap);
+			}
+			return -1;
+		}
+
+		int _drm_etnaviv_gem_submit(drm_etnaviv_gem_submit &arg)
+		{
+			size_t const payload_size = Drm::get_payload_size(arg);
+			if (payload_size > EXEC_BUFFER_SIZE) {
+				Genode::error(__func__, ": exec buffer too small (",
+				              (unsigned)EXEC_BUFFER_SIZE, ") needed ", payload_size);
+				return -1;
+			}
+
+			/*
+			 * Copy each array flat to the exec buffer and adjust the
+			 * addresses in the submit object.
+			 */
+			Genode::memset(_local_exec_buffer, 0, EXEC_BUFFER_SIZE);
+			Drm::serialize(&arg, _local_exec_buffer);
+
+			try {
+				uint64_t const pending_exec_buffer =
+					_gpu_session->exec_buffer(_exec_buffer_cap, EXEC_BUFFER_SIZE).id;
+				arg.fence = pending_exec_buffer & 0xffffffffu;
+				return 0;
+			} catch (Gpu::Session::Invalid_state) { }
+
+			return -1;
+		}
+
+		int _drm_etnaviv_gem_wait(drm_etnaviv_gem_wait &)
+		{
+			Genode::warning(__func__, ": not implemented");
+			return -1;
+		}
+
+		int _drm_etnaviv_gem_userptr(drm_etnaviv_gem_userptr &)
+		{
+			Genode::warning(__func__, ": not implemented");
+			return -1;
+		}
+
+		int _drm_etnaviv_get_param(drm_etnaviv_param &arg)
+		{
+			if (arg.param > Gpu::Info::MAX_ETNAVIV_PARAMS) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			arg.value = _gpu_info.etnaviv_param[arg.param];
+			return 0;
+		}
+
+		int _drm_etnaviv_pm_query_dom(drm_etnaviv_pm_domain &)
+		{
+			Genode::warning(__func__, ": not implemented");
+			return -1;
+		}
+
+		int _drm_etnaviv_pm_query_sig(drm_etnaviv_pm_signal &)
+		{
+			Genode::warning(__func__, ": not implemented");
+			return -1;
+		}
+
+		int _drm_etnaviv_wait_fence(drm_etnaviv_wait_fence &arg)
+		{
+			// XXX ignore timeout for now
+			_wait_for_completion(arg.fence);
+			return 0;
+		}
+
+		int _device_ioctl(unsigned cmd, void *arg)
+		{
+			if (!arg) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			switch (cmd) {
+			case DRM_ETNAVIV_GEM_CPU_FINI:
+				return _drm_etnaviv_gem_cpu_fini(*reinterpret_cast<drm_etnaviv_gem_cpu_fini*>(arg));
+			case DRM_ETNAVIV_GEM_CPU_PREP:
+				return _drm_etnaviv_gem_cpu_prep(*reinterpret_cast<drm_etnaviv_gem_cpu_prep*>(arg));
+			case DRM_ETNAVIV_GEM_INFO:
+				return _drm_etnaviv_gem_info(*reinterpret_cast<drm_etnaviv_gem_info*>(arg));
+			case DRM_ETNAVIV_GEM_NEW:
+				return _drm_etnaviv_gem_new(*reinterpret_cast<drm_etnaviv_gem_new*>(arg));
+			case DRM_ETNAVIV_GEM_SUBMIT:
+				return _drm_etnaviv_gem_submit(*reinterpret_cast<drm_etnaviv_gem_submit*>(arg));
+			case DRM_ETNAVIV_GEM_USERPTR:
+				return _drm_etnaviv_gem_userptr(*reinterpret_cast<drm_etnaviv_gem_userptr*>(arg));
+			case DRM_ETNAVIV_GEM_WAIT:
+				return _drm_etnaviv_gem_wait(*reinterpret_cast<drm_etnaviv_gem_wait*>(arg));
+			case DRM_ETNAVIV_GET_PARAM:
+				return _drm_etnaviv_get_param(*reinterpret_cast<drm_etnaviv_param*>(arg));
+			case DRM_ETNAVIV_PM_QUERY_DOM:
+				return _drm_etnaviv_pm_query_dom(*reinterpret_cast<drm_etnaviv_pm_domain*>(arg));
+			case DRM_ETNAVIV_PM_QUERY_SIG:
+				return _drm_etnaviv_pm_query_sig(*reinterpret_cast<drm_etnaviv_pm_signal*>(arg));
+			case DRM_ETNAVIV_WAIT_FENCE:
+				return _drm_etnaviv_wait_fence(*reinterpret_cast<drm_etnaviv_wait_fence*>(arg));
+			default: break;
+			}
+
+			return 0;
+		}
+
+		/*******************************
+		  ** Generic DRM I/O controls **
+		 *******************************/
+
+		int _drm_gem_close(drm_gem_close const &gem_close)
+		{
+			Handle_id const id { .value = gem_close.handle };
+
+			bool const handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
+				_gpu_session->free_buffer(bh.cap);
+
+				Genode::destroy(_heap, &bh);
+			});
+
+			return handled ? 0 : -1;
+		}
+
+		int _drm_version(drm_version &version)
+		{
+			// TODO make sure user ptr are properly accounted for
+			version.version_major = 1;
+			version.version_minor = 3;
+			version.version_patchlevel = 0;
+
+			return 0;
+		}
+
+		int _generic_ioctl(unsigned cmd, void *arg)
+		{
+			if (!arg) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			switch (cmd) {
+			case command_number(DRM_IOCTL_GEM_CLOSE):
+				return _drm_gem_close(*reinterpret_cast<drm_gem_close*>(arg));
+			case command_number(DRM_IOCTL_VERSION):
+				return _drm_version(*reinterpret_cast<drm_version*>(arg));
+			default:
+				Genode::error("unhandled generic DRM ioctl: ", Genode::Hex(cmd));
+				break;
+			}
+
+			return -1;
+		}
+
+		int _ioctl_gpu(unsigned long request, void *arg)
+		{
+			bool const device_request = device_ioctl(request);
+			return device_request ? _device_ioctl(device_number(request), arg)
+			                      : _generic_ioctl(command_number(request), arg);
+		}
+
+		/*****************
+		 ** Drm session **
+		 *****************/
+
 		Genode::Allocator_avl _drm_alloc { &_heap };
-		Drm::Connection       _drm_session { _env, &_drm_alloc, 1024*1024 };
+		Genode::Constructible<Drm::Connection> _drm_session { };
 
-	public:
-
-		Drm_call(Genode::Env &env) : _env(env) { }
-
-		int ioctl(unsigned long request, void *arg)
+		int _ioctl_drm(unsigned long request, void *arg)
 		{
 			size_t size = IOCPARM_LEN(request);
 
@@ -328,7 +695,7 @@ class Drm_call
 				size += payload_size;
 			}
 
-			Drm::Session::Tx::Source &src = *_drm_session.tx();
+			Drm::Session::Tx::Source &src = *_drm_session->tx();
 			Drm::Packet_descriptor p { src.alloc_packet(size), lx_request };
 
 			/*
@@ -388,9 +755,65 @@ class Drm_call
 			return p.error();
 		}
 
+	public:
+
+		Drm_call(Genode::Env &env, Genode::Entrypoint &signal_ep, bool use_gpu_session)
+		:
+			_env { env },
+			_completion_sigh { signal_ep, *this, &Drm_call::_handle_completion }
+		{
+			if (use_gpu_session) {
+				_gpu_session.construct(_env);
+				_gpu_info = _gpu_session->info();
+				_exec_buffer_cap = _alloc_buffer(EXEC_BUFFER_SIZE);
+				if (!_exec_buffer_cap.valid()) {
+					throw Gpu::Session::Invalid_state();
+				}
+				try {
+					_local_exec_buffer =
+						(char*)_env.rm().attach(_exec_buffer_cap);
+				} catch (...) {
+					throw Gpu::Session::Invalid_state();
+				}
+
+				_gpu_session->completion_sigh(_completion_sigh);
+
+			} else {
+				_drm_session.construct(_env, &_drm_alloc, 1u<<20);
+			}
+		}
+
+		~Drm_call()
+		{
+			if (_local_exec_buffer) {
+				_env.rm().detach(_local_exec_buffer);
+			}
+
+			if (_exec_buffer_cap.valid()) {
+				_gpu_session->free_buffer(_exec_buffer_cap);
+			}
+		}
+
+		int ioctl(unsigned long request, void *arg)
+		{
+			return _gpu_session.constructed() ? _ioctl_gpu(request, arg)
+			                                  : _ioctl_drm(request, arg);
+		}
+
 		void *mmap(unsigned long offset, unsigned long size)
 		{
-			Genode::Ram_dataspace_capability cap = _drm_session.object_dataspace(offset, size);
+
+			Genode::Ram_dataspace_capability cap { };
+			
+			if (_gpu_session.constructed()) {
+				/*
+				 * Buffer should have been mapped during GEM INFO call.
+				 */
+				return (void*)offset;
+			} else {
+				cap = _drm_session->object_dataspace(offset, size);
+			}
+
 			if (!cap.valid()) {
 				return (void *)-1;
 			}
@@ -404,6 +827,10 @@ class Drm_call
 
 		void munmap(void *addr)
 		{
+			if (_gpu_session.constructed()) {
+				return;
+			}
+
 			_env.rm().detach(addr);
 		}
 };
@@ -412,9 +839,9 @@ class Drm_call
 static Genode::Constructible<Drm_call> _drm;
 
 
-void drm_init(Genode::Env &env)
+void drm_init(Genode::Env &env, Genode::Entrypoint &ep, bool use_gpu_session)
 {
-	_drm.construct(env);
+	_drm.construct(env, ep, use_gpu_session);
 }
 
 
