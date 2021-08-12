@@ -87,8 +87,13 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			static_assert(sizeof(params)/sizeof(params[0]) == 32);
 
 			for (int p = 0; p < 32; p++) {
+
+				if (params[p] == 0xff) {
+					continue;
+				}
+
 				uint64_t value;
-				int const err = lx_drm_ioctl_etnaviv_gem_param(drm, p, &value);
+				int const err = lx_drm_ioctl_etnaviv_gem_param(drm, params[p], &value);
 				if (err) {
 					return -1;
 				}
@@ -167,6 +172,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 						}
 
 						_populate_info(args.drm_session, args.info);
+
+						args.request.result = Gpu_request::Result::SUCCESS;
 					}
 					break;
 				case Gpu_request::Op::CLOSE:
@@ -290,7 +297,19 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		  	_name { name },
 			_drm_worker { _drm_worker_run, &_drm_worker_args, _name,
 			              Lx::Task::PRIORITY_2, Lx::scheduler() }
-		{ }
+		{
+			_drm_worker_args.request = Gpu_request {
+				.op = Gpu_request::Op::OPEN,
+			};
+
+			_drm_worker.unblock();
+			Lx::scheduler().schedule();
+			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
+
+			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
+				Genode::warning("could not open DRM session");
+			}
+		}
 
 		~Session_component()
 		{
