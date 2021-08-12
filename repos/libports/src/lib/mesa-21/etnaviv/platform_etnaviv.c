@@ -18,6 +18,7 @@
 /*
  * Libc
  */
+#include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
 
@@ -194,7 +195,10 @@ static EGLBoolean dri2_initialize_genode_etnaviv(_EGLDisplay *disp)
 	int i;
 
 	/* initialize DRM back end */
-	genode_drm_init();
+	char const *use_gpu_value = getenv("USE_GPU_SESSION");
+	bool const use_gpu_session =
+		use_gpu_value && strncmp(use_gpu_value, "yes", 3) == 0;
+	genode_drm_init(use_gpu_session);
 
 	dri2_dpy = calloc(1, sizeof *dri2_dpy);
 	if (!dri2_dpy)
