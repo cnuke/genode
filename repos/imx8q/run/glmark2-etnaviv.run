@@ -113,6 +113,7 @@ set config {
 				</dir>
 			</vfs>
 			<env key="GALLIUM_HUD" value="fps,draw-calls"/>
+			<env key="USE_GPU_SESSION" value="yes"/>
 		</config>
 		<route>
 			<service name="Gui"> <child name="nitpicker"/> </service>
@@ -205,7 +206,10 @@ set config {
 
 	<start name="imx8q_gpu_drv" caps="500">
 		<resource name="RAM" quantum="128M"/>
-		<provides> <service name="Drm"/> </provides>
+		<provides>
+			<service name="Drm"/>
+			<service name="Gpu"/>
+		</provides>
 		<config ld_verbose="yes"/>
 		<route>
 			<service name="Timer"> <child name="timer"/> </service>
