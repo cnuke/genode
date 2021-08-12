@@ -577,6 +577,16 @@ class Drm_call
 			return handled ? 0 : -1;
 		}
 
+		int _drm_version(drm_version &version)
+		{
+			// TODO make sure user ptr are properly accounted for
+			version.version_major = 1;
+			version.version_minor = 3;
+			version.version_patchlevel = 0;
+
+			return 0;
+		}
+
 		int _generic_ioctl(unsigned cmd, void *arg)
 		{
 			if (!arg) {
@@ -587,6 +597,8 @@ class Drm_call
 			switch (cmd) {
 			case command_number(DRM_IOCTL_GEM_CLOSE):
 				return _drm_gem_close(*reinterpret_cast<drm_gem_close*>(arg));
+			case command_number(DRM_IOCTL_VERSION):
+				return _drm_version(*reinterpret_cast<drm_version*>(arg));
 			default:
 				Genode::error("unhandled generic DRM ioctl: ", Genode::Hex(cmd));
 				break;
