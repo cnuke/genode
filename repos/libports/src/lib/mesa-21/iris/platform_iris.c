@@ -207,7 +207,7 @@ EGLBoolean dri2_initialize_genode_backend(_EGLDisplay *disp)
 	static unsigned rgb888_sizes[4]  = {  8, 8, 8,  8 };
 
 	/* initialize DRM back end */
-	genode_drm_init();
+	genode_drm_init(false);
 
 	dri2_dpy = calloc(1, sizeof *dri2_dpy);
 	if (!dri2_dpy)
