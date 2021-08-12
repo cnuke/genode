@@ -1196,8 +1196,21 @@ void lx_fence_completion_signal(u64 fence_id)
 int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
                                    unsigned long long *value)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+
+	struct drm_etnaviv_param req = {
+		.pipe = 0,
+		.param = param,
+		.value = 0,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GET_PARAM, &req);
+	if (err) {
+		return -1;
+	}
+
+	*value = req.value;
+	return 0;
 }
 
 
