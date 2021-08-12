@@ -21,7 +21,7 @@ extern "C" {
 extern Genode::Entrypoint &genode_entrypoint();
 extern void drm_init(Genode::Env &env, Genode::Entrypoint &ep);
 
-void genode_drm_init()
+void genode_drm_init(int)
 {
 	drm_init(*genode_env, genode_entrypoint());
 }

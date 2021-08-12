@@ -23,7 +23,7 @@ extern Genode::Env *genode_env;
 
 struct Genode_egl_window;
 void genode_blit(void const *src, unsigned src_w, void *dst, unsigned dst_w, int w, int h);
-void genode_drm_init();
+void genode_drm_init(int use_gpu_session);
 void genode_drm_complete();
 
 struct _EGLSurface;
