@@ -744,9 +744,9 @@ class Drm_call
 static Genode::Constructible<Drm_call> _drm;
 
 
-void drm_init(Genode::Env &env)
+void drm_init(Genode::Env &env, bool use_gpu_session)
 {
-	_drm.construct(env, false);
+	_drm.construct(env, use_gpu_session);
 }
 
 
