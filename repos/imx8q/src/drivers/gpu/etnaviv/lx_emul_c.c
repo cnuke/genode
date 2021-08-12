@@ -998,6 +998,10 @@ void lx_drm_close(void *p)
 	struct Drm_session *session;
 	struct drm_driver *drv;
 
+	if (!p) {
+		return;
+	}
+
 	session = (struct Drm_session*)p;
 	drv = _lx_drm_device->driver;
 
@@ -1128,9 +1132,7 @@ int lx_drm_check_gem_new(unsigned int cmd)
 		return 0;
 	}
 
-	unsigned const int dnr = nr - DRM_COMMAND_BASE;
-
-	return dnr == DRM_ETNAVIV_GEM_NEW ? 1 : 0;
+	return (nr - DRM_COMMAND_BASE) == DRM_ETNAVIV_GEM_NEW ? 1 : 0;
 }
 
 
@@ -1177,7 +1179,7 @@ int lx_drm_close_handle(void *p, unsigned int handle)
 
 	session = (struct Drm_session*)p;
 
-	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, &arg);
+	return drm_ioctl(session->file, DRM_IOCTL_GEM_CLOSE, (unsigned long)&arg);
 }
 
 
@@ -1185,9 +1187,16 @@ int lx_drm_close_handle(void *p, unsigned int handle)
  * The next functions are used by the Gpu session to perform I/O controls.
  */
 
+void lx_fence_completion_signal(u64 fence_id)
+{
+	genode_completion_signal(fence_id);
+}
+
+
 int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
                                    unsigned long long *value)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
@@ -1195,6 +1204,7 @@ int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
 int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned int handle,
                                     unsigned long long *fence)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
@@ -1202,24 +1212,28 @@ int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned int handle,
 int lx_drm_ioctl_etnaviv_gem_new(void *session, unsigned long size,
                                  unsigned int *handle)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
 
 int lx_drm_ioctl_etnaviv_prep_cpu(void *session, unsigned int handle)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
 
 int lx_drm_ioctl_etnaviv_fini_cpu(void *session, unsigned int handle)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
 
 int lx_drm_ioctl_gem_close(void *session, unsigned int handle)
 {
+	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
 	return -1;
 }
 
