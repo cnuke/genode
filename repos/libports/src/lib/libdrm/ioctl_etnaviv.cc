@@ -292,6 +292,12 @@ class Drm_call
 {
 	private:
 
+		/*
+		 * Noncopyable
+		 */
+		Drm_call(Drm_call const &) = delete;
+		Drm_call &operator=(Drm_call const &) = delete;
+
 		Genode::Env          &_env;
 		Genode::Heap          _heap { _env.ram(), _env.rm() };
 
@@ -303,7 +309,10 @@ class Drm_call
 		Gpu::Info                              _gpu_info {
 			0, 0, 0, 0, Gpu::Info::Execution_buffer_sequence { 0 } };
 
-		Genode::Dataspace_capability     _exec_buffer_cap { };
+		enum { EXEC_BUFFER_SIZE = 8192 };
+		Genode::Dataspace_capability  _exec_buffer_cap   { };
+		char                         *_local_exec_buffer { nullptr };
+		uint64_t                      _pending_exec_buffer { 0 };
 
 		Genode::Blockade                 _completion_blockade { };
 		Genode::Signal_handler<Drm_call> _completion_sigh;
@@ -483,19 +492,20 @@ class Drm_call
 
 		int _drm_etnaviv_gem_submit(drm_etnaviv_gem_submit &arg)
 		{
-			(void)arg;
+			/*
+			 * Copy each array flat to the exec buffer and adjust the
+			 * addresses in the submit object.
+			 */
+			Genode::memset(_local_exec_buffer, 0, EXEC_BUFFER_SIZE);
+			Drm::serialize(&arg, _local_exec_buffer);
 
-			// Handle_id const id { .value = arg.handle };
+			try {
+				_pending_exec_buffer =
+					_gpu_session->exec_buffer(_exec_buffer_cap, EXEC_BUFFER_SIZE).id;
+				arg.fence = _pending_exec_buffer % (1ul << (sizeof (arg.fence) * 8));
+				return 0;
+			} catch (Gpu::Session::Invalid_state) { }
 
-			// bool success = false;
-			// auto lookup_and_attach = [&] (Buffer_handle &bh) {
-			// 	try {
-			// 		bh.seqno = _gpu_session->exec_buffer(bh.cap, bh.size);
-			// 		success = true;
-			// 	} catch (Gpu::Session::Invalid_state) { }
-			// };
-			// return _apply_buffer(id, lookup_and_attach) && success ? 0 : -1;
-			Genode::warning(__func__, ": not implemented");
 			return -1;
 		}
 
@@ -736,10 +746,19 @@ class Drm_call
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
 				_gpu_info = _gpu_session->info();
-				_exec_buffer_cap = _alloc_buffer(8192);
+				_exec_buffer_cap = _alloc_buffer(EXEC_BUFFER_SIZE);
 				if (!_exec_buffer_cap.valid()) {
 					throw Gpu::Session::Invalid_state();
 				}
+				try {
+					_local_exec_buffer =
+						(char*)_env.rm().attach(_exec_buffer_cap);
+				} catch (...) {
+					throw Gpu::Session::Invalid_state();
+				}
+
+				_gpu_session->completion_sigh(_completion_sigh);
+
 			} else {
 				_drm_session.construct(_env, &_drm_alloc, 1u<<20);
 			}
@@ -747,6 +766,10 @@ class Drm_call
 
 		~Drm_call()
 		{
+			if (_local_exec_buffer) {
+				_env.rm().detach(_local_exec_buffer);
+			}
+
 			if (_exec_buffer_cap.valid()) {
 				_gpu_session->free_buffer(_exec_buffer_cap);
 			}
@@ -760,7 +783,18 @@ class Drm_call
 
 		void *mmap(unsigned long offset, unsigned long size)
 		{
-			Genode::Ram_dataspace_capability cap = _drm_session->object_dataspace(offset, size);
+
+			Genode::Ram_dataspace_capability cap { };
+			
+			if (_gpu_session.constructed()) {
+				/*
+				 * Buffer should have been mapped during GEM INFO call.
+				 */
+				return (void*)offset;
+			} else {
+				cap = _drm_session->object_dataspace(offset, size);
+			}
+
 			if (!cap.valid()) {
 				return (void *)-1;
 			}
@@ -774,6 +808,10 @@ class Drm_call
 
 		void munmap(void *addr)
 		{
+			if (_gpu_session.constructed()) {
+				return;
+			}
+
 			_env.rm().detach(addr);
 		}
 };
