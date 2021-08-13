@@ -303,6 +303,8 @@ class Drm_call
 		Gpu::Info                              _gpu_info {
 			0, 0, 0, 0, Gpu::Info::Execution_buffer_sequence { 0 } };
 
+		Genode::Dataspace_capability     _exec_buffer_cap { };
+
 		Genode::Blockade                 _completion_blockade { };
 		Genode::Signal_handler<Drm_call> _completion_sigh;
 
@@ -444,17 +446,30 @@ class Drm_call
 			return _apply_buffer(id, lookup_and_attach) ? 0 : -1;
 		}
 
+		Genode::Dataspace_capability _alloc_buffer(Genode::size_t const size)
+		{
+			Genode::size_t donate = size;
+
+			try {
+				return Genode::retry<Gpu::Session::Out_of_ram>(
+				[&] () { return _gpu_session->alloc_buffer(size); },
+				[&] () {
+					_gpu_session->upgrade_ram(donate);
+					donate >>= 2;
+				}, 8);
+			} catch (Gpu::Session::Out_of_ram) { }
+
+			return Genode::Dataspace_capability();
+		}
+
 		int _drm_etnaviv_gem_new(drm_etnaviv_gem_new &arg)
 		{
 			Genode::size_t const size = arg.size;
 
-			Genode::size_t donate = arg.size;
-			Genode::Dataspace_capability cap = Genode::retry<Gpu::Session::Out_of_ram>(
-			[&] () { return _gpu_session->alloc_buffer(size); },
-			[&] () {
-				_gpu_session->upgrade_ram(donate);
-				donate >>= 2;
-			});
+			Genode::Dataspace_capability cap = _alloc_buffer(size);
+			if (!cap.valid()) {
+				return -1;
+			}
 
 			try {
 				Buffer_handle *buffer = new (&_heap) Buffer_handle(_buffer_handles, cap, size);
@@ -721,8 +736,19 @@ class Drm_call
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
 				_gpu_info = _gpu_session->info();
+				_exec_buffer_cap = _alloc_buffer(8192);
+				if (!_exec_buffer_cap.valid()) {
+					throw Gpu::Session::Invalid_state();
+				}
 			} else {
 				_drm_session.construct(_env, &_drm_alloc, 1u<<20);
+			}
+		}
+
+		~Drm_call()
+		{
+			if (_exec_buffer_cap.valid()) {
+				_gpu_session->free_buffer(_exec_buffer_cap);
 			}
 		}
 
