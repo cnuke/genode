@@ -1197,14 +1197,13 @@ int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
                                    unsigned long long *value)
 {
 	int err;
-
 	struct drm_etnaviv_param req = {
 		.pipe = 0,
 		.param = param,
 		.value = 0,
 	};
 
-	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GET_PARAM, &req);
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GET_PARAM, (unsigned long)&req);
 	if (err) {
 		return -1;
 	}
@@ -1214,40 +1213,109 @@ int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
 }
 
 
-int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned int handle,
+int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned long arg,
                                     unsigned long long *fence)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+	struct drm_etnaviv_gem_submit *submit;
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_NEW, arg);
+	if (err) {
+		return -1;
+	}
+
+	submit = (struct drm_etnaviv_gem_submit*)arg;
+
+	*fence = submit->fence;
+	return 0;
 }
 
 
 int lx_drm_ioctl_etnaviv_gem_new(void *session, unsigned long size,
                                  unsigned int *handle)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+	struct drm_etnaviv_gem_new req = {
+		.size = size,
+		.flags = ETNA_BO_WC,
+		.handle = 0,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_NEW, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	*handle = req.handle;
+	return 0;
 }
 
 
-int lx_drm_ioctl_etnaviv_prep_cpu(void *session, unsigned int handle)
+int lx_drm_ioctl_etnaviv_gem_info(void *session, unsigned int handle,
+                                  unsigned long long *offset)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+	struct drm_etnaviv_gem_info req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_INFO, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	*offset = req.offset;
+	return 0;
 }
 
 
-int lx_drm_ioctl_etnaviv_fini_cpu(void *session, unsigned int handle)
+int lx_drm_ioctl_etnaviv_cpu_prep(void *session, unsigned int handle, int op)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+	struct drm_etnaviv_gem_cpu_prep req = {
+		.handle = handle,
+		.op     = op,
+		// .timeout = ...
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_CPU_PREP, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_cpu_fini(void *session, unsigned int handle)
+{
+	int err;
+	struct drm_etnaviv_gem_cpu_fini req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_CPU_FINI, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
 }
 
 
 int lx_drm_ioctl_gem_close(void *session, unsigned int handle)
 {
-	lx_emul_printf("%s:%d: not implemented\n", __func__, __LINE__);
-	return -1;
+	int err;
+	struct drm_gem_close req = {
+		.handle = handle,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_GEM_CLOSE, (unsigned long)&req);
+	if (err) {
+		return -1;
+	}
+
+	return 0;
 }
 
 

@@ -971,13 +971,30 @@ Genode::Ram_dataspace_capability lx_drm_object_dataspace(unsigned long offset, u
  ** Gpu session **
  *****************/
 
-Genode::Dataspace_capability genode_lookup_cap(void *, unsigned int)
+Genode::Dataspace_capability genode_lookup_cap(void *drm_session, unsigned long long offset,
+                                               unsigned long size)
 {
+	void *as = genode_lookup_mapping_from_offset(offset, size);
+	if (!as) {
+		return Genode::Dataspace_capability();
+	}
+	
+	Mapping *mp = nullptr;
+	_mapping_registry().for_each([&mp, as] (Mapping &m) {
+		if (m.address_space == as) {
+			mp = &m;
+		}
+	});
+
+	if (!mp) {
+		return Genode::Dataspace_capability();
+	}
+
+	for (Dma_wc_dataspace *ds = _dma_wc_ds_list().first(); ds; ds = ds->next()) {
+		if (ds->local_addr<void>() == (void*)mp->dma.vaddr) {
+			return ds->cap();
+		}
+	}
+
 	return Genode::Dataspace_capability();
-}
-
-
-unsigned int genode_lookup_handle(void *, Genode::Dataspace_capability)
-{
-	return ~0u;
 }
