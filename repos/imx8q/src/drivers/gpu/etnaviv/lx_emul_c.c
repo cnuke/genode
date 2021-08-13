@@ -1219,7 +1219,7 @@ int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned long arg,
 	int err;
 	struct drm_etnaviv_gem_submit *submit;
 
-	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_NEW, arg);
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_SUBMIT, arg);
 	if (err) {
 		return -1;
 	}

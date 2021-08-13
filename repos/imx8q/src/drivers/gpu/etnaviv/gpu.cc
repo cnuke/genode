@@ -41,7 +41,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 {
 	private:
 
-		Genode::Heap _alloc;
+		Genode::Env  &_env;
+		Genode::Heap  _alloc;
 
 		struct Buffer_handle : Genode::Registry<Buffer_handle>::Element
 		{
@@ -229,12 +230,14 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			struct Op_data {
 				// new
 				size_t size;
-				// new. close. exec, map, unmap
+				// new. close. map, unmap
 				Genode::Dataspace_capability buffer_cap;
 				// exec
 				uint64_t seqno;
 				// map
 				int mt;
+				// exec
+				void *gem_submit;
 			};
 
 			Op      op;
@@ -254,6 +257,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			Gpu::Info &info;
 
 			Buffer_handle_registry &buffer_handle_registry;
+
+			void *gem_submit;
 		};
 
 		Drm_worker_args _drm_worker_args {
@@ -350,15 +355,13 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				}
 				case Gpu_request::Op::EXEC:
 				{
-					unsigned int const handle =
-						args.buffer_handle_registry.lookup_buffer(args.request.op_data.buffer_cap);
-					if (handle == ~0u) {
-						break;
-					}
-
+					void *gem_submit = args.request.op_data.gem_submit;
 					uint64_t seqno;
+
 					int const err =
-						lx_drm_ioctl_etnaviv_gem_submit(args.drm_session, handle, &seqno);
+						lx_drm_ioctl_etnaviv_gem_submit(args.drm_session,
+						                                (unsigned long)gem_submit,
+						                                &seqno);
 					if (err) {
 						// XXX check value of err
 						break;
@@ -423,7 +426,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		:
 			Session_object { ep, resources, label, diag },
 			Genode::Registry<Gpu::Session_component>::Element { registry, *this },
-			_alloc { env.ram(), env.rm() },
+			_env   { env },
+			_alloc { _env.ram(), _env.rm() },
 		  	_name { name },
 			_drm_worker { _drm_worker_run, &_drm_worker_args, _name,
 			              Lx::Task::PRIORITY_2, Lx::scheduler() }
@@ -497,14 +501,21 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				throw Retry_request();
 			}
 
+			void *arg = (void*)_env.rm().attach(cap);
+
+			// FIXME leads to pf
+			Genode::error(__func__, ": arg: ", arg);
+
 			_drm_worker_args.request = Gpu_request {
 				.op      = Gpu_request::Op::EXEC,
-				.op_data = { .size = size, .buffer_cap = cap },
+				.op_data = { .size = size, .buffer_cap = cap, .gem_submit = arg },
 			};
 
 			_drm_worker.unblock();
 			Lx::scheduler().schedule();
 			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
+
+			_env.rm().detach(arg);
 
 			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
 				throw Gpu::Session::Invalid_state();
