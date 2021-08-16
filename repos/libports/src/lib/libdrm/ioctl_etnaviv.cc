@@ -166,6 +166,7 @@ size_t Drm::get_payload_size(drm_etnaviv_gem_submit const &submit)
 	size += sizeof (drm_etnaviv_gem_submit_reloc) * submit.nr_relocs;
 	size += sizeof (drm_etnaviv_gem_submit_bo) * submit.nr_bos;
 	size += sizeof (drm_etnaviv_gem_submit_pmr) * submit.nr_pmrs;
+	size += submit.stream_size;
 
 	return size;
 }
@@ -309,7 +310,7 @@ class Drm_call
 		Gpu::Info                              _gpu_info {
 			0, 0, 0, 0, Gpu::Info::Execution_buffer_sequence { 0 } };
 
-		enum { EXEC_BUFFER_SIZE = 8192 };
+		enum { EXEC_BUFFER_SIZE = 64u << 10 };
 		Genode::Dataspace_capability  _exec_buffer_cap   { };
 		char                         *_local_exec_buffer { nullptr };
 		uint64_t                      _pending_exec_buffer { 0 };
@@ -492,6 +493,13 @@ class Drm_call
 
 		int _drm_etnaviv_gem_submit(drm_etnaviv_gem_submit &arg)
 		{
+			size_t const payload_size = Drm::get_payload_size(arg);
+			if (payload_size > EXEC_BUFFER_SIZE) {
+				Genode::error(__func__, ": exec buffer too small (",
+				              (unsigned)EXEC_BUFFER_SIZE, ") needed ", payload_size);
+				return -1;
+			}
+
 			/*
 			 * Copy each array flat to the exec buffer and adjust the
 			 * addresses in the submit object.
