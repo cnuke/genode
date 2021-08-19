@@ -573,6 +573,17 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			}
 		}
 
+		Handle buffer_handle(Genode::Dataspace_capability cap) override
+		{
+			unsigned int const handle =
+				_buffer_handle_registry.lookup_buffer(cap);
+			if (handle == ~0u) {
+					return Handle { ._valid = false };
+			}
+
+			return Handle { ._valid = true, .value = handle };
+		}
+
 		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability cap,
 		                                        bool /* aperture */,
 		                                        Mapping_type mt) override
