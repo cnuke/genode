@@ -21,6 +21,7 @@ namespace Gpu {
 	using addr_t = Genode::uint64_t;
 
 	struct Info;
+	struct Handle;
 	struct Session;
 }
 
@@ -62,6 +63,19 @@ struct Gpu::Info
 		aperture_size(aperture_size), ctx_id(ctx_id),
 		last_completed(last)
 	{ }
+};
+
+
+struct Gpu::Handle
+{
+	bool _valid;
+
+	Genode::uint32_t value;
+
+	bool valid() const
+	{
+		return _valid;
+	}
 };
 
 
@@ -127,6 +141,13 @@ struct Gpu::Session : public Genode::Session
 	virtual void free_buffer(Genode::Dataspace_capability ds) = 0;
 
 	/**
+	 * Get local handle for buffer
+	 *
+	 * \param ds  dataspace capability for buffer
+	 */
+	virtual Handle buffer_handle(Genode::Dataspace_capability ds) = 0;
+
+	/**
 	 * Map buffer
 	 *
 	 * \param ds        dataspace capability for buffer
@@ -185,6 +206,7 @@ struct Gpu::Session : public Genode::Session
 	                 GENODE_TYPE_LIST(Out_of_ram),
 	                 Genode::size_t);
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Genode::Dataspace_capability);
+	GENODE_RPC(Rpc_buffer_handle, Handle, buffer_handle, Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Out_of_ram),
 	                 Genode::Dataspace_capability, bool,
@@ -201,7 +223,8 @@ struct Gpu::Session : public Genode::Session
 
 	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
-	                     Rpc_free_buffer, Rpc_map_buffer, Rpc_unmap_buffer,
+	                     Rpc_free_buffer, Rpc_buffer_handle,
+	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
 	                     Rpc_set_tiling);
 };
