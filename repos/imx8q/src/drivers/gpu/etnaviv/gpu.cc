@@ -503,9 +503,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 			void *arg = (void*)_env.rm().attach(cap);
 
-			// FIXME leads to pf
-			Genode::error(__func__, ": arg: ", arg);
-
 			_drm_worker_args.request = Gpu_request {
 				.op      = Gpu_request::Op::EXEC,
 				.op_data = { .size = size, .buffer_cap = cap, .gem_submit = arg },
