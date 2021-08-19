@@ -310,10 +310,10 @@ class Drm_call
 		Gpu::Info                              _gpu_info {
 			0, 0, 0, 0, Gpu::Info::Execution_buffer_sequence { 0 } };
 
-		enum { EXEC_BUFFER_SIZE = 64u << 10 };
+		/* apparently glmark2 submits araound 110 KiB at some point */
+		enum { EXEC_BUFFER_SIZE = 256u << 10 };
 		Genode::Dataspace_capability  _exec_buffer_cap   { };
 		char                         *_local_exec_buffer { nullptr };
-		uint64_t                      _pending_exec_buffer { 0 };
 
 		Genode::Blockade                 _completion_blockade { };
 		Genode::Signal_handler<Drm_call> _completion_sigh;
@@ -327,8 +327,9 @@ class Drm_call
 		{
 			do {
 				Gpu::Info const info { _gpu_session->info() };
+				uint32_t  const last = info.last_completed.id & 0xffffffffu;
 
-				if (info.last_completed.id >= fence) {
+				if (last >= fence) {
 					break;
 				}
 
@@ -518,9 +519,9 @@ class Drm_call
 			Drm::serialize(&arg, _local_exec_buffer);
 
 			try {
-				_pending_exec_buffer =
+				uint64_t const pending_exec_buffer =
 					_gpu_session->exec_buffer(_exec_buffer_cap, EXEC_BUFFER_SIZE).id;
-				arg.fence = _pending_exec_buffer % (1ul << (sizeof (arg.fence) * 8));
+				arg.fence = pending_exec_buffer & 0xffffffffu;
 				return 0;
 			} catch (Gpu::Session::Invalid_state) { }
 
@@ -615,6 +616,8 @@ class Drm_call
 
 			bool const handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
 				_gpu_session->free_buffer(bh.cap);
+
+				Genode::destroy(_heap, &bh);
 			});
 
 			return handled ? 0 : -1;
@@ -756,10 +759,10 @@ class Drm_call
 
 	public:
 
-		Drm_call(Genode::Env &env, bool use_gpu_session)
+		Drm_call(Genode::Env &env, Genode::Entrypoint &signal_ep, bool use_gpu_session)
 		:
 			_env { env },
-			_completion_sigh { env.ep(), *this, &Drm_call::_handle_completion }
+			_completion_sigh { signal_ep, *this, &Drm_call::_handle_completion }
 		{
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
@@ -838,9 +841,9 @@ class Drm_call
 static Genode::Constructible<Drm_call> _drm;
 
 
-void drm_init(Genode::Env &env, bool use_gpu_session)
+void drm_init(Genode::Env &env, Genode::Entrypoint &ep, bool use_gpu_session)
 {
-	_drm.construct(env, use_gpu_session);
+	_drm.construct(env, ep, use_gpu_session);
 }
 
 
