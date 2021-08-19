@@ -154,7 +154,6 @@ static Kmem_cache *_kmem_cache_lookup(void const *lx)
 int lx_emul_kmem_cache_create(void const *c, unsigned int size, unsigned int align)
 {
 	new (Lx::Malloc::mem()) Kmem_cache(kmem_cache_registry(), c, size, false);
-	Genode::error(__func__, ": create kmem cache: ", c, " from: ", __builtin_return_address(0));
 	return 0;
 }
 
@@ -843,14 +842,11 @@ struct workqueue_struct *lx_emul_alloc_workqueue(char const *fmt, unsigned int f
 		return nullptr;
 	}
 
-	Genode::error(__func__, ":", __LINE__);
-
 	Genode::memset(wq, sizeof (workqueue_struct), 0);
 
 	Lx::Work *work = Lx::Work::alloc_work_queue(&Lx::Malloc::mem(), fmt);
 	wq->task       = work;
 
-	Genode::error("wq: ", wq, " work: ", work);
 	return wq;
 }
 

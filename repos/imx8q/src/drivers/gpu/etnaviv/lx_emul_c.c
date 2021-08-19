@@ -207,7 +207,7 @@ struct kmem_cache *kmem_cache_create(const char *name, unsigned int size,
 
 	if (!cache_name) {
 		kfree(cache);
-		return 0;
+		return NULL;
 	}
 	cache_name[len] = 0;
 
@@ -317,12 +317,6 @@ int of_dma_configure(struct device *dev, struct device_node *np,
 	LX_TRACE_PRINT("%s: dev: %p np: %p force_dma: %d\n", __func__,
 	               dev, np, force_dma);
 	return 0;
-}
-
-
-void of_node_put(struct device_node *node)
-{
-	lx_emul_trace(__func__);
 }
 
 
@@ -440,6 +434,9 @@ int __platform_driver_register(struct platform_driver *drv, struct module *mod)
 
 	lx_emul_printf("Register: %s\n", drv->driver.name);
 	driver = (struct Lx_driver*)kzalloc(sizeof (struct Lx_driver), 0);
+	if (!driver) {
+		return -1;
+	}
 	//driver->driver = &drv->driver;
 	driver->pdriver = drv;
 	list_add(&driver->list, &driver_list_head);
