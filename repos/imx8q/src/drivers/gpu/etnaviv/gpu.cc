@@ -126,11 +126,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 				return handle;
 			}
-
-			Genode::Allocator* alloc()
-			{
-				return &_alloc;
-			}
 		};
 
 		Buffer_handle_registry _buffer_handle_registry { _alloc };
@@ -198,7 +193,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return 0;
 		}
 
-		int _convert_mt(Gpu::Session::Mapping_type mt)
+		static int _convert_mt(Gpu::Session::Mapping_type mt)
 		{
 			using MT = Gpu::Session::Mapping_type;
 
@@ -218,7 +213,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		}
 
 		Genode::Signal_context_capability _completion_sigh { };
-		uint64_t _pending_seqno { };
+		uint64_t _pending_seqno { ~0llu };
 
 		char const *_name;
 
@@ -315,12 +310,14 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 						                             args.request.op_data.size, &handle);
 					// XXX check value of err to propagate type of error
 					if (err) {
+						Genode::error("lx_drm_ioctl_etnaviv_gem_new failed: ", err);
 						break;
 					}
 
 					unsigned long long offset;
 					err = lx_drm_ioctl_etnaviv_gem_info(args.drm_session, handle, &offset);
 					if (err) {
+						Genode::error("lx_drm_ioctl_etnaviv_gem_info failed: ", err);
 						lx_drm_ioctl_gem_close(args.drm_session, handle);
 						break;
 					}
@@ -329,6 +326,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 						genode_lookup_cap(args.drm_session, offset, args.request.op_data.size);
 					if (!cap.valid()) {
 						/* this should never happen */
+						Genode::error("genode_lookup_cap for offset: ", Genode::Hex(offset),
+						              " failed");
 						lx_drm_ioctl_gem_close(args.drm_session, handle);
 						break;
 					}
@@ -349,6 +348,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 
 					(void)lx_drm_ioctl_gem_close(args.drm_session, handle);
+					args.buffer_handle_registry.remove(handle);
 
 					args.request.result = Gpu_request::Result::SUCCESS;
 					break;
@@ -403,7 +403,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				default:
 				break;
 				}
-
 
 				Lx::scheduler().current()->block_and_schedule();
 			}
@@ -497,6 +496,11 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap,
 		                                                 Genode::size_t size) override
 		{
+			if (!cap.valid()) {
+				Genode::error(__func__, ": invalid exec buffer capability");
+				throw Gpu::Session::Invalid_state();
+			}
+
 			if (_drm_worker_args.request.valid()) {
 				throw Retry_request();
 			}
@@ -542,12 +546,17 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 			_drm_worker.unblock();
 			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
 
 			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
 				throw Gpu::Session::Out_of_ram();
 			}
-			return _drm_worker_args.request.op_data.buffer_cap;
+			Genode::Dataspace_capability cap = _drm_worker_args.request.op_data.buffer_cap;
+
+			if (!cap.valid()) {
+				Genode::error(__func__, ": buffer_cap invalid");
+			}
+			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
+			return cap;
 		}
 
 		void free_buffer(Genode::Dataspace_capability cap) override
@@ -706,7 +715,7 @@ struct Gpu::Root : Gpu::Root_component
 		void completion_signal(uint64_t seqno)
 		{
 			_sessions.for_each([&] (Gpu::Session_component &sc) {
-				if (sc.pending_seqno() == seqno) {
+				if (sc.pending_seqno() <= seqno) {
 					sc.submit_completion_signal(seqno);
 				}
 			});
