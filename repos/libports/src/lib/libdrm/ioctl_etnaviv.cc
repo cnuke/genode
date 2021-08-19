@@ -354,9 +354,12 @@ class Drm_call
 
 			Buffer_handle(Genode::Id_space<Buffer_handle> &space,
 			              Genode::Dataspace_capability cap,
+			              Genode::uint32_t handle,
 			              Genode::size_t size)
 			:
-				cap { cap }, size { size }, handle { *this, space }, seqno { .id = 0 }
+				cap { cap }, size { size },
+				handle { *this, space, Handle_id { .value = handle } },
+				seqno { .id = 0 }
 			{
 				if (!cap.valid()) {
 					throw Invalid_capability();
@@ -481,8 +484,15 @@ class Drm_call
 				return -1;
 			}
 
+			Gpu::Handle const handle { _gpu_session->buffer_handle(cap) };
+			if (!handle.valid()) {
+				_gpu_session->free_buffer(cap);
+				return -1;
+			}
+
 			try {
-				Buffer_handle *buffer = new (&_heap) Buffer_handle(_buffer_handles, cap, size);
+				Buffer_handle *buffer =
+					new (&_heap) Buffer_handle(_buffer_handles, cap, handle.value, size);
 				arg.handle = buffer->handle.id().value;
 				return 0;
 			} catch (...) {
