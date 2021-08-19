@@ -61,8 +61,6 @@ class Lx_kit::Slab_backend_alloc : public Lx::Slab_backend_alloc,
 				return false;
 			}
 
-			Genode::log(__func__, ": index: ", _index);
-
 			try {
 				_ds_cap[_index] = Lx::backend_alloc(P_BLOCK_SIZE, _cached);
 				/* attach at index * V_BLOCK_SIZE */

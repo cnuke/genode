@@ -12,6 +12,7 @@
 void probe_platform_bus(void);
 void register_gpu_platform_device(void);
 void lx_emul_announce_drm_session(void);
+void lx_emul_announce_gpu_session(void);
 
 
 /* functions marked with __init */
@@ -27,15 +28,8 @@ int lx_emul_init_kernel()
 
 int lx_emul_start_kernel()
 {
-	int err = 0;
-
 	register_gpu_platform_device();
 	probe_platform_bus();
-
-	// err = lx_drm_open();
-	// if (err) {
-	// 	return err;
-	// }
 
 	lx_emul_announce_drm_session();
 	lx_emul_announce_gpu_session();
