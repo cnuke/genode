@@ -19,9 +19,10 @@ extern "C" {
 #include <platform.h>
 }
 
-extern void drm_init(Genode::Env &env, bool use_gpu_session);
+extern Genode::Entrypoint &genode_entrypoint();
+extern void drm_init(Genode::Env &env, Genode::Entrypoint &ep, bool use_gpu_session);
 
 void genode_drm_init(int use_gpu_session)
 {
-	drm_init(*genode_env, use_gpu_session);
+	drm_init(*genode_env, genode_entrypoint(), use_gpu_session);
 }
