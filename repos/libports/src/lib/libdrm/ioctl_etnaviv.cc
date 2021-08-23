@@ -329,7 +329,7 @@ class Drm_call
 				Gpu::Info const info { _gpu_session->info() };
 				uint32_t  const last = info.last_completed.id & 0xffffffffu;
 
-				if (last >= fence) {
+				if (_gpu_session->wait_fence(fence)) {
 					break;
 				}
 
