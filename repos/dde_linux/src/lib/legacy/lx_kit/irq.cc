@@ -27,6 +27,8 @@
 #include <legacy/lx_kit/scheduler.h>
 
 
+#include <trace/timestamp.h>
+
 namespace Lx_kit { class Irq; }
 
 
@@ -139,15 +141,34 @@ class Lx_kit::Irq : public Lx::Irq
 					_irq_sess.ack_irq();
 				}
 
+				uint64_t _start_timestamp { 0 };
+				uint32_t _interrupt_counter { 0 };
+
 				/**
 				 * Unblock this context, e.g., as result of an IRQ signal
 				 */
 				void unblock()
 				{
+					// if (!_start_timestamp) {
+					// 	_start_timestamp = Genode::Trace::timestamp();
+					// }
+					// ++_interrupt_counter;
+					// if (_interrupt_counter % 100 == 0) {
+					// 	uint64_t const curr = Genode::Trace::timestamp();
+					// 	uint64_t const diff = curr - _start_timestamp;
+					// 	_start_timestamp = curr;
+					// 	Genode::log("irqs: ", _interrupt_counter, " diff: ", diff);
+					// }
+
 					_task.unblock();
+
+					uint64_t const schedule_start = Genode::Trace::timestamp();
 
 					/* kick off scheduling */
 					Lx::scheduler().schedule();
+					uint64_t const schedule_end = Genode::Trace::timestamp();
+
+					// Genode::log("sched: ", schedule_end - schedule_start);
 				}
 
 				/**
