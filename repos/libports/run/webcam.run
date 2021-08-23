@@ -1,16 +1,16 @@
-set build_components { }
+set build_components { app/top timer }
 
 # fuji4
-proc libuvc_vendor_id {}  { return "0x04f2" }
-proc libuvc_product_id {} { return "0xb564" }
+#proc libuvc_vendor_id {}  { return "0x04f2" }
+#proc libuvc_product_id {} { return "0xb564" }
 
 # c270
 #proc libuvc_vendor_id {}  { return "0x046d" }
 #proc libuvc_product_id {} { return "0x0825" }
 
 # quickcam
-#proc libuvc_vendor_id {}  { return "0x046d" }
-#proc libuvc_product_id {} { return "0x09c1" }
+proc libuvc_vendor_id {}  { return "0x046d" }
+proc libuvc_product_id {} { return "0x09c1" }
 
 # t470
 #proc libuvc_vendor_id {}  { return "0x0bda" }
@@ -20,20 +20,15 @@ proc libuvc_product_id {} { return "0xb564" }
 
 create_boot_directory
 
-import_from_depot [depot_user]/src/[base_src] \
+import_from_depot [depot_user]/pkg/drivers_managed-[board] \
                   [depot_user]/src/init \
                   [depot_user]/src/nitpicker \
                   [depot_user]/src/dynamic_rom \
                   [depot_user]/src/rom_reporter \
-                  [depot_user]/src/usb_host_drv \
-                  [depot_user]/src/vesa_drv \
                   [depot_user]/src/test-capture \
                   [depot_user]/pkg/usb_webcam
 
-source ${genode_dir}/repos/base/run/platform_drv.inc
-append_platform_drv_build_components
 build $build_components
-
 
 append config {
 <config verbose="yes" prio_levels="4">
@@ -47,14 +42,15 @@ append config {
 		<service name="CPU"/>
 		<service name="LOG"/>
 		<service name="VM"/>
+		<service name="TRACE"/>
 	</parent-provides>
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
 	<default caps="100"/>
-}
 
-append_platform_drv_config
+	<affinity-space width="4" height="1"/>
+}
 
 append config {
 	<start name="timer">
@@ -65,46 +61,51 @@ append config {
 		</route>
 	</start>
 
-	<start name="usb_drv" priority="0" caps="200">
-		<binary name="x86_pc_usb_host_drv"/>
-		<resource name="RAM" quantum="16M"/>
-		<!-- <resource name="CPU" quantum="10"/> -->
-		<provides><service name="Usb"/></provides>
-		<config uhci="yes" ehci="yes" xhci="yes" bios_handoff="no">
-			<report devices="no"/>
-			<policy label_suffix="usb_webcam -> usb_device"
-			        vendor_id="} [libuvc_vendor_id] {" product_id="} [libuvc_product_id] {"/>
-		</config>
+	<start name="report_rom">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="no"/>
 		<route>
-			<any-service> <parent/> <any-child/> </any-service>
+			<any-service> <parent/> </any-service>
 		</route>
 	</start>
 
-	<start name="fb_drv" priority="-1" caps="150">
-		<binary name="vesa_fb_drv"/>
-		<resource name="RAM" quantum="20M"/>
-		<config/>
+	<start name="drivers" caps="2500" managing_system="yes">
+		<affinity xpos="2" width="1"/>
+		<resource name="RAM" quantum="160M"/>
+		<binary name="init"/>
+		<provides> <service name="Platform"/> <service name="Usb"/> </provides>
 		<route>
+			<service name="ROM" label="usb_active_config"> <child name="dynamic-webcam"/> </service>
+			<service name="ROM" label="config"> <parent label="drivers.config"/> </service>
+			<service name="Timer">   <child name="timer"/> </service>
 			<service name="Capture"> <child name="nitpicker"/> </service>
-			<any-service> <parent/> <any-child /> </any-service>
+			<service name="Event">   <child name="nitpicker"/> </service>
+			<service name="Report">  <child name="report_rom"/> </service>
+			<any-service> <parent/> </any-service>
 		</route>
 	</start>
 
-	<start name="nitpicker" priority="-1" caps="150">
-		<resource name="RAM" quantum="12M"/>
+	<start name="nitpicker" caps="200" priority="-1">
+		<resource name="RAM" quantum="2M"/>
 		<provides>
 			<service name="Gui"/> <service name="Capture"/> <service name="Event"/>
 		</provides>
 		<config>
-			<capture/>
+			<capture/> <event/>
 			<report focus="yes" hover="yes" />
-			<domain name="" layer="3" content="client" label="no" focus="click" hover="always"/>
-			<default-policy domain=""/>
+			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
+			<domain name="default" layer="2" content="client" label="no" focus="click" hover="always" />
+			<policy label_prefix="pointer" domain="pointer"/>
+			<default-policy                domain="default"/>
 		</config>
 		<route>
-			<service name="Report"> <child name="acpi_report_rom"/> </service>
-			<any-service> <parent/> <any-child /> </any-service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
 		</route>
+	</start>
+	<start name="pointer">
+		<resource name="RAM" quantum="1M"/>
 	</start>
 
 	<start name="test-capture" priority="-1">
@@ -128,11 +129,17 @@ append config {
 				<inline>
 					<capture enabled="true"/>
 				</inline>
-				<sleep milliseconds="8000"/>
+				<sleep milliseconds="8000000"/>
 				<inline>
 					<capture enabled="no"/>
 				</inline>
 				<sleep milliseconds="3000"/>
+			</rom>
+			<rom name="usb_active_config">
+				<config>
+					<policy label_suffix="usb_webcam -> usb_device" class="0xe"/>
+				</config>
+				<sleep milliseconds="500000"/>
 			</rom>
 		</config>
 		<route>
@@ -160,18 +167,29 @@ append config {
 		<route>
 			<service name="ROM" label="config"> <parent label="usb_webcam.config"/> </service>
 			<service name="Timer"> <child name="timer"/> </service>
-			<service name="Usb"> <child name="usb_drv"/> </service>
+			<service name="Usb"> <child name="drivers"/> </service>
 			<any-service> <parent /> </any-service>
 		</route>
 		<provides> <service name="Capture"/> <service name="Report"/> </provides>
 	</start>
+
+<!--
+	<start name="top">
+		<resource name="RAM" quantum="1MB"/>
+		<config period_ms="1000">
+		</config>
+		<route>
+			<service name="Timer"> <child name="timer"/> </service>
+			<any-service> <parent /> </any-service>
+		</route>
+	</start>
+
+-->
 </config>}
 
 install_config $config
 
-append_platform_drv_boot_modules
-
-append boot_modules { }
+append boot_modules { top timer }
 
 build_boot_image $boot_modules
 
