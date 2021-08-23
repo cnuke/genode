@@ -115,6 +115,8 @@ struct Gpu::Session : public Genode::Session
 	 */
 	virtual Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
 
+	virtual bool wait_fence(Genode::uint32_t fence) = 0;
+
 	/**
 	 * Register completion signal handler
 	 *
@@ -200,6 +202,8 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Genode::Dataspace_capability, Genode::size_t);
+	GENODE_RPC(Rpc_wait_fence, bool, wait_fence,
+	           Genode::uint32_t);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,
 	           Genode::Signal_context_capability);
 	GENODE_RPC_THROW(Rpc_alloc_buffer, Genode::Dataspace_capability, alloc_buffer,
@@ -221,7 +225,7 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Genode::Dataspace_capability, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_buffer_handle,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,

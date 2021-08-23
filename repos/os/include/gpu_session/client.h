@@ -44,6 +44,9 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		                                                 Genode::size_t size) override {
 			return call<Rpc_exec_buffer>(cap, size); }
 
+		bool wait_fence(Genode::uint32_t fence) override {
+			return call<Rpc_wait_fence>(fence); }
+
 		void completion_sigh(Genode::Signal_context_capability sigh) override {
 			call<Rpc_completion_sigh>(sigh); }
 
