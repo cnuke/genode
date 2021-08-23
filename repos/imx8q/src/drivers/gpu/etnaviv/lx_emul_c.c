@@ -1211,7 +1211,7 @@ int lx_drm_ioctl_etnaviv_gem_param(void *session, unsigned char param,
 
 
 int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned long arg,
-                                    unsigned long long *fence)
+                                    unsigned int *fence)
 {
 	int err;
 	struct drm_etnaviv_gem_submit *submit;
@@ -1225,6 +1225,23 @@ int lx_drm_ioctl_etnaviv_gem_submit(void *session, unsigned long arg,
 
 	*fence = submit->fence;
 	return 0;
+}
+
+
+int lx_drm_ioctl_etnaviv_wait_fence(void *session, unsigned int fence)
+{
+	int err;
+
+	struct drm_etnaviv_wait_fence req = {
+		.pipe = 0,
+		.fence = fence,
+		.flags = ETNA_WAIT_NONBLOCK,
+	};
+
+	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_WAIT_FENCE,
+	                   (unsigned long) &req);
+
+	return err;
 }
 
 

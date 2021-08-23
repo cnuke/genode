@@ -213,13 +213,13 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		}
 
 		Genode::Signal_context_capability _completion_sigh { };
-		uint64_t _pending_seqno { ~0llu };
+		uint32_t _pending_fence_id { ~0u };
 
 		char const *_name;
 
 		struct Gpu_request
 		{
-			enum class Op { INVALID, OPEN, CLOSE, NEW, DELETE, EXEC, MAP, UNMAP };
+			enum class Op { INVALID, OPEN, CLOSE, NEW, DELETE, EXEC, WAIT_FENCE, MAP, UNMAP };
 			enum class Result { SUCCESS, ERR };
 
 			struct Op_data {
@@ -227,8 +227,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				size_t size;
 				// new. close. map, unmap
 				Genode::Dataspace_capability buffer_cap;
-				// exec
-				uint64_t seqno;
+				// exec, wait_fence
+				uint32_t fence_id;
 				// map
 				int mt;
 				// exec
@@ -356,19 +356,34 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				case Gpu_request::Op::EXEC:
 				{
 					void *gem_submit = args.request.op_data.gem_submit;
-					uint64_t seqno;
+					uint32_t fence_id;
 
 					int const err =
 						lx_drm_ioctl_etnaviv_gem_submit(args.drm_session,
 						                                (unsigned long)gem_submit,
-						                                &seqno);
+						                                &fence_id);
 					if (err) {
 						// XXX check value of err
 						break;
 					}
 
-					args.request.op_data.seqno = seqno;
-					args.request.result        = Gpu_request::Result::SUCCESS;
+					args.request.op_data.fence_id = fence_id;
+					args.request.result           = Gpu_request::Result::SUCCESS;
+					break;
+				}
+				case Gpu_request::Op::WAIT_FENCE:
+				{
+					uint32_t fence_id;
+
+					int const err =
+						lx_drm_ioctl_etnaviv_wait_fence(args.drm_session, fence_id);
+					if (err) {
+						// XXX check value of err
+						break;
+					}
+
+					args.request.result = Gpu_request::Result::SUCCESS;
+					break;
 				}
 				case Gpu_request::Op::MAP:
 				{
@@ -465,11 +480,11 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 		char const *name() { return _name; }
 
-		uint64_t pending_seqno() const { return _pending_seqno; }
+		uint32_t pending_fence_id() const { return _pending_fence_id; }
 
-		void submit_completion_signal(uint64_t seqno)
+		void submit_completion_signal(uint32_t fence_id)
 		{
-			_info.last_completed.id = seqno;
+			_info.last_completed.id = fence_id;
 			Genode::Signal_transmitter(_completion_sigh).submit();
 		}
 
@@ -522,10 +537,28 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				throw Gpu::Session::Invalid_state();
 			}
 
-			_pending_seqno = _drm_worker_args.request.op_data.seqno;
+			_pending_fence_id = _drm_worker_args.request.op_data.fence_id;
 
 			return Gpu::Info::Execution_buffer_sequence {
-				.id = _pending_seqno };
+				.id = _pending_fence_id };
+		}
+
+		bool wait_fence(Genode::uint32_t fence_id) override
+		{
+			if (_drm_worker_args.request.valid()) {
+				throw Retry_request();
+			}
+			_drm_worker_args.request = Gpu_request {
+				.op      = Gpu_request::Op::WAIT_FENCE,
+				.op_data = { .fence_id = fence_id }
+			};
+
+			_drm_worker.unblock();
+			Lx::scheduler().schedule();
+			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
+
+			bool const finished = _drm_worker_args.request.result == Gpu_request::Result::SUCCESS;
+			return finished;
 		}
 
 		void completion_sigh(Genode::Signal_context_capability sigh) override
@@ -715,9 +748,7 @@ struct Gpu::Root : Gpu::Root_component
 		void completion_signal(uint64_t seqno)
 		{
 			_sessions.for_each([&] (Gpu::Session_component &sc) {
-				if (sc.pending_seqno() <= seqno) {
-					sc.submit_completion_signal(seqno);
-				}
+				sc.submit_completion_signal(seqno);
 			});
 		}
 };
