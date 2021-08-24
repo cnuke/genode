@@ -132,7 +132,7 @@ class Device : public List<Device>::Element
 		 */
 		void _ctrl_in(Packet_descriptor &p)
 		{
-			void *buf = kmalloc(4096, GFP_NOIO);
+			void *buf = dma_malloc(4096);
 
 			int err = usb_control_msg(&_udev, usb_rcvctrlpipe(&_udev, 0),
 			                          p.control.request, p.control.request_type,
@@ -145,7 +145,7 @@ class Device : public List<Device>::Element
 				});
 			}
 
-			kfree(buf);
+			dma_free(buf);
 
 			if (err >= 0) {
 				p.succeded = true;
@@ -175,7 +175,7 @@ class Device : public List<Device>::Element
 		 */
 		void _ctrl_out(Packet_descriptor &p)
 		{
-			void *buf = kmalloc(4096, GFP_NOIO);
+			void *buf = dma_malloc(4096);
 
 			if (p.size())
 				Genode::memcpy(buf, _sink->packet_content(p), p.size());
@@ -212,7 +212,7 @@ class Device : public List<Device>::Element
 				}
 			}
 
-			kfree(buf);
+			dma_free(buf);
 		}
 
 		/**
