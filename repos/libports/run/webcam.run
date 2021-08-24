@@ -1,4 +1,4 @@
-set build_components { app/top timer }
+set build_components { app/top timer drivers/usb_host }
 
 # fuji4
 #proc libuvc_vendor_id {}  { return "0x04f2" }
@@ -189,7 +189,7 @@ append config {
 
 install_config $config
 
-append boot_modules { top timer }
+append boot_modules { top timer imx8q_evk_usb_host_drv }
 
 build_boot_image $boot_modules
 
