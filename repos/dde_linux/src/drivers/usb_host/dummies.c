@@ -622,19 +622,6 @@ size_t sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
  ** linux/dma-mapping.h **
  *************************/
 
-void dma_unmap_single_attrs(struct device *dev, dma_addr_t addr,
-                            size_t size,
-                            enum dma_data_direction dir,
-                            struct dma_attrs *attrs) { SKIP; }
-
-void dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sg,
-                        int nents, enum dma_data_direction dir,
-                        struct dma_attrs *attrs) { SKIP; }
-
-
-void dma_unmap_page(struct device *dev, dma_addr_t dma_address, size_t size,
-                    enum dma_data_direction direction) { SKIP; }
-
 int dma_mapping_error(struct device *dev, dma_addr_t dma_addr) { SKIP; return 0; }
 
 

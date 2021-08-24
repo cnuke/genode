@@ -19,6 +19,7 @@
 #include <timer_session/connection.h>
 #include <util/bit_allocator.h>
 #include <util/string.h>
+#include <util/touch.h>
 
 /* Local includes */
 #include "signal.h"
@@ -513,11 +514,46 @@ void dma_free_coherent(struct device *, size_t size, void *vaddr, dma_addr_t)
  ** linux/dma-mapping.h **
  *************************/
 
+#include <cpu/cache.h>
+
+static void _dma_map_cache_handling(void const *ptr, size_t size, enum dma_data_direction dir)
+{
+	switch (dir) {
+	case DMA_TO_DEVICE:
+		Genode::cache_clean_invalidate_data((Genode::addr_t)ptr, (Genode::size_t)size);
+		break;
+	case DMA_FROM_DEVICE:
+		for (size_t i = 0; i < size; i += 4096) {
+			Genode::touch_read((unsigned char const*)ptr + i);
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
+static void _dma_unmap_cache_handling(void const *ptr, size_t size, enum dma_data_direction dir)
+{
+	switch (dir) {
+	case DMA_TO_DEVICE:
+		break;
+	case DMA_FROM_DEVICE:
+		Genode::cache_invalidate_data((Genode::addr_t)ptr, (Genode::size_t)size);
+		break;
+	default:
+		break;
+	}
+}
+
+
 dma_addr_t dma_map_single_attrs(struct device *dev, void *ptr,
                                 size_t size,
                                 enum dma_data_direction dir,
                                 struct dma_attrs *attrs)
 {
+	_dma_map_cache_handling(ptr, size, dir);
+
 	dma_addr_t phys = (dma_addr_t)Lx::Malloc::dma().phys_addr(ptr);
 
 	if (phys == ~0UL)
@@ -533,14 +569,56 @@ dma_addr_t dma_map_page(struct device *dev, struct page *page,
                         size_t offset, size_t size,
                         enum dma_data_direction dir)
 {
+	_dma_map_cache_handling(page->virt, size);
+
 	lx_log(DEBUG_DMA, "virt: %p phys: %lx offs: %zx", page->virt, page->phys, offset);
 	return page->phys + offset;
 }
 
 
-int dma_map_sg_attrs(struct device *dev, struct scatterlist *sg,
+int dma_map_sg_attrs(struct device *dev, struct scatterlist *sgl,
                      int nents, enum dma_data_direction dir,
-                     struct dma_attrs *attrs) { return nents; }
+                     struct dma_attrs *attrs)
+{
+	int i;
+	struct scatterlist *sg;
+	for_each_sg(sgl, sg, nents, i) {
+		struct page *page = sg_page(sg);
+		_dma_map_cache_handling(page->virt, 4096, dir);
+	}
+	return nents;
+}
+
+
+void dma_unmap_single_attrs(struct device *dev, dma_addr_t addr,
+                            size_t size,
+                            enum dma_data_direction dir,
+                            struct dma_attrs *attrs)
+{
+	Lx_kit::addr_t vaddr = (dma_addr_t)Lx::Malloc::dma().virt_addr(addr);
+	_dma_unmap_cache_handling((void*)vaddr, size, dir);
+}
+
+
+void dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sgl,
+                        int nents, enum dma_data_direction dir,
+                        struct dma_attrs *attrs)
+{
+	int i;
+	struct scatterlist *sg;
+	for_each_sg(sgl, sg, nents, i) {
+		struct page *page = sg_page(sg);
+		_dma_unmap_cache_handling(page->virt, 4096, dir);
+	}
+}
+
+
+void dma_unmap_page(struct device *dev, dma_addr_t dma_address, size_t size,
+                    enum dma_data_direction dir)
+{
+	Lx_kit::addr_t vaddr = (dma_addr_t)Lx::Malloc::dma().virt_addr(dma_address);
+	_dma_unmap_cache_handling((void*)vaddr, size, dir);
+}
 
 
 /*************************
