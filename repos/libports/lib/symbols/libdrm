@@ -198,6 +198,10 @@ drmUnmapBufs T
 drmUpdateDrawableInfo T
 drmWaitVBlank T
 
+_Z8drm_initRN6Genode3EnvERNS_10EntrypointEb T
+drm_mmap T
+drm_unmap T
+
 # Etnaviv symbols
 etna_device_new T
 etna_device_new_dup T
