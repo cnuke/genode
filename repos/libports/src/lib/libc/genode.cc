@@ -21,3 +21,10 @@ void genode_cache_coherent(void *addr, size_t size)
 {
 	Genode::cache_coherent((Genode::addr_t)addr, size);
 }
+
+#include <os/backtrace.h>
+
+extern "C" void genode_backtrace(void)
+{
+	Genode::backtrace();
+}

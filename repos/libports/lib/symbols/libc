@@ -953,6 +953,11 @@ writev T
 wscanf T
 xsi_sigpause T
 
+#
+# Misc Genode related symbols
+#
+genode_backtrace T
+
 
 #
 # Symbols needed by libm
