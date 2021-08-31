@@ -116,7 +116,6 @@ set config {
 		</route>
 	</start>
 
-<!--
 	<start name="glmark2" caps="500">
 		<affinity xpos="1" width="1"/>
 		<resource name="RAM" quantum="160M"/>
@@ -152,7 +151,6 @@ set config {
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
--->
 
 	<start name="imx8q_gpu_drv" caps="500">
 		<resource name="RAM" quantum="128M"/>

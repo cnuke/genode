@@ -179,6 +179,11 @@ gear(GLfloat inner_radius, GLfloat outer_radius, GLfloat width,
 static void
 draw(void)
 {
+	static float r = 0.0f;
+	glClearColor(r, 0.f, 0.0f, 0.f);
+	r += 0.1f;
+	if (r > 1.0f) { r = 0.0f; }
+
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #if 1
    glPushMatrix();
@@ -206,6 +211,8 @@ draw(void)
 
    glPopMatrix();
 #endif
+   glFinish();
+   // usleep(500 * 1000);
 }
 
 

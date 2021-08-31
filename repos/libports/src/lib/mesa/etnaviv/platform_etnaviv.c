@@ -27,6 +27,8 @@
  */
 #include <platform.h>
 
+extern void genode_backtrace(void);
+
 
 static int stride(int value)
 {
@@ -77,6 +79,9 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 	dri2_flush_drawable_for_swapbuffers(disp, draw);
 	dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
+	// printf("%s: backtrace:\n", __func__);
+	// genode_backtrace();
+
 	_EGLContext *ctx = _eglGetCurrentContext();
 	struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
 	void *map_data = NULL;
@@ -92,9 +97,10 @@ dri2_genode_etnaviv_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 		dri2_genode_etnaviv_put_image(dri2_surf->dri_drawable, 0, 0, 0,
 			dri2_surf->base.Width, dri2_surf->base.Height,
 			(char *)data, (void *)dri2_surf);
-	}
-	if (map_data) {
+
 		dri2_dpy->image->unmapImage(dri2_ctx->dri_context, dri2_surf->back_image, map_data);
+	} else {
+		// return EGL_FALSE;
 	}
 
 	return EGL_TRUE;
@@ -156,6 +162,8 @@ dri2_genode_image_get_buffers(__DRIdrawable *driDrawable,
    buffers->image_mask = 0;
    buffers->front = NULL;
    buffers->back = NULL;
+
+   // printf("%s:%d\n", __func__, __LINE__);
 
    buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
    buffers->back = dri2_surf->back_image;

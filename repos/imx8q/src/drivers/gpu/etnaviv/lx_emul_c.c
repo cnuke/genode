@@ -1099,6 +1099,7 @@ static int lx_drm_out(unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
+extern void genode_backtrace(void);
 
 int lx_drm_ioctl(void *p, unsigned int cmd, unsigned long arg)
 {
@@ -1106,6 +1107,11 @@ int lx_drm_ioctl(void *p, unsigned int cmd, unsigned long arg)
 	int res;
 
 	session = (struct Drm_session*)p;
+
+	if (!session) {
+		genode_backtrace();
+		return -1;
+	}
 
 	if (cmd & IOC_IN) {
 		lx_drm_in(cmd, arg);
@@ -1286,14 +1292,22 @@ int lx_drm_ioctl_etnaviv_gem_info(void *session, unsigned int handle,
 int lx_drm_ioctl_etnaviv_cpu_prep(void *session, unsigned int handle, int op)
 {
 	int err;
+
+	struct timespec64 to;
+	ktime_get_ts64(&to);
+	// see mesa:
+	//     get_abs_timeout(&req.timeout, 5000000000);
+	to.tv_sec += 5;
+
 	struct drm_etnaviv_gem_cpu_prep req = {
 		.handle = handle,
 		.op     = op,
-		// .timeout = ...
+		.timeout = { to.tv_sec, to.tv_nsec },
 	};
 
 	err = lx_drm_ioctl(session, DRM_IOCTL_ETNAVIV_GEM_CPU_PREP, (unsigned long)&req);
 	if (err) {
+		lx_emul_printf("%s: err: %d\n", __func__, err);
 		return -1;
 	}
 

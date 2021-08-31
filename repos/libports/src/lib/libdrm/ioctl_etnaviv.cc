@@ -441,9 +441,25 @@ class Drm_call
 			default: break;
 			}
 
-			Genode::Dataspace_capability const map_cap =
-				_gpu_session->map_buffer(cap, false, mt);
-			return map_cap.valid() ? 0 : -1;
+			bool const to = arg.timeout.tv_sec != 0;
+			if (to) {
+				for (int i = 0; i < 100; i++) {
+					Genode::Dataspace_capability const map_cap =
+					_gpu_session->map_buffer(cap, false, mt);
+					if (map_cap.valid()) {
+						return 0;
+					} else {
+						continue;
+					}
+				}
+			}
+			else {
+				Genode::Dataspace_capability const map_cap =
+					_gpu_session->map_buffer(cap, false, mt);
+				return map_cap.valid() ? 0 : -1;
+			}
+
+			return -1;
 		}
 
 		int _drm_etnaviv_gem_info(drm_etnaviv_gem_info &arg)
@@ -564,7 +580,7 @@ class Drm_call
 
 		int _drm_etnaviv_wait_fence(drm_etnaviv_wait_fence &arg)
 		{
-			usleep(1);
+			// usleep(1);
 
 			// XXX ignore timeout for now
 			_wait_for_completion(arg.fence);

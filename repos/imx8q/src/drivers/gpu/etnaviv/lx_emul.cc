@@ -26,6 +26,13 @@
 #include <lx_kit/work.h>
 #include <lx_kit/timer.h>
 
+#include <os/backtrace.h>
+
+extern "C" void genode_backtrace(void)
+{
+	Genode::backtrace();
+}
+
 
 using size_t = Genode::size_t;
 
