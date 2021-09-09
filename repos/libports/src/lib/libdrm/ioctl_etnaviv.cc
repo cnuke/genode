@@ -315,27 +315,6 @@ class Drm_call
 		Genode::Dataspace_capability  _exec_buffer_cap   { };
 		char                         *_local_exec_buffer { nullptr };
 
-		Genode::Blockade                 _completion_blockade { };
-		Genode::Signal_handler<Drm_call> _completion_sigh;
-
-		void _handle_completion()
-		{
-			_completion_blockade.wakeup();
-		}
-
-		void _wait_for_completion(uint32_t fence)
-		{
-			do {
-				Gpu::Info const info { _gpu_session->info() };
-
-				if (_gpu_session->wait_fence(fence)) {
-					break;
-				}
-
-				_completion_blockade.block();
-			} while (true);
-		}
-
 		struct Buffer_handle;
 		using Handle    = Genode::Id_space<Buffer_handle>::Element;
 		using Handle_id = Genode::Id_space<Buffer_handle>::Id;
@@ -415,51 +394,117 @@ class Drm_call
 		 ** Device DRM I/O controls **
 		 ******************************/
 
+		struct Cap_handle
+		{
+			Genode::Dataspace_capability cap { };
+			Gpu::Handle handle { };
+
+			bool valid() const
+			{
+				return cap.valid() && handle.valid();
+			}
+		};
+
+		Cap_handle _local_exec { };
+
+		Genode::Blockade _request_completion { };
+
+		void _handle_request_completion()
+		{
+			_request_completion.wakeup();
+		}
+
+		Genode::Signal_handler<Drm_call> _request_completion_sigh;
+
+		static Gpu::Request _initialize_request()
+		{
+			return Gpu::Request {
+				.operation = Gpu::Operation {
+					.type = Gpu::Operation::Type::INVALID,
+					.gpu_addr = 0,
+					.aperture = false,
+					.ggtt = false,
+					.size = 0,
+					.handle = Gpu::Handle { ._valid = false, .value = 0 },
+					.seqno = Gpu::Operation::Seqno { .id = 0 },
+					.mt = Gpu::MT::UNKNOWN,
+				},
+				.success = false,
+				.tag = Gpu::Request::Tag { .value = 0 },
+			};
+		}
+
 		int _drm_etnaviv_gem_cpu_fini(drm_etnaviv_gem_cpu_fini &arg)
 		{
-			Genode::Dataspace_capability const cap = _lookup_cap_from_handle(arg.handle);
-			if (!cap.valid()) {
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type   = Gpu::Operation::Type::UNMAP;
+			r.operation.handle = Gpu::Handle { ._valid = true, .value = arg.handle };
+
+			if (!_gpu_session->enqueue_request(r)) {
+				Genode::error(__func__, ": could not enqueue request");
 				return -1;
 			}
+			_request_completion.block();
 
-			_gpu_session->unmap_buffer(cap);
-			return 0;
+			int res = -1;
+			_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+				if (completed.tag.value != r.tag.value) {
+					Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+					                        " expected: ", r.tag.value);
+					return;
+				}
+
+				res = completed.success ? 0 : -1;
+			});
+
+			return res;
 		}
 
 		int _drm_etnaviv_gem_cpu_prep(drm_etnaviv_gem_cpu_prep &arg)
 		{
-			Genode::Dataspace_capability const cap = _lookup_cap_from_handle(arg.handle);
-			if (!cap.valid()) {
-				return -1;
-			}
-
-			Gpu::Session::Mapping_type mt { Gpu::Session::Mapping_type::UNKNOWN };
+			Gpu::MT mt { Gpu::MT::UNKNOWN };
 			switch (arg.op) {
-			case ETNA_PREP_READ:   mt = Gpu::Session::Mapping_type::READ; break;
-			case ETNA_PREP_WRITE:  mt = Gpu::Session::Mapping_type::WRITE; break;
-			case ETNA_PREP_NOSYNC: mt = Gpu::Session::Mapping_type::NOSYNC; break;
+			case ETNA_PREP_READ:   mt = Gpu::MT::READ; break;
+			case ETNA_PREP_WRITE:  mt = Gpu::MT::WRITE; break;
+			case ETNA_PREP_NOSYNC: mt = Gpu::MT::NOSYNC; break;
 			default: break;
 			}
 
-			bool const to = arg.timeout.tv_sec != 0;
-			if (to) {
-				for (int i = 0; i < 100; i++) {
-					Genode::Dataspace_capability const map_cap =
-					_gpu_session->map_buffer(cap, false, mt);
-					if (map_cap.valid()) {
-						return 0;
-					} else {
-						continue;
+			Gpu::Handle const handle { ._valid = true, .value = arg.handle };
+
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type   = Gpu::Operation::Type::MAP;
+			r.operation.handle = handle;
+			r.operation.mt     = mt;
+
+			if (!_gpu_session->enqueue_request(r)) {
+				Genode::error(__func__, ": could not enqueue request");
+				return -1;
+			}
+			_request_completion.block();
+
+			int res = -1;
+			_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+				if (completed.tag.value != r.tag.value) {
+					Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+					                        " expected: ", r.tag.value);
+					return;
+				}
+
+				if (completed.success) {
+					Genode::Dataspace_capability cap =
+						_gpu_session->mapped_dataspace(handle);
+					if (!cap.valid()) {
+						completed.success = false;
 					}
 				}
-			}
-			else {
-				Genode::Dataspace_capability const map_cap =
-					_gpu_session->map_buffer(cap, false, mt);
-				return map_cap.valid() ? 0 : -1;
-			}
 
-			return -1;
+				res = completed.success ? 0 : -1;
+			});
+
+			return res;
 		}
 
 		int _drm_etnaviv_gem_info(drm_etnaviv_gem_info &arg)
@@ -475,44 +520,102 @@ class Drm_call
 			return _apply_buffer(id, lookup_and_attach) ? 0 : -1;
 		}
 
-		Genode::Dataspace_capability _alloc_buffer(Genode::size_t const size)
+		Cap_handle _alloc_buffer(Genode::size_t const size)
 		{
-			Genode::size_t donate = size;
+			Cap_handle result { };
 
-			try {
-				return Genode::retry<Gpu::Session::Out_of_ram>(
-				[&] () { return _gpu_session->alloc_buffer(size); },
-				[&] () {
-					_gpu_session->upgrade_ram(donate);
-					donate >>= 2;
-				}, 8);
-			} catch (Gpu::Session::Out_of_ram) { }
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type = Gpu::Operation::Type::ALLOC;
+			r.operation.size = size;
 
-			return Genode::Dataspace_capability();
+			for (int i =0; i < 2; i++) {
+
+				if (!_gpu_session->enqueue_request(r)) {
+					Genode::error(__func__, ": could not enqueue request");
+					return Cap_handle { };
+				}
+
+				_request_completion.block();
+
+				bool retry = false;
+				_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+					if (completed.tag.value != r.tag.value) {
+						Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+						                        " expected: ", r.tag.value);
+						return;
+					}
+
+					if (completed.success) {
+						Genode::Dataspace_capability cap =
+							_gpu_session->dataspace(completed.operation.handle);
+						result = Cap_handle {
+							.cap = cap,
+							.handle = completed.operation.handle,
+						};
+						return;
+					}
+
+					retry = true;
+				});
+
+				if (retry) {
+					_gpu_session->upgrade_ram(size);
+					_gpu_session->upgrade_caps(4);
+					continue;
+				}
+
+				break;
+			}
+
+			return result;
+		}
+
+		void _free_buffer(Gpu::Handle handle)
+		{
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type = Gpu::Operation::Type::FREE;
+			r.operation.handle = handle;
+
+			if (!_gpu_session->enqueue_request(r)) {
+				Genode::error(__func__, ": could not enqueue request");
+				return;
+			}
+
+			_request_completion.block();
+
+			_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+				if (completed.tag.value != r.tag.value) {
+					Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+					                        " expected: ", r.tag.value);
+					return;
+				}
+
+				if (!completed.success) {
+					Genode::warning("could not free buffer: ",
+					                completed.operation.handle.value);
+				}
+			});
 		}
 
 		int _drm_etnaviv_gem_new(drm_etnaviv_gem_new &arg)
 		{
 			Genode::size_t const size = arg.size;
 
-			Genode::Dataspace_capability cap = _alloc_buffer(size);
-			if (!cap.valid()) {
-				return -1;
-			}
-
-			Gpu::Handle const handle { _gpu_session->buffer_handle(cap) };
-			if (!handle.valid()) {
-				_gpu_session->free_buffer(cap);
+			Cap_handle cap_handle = _alloc_buffer(size);
+			if (!cap_handle.valid()) {
 				return -1;
 			}
 
 			try {
 				Buffer_handle *buffer =
-					new (&_heap) Buffer_handle(_buffer_handles, cap, handle.value, size);
+					new (&_heap) Buffer_handle(_buffer_handles, cap_handle.cap,
+					                           cap_handle.handle.value, size);
 				arg.handle = buffer->handle.id().value;
 				return 0;
 			} catch (...) {
-				_gpu_session->free_buffer(cap);
+				_free_buffer(cap_handle.handle);
 			}
 			return -1;
 		}
@@ -533,14 +636,73 @@ class Drm_call
 			Genode::memset(_local_exec_buffer, 0, EXEC_BUFFER_SIZE);
 			Drm::serialize(&arg, _local_exec_buffer);
 
-			try {
-				uint64_t const pending_exec_buffer =
-					_gpu_session->exec_buffer(_exec_buffer_cap, EXEC_BUFFER_SIZE).id;
-				arg.fence = pending_exec_buffer & 0xffffffffu;
-				return 0;
-			} catch (Gpu::Session::Invalid_state) { }
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type = Gpu::Operation::Type::EXEC;
+			r.operation.handle = _local_exec.handle;
 
-			return -1;
+			if (!_gpu_session->enqueue_request(r)) {
+				Genode::error(__func__, ": could not enqueue_request");
+				return -1;
+			}
+
+			_request_completion.block();
+
+			int res = -1;
+			_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+				if (completed.tag.value != r.tag.value) {
+					Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+					                        " expected: ", r.tag.value);
+					return;
+				}
+
+				if (completed.success) {
+					arg.fence = completed.operation.seqno.id & 0xffffffffu;
+				}
+
+				res = completed.success ? 0 : -1;
+			});
+
+			return res;
+		}
+
+		int _drm_etnaviv_wait_fence(drm_etnaviv_wait_fence &arg)
+		{
+			Gpu::Request r = _initialize_request();
+			r.tag = Gpu::Request::Tag { .value = 42 };
+			r.operation.type = Gpu::Operation::Type::WAIT;
+			r.operation.seqno = Gpu::Operation::Seqno { arg.fence };
+
+			if (!_gpu_session->enqueue_request(r)) {
+				Genode::error(__func__, ": could not enqueue_request");
+				return -1;
+			}
+
+			_request_completion.block();
+
+			int res = -1;
+			_gpu_session->for_each_completed_request([&] (Gpu::Request completed) {
+				if (completed.tag.value != r.tag.value) {
+					Genode::error(__func__, ": wrong: request: ", completed.tag.value,
+					                        " expected: ", r.tag.value);
+					return;
+				}
+
+				res = completed.success ? 0 : -1;
+			});
+
+			return res;
+		}
+
+		int _drm_etnaviv_get_param(drm_etnaviv_param &arg)
+		{
+			if (arg.param > Gpu::Info::MAX_ETNAVIV_PARAMS) {
+				errno = EINVAL;
+				return -1;
+			}
+
+			arg.value = _gpu_info.etnaviv_param[arg.param];
+			return 0;
 		}
 
 		int _drm_etnaviv_gem_wait(drm_etnaviv_gem_wait &)
@@ -555,17 +717,6 @@ class Drm_call
 			return -1;
 		}
 
-		int _drm_etnaviv_get_param(drm_etnaviv_param &arg)
-		{
-			if (arg.param > Gpu::Info::MAX_ETNAVIV_PARAMS) {
-				errno = EINVAL;
-				return -1;
-			}
-
-			arg.value = _gpu_info.etnaviv_param[arg.param];
-			return 0;
-		}
-
 		int _drm_etnaviv_pm_query_dom(drm_etnaviv_pm_domain &)
 		{
 			Genode::warning(__func__, ": not implemented");
@@ -578,14 +729,6 @@ class Drm_call
 			return -1;
 		}
 
-		int _drm_etnaviv_wait_fence(drm_etnaviv_wait_fence &arg)
-		{
-			// usleep(1);
-
-			// XXX ignore timeout for now
-			_wait_for_completion(arg.fence);
-			return 0;
-		}
 
 		int _device_ioctl(unsigned cmd, void *arg)
 		{
@@ -779,23 +922,25 @@ class Drm_call
 		Drm_call(Genode::Env &env, Genode::Entrypoint &signal_ep, bool use_gpu_session)
 		:
 			_env { env },
-			_completion_sigh { signal_ep, *this, &Drm_call::_handle_completion }
+			_request_completion_sigh { signal_ep, *this, &Drm_call::_handle_request_completion }
 		{
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
 				_gpu_info = _gpu_session->info();
-				_exec_buffer_cap = _alloc_buffer(EXEC_BUFFER_SIZE);
-				if (!_exec_buffer_cap.valid()) {
+
+				_local_exec = _alloc_buffer(EXEC_BUFFER_SIZE);
+				if (!_local_exec.valid()) {
 					throw Gpu::Session::Invalid_state();
 				}
+
 				try {
 					_local_exec_buffer =
-						(char*)_env.rm().attach(_exec_buffer_cap);
+						(char*)_env.rm().attach(_local_exec.cap);
 				} catch (...) {
 					throw Gpu::Session::Invalid_state();
 				}
 
-				_gpu_session->completion_sigh(_completion_sigh);
+				_gpu_session->request_complete_sigh(_request_completion_sigh);
 
 			} else {
 				_drm_session.construct(_env, &_drm_alloc, 1u<<20);
@@ -808,8 +953,8 @@ class Drm_call
 				_env.rm().detach(_local_exec_buffer);
 			}
 
-			if (_exec_buffer_cap.valid()) {
-				_gpu_session->free_buffer(_exec_buffer_cap);
+			if (_local_exec.valid()) {
+				_free_buffer(_local_exec.handle);
 			}
 		}
 
