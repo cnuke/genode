@@ -14,6 +14,7 @@
 #ifndef _INCLUDE__GPU_SESSION__GPU_SESSION_H_
 #define _INCLUDE__GPU_SESSION__GPU_SESSION_H_
 
+#include <base/output.h>
 #include <session/session.h>
 
 namespace Gpu {
@@ -22,7 +23,11 @@ namespace Gpu {
 
 	struct Info;
 	struct Handle;
+	struct Request;
+	struct Operation;
 	struct Session;
+
+	enum class MT { UNKNOWN, READ, WRITE, NOSYNC };
 }
 
 
@@ -105,6 +110,76 @@ struct Gpu::Handle
 };
 
 
+struct Gpu::Operation
+{
+	using Seqno = Gpu::Info::Execution_buffer_sequence;
+
+	enum class Type {
+		INVALID = 0,
+		ALLOC   = 1,
+		FREE    = 2,
+		MAP     = 3,
+		UNMAP   = 4,
+		EXEC    = 5,
+		WAIT    = 6,
+		VIEW    = 7,
+	};
+
+	Type type;
+
+	unsigned long gpu_addr;
+	bool          aperture;
+	bool          ggtt;
+
+	unsigned long size;
+	Handle        handle;
+	Seqno         seqno;
+	MT mt;
+
+	bool valid() const
+	{
+		return type != Type::INVALID;
+	}
+
+	static char const *type_name(Type type)
+	{
+		switch (type) {
+		case Type::INVALID: return "INVALID";
+		case Type::ALLOC:   return "ALLOC";
+		case Type::FREE:    return "FREE";
+		case Type::MAP:     return "MAP";
+		case Type::UNMAP:   return "UNMAP";
+		case Type::EXEC:    return "EXEC";
+		case Type::WAIT:    return "WAIT";
+		case Type::VIEW:    return "VIEW";
+		}
+		return "INVALID";
+	}
+
+	void print(Genode::Output &out) const
+	{
+		Genode::print(out, type_name(type));
+	}
+};
+
+
+struct Gpu::Request
+{
+	struct Tag { unsigned long value; };
+
+	Operation operation;
+
+	bool success;
+
+	Tag tag;
+
+	bool valid() const
+	{
+		return operation.valid();
+	}
+};
+
+
 /*
  * Gpu session interface
  */
@@ -124,6 +199,41 @@ struct Gpu::Session : public Genode::Session
 	/***********************
 	 ** Session interface **
 	 ***********************/
+
+	virtual Gpu::Request completed_request()
+	{
+		return Gpu::Request();
+	}
+
+	virtual bool enqueue_request(Gpu::Request)
+	{
+		return false;
+	}
+
+	virtual void request_complete_sigh(Genode::Signal_context_capability)
+	{
+	}
+
+	template <typename FN> void for_each_completed_request(FN const &fn)
+	{
+		while (true) {
+			Gpu::Request const r = completed_request();
+			if (!r.valid()) {
+				break;
+			}
+			fn(r);
+		}
+	}
+
+	virtual Genode::Dataspace_capability dataspace(Gpu::Handle)
+	{
+		return Genode::Dataspace_capability();
+	}
+
+	virtual Genode::Dataspace_capability mapped_dataspace(Gpu::Handle)
+	{
+		return Genode::Dataspace_capability();
+	}
 
 	/**
 	 * Query GPU information
@@ -237,6 +347,13 @@ struct Gpu::Session : public Genode::Session
 	 ** RPC interface **
 	 *******************/
 
+	GENODE_RPC(Rpc_completed_request, Gpu::Request, completed_request);
+	GENODE_RPC(Rpc_enqueue_request, bool, enqueue_request, Gpu::Request);
+	GENODE_RPC(Rpc_request_complete_sigh, void, request_complete_sigh,
+	           Genode::Signal_context_capability);
+	GENODE_RPC(Rpc_dataspace, Genode::Dataspace_capability, dataspace, Gpu::Handle);
+	GENODE_RPC(Rpc_mapped_dataspace, Genode::Dataspace_capability, mapped_dataspace, Gpu::Handle);
+
 	GENODE_RPC(Rpc_info, Info, info);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
@@ -264,7 +381,9 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Genode::Dataspace_capability, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
+	GENODE_RPC_INTERFACE(Rpc_completed_request, Rpc_enqueue_request, Rpc_request_complete_sigh,
+	                     Rpc_dataspace, Rpc_mapped_dataspace,
+	                     Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_buffer_handle,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,

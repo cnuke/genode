@@ -37,6 +37,22 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		 ** Session interface **
 		 ***********************/
 
+		Gpu::Request completed_request() override {
+			return call<Rpc_completed_request>(); }
+
+		bool enqueue_request(Gpu::Request request) override {
+			return call<Rpc_enqueue_request>(request); }
+
+		void request_complete_sigh(Genode::Signal_context_capability sigh) override {
+			call<Rpc_request_complete_sigh>(sigh); }
+
+		Genode::Dataspace_capability dataspace(Gpu::Handle handle) override {
+			return call<Rpc_dataspace>(handle); }
+
+		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override {
+			return call<Rpc_mapped_dataspace>(handle); }
+
+
 		Info info() const override {
 			return call<Rpc_info>(); }
 
