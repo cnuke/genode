@@ -14,6 +14,7 @@
 /* Genode includes */
 #include <base/heap.h>
 #include <base/session_object.h>
+#include <base/signal.h>
 #include <root/component.h>
 #include <session/session.h>
 #include <gpu_session/gpu_session.h>
@@ -113,18 +114,15 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				}
 			}
 
-			uint32_t lookup_buffer(Genode::Dataspace_capability cap)
+			Genode::Dataspace_capability lookup_buffer(uint32_t handle)
 			{
-				// XXX remove hardcoding
-				uint32_t handle = ~0u;
-
+				Genode::Dataspace_capability cap { };
 				for_each([&] (Buffer_handle &h) {
-					if (h.cap == cap) {
-						handle = h.handle;
+					if (h.handle == handle) {
+						cap = h.cap;
 					}
 				});
-
-				return handle;
+				return cap;
 			}
 		};
 
@@ -193,6 +191,25 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return 0;
 		}
 
+		static int _convert_mt(Gpu::MT mt)
+		{
+			using MT = Gpu::MT;
+
+			switch (mt) {
+			case MT::READ:
+				return 1;
+			case MT::WRITE:
+				return 2;
+			case MT::NOSYNC:
+				return 4;
+			case MT::UNKNOWN: [[fallthrough]];
+			default:
+					return 0;
+			}
+
+			return 0;
+		}
+
 		static int _convert_mt(Gpu::Session::Mapping_type mt)
 		{
 			using MT = Gpu::Session::Mapping_type;
@@ -216,36 +233,27 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 		char const *_name;
 
-		struct Gpu_request
+		Gpu::Request _pending_request   { };
+		Gpu::Request _completed_request { };
+
+		Genode::Signal_context_capability _requester_complete_sigh { };
+
+		struct Local_gpu_request
 		{
-			enum class Op { INVALID, OPEN, CLOSE, NEW, DELETE, EXEC, WAIT_FENCE, MAP, UNMAP };
-			enum class Result { SUCCESS, ERR };
-
-			struct Op_data {
-				// new
-				size_t size;
-				// new. close. map, unmap
-				Genode::Dataspace_capability buffer_cap;
-				// exec, wait_fence
-				uint32_t fence_id;
-				// map
-				int mt;
-				// exec
-				void *gem_submit;
-			};
-
-			Op      op;
-			Op_data op_data;
-
-			Result result;
-
-			bool valid() const { return op != Op::INVALID; }
+			enum class Type { INVALID = 0, OPEN, CLOSE };
+			Type type;
+			bool success;
 		};
-
 
 		struct Drm_worker_args
 		{
-			Gpu_request request;
+			Genode::Region_map &rm;
+
+			Gpu::Request *pending_request;
+			Gpu::Request *completed_request;
+			Genode::Signal_context_capability completed_sigh;
+
+			Local_gpu_request local_request;
 			void *drm_session;
 
 			Gpu::Info &info;
@@ -256,10 +264,13 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		};
 
 		Drm_worker_args _drm_worker_args {
-			.request = Gpu_request {
-				.op      = Gpu_request::Op::INVALID,
-				.op_data = { 0, Genode::Dataspace_capability() },
-				.result  = Gpu_request::Result::ERR,
+			.rm = _env.rm(),
+			.pending_request = &_pending_request,
+			.completed_request = &_completed_request,
+			.completed_sigh = _requester_complete_sigh,
+			.local_request = Local_gpu_request {
+				.type = Local_gpu_request::Type::INVALID,
+				.success = false,
 			},
 			.drm_session            = nullptr,
 			.info                   = _info,
@@ -271,14 +282,16 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		static void _drm_worker_run(void *p)
 		{
 			Drm_worker_args &args = *static_cast<Drm_worker_args*>(p);
+			Buffer_handle_registry &registry = args.buffer_handle_registry;
+
+			using OP = Gpu::Operation::Type;
 
 			while (true) {
 
-				/* clear request result */
-				args.request.result = Gpu_request::Result::ERR;
-
-				switch (args.request.op) {
-				case Gpu_request::Op::OPEN:
+				/* handle local requests first */
+				args.local_request.success = false;
+				switch (args.local_request.type) {
+				case Local_gpu_request::Type::OPEN:
 					if (!args.drm_session) {
 						args.drm_session = lx_drm_open();
 						if (!args.drm_session) {
@@ -287,24 +300,32 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 						_populate_info(args.drm_session, args.info);
 
-						args.request.result = Gpu_request::Result::SUCCESS;
+						args.local_request.success = true;
 					}
 					break;
-				case Gpu_request::Op::CLOSE:
+				case Local_gpu_request::Type::CLOSE:
 					lx_drm_close(args.drm_session);
 					args.drm_session = nullptr;
+					args.local_request.success = true;
 					break;
-				case Gpu_request::Op::NEW:
+				case Local_gpu_request::Type::INVALID:
+					break;
+				}
+
+				Gpu::Request &pending_request = *args.pending_request;
+				bool const pending = pending_request.valid();
+
+				/* clear request result */
+				pending_request.success = false;
+
+				switch (pending_request.operation.type) {
+				case OP::ALLOC:
 				{
+					uint32_t const size = pending_request.operation.size;
 					uint32_t handle;
 
-					/* make sure cap is invalid */
-					args.request.op_data.buffer_cap = Genode::Dataspace_capability();
-
 					int err =
-						lx_drm_ioctl_etnaviv_gem_new(args.drm_session,
-						                             args.request.op_data.size, &handle);
-					// XXX check value of err to propagate type of error
+						lx_drm_ioctl_etnaviv_gem_new(args.drm_session, size, &handle);
 					if (err) {
 						Genode::error("lx_drm_ioctl_etnaviv_gem_new failed: ", err);
 						break;
@@ -319,7 +340,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 
 					Genode::Dataspace_capability cap =
-						genode_lookup_cap(args.drm_session, offset, args.request.op_data.size);
+						genode_lookup_cap(args.drm_session, offset, size);
 					if (!cap.valid()) {
 						/* this should never happen */
 						Genode::error("genode_lookup_cap for offset: ", Genode::Hex(offset),
@@ -328,91 +349,88 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 						break;
 					}
 
-					args.buffer_handle_registry.insert(handle, cap);
+					registry.insert(handle, cap);
 
-					args.request.op_data.buffer_cap = cap;
-					args.request.result             = Gpu_request::Result::SUCCESS;
+					pending_request.success = true;
 					break;
 				}
-				case Gpu_request::Op::DELETE:
+				case OP::FREE:
 				{
-
-					unsigned int const handle =
-						args.buffer_handle_registry.lookup_buffer(args.request.op_data.buffer_cap);
-					if (handle == ~0u) {
-						break;
-					}
+					uint32_t const handle = pending_request.operation.handle.value;
 
 					(void)lx_drm_ioctl_gem_close(args.drm_session, handle);
-					args.buffer_handle_registry.remove(handle);
+					registry.remove(handle);
 
-					args.request.result = Gpu_request::Result::SUCCESS;
+					pending_request.success = true;
 					break;
 				}
-				case Gpu_request::Op::EXEC:
+				case OP::EXEC:
 				{
-					void *gem_submit = args.request.op_data.gem_submit;
-					uint32_t fence_id;
+					Genode::Dataspace_capability cap =
+						registry.lookup_buffer(pending_request.operation.handle.value);
+					void const *gem_submit = (void*)args.rm.attach(cap);
 
+					uint32_t fence_id;
 					int const err =
 						lx_drm_ioctl_etnaviv_gem_submit(args.drm_session,
 						                                (unsigned long)gem_submit,
 						                                &fence_id);
+					args.rm.detach(gem_submit);
 					if (err) {
-						// XXX check value of err
 						break;
 					}
 
-					args.request.op_data.fence_id = fence_id;
-					args.request.result           = Gpu_request::Result::SUCCESS;
+					pending_request.operation.seqno.id = fence_id;
+					pending_request.success = true;
 					break;
 				}
-				case Gpu_request::Op::WAIT_FENCE:
+				case OP::WAIT:
 				{
-					uint32_t fence_id = args.request.op_data.fence_id;
+					uint32_t const fence_id = pending_request.operation.seqno.id;
 
 					int const err =
 						lx_drm_ioctl_etnaviv_wait_fence(args.drm_session, fence_id);
 					if (err) {
-						// XXX check value of err
 						break;
 					}
 
-					args.request.result = Gpu_request::Result::SUCCESS;
+					pending_request.success = true;
 					break;
 				}
-				case Gpu_request::Op::MAP:
+				case OP::MAP:
 				{
-					unsigned int const handle =
-						args.buffer_handle_registry.lookup_buffer(args.request.op_data.buffer_cap);
-					if (handle == ~0u) {
-						break;
-					}
+					uint32_t const handle = pending_request.operation.handle.value;
+					int const mt = _convert_mt(pending_request.operation.mt);
 
 					int const err =
-						lx_drm_ioctl_etnaviv_cpu_prep(args.drm_session, handle,
-						                              args.request.op_data.mt);
+						lx_drm_ioctl_etnaviv_cpu_prep(args.drm_session, handle, mt);
 					if (err) {
 						break;
 					}
-					args.request.result = Gpu_request::Result::SUCCESS;
+
+					pending_request.success = true;
 					break;
 				}
-				case Gpu_request::Op::UNMAP:
+				case OP::UNMAP:
 				{
-					unsigned int const handle =
-						args.buffer_handle_registry.lookup_buffer(args.request.op_data.buffer_cap);
-					if (handle == ~0u) {
-						break;
-					}
-
+					uint32_t const handle = pending_request.operation.handle.value;
 					(void)lx_drm_ioctl_etnaviv_cpu_fini(args.drm_session, handle);
 
-					args.request.result = Gpu_request::Result::SUCCESS;
+					pending_request.success = true;
 					break;
 				}
 				default:
 				break;
+				}
+
+				if (pending) {
+
+					*args.completed_request = pending_request;
+					*args.pending_request   = Gpu::Request();
+
+					if (args.completed_sigh.valid()) {
+						Genode::Signal_transmitter(args.completed_sigh).submit();
+					}
 				}
 
 				Lx::scheduler().current()->block_and_schedule();
@@ -442,15 +460,16 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			_drm_worker { _drm_worker_run, &_drm_worker_args, _name,
 			              Lx::Task::PRIORITY_2, Lx::scheduler() }
 		{
-			_drm_worker_args.request = Gpu_request {
-				.op = Gpu_request::Op::OPEN,
+			_drm_worker_args.local_request = Local_gpu_request {
+				.type = Local_gpu_request::Type::OPEN,
+				.success = false,
 			};
 
+			// XXX must not return prematurely
 			_drm_worker.unblock();
 			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
 
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
+			if (!_drm_worker_args.local_request.success) {
 				Genode::warning("could not open DRM session");
 				throw Could_not_open_drm();
 			}
@@ -458,19 +477,20 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 		~Session_component()
 		{
-			if (_drm_worker_args.request.valid()) {
+			if (_drm_worker_args.pending_request->valid()) {
 				Genode::warning("destructor override currently pending request");
 			}
 
-			_drm_worker_args.request = Gpu_request {
-				.op = Gpu_request::Op::CLOSE,
+			_drm_worker_args.local_request = Local_gpu_request {
+				.type = Local_gpu_request::Type::CLOSE,
+				.success = false,
 			};
 
+			// XXX must not return prematurely
 			_drm_worker.unblock();
 			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
 
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
+			if (!_drm_worker_args.local_request.success) {
 				Genode::warning("could not close DRM session - leaking objects");
 			}
 		}
@@ -496,168 +516,106 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		 ** Gpu session interface **
 		 ***************************/
 
-		struct Retry_request : Genode::Exception { };
+		void _handle_requester()
+		{
+			_drm_worker_args.completed_sigh = _requester_complete_sigh;
+
+			_drm_worker.unblock();
+			Lx::scheduler().schedule();
+		}
+
+		Genode::Signal_handler<Session_component> _requester_sigh {
+			_env.ep(), *this, &Session_component::_handle_requester };
+
+		Gpu::Request completed_request() override
+		{
+			if (_completed_request.valid()) {
+				Gpu::Request r = _completed_request;
+				_completed_request = Gpu::Request();
+				return r;
+			}
+
+			return Gpu::Request();
+		}
+
+		bool enqueue_request(Gpu::Request request) override
+		{
+			if (_pending_request.valid()) {
+				return false;
+			}
+
+			_pending_request = request;
+			_requester_sigh.local_submit();
+			return true;
+		}
+
+		void request_complete_sigh(Genode::Signal_context_capability sigh) override
+		{
+			_requester_complete_sigh = sigh;
+		}
+
+		Genode::Dataspace_capability dataspace(Gpu::Handle handle) override
+		{
+			return _buffer_handle_registry.lookup_buffer(handle.value);
+		}
+
+		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override
+		{
+			return _buffer_handle_registry.lookup_buffer(handle.value);
+		}
+
 
 		Info info() const
 		{
 			return _info;
 		}
 
-		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap,
-		                                                 Genode::size_t size) override
+		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability,
+		                                                 Genode::size_t) override
 		{
-			if (!cap.valid()) {
-				Genode::error(__func__, ": invalid exec buffer capability");
-				throw Gpu::Session::Invalid_state();
-			}
-
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-
-			void *arg = (void*)_env.rm().attach(cap);
-
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::EXEC,
-				.op_data = { .size = size, .buffer_cap = cap, .gem_submit = arg },
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-
-			_env.rm().detach(arg);
-
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
-				throw Gpu::Session::Invalid_state();
-			}
-
-			uint64_t const fence_id = _drm_worker_args.request.op_data.fence_id;
-			return Gpu::Info::Execution_buffer_sequence { .id = fence_id };
+			Genode::warning(__func__, ": not implemented");
+			return Gpu::Info::Execution_buffer_sequence { .id = ~0llu };
 		}
 
-		bool wait_fence(Genode::uint32_t fence_id) override
+		bool wait_fence(Genode::uint32_t) override
 		{
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::WAIT_FENCE,
-				.op_data = { .fence_id = fence_id }
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-
-			bool const finished = _drm_worker_args.request.result == Gpu_request::Result::SUCCESS;
-			return finished;
+			Genode::warning(__func__, ": not implemented");
+			return false;
 		}
 
-		void completion_sigh(Genode::Signal_context_capability sigh) override
+		void completion_sigh(Genode::Signal_context_capability) override
 		{
-			_completion_sigh = sigh;
+			Genode::warning(__func__, ": not implemented");
 		}
 
-		Genode::Dataspace_capability alloc_buffer(Genode::size_t size) override
+		Genode::Dataspace_capability alloc_buffer(Genode::size_t) override
 		{
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::NEW,
-				.op_data = { size, Genode::Dataspace_capability() },
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
-				throw Gpu::Session::Out_of_ram();
-			}
-			Genode::Dataspace_capability cap = _drm_worker_args.request.op_data.buffer_cap;
-
-			if (!cap.valid()) {
-				Genode::error(__func__, ": buffer_cap invalid");
-			}
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-			return cap;
+			Genode::warning(__func__, ": not implemented");
+			return Genode::Dataspace_capability();
 		}
 
-		void free_buffer(Genode::Dataspace_capability cap) override
+		void free_buffer(Genode::Dataspace_capability) override
 		{
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::DELETE,
-				.op_data = { .buffer_cap = cap },
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
-				Genode::warning(__func__, ": could not free buffer");
-			}
+			Genode::warning(__func__, ": not implemented");
 		}
 
-		Handle buffer_handle(Genode::Dataspace_capability cap) override
+		Handle buffer_handle(Genode::Dataspace_capability) override
 		{
-			unsigned int const handle =
-				_buffer_handle_registry.lookup_buffer(cap);
-			if (handle == ~0u) {
-					return Handle { ._valid = false };
-			}
-
-			return Handle { ._valid = true, .value = handle };
+			Genode::warning(__func__, ": not implemented");
+			return Handle { ._valid = false, .value = 0 };
 		}
 
-		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability cap,
+		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability,
 		                                        bool /* aperture */,
-		                                        Mapping_type mt) override
+		                                        Mapping_type) override
 		{
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::MAP,
-				.op_data = { .buffer_cap = cap, .mt = _convert_mt(mt), },
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
-				return Genode::Dataspace_capability();
-			}
-
-			return cap;
+			Genode::warning(__func__, ": not implemented");
+			return Genode::Dataspace_capability();
 		}
 
-		void unmap_buffer(Genode::Dataspace_capability cap) override
+		void unmap_buffer(Genode::Dataspace_capability) override
 		{
-			if (_drm_worker_args.request.valid()) {
-				throw Retry_request();
-			}
-
-			_drm_worker_args.request = Gpu_request {
-				.op      = Gpu_request::Op::UNMAP,
-				.op_data = { .buffer_cap = cap, },
-			};
-
-			_drm_worker.unblock();
-			Lx::scheduler().schedule();
-			_drm_worker_args.request.op = Gpu_request::Op::INVALID;
-
-			if (_drm_worker_args.request.result != Gpu_request::Result::SUCCESS) {
-				Genode::warning(__func__, ": could not unmap buffer");
-			}
+			Genode::warning(__func__, ": not implemented");
 		}
 
 		bool map_buffer_ppgtt(Genode::Dataspace_capability, Gpu::addr_t) override
@@ -666,16 +624,17 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return false;
 		}
 
-		void unmap_buffer_ppgtt(Genode::Dataspace_capability, Gpu::addr_t)
+		void unmap_buffer_ppgtt(Genode::Dataspace_capability, Gpu::addr_t) override
 		{
 			Genode::warning(__func__, ": not implemented");
 		}
 
-		bool set_tiling(Genode::Dataspace_capability, unsigned)
+		bool set_tiling(Genode::Dataspace_capability, unsigned) override
 		{
 			Genode::warning(__func__, ": not implemented");
 			return false;
 		}
+
 };
 
 
