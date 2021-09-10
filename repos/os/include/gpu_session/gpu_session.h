@@ -235,6 +235,11 @@ struct Gpu::Session : public Genode::Session
 		return Genode::Dataspace_capability();
 	}
 
+	virtual Genode::Dataspace_capability info_dataspace()
+	{
+		return Genode::Dataspace_capability();
+	}
+
 	/**
 	 * Query GPU information
 	 */
@@ -353,6 +358,7 @@ struct Gpu::Session : public Genode::Session
 	           Genode::Signal_context_capability);
 	GENODE_RPC(Rpc_dataspace, Genode::Dataspace_capability, dataspace, Gpu::Handle);
 	GENODE_RPC(Rpc_mapped_dataspace, Genode::Dataspace_capability, mapped_dataspace, Gpu::Handle);
+	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
 
 	GENODE_RPC(Rpc_info, Info, info);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
@@ -382,7 +388,7 @@ struct Gpu::Session : public Genode::Session
 	           Genode::Dataspace_capability, unsigned);
 
 	GENODE_RPC_INTERFACE(Rpc_completed_request, Rpc_enqueue_request, Rpc_request_complete_sigh,
-	                     Rpc_dataspace, Rpc_mapped_dataspace,
+	                     Rpc_dataspace, Rpc_mapped_dataspace, Rpc_info_dataspace,
 	                     Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_buffer_handle,

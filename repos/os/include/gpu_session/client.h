@@ -52,6 +52,9 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override {
 			return call<Rpc_mapped_dataspace>(handle); }
 
+		Genode::Dataspace_capability info_dataspace() override {
+			return call<Rpc_info_dataspace>(); }
+
 
 		Info info() const override {
 			return call<Rpc_info>(); }
