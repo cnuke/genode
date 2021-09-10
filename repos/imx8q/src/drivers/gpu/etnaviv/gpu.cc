@@ -128,6 +128,26 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				});
 				return cap;
 			}
+
+			template <typename FN> void with_handle(uint32_t handle, FN const &fn)
+			{
+				for_each([&] (Buffer_handle &h) {
+					if (h.handle == handle) {
+						fn(h.handle, h.cap);
+					}
+				});
+			}
+
+			bool managed(uint32_t handle)
+			{
+				bool result = false;
+				for_each([&] (Buffer_handle &h) {
+					if (h.handle == handle) {
+						result = true;
+					}
+				});
+				return result;
+			}
 		};
 
 		Buffer_handle_registry _buffer_handle_registry { _alloc };
@@ -265,6 +285,20 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			Buffer_handle_registry &buffer_handle_registry;
 
 			void *gem_submit;
+
+			template <typename FN> void for_each_pending_request(FN const &fn)
+			{
+				if (!pending_request || !pending_request->valid()) {
+					return;
+				}
+
+				*completed_request = fn(*pending_request);
+				*pending_request   = Gpu::Request();
+
+				if (completed_sigh.valid()) {
+					Genode::Signal_transmitter(completed_sigh).submit();
+				}
+			}
 		};
 
 		Drm_worker_args _drm_worker_args {
@@ -287,6 +321,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		{
 			Drm_worker_args &args = *static_cast<Drm_worker_args*>(p);
 			Buffer_handle_registry &registry = args.buffer_handle_registry;
+			Genode::Region_map &rm = args.rm;
 
 			using OP = Gpu::Operation::Type;
 
@@ -316,126 +351,117 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					break;
 				}
 
-				Gpu::Request &pending_request = *args.pending_request;
-				bool const pending = pending_request.valid();
+				auto dispatch_pending = [&] (Gpu::Request r) {
 
-				/* clear request result */
-				pending_request.success = false;
+					/* clear request result */
+					r.success = false;
 
-				switch (pending_request.operation.type) {
-				case OP::ALLOC:
-				{
-					uint32_t const size = pending_request.operation.size;
-					uint32_t handle;
+					switch (r.operation.type) {
+					case OP::ALLOC:
+					{
+						uint32_t const size = r.operation.size;
+						uint32_t handle;
 
-					int err =
-						lx_drm_ioctl_etnaviv_gem_new(args.drm_session, size, &handle);
-					if (err) {
-						Genode::error("lx_drm_ioctl_etnaviv_gem_new failed: ", err);
+						int err =
+							lx_drm_ioctl_etnaviv_gem_new(args.drm_session, size, &handle);
+						if (err) {
+							Genode::error("lx_drm_ioctl_etnaviv_gem_new failed: ", err);
+							break;
+						}
+
+						unsigned long long offset;
+						err = lx_drm_ioctl_etnaviv_gem_info(args.drm_session, handle, &offset);
+						if (err) {
+							Genode::error("lx_drm_ioctl_etnaviv_gem_info failed: ", err);
+							lx_drm_ioctl_gem_close(args.drm_session, handle);
+							break;
+						}
+
+						Genode::Dataspace_capability cap =
+							genode_lookup_cap(args.drm_session, offset, size);
+						registry.insert(handle, cap);
+
+						r.success = true;
 						break;
 					}
+					case OP::FREE:
+					{
+						uint32_t const handle = r.operation.handle.value;
 
-					unsigned long long offset;
-					err = lx_drm_ioctl_etnaviv_gem_info(args.drm_session, handle, &offset);
-					if (err) {
-						Genode::error("lx_drm_ioctl_etnaviv_gem_info failed: ", err);
-						lx_drm_ioctl_gem_close(args.drm_session, handle);
+						(void)lx_drm_ioctl_gem_close(args.drm_session, handle);
+						registry.remove(handle);
+
+						r.success = true;
 						break;
 					}
+					case OP::EXEC:
+					{
+						uint32_t const handle = r.operation.handle.value;
 
-					Genode::Dataspace_capability cap =
-						genode_lookup_cap(args.drm_session, offset, size);
-					if (!cap.valid()) {
-						/* this should never happen */
-						Genode::error("genode_lookup_cap for offset: ", Genode::Hex(offset),
-						              " failed");
-						lx_drm_ioctl_gem_close(args.drm_session, handle);
+						auto exec_buffer = [&] (uint32_t handle, Genode::Dataspace_capability cap) {
+							void const *gem_submit = (void*)rm.attach(cap);
+
+							uint32_t fence_id;
+							int const err =
+								lx_drm_ioctl_etnaviv_gem_submit(args.drm_session,
+								                                (unsigned long)gem_submit,
+								                                &fence_id);
+							rm.detach(gem_submit);
+							if (err) {
+								return;
+							}
+
+							r.operation.seqno.id = fence_id;
+							r.success = true;
+						};
+
+						registry.with_handle(handle, exec_buffer);
 						break;
 					}
+					case OP::WAIT:
+					{
+						uint32_t const fence_id = r.operation.seqno.id;
 
-					registry.insert(handle, cap);
+						int const err =
+							lx_drm_ioctl_etnaviv_wait_fence(args.drm_session, fence_id);
+						if (err) {
+							break;
+						}
 
-					pending_request.success = true;
-					break;
-				}
-				case OP::FREE:
-				{
-					uint32_t const handle = pending_request.operation.handle.value;
-
-					(void)lx_drm_ioctl_gem_close(args.drm_session, handle);
-					registry.remove(handle);
-
-					pending_request.success = true;
-					break;
-				}
-				case OP::EXEC:
-				{
-					Genode::Dataspace_capability cap =
-						registry.lookup_buffer(pending_request.operation.handle.value);
-					void const *gem_submit = (void*)args.rm.attach(cap);
-
-					uint32_t fence_id;
-					int const err =
-						lx_drm_ioctl_etnaviv_gem_submit(args.drm_session,
-						                                (unsigned long)gem_submit,
-						                                &fence_id);
-					args.rm.detach(gem_submit);
-					if (err) {
+						r.success = true;
 						break;
 					}
+					case OP::MAP:
+					{
+						uint32_t const handle = r.operation.handle.value;
+						int const mt = _convert_mt(r.operation.mt);
 
-					pending_request.operation.seqno.id = fence_id;
-					pending_request.success = true;
-					break;
-				}
-				case OP::WAIT:
-				{
-					uint32_t const fence_id = pending_request.operation.seqno.id;
+						int const err =
+							lx_drm_ioctl_etnaviv_cpu_prep(args.drm_session, handle, mt);
+						if (err) {
+							break;
+						}
 
-					int const err =
-						lx_drm_ioctl_etnaviv_wait_fence(args.drm_session, fence_id);
-					if (err) {
+						r.success = true;
 						break;
 					}
+					case OP::UNMAP:
+					{
+						uint32_t const handle = r.operation.handle.value;
+						(void)lx_drm_ioctl_etnaviv_cpu_fini(args.drm_session, handle);
 
-					pending_request.success = true;
-					break;
-				}
-				case OP::MAP:
-				{
-					uint32_t const handle = pending_request.operation.handle.value;
-					int const mt = _convert_mt(pending_request.operation.mt);
-
-					int const err =
-						lx_drm_ioctl_etnaviv_cpu_prep(args.drm_session, handle, mt);
-					if (err) {
+						r.success = true;
 						break;
 					}
-
-					pending_request.success = true;
+					default:
 					break;
-				}
-				case OP::UNMAP:
-				{
-					uint32_t const handle = pending_request.operation.handle.value;
-					(void)lx_drm_ioctl_etnaviv_cpu_fini(args.drm_session, handle);
-
-					pending_request.success = true;
-					break;
-				}
-				default:
-				break;
-				}
-
-				if (pending) {
-
-					*args.completed_request = pending_request;
-					*args.pending_request   = Gpu::Request();
-
-					if (args.completed_sigh.valid()) {
-						Genode::Signal_transmitter(args.completed_sigh).submit();
 					}
-				}
+
+					return r;
+
+				};
+
+				args.for_each_pending_request(dispatch_pending);
 
 				Lx::scheduler().current()->block_and_schedule();
 			}
@@ -523,6 +549,31 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		 ** Gpu session interface **
 		 ***************************/
 
+		bool _managed_handle(Gpu::Request request)
+		{
+			using OP = Gpu::Operation::Type;
+
+			bool managed = true;
+			switch (request.operation.type) {
+			case OP::FREE:  [[fallthrough]];
+			case OP::MAP:   [[fallthrough]];
+			case OP::UNMAP: [[fallthrough]];
+			case OP::EXEC:
+				managed = _buffer_handle_registry.managed(request.operation.handle.value);
+				break;
+			default:
+				break;
+			}
+
+			if (!managed) {
+				_completed_request = request;
+				_completed_request.success = false;
+				Genode::Signal_transmitter(_requester_complete_sigh).submit();
+			}
+
+			return managed;
+		}
+
 		void _handle_requester()
 		{
 			_drm_worker_args.completed_sigh = _requester_complete_sigh;
@@ -549,6 +600,15 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		{
 			if (_pending_request.valid()) {
 				return false;
+			}
+
+			/*
+			 * Requests referencing not managed handles will be
+			 * marked as complete but unsuccessful and the client
+			 * will is notified.
+			 */
+			if (!_managed_handle(request)) {
+				return true;
 			}
 
 			_pending_request = request;
