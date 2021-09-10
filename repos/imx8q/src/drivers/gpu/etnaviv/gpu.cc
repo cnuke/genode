@@ -12,6 +12,7 @@
  */
 
 /* Genode includes */
+#include <base/attached_ram_dataspace.h>
 #include <base/heap.h>
 #include <base/session_object.h>
 #include <base/signal.h>
@@ -44,6 +45,9 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 		Genode::Env  &_env;
 		Genode::Heap  _alloc;
+
+		Genode::Attached_ram_dataspace _info_dataspace {
+			_env.ram(), _env.rm(), 4096 };
 
 		struct Buffer_handle : Genode::Registry<Buffer_handle>::Element
 		{
@@ -473,6 +477,9 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 				Genode::warning("could not open DRM session");
 				throw Could_not_open_drm();
 			}
+
+			void *info = _info_dataspace.local_addr<void>();
+			Genode::memcpy(info, &_info, sizeof (_info));
 		}
 
 		~Session_component()
@@ -564,10 +571,16 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return _buffer_handle_registry.lookup_buffer(handle.value);
 		}
 
+		Genode::Dataspace_capability info_dataspace() override
+		{
+			return _info_dataspace.cap();
+		}
+
 
 		Info info() const
 		{
-			return _info;
+			Genode::warning(__func__, ": not implemented");
+			return Info();
 		}
 
 		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability,
