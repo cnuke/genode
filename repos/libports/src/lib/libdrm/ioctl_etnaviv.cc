@@ -308,7 +308,7 @@ class Drm_call
 		 *****************/
 
 		Genode::Constructible<Gpu::Connection> _gpu_session { };
-		Gpu::Info                              _gpu_info { };
+		Gpu::Info                              *_gpu_info { nullptr };
 
 		/* apparently glmark2 submits araound 110 KiB at some point */
 		enum { EXEC_BUFFER_SIZE = 256u << 10 };
@@ -701,7 +701,7 @@ class Drm_call
 				return -1;
 			}
 
-			arg.value = _gpu_info.etnaviv_param[arg.param];
+			arg.value = _gpu_info->etnaviv_param[arg.param];
 			return 0;
 		}
 
@@ -926,7 +926,8 @@ class Drm_call
 		{
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
-				_gpu_info = _gpu_session->info();
+				// XXX try
+				_gpu_info = _env.rm().attach(_gpu_session->info_dataspace());
 
 				_local_exec = _alloc_buffer(EXEC_BUFFER_SIZE);
 				if (!_local_exec.valid()) {
@@ -949,6 +950,10 @@ class Drm_call
 
 		~Drm_call()
 		{
+			if (_gpu_info) {
+				_env.rm().detach(_gpu_info);
+			}
+
 			if (_local_exec_buffer) {
 				_env.rm().detach(_local_exec_buffer);
 			}
