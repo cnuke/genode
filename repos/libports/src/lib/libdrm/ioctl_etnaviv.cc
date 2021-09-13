@@ -926,6 +926,8 @@ class Drm_call
 		{
 			if (use_gpu_session) {
 				_gpu_session.construct(_env);
+				_gpu_session->request_complete_sigh(_request_completion_sigh);
+
 				// XXX try
 				_gpu_info = _env.rm().attach(_gpu_session->info_dataspace());
 
@@ -940,8 +942,6 @@ class Drm_call
 				} catch (...) {
 					throw Gpu::Session::Invalid_state();
 				}
-
-				_gpu_session->request_complete_sigh(_request_completion_sigh);
 
 			} else {
 				_drm_session.construct(_env, &_drm_alloc, 1u<<20);
