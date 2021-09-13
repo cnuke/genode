@@ -234,25 +234,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return 0;
 		}
 
-		static int _convert_mt(Gpu::Session::Mapping_type mt)
-		{
-			using MT = Gpu::Session::Mapping_type;
-
-			switch (mt) {
-			case MT::READ:
-				return 1;
-			case MT::WRITE:
-				return 2;
-			case MT::NOSYNC:
-				return 4;
-			case MT::UNKNOWN: [[fallthrough]];
-			default:
-					return 0;
-			}
-
-			return 0;
-		}
-
 		Genode::Signal_context_capability _completion_sigh { };
 
 		char const *_name;
@@ -651,12 +632,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			return Gpu::Info::Execution_buffer_sequence { .id = ~0llu };
 		}
 
-		bool wait_fence(Genode::uint32_t) override
-		{
-			Genode::warning(__func__, ": not implemented");
-			return false;
-		}
-
 		void completion_sigh(Genode::Signal_context_capability) override
 		{
 			Genode::warning(__func__, ": not implemented");
@@ -673,15 +648,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			Genode::warning(__func__, ": not implemented");
 		}
 
-		Handle buffer_handle(Genode::Dataspace_capability) override
-		{
-			Genode::warning(__func__, ": not implemented");
-			return Handle { ._valid = false, .value = 0 };
-		}
-
 		Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability,
-		                                        bool /* aperture */,
-		                                        Mapping_type) override
+		                                        bool /* aperture */) override
 		{
 			Genode::warning(__func__, ": not implemented");
 			return Genode::Dataspace_capability();
