@@ -775,7 +775,7 @@ class Drm_call
 			Handle_id const id { .value = gem_close.handle };
 
 			bool const handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
-				_gpu_session->free_buffer(bh.cap);
+				_free_buffer(Gpu::Handle { ._valid = true, .value = gem_close.handle });
 
 				Genode::destroy(_heap, &bh);
 			});
