@@ -381,6 +381,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 							genode_lookup_cap(args.drm_session, offset, size);
 						registry.insert(handle, cap);
 
+						r.operation.handle = Gpu::Handle { ._valid = true, .value = handle };
 						r.success = true;
 						break;
 					}
