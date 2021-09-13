@@ -177,6 +177,12 @@ struct Gpu::Request
 	{
 		return operation.valid();
 	}
+
+	void print(Genode::Output &out) const
+	{
+		Genode::print(out, "tag=", tag.value, " success=", success,
+		                   " operation=", operation);
+	}
 };
 
 
