@@ -264,15 +264,6 @@ struct Gpu::Session : public Genode::Session
 	virtual Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
 
 	/**
-	 * Check if given fence is completed
-	 *
-	 * \param fence  to wait for
-	 *
-	 * \return true if fence is completed, false otherwise
-	 */
-	virtual bool wait_fence(Genode::uint32_t fence) = 0;
-
-	/**
 	 * Register completion signal handler
 	 *
 	 * \param sigh  signal handler that is called when the execution
@@ -298,13 +289,6 @@ struct Gpu::Session : public Genode::Session
 	virtual void free_buffer(Genode::Dataspace_capability ds) = 0;
 
 	/**
-	 * Get local handle for buffer
-	 *
-	 * \param ds  dataspace capability for buffer
-	 */
-	virtual Handle buffer_handle(Genode::Dataspace_capability ds) = 0;
-
-	/**
 	 * Map buffer
 	 *
 	 * \param ds        dataspace capability for buffer
@@ -315,10 +299,8 @@ struct Gpu::Session : public Genode::Session
 	 * \param write     if true, writeable mapping is created, otherwise
 	 *                  a readable mapping is created
 	 */
-	enum class Mapping_type { UNKNOWN, READ, WRITE, NOSYNC };
 	virtual Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability ds,
-	                                                bool aperture,
-	                                                Mapping_type mt = Mapping_type::UNKNOWN) = 0;
+	                                                bool aperture) = 0;
 
 	/**
 	 * Unmap buffer
@@ -370,19 +352,15 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Genode::Dataspace_capability, Genode::size_t);
-	GENODE_RPC(Rpc_wait_fence, bool, wait_fence,
-	           Genode::uint32_t);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,
 	           Genode::Signal_context_capability);
 	GENODE_RPC_THROW(Rpc_alloc_buffer, Genode::Dataspace_capability, alloc_buffer,
 	                 GENODE_TYPE_LIST(Out_of_ram),
 	                 Genode::size_t);
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Genode::Dataspace_capability);
-	GENODE_RPC(Rpc_buffer_handle, Handle, buffer_handle, Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_ram),
-	                 Genode::Dataspace_capability, bool,
-	                 Session::Mapping_type);
+	                 Genode::Dataspace_capability, bool);
 	GENODE_RPC(Rpc_unmap_buffer, void, unmap_buffer,
 	           Genode::Dataspace_capability);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
@@ -395,9 +373,9 @@ struct Gpu::Session : public Genode::Session
 
 	GENODE_RPC_INTERFACE(Rpc_completed_request, Rpc_enqueue_request, Rpc_request_complete_sigh,
 	                     Rpc_dataspace, Rpc_mapped_dataspace, Rpc_info_dataspace,
-	                     Rpc_info, Rpc_exec_buffer, Rpc_wait_fence,
+	                     Rpc_info, Rpc_exec_buffer,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
-	                     Rpc_free_buffer, Rpc_buffer_handle,
+	                     Rpc_free_buffer,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
 	                     Rpc_set_tiling);
