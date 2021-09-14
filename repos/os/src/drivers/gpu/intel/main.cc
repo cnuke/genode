@@ -12,6 +12,7 @@
  */
 
 /* Genode includes */
+#include <base/attached_ram_dataspace.h>
 #include <base/attached_rom_dataspace.h>
 #include <base/component.h>
 #include <base/heap.h>
@@ -520,6 +521,28 @@ struct Igd::Device
 		uint64_t                         _current_seqno   { 0 };
 		uint64_t                         _completed_seqno { 0 };
 
+		Signal_context_capability _wait_sigh { };
+		uint64_t _wait_seqno { ~0llu };
+
+		void wait_for(Signal_context_capability sigh, uint64_t seqno)
+		{
+			_wait_sigh = sigh;
+			_wait_seqno = seqno;
+
+			if (_wait_sigh.valid() && _wait_seqno <= _completed_seqno) {
+				// XXX local submit
+				Genode::Signal_transmitter(_wait_sigh).submit();
+			}
+		}
+
+		void notify_wait(uint64_t seqno)
+		{
+			if (_wait_sigh.valid() && seqno == _wait_seqno) {
+				// XXX local submit
+				Genode::Signal_transmitter(_wait_sigh).submit();
+			}
+		}
+
 		uint32_t _id_alloc()
 		{
 			static uint32_t id = 1;
@@ -928,6 +951,8 @@ struct Igd::Device
 			return false;
 
 		Genode::Signal_transmitter(gpu->completion_sigh()).submit();
+
+		gpu->notify_wait(comp_seqno);
 
 		return true;
 	}
@@ -1461,6 +1486,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 		struct Buffer
 		{
+			Gpu::Handle handle;
 			Genode::Dataspace_capability cap;
 
 			Gpu::addr_t ppgtt_va       { };
@@ -1471,10 +1497,13 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 			Igd::Ggtt::Mapping map { };
 
-			Buffer(Genode::Dataspace_capability cap) : cap(cap) { }
+			Buffer(Gpu::Handle handle, Genode::Dataspace_capability cap)
+			: handle { handle }, cap(cap) { }
 
 			virtual ~Buffer() { }
 		};
+
+		Genode::uint32_t handle_counter { 0 };
 
 		Genode::Registry<Genode::Registered<Buffer>> _buffer_registry { };
 
@@ -1503,6 +1532,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			_buffer_registry.for_each(lookup_and_free);
 		}
 
+		Genode::Signal_handler<Session_component> _wait_sigh;
+
 	public:
 
 		/**
@@ -1525,12 +1556,382 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			_rm(rm),
 			_ram(ram, _ram_quota_guard(), _cap_quota_guard()),
 			_device(device),
-			_vgpu(_device, _heap)
+			_vgpu(_device, _heap),
+			_wait_sigh { ep, *this, &Session_component::_handle_wait }
 		{ }
 
 		~Session_component()
 		{
 			_free_buffers();
+		}
+
+		Genode::Attached_ram_dataspace _info_dataspace {
+			_ram, _rm, 4096 };
+
+		Gpu::Request _pending_request   { };
+		Gpu::Request _completed_request { };
+		Genode::Signal_context_capability _request_completed_sigh { };
+
+		void _handle_wait()
+		{
+			if (!_pending_request.valid()) {
+				return;
+			}
+			if (_pending_request.operation.type != Gpu::Operation::Type::WAIT) {
+				return;
+			}
+
+			_pending_request.success = true;
+
+			_completed_request = _pending_request;
+			_pending_request = Gpu::Request();
+
+			Genode::Signal_transmitter(_request_completed_sigh).submit();
+		}
+
+		void _handle_new_request(Gpu::Request r)
+		{
+			Gpu::Request tmp = r;
+			tmp.success = false;
+
+			using OP = Gpu::Operation::Type;
+			switch (tmp.operation.type) {
+			case OP::ALLOC:
+			{
+				size_t size = r.operation.size;
+				size = ((size + 0xffful) & ~0xffful);
+
+				try {
+					Genode::Dataspace_capability cap = _device.alloc_buffer(_heap, size);
+
+					Gpu::Handle handle { ._valid = true, .value = ++handle_counter };
+					try {
+						new (&_heap) Genode::Registered<Buffer>(_buffer_registry, handle, cap);
+					} catch (...) {
+						if (cap.valid())
+							_device.free_buffer(_heap, cap);
+						break;
+					}
+					tmp.operation.handle = handle;
+					tmp.success = true;
+				} catch (Igd::Device::Out_of_ram) { }
+				break;
+			}
+			case OP::FREE:
+			{
+				auto lookup_and_free = [&] (Buffer &buffer) {
+					if (buffer.handle.value != tmp.operation.handle.value) {
+						return;
+					}
+
+					if (buffer.map.offset != Igd::Ggtt::Mapping::INVALID_OFFSET) {
+						Genode::error("cannot free mapped buffer");
+						/* XXX throw */
+					}
+
+					_device.free_buffer(_heap, buffer.cap);
+					Genode::destroy(&_heap, &buffer);
+					tmp.success = true;
+				};
+				_buffer_registry.for_each(lookup_and_free);
+				break;
+			}
+			case OP::EXEC:
+			{
+				bool found = false;
+
+				auto lookup_and_setup = [&] (Buffer &buffer) {
+					if (found || buffer.handle.value != tmp.operation.handle.value) {
+						return;
+					}
+
+					if (!buffer.ppgtt_va_valid) {
+						Genode::error("Invalid execbuffer");
+						return;
+					}
+
+					found = _vgpu.setup_ring_buffer(buffer.ppgtt_va);
+				};
+				_buffer_registry.for_each(lookup_and_setup);
+
+				if (!found) {
+					break;
+				}
+
+				_device.vgpu_activate(_vgpu);
+				tmp.operation.seqno.id = _vgpu.current_seqno();
+				tmp.success = true;
+				break;
+			}
+			case OP::WAIT:
+			{
+				_vgpu.wait_for(_wait_sigh, tmp.operation.seqno.id);
+				break;
+			}
+			case OP::MAP:
+			{
+				bool const ggtt = tmp.operation.gpu_addr == 0;
+				if (ggtt) {
+					bool mapped = false;
+					auto lookup_and_map = [&] (Buffer &buffer) {
+						if (buffer.handle.value != tmp.operation.handle.value) {
+							return;
+						}
+
+						if (buffer.map.offset != Igd::Ggtt::Mapping::INVALID_OFFSET) {
+							Genode::error("buffer already mapped");
+							return;
+						}
+
+						try {
+							Igd::Ggtt::Mapping const &map =
+								_device.map_buffer(_heap, buffer.cap,
+								                   tmp.operation.aperture);
+							buffer.map.cap    = map.cap;
+							buffer.map.offset = map.offset;
+							mapped = true;
+						} catch (Igd::Device::Could_not_map_buffer) {
+							Genode::error("could not map buffer object");
+							return;
+						}
+					};
+					_buffer_registry.for_each(lookup_and_map);
+					if (mapped) {
+						tmp.success = true;
+					}
+				} else {
+
+					enum { ALLOC_FAILED, MAP_FAILED, OK } result = ALLOC_FAILED;
+
+					auto lookup_and_map = [&] (Buffer &buffer) {
+						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						if (!match) {
+							return;
+						}
+
+						if (buffer.ppgtt_va_valid) {
+							Genode::error("buffer already mapped");
+							return;
+						}
+
+						try {
+							Genode::Dataspace_client buf(buffer.cap);
+							/* XXX check that actual_size matches alloc_buffer size */
+							Genode::size_t const actual_size = buf.size();
+							Genode::addr_t const phys_addr   = buf.phys_addr();
+							_vgpu.rcs_map_ppgtt(tmp.operation.gpu_addr, phys_addr, actual_size);
+							buffer.ppgtt_va = tmp.operation.gpu_addr;
+							buffer.ppgtt_va_valid = true;
+							result = OK;
+						} catch (Igd::Device::Could_not_map_buffer) {
+							Genode::error("could not map buffer object (",
+							              Genode::Hex(tmp.operation.gpu_addr), ") into PPGTT");
+							result = MAP_FAILED;
+							return;
+						}
+						catch (Igd::Device::Out_of_ram) {
+							result = ALLOC_FAILED;
+							return;
+						}
+					};
+					_buffer_registry.for_each(lookup_and_map);
+
+					switch (result) {
+					case ALLOC_FAILED:
+						break;
+					case MAP_FAILED:
+						break;
+					case OK:
+						tmp.success = true;
+						break;
+					default:
+						break;
+					}
+				}
+				break;
+			}
+			case OP::UNMAP:
+			{
+				bool const ggtt = tmp.operation.gpu_addr == 0;
+				if (ggtt) {
+					bool unmapped = false;
+					auto lookup_and_unmap = [&] (Buffer &buffer) {
+						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						if (!match) {
+							return;
+						}
+
+						if (buffer.fenced != Buffer::INVALID_FENCE) {
+							_device.clear_tiling(buffer.fenced);
+							_vgpu.active_fences--;
+						}
+
+						_device.unmap_buffer(_heap, buffer.map);
+						buffer.map.offset = Igd::Ggtt::Mapping::INVALID_OFFSET;
+						unmapped = true;
+					};
+					_buffer_registry.for_each(lookup_and_unmap);
+
+					if (!unmapped) {
+						Genode::error("buffer not mapped");
+						break;
+					}
+					tmp.success = true;
+				} else {
+					auto lookup_and_unmap = [&] (Buffer &buffer) {
+						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						if (!match) {
+							return;
+						}
+
+						if (!buffer.ppgtt_va_valid) {
+							Genode::error("buffer not mapped");
+							return;
+						}
+
+						if (buffer.ppgtt_va != tmp.operation.gpu_addr) {
+							Genode::error("buffer not mapped at ",
+							              Genode::Hex(tmp.operation.gpu_addr));
+							return;
+						}
+
+						Genode::Dataspace_client buf(buffer.cap);
+						Genode::size_t const actual_size = buf.size();
+						_vgpu.rcs_unmap_ppgtt(buffer.ppgtt_va, actual_size);
+						buffer.ppgtt_va_valid = false;
+						
+						tmp.success = true;
+					};
+					_buffer_registry.for_each(lookup_and_unmap);
+				}
+				break;
+			}
+			case OP::VIEW:
+			{
+				if (_vgpu.active_fences > Igd::Device::Vgpu::MAX_FENCES) {
+					Genode::error("no free fences left, already active: ", _vgpu.active_fences);
+					break;
+				}
+
+				Buffer *b = nullptr;
+				auto lookup = [&] (Buffer &buffer) {
+					bool const found = buffer.handle.value == tmp.operation.handle.value;
+					if (!found || !buffer.map.cap.valid()) {
+						return;
+					}
+					b = &buffer;
+				};
+				_buffer_registry.for_each(lookup);
+
+				if (b == nullptr) {
+					Genode::error("attempt to set tiling for non-mapped buffer");
+					break;
+				}
+
+				//XXX: support change of already fenced bo's fencing mode
+				if (b->fenced) {
+					tmp.success = true;
+					break;
+				}
+
+				Igd::size_t const size = Genode::Dataspace_client(b->cap).size();
+				Genode::uint32_t const fenced =
+					_device.set_tiling(b->map.offset, size, tmp.operation.mode);
+				if (fenced == Buffer::INVALID_FENCE) {
+					break;
+				}
+
+				b->fenced = fenced;
+				_vgpu.active_fences++;
+				tmp.success = true;
+				break;
+			}
+			case OP::INVALID:
+				break;
+			} /* end of switch */
+
+			if (tmp.success && tmp.operation.type != OP::WAIT) {
+				_completed_request = tmp;
+				_pending_request = Gpu::Request();
+
+				Genode::Signal_transmitter(_request_completed_sigh).submit();
+			}
+		}
+
+		Gpu::Request completed_request() override
+		{
+			if (_completed_request.valid()) {
+				Gpu::Request r = _completed_request;
+				_completed_request = Gpu::Request();
+				return r;
+			}
+			return Gpu::Request();
+		}
+
+		bool enqueue_request(Gpu::Request r) override
+		{
+			if (_pending_request.valid()) {
+				return false;
+			}
+
+			_pending_request = r;
+			_handle_new_request(_pending_request);
+			return true;
+		}
+
+		void request_complete_sigh(Genode::Signal_context_capability sigh) override
+		{
+			_request_completed_sigh = sigh;
+		}
+
+		Genode::Dataspace_capability dataspace(Gpu::Handle handle) override
+		{
+			Genode::Dataspace_capability cap { };
+
+			auto lookup = [&] (Buffer &buffer) {
+				bool const match = buffer.handle.value == handle.value;
+				if (!match) {
+					return;
+				}
+
+				cap = buffer.cap;
+			};
+			_buffer_registry.for_each(lookup);
+
+			return cap;
+		}
+
+		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override
+		{
+			Genode::Dataspace_capability cap { };
+
+			auto lookup = [&] (Buffer &buffer) {
+				bool const match = buffer.handle.value == handle.value;
+				if (!match) {
+					return;
+				}
+
+				cap = buffer.map.cap;
+			};
+			_buffer_registry.for_each(lookup);
+
+			return cap;
+		}
+
+		Genode::Dataspace_capability info_dataspace() override
+		{
+			Genode::size_t const aperture_size = Igd::Device::Vgpu::APERTURE_SIZE;
+			Info _info(_device.id(), _device.features(), aperture_size,
+			           _vgpu.id(), { .id = _vgpu.completed_seqno() },
+			           _device._revision,
+			           _device._slice_mask,
+			           _device._subslice_mask,
+			           _device._eus,
+			           _device._subslices);
+
+			void *info = _info_dataspace.local_addr<void>();
+			Genode::memcpy(info, &_info, sizeof (_info));
+			return _info_dataspace.cap();
 		}
 
 		/*********************************
@@ -1604,7 +2005,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				Genode::Dataspace_capability cap = _device.alloc_buffer(_heap, size);
 
 				try {
-					new (&_heap) Genode::Registered<Buffer>(_buffer_registry, cap);
+					new (&_heap) Genode::Registered<Buffer>(_buffer_registry,
+						Gpu::Handle { ._valid = true, .value = ++handle_counter }, cap);
 				} catch (...) {
 					if (cap.valid())
 						_device.free_buffer(_heap, cap);
