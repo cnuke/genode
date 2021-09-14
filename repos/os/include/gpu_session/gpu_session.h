@@ -130,6 +130,7 @@ struct Gpu::Operation
 	unsigned long gpu_addr;
 	bool          aperture;
 	bool          ggtt;
+	unsigned      mode;
 
 	unsigned long size;
 	Handle        handle;
