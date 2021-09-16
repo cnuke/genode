@@ -79,6 +79,7 @@ static Igd::Device_info _supported_devices[] = {
 	{ 0x1622, 8, Igd::Device_info::Platform::BROADWELL, "Iris Pro Graphics 6200 (BDW GT3e)", 0ull },
 	{ 0x1916, 9, Igd::Device_info::Platform::SKYLAKE,   "HD Graphics 520 (Skylake, Gen9)", 0ull },
 	{ 0x191b, 9, Igd::Device_info::Platform::SKYLAKE,   "HD Graphics 530 (Skylake, Gen9)", 0ull },
+	{ 0x5916, 9, Igd::Device_info::Platform::KABYLAKE,  "UHD Graphics 620 (Kaby Lake, Gen9p5)", 0ull },
 	{ 0x5917, 9, Igd::Device_info::Platform::KABYLAKE,  "UHD Graphics 620 (Kaby Lake, Gen9p5)", 0ull },
 };
 
