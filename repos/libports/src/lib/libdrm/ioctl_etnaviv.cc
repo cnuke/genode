@@ -432,6 +432,7 @@ class Drm_call
 					return;
 				}
 
+				success = completed.success;
 				r = completed;
 			});
 
