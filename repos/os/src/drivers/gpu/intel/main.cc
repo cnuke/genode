@@ -2308,6 +2308,8 @@ struct Main
 			_device.construct(_env, _device_md_alloc, _gpu_resources);
 			_gpu_root.manage(*_device);
 			_env.parent().announce(_env.ep().manage(_gpu_root));
+		} catch (Igd::Device::Unsupported_device) {
+			Genode::warning("could not find supported GPU device");
 		} catch (...) { }
 
 		/* platform service */
