@@ -780,7 +780,7 @@ class Igd::Rcs_context
 
 		enum {
 			HW_ID         = 0,
-			CONTEXT_PAGES = 20 /* ctx */ + 1 /* GuC */,
+			CONTEXT_PAGES = 22 /* ctx */ + 1 /* GuC */,
 			RING_PAGES    = 4,
 
 			RCS_RING_BASE = 0x2000,
