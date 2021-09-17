@@ -54,6 +54,8 @@ void Igd::Mmio::dump()
 	log("0x20FC - MI_RDRET_STATE  ", Hex(read<MI_RDRET_STATE>()));
 	log("0x209C - MI_MODE         ", Hex(read<MI_MODE>()));
 	log("0x21D0 - ECOSKPD         ", Hex(read<ECOSKPD>()));
+	log("0x2030 - RING_BUFFER_TAIL_RCSUNIT:   ", Hex(read<RING_BUFFER_TAIL_RCSUNIT>()));
+	log("0x2034 - RING_BUFFER_HEAD_RCSUNIT:   ", Hex(read<RING_BUFFER_HEAD_RCSUNIT>()));
 }
 
 
@@ -281,6 +283,7 @@ void Igd::Mmio::intr_dump()
 
 void Igd::Mmio::fault_dump()
 {
+	Genode::log("FAULT_REG: ", Genode::Hex(read<FAULT_REG_1>()));
 	Genode::log("FAULT_TLB_RB_DATA0: ", Genode::Hex(read<FAULT_TLB_RB_DATA0>()));
 	Genode::log("FAULT_TLB_RB_DATA1: ", Genode::Hex(read<FAULT_TLB_RB_DATA1>()));
 

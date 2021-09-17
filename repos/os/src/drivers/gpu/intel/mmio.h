@@ -280,6 +280,32 @@ class Igd::Mmio : public Genode::Mmio
 			struct Valid_Bit  : Bitfield<0,1> { };
 		};
 
+		struct FAULT_REG_1 : Register<0x04094, 32>
+		{
+			struct Engine_ID  : Bitfield<12,3>
+			{
+				enum EID {
+					GFX  = 0,
+					MFX0 = 1,
+					MFX1 = 2,
+					VEBX = 3,
+					BLT  = 4
+				};
+			};
+			struct SRCID      : Bitfield< 3,8> { };
+			struct Fault_Type : Bitfield< 1,2>
+			{
+				enum GFX_FT {
+					INVALID_PTE   = 0,
+					INVALID_PDE   = 1,
+					INVALID_PDPE  = 2,
+					INVALID_PML4E = 3
+				};
+			};
+			struct Valid_Bit  : Bitfield<0,1> { };
+		};
+
+
 		/*
 		 * IHD-OS-BDW-Vol 2c-11.15 p. 446
 		 */
@@ -1600,11 +1626,14 @@ class Igd::Mmio : public Genode::Mmio
 		 */
 		bool fault_regs_valid()
 		{
-			bool result = false;
+			auto const v = read<FAULT_REG_1>();
+			if (v) {
+				Genode::error("FAULT_REG_1: ", Genode::Hex(v));
+			}
 
 			/* TODO */
 
-			return result;
+			return !!v;
 		}
 
 		/******************
