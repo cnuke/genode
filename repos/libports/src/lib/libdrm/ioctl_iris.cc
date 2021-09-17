@@ -159,7 +159,6 @@ class Drm_call
 		Genode::Heap      _heap               { _env.ram(), _env.rm() };
 		Gpu::Connection   _gpu_session        { _env };
 		Gpu::Info         _gpu_info           { _gpu_session.info() };
-		Genode::Blockade  _completion_lock    { };
 		size_t            _available_gtt_size { _gpu_info.aperture_size };
 
 		using Offset = unsigned long;
@@ -346,7 +345,7 @@ class Drm_call
 			return result;
 		}
 
-		void _free_buffer(Gpu::Handle handle)
+		void __free_buffer(Gpu::Handle handle)
 		{
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::FREE;
@@ -421,7 +420,7 @@ class Drm_call
 			buffer.gpu_vaddr_valid = false;
 		}
 
-		void _unmap_buffer(Buffer_handle &h)
+		void _unmap_buffer_ggtt(Buffer_handle &h)
 		{
 			Offset const offset = h.map_offset;
 			// XXX check if it is necessary to detach before the mapped cap
@@ -455,12 +454,12 @@ class Drm_call
 		{
 			bool const handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
 				if (bh.map_cap.valid())
-					_unmap_buffer(bh);
+					_unmap_buffer_ggtt(bh);
 
 				if (bh.gpu_vaddr_valid) {
 					_unmap_buffer_ppgtt(bh);
 				}
-				_free_buffer(Gpu::Handle { ._valid = true, .value = (uint32_t)bh.handle.id().value});
+				__free_buffer(Gpu::Handle { ._valid = true, .value = (uint32_t)bh.handle.id().value});
 
 				Genode::destroy(&_heap, (&bh));
 			});
@@ -473,7 +472,7 @@ class Drm_call
 			return handled ? 0 : -1;
 		}
 
-		Offset _map_buffer(Buffer_handle &bh)
+		Offset _map_buffer_ggtt(Buffer_handle &bh)
 		{
 			Offset offset = 0;
 
@@ -524,7 +523,7 @@ class Drm_call
 			Offset offset = 0;
 
 			bool handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
-				offset = _map_buffer(bh);
+				offset = _map_buffer_ggtt(bh);
 			});
 
 			if (!handled) {
@@ -573,20 +572,6 @@ class Drm_call
 			_buffer_handles.for_each<Buffer_handle>(fn);
 		}
 
-		/***************************
-		 ** execbuffer completion **
-		 ***************************/
-
-		void _handle_completion()
-		{
-			/* wake up possible waiters */
-			_completion_lock.wakeup();
-		}
-
-		Genode::Io_signal_handler<Drm_call> _completion_sigh {
-			_env.ep(), *this, &Drm_call::_handle_completion };
-
-
 		/************
 		 ** ioctls **
 		 ************/
@@ -620,7 +605,7 @@ class Drm_call
 				p->size = size;
 				return 0;
 			} catch (...) {
-				_free_buffer(cap_handle.handle);
+				__free_buffer(cap_handle.handle);
 			}
 			return -1;
 		}
@@ -813,7 +798,7 @@ class Drm_call
 					return;
 
 				/* we need a valid GGTT mapping for fencing */
-				if (!bh.map_cap.valid() && !_map_buffer(bh))
+				if (!bh.map_cap.valid() && !_map_buffer_ggtt(bh))
 					return;
 
 				uint32_t const m = (stride << 16) | (mode == 1 ? 1 : 0);
@@ -1338,7 +1323,7 @@ class Drm_call
 					return;
 				}
 
-				_unmap_buffer(h);
+				_unmap_buffer_ggtt(h);
 				handled = true;
 			});
 
