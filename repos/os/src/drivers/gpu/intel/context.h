@@ -398,7 +398,7 @@ class Igd::Execlist_context : public Igd::Common_context_regs
 			{
 				typename Ring_buffer_control_value::access_t v = read<Ring_buffer_control_value>();
 				/* length is given in number of pages */
-				Ring_buffer_control_value::Buffer_length::set(v, ring_buffer_length / PAGE_SIZE);
+				Ring_buffer_control_value::Buffer_length::set(v, (ring_buffer_length / PAGE_SIZE) - 1);
 				/* according to the PRM it should be disable b/c of the amount of reports generated */
 				Ring_buffer_control_value::Arhp::set(v, Ring_buffer_control_value::Arhp::MI_AUTOREPORT_OFF);
 				Ring_buffer_control_value::Ring_buffer_enable::set(v, 1);
