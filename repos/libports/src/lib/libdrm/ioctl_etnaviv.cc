@@ -18,6 +18,7 @@
 #include <base/heap.h>
 #include <base/log.h>
 #include <gpu/connection.h>
+#include <gpu/info_etnaviv.h>
 #include <gpu_session/connection.h>
 #include <util/string.h>
 
@@ -308,7 +309,7 @@ class Drm_call
 		 *****************/
 
 		Genode::Constructible<Gpu::Connection> _gpu_session { };
-		Gpu::Info                              *_gpu_info { nullptr };
+		Gpu::Info_etnaviv const *_gpu_info { nullptr };
 
 		/* apparently glmark2 submits araound 110 KiB at some point */
 		enum { EXEC_BUFFER_SIZE = 256u << 10 };
@@ -397,11 +398,11 @@ class Drm_call
 		struct Cap_handle
 		{
 			Genode::Dataspace_capability cap { };
-			Gpu::Handle handle { };
+			Gpu::Buffer_id id { };
 
 			bool valid() const
 			{
-				return cap.valid() && handle.valid();
+				return cap.valid() && id.valid();
 			}
 		};
 
@@ -446,13 +447,13 @@ class Drm_call
 			return Gpu::Request {
 				.operation = Gpu::Operation {
 					.type = Gpu::Operation::Type::INVALID,
-					.gpu_addr = 0,
+					.gpu_vaddr = Gpu::Virtual_address { 0 },
 					.aperture = false,
-					.ggtt = false,
+					.mode = 0,
 					.size = 0,
-					.handle = Gpu::Handle { ._valid = false, .value = 0 },
-					.seqno = Gpu::Operation::Seqno { .id = 0 },
-					.mt = Gpu::MT::UNKNOWN,
+					.id = Gpu::Buffer_id { .value = 0 },
+					.seqno = Gpu::Seqno { .value = 0 },
+					.buffer_mapping = Gpu::Buffer_mapping::UNKNOWN,
 				},
 				.success = false,
 				.tag = Gpu::Request::Tag { .value = tag++ },
@@ -462,8 +463,8 @@ class Drm_call
 		int _drm_etnaviv_gem_cpu_fini(drm_etnaviv_gem_cpu_fini &arg)
 		{
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::UNMAP;
-			r.operation.handle = Gpu::Handle { ._valid = true, .value = arg.handle };
+			r.operation.type = Gpu::Operation::Type::UNMAP;
+			r.operation.id   = Gpu::Buffer_id { .value = arg.handle };
 
 			if (!_gpu_session->enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -476,20 +477,22 @@ class Drm_call
 
 		int _drm_etnaviv_gem_cpu_prep(drm_etnaviv_gem_cpu_prep &arg)
 		{
-			Gpu::MT mt { Gpu::MT::UNKNOWN };
+			using BM = Gpu::Buffer_mapping;
+
+			BM bm { BM::UNKNOWN };
 			switch (arg.op) {
-			case ETNA_PREP_READ:   mt = Gpu::MT::READ; break;
-			case ETNA_PREP_WRITE:  mt = Gpu::MT::WRITE; break;
-			case ETNA_PREP_NOSYNC: mt = Gpu::MT::NOSYNC; break;
+			case ETNA_PREP_READ:   bm = BM::READ; break;
+			case ETNA_PREP_WRITE:  bm = BM::WRITE; break;
+			case ETNA_PREP_NOSYNC: bm = BM::NOSYNC; break;
 			default: break;
 			}
 
-			Gpu::Handle const handle { ._valid = true, .value = arg.handle };
+			Gpu::Buffer_id const id { .value = arg.handle };
 
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::MAP;
-			r.operation.handle = handle;
-			r.operation.mt     = mt;
+			r.operation.type           = Gpu::Operation::Type::MAP;
+			r.operation.id             = id;
+			r.operation.buffer_mapping = bm;
 
 			if (!_gpu_session->enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -499,7 +502,7 @@ class Drm_call
 			bool success = _wait_for_request(r);
 			if (success) {
 				Genode::Dataspace_capability cap =
-					_gpu_session->mapped_dataspace(handle);
+					_gpu_session->mapped_dataspace(id);
 				if (!cap.valid()) {
 					success = false;
 				}
@@ -538,10 +541,10 @@ class Drm_call
 				bool success = _wait_for_request(r);
 				if (success) {
 					Genode::Dataspace_capability cap =
-						_gpu_session->dataspace(r.operation.handle);
+						_gpu_session->dataspace(r.operation.id);
 					result = Cap_handle {
 						.cap = cap,
-						.handle = r.operation.handle,
+						.id = r.operation.id,
 					};
 					break;
 				}
@@ -559,11 +562,11 @@ class Drm_call
 			return result;
 		}
 
-		void _free_buffer(Gpu::Handle handle)
+		void _free_buffer(Gpu::Buffer_id id)
 		{
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::FREE;
-			r.operation.handle = handle;
+			r.operation.id = id;
 
 			if (!_gpu_session->enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -573,7 +576,7 @@ class Drm_call
 			bool const success = _wait_for_request(r);
 			if (!success) {
 				Genode::warning("could not free buffer: ",
-				                r.operation.handle.value);
+				                r.operation.id.value);
 			}
 		}
 
@@ -589,11 +592,11 @@ class Drm_call
 			try {
 				Buffer_handle *buffer =
 					new (&_heap) Buffer_handle(_buffer_handles, cap_handle.cap,
-					                           cap_handle.handle.value, size);
+					                           cap_handle.id.value, size);
 				arg.handle = buffer->handle.id().value;
 				return 0;
 			} catch (...) {
-				_free_buffer(cap_handle.handle);
+				_free_buffer(cap_handle.id);
 			}
 			return -1;
 		}
@@ -616,7 +619,7 @@ class Drm_call
 
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::EXEC;
-			r.operation.handle = _local_exec.handle;
+			r.operation.id   = _local_exec.id;
 
 			if (!_gpu_session->enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue_request");
@@ -625,7 +628,7 @@ class Drm_call
 
 			bool success = _wait_for_request(r);
 			if (success) {
-				arg.fence = r.operation.seqno.id & 0xffffffffu;
+				arg.fence = r.operation.seqno.value & 0xffffffffu;
 			}
 			return success ? 0 : -1;
 		}
@@ -634,7 +637,7 @@ class Drm_call
 		{
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::WAIT;
-			r.operation.seqno = Gpu::Operation::Seqno { arg.fence };
+			r.operation.seqno = Gpu::Seqno { arg.fence };
 
 			if (!_gpu_session->enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue_request");
@@ -647,12 +650,12 @@ class Drm_call
 
 		int _drm_etnaviv_get_param(drm_etnaviv_param &arg)
 		{
-			if (arg.param > Gpu::Info::MAX_ETNAVIV_PARAMS) {
+			if (arg.param > Gpu::Info_etnaviv::MAX_ETNAVIV_PARAMS) {
 				errno = EINVAL;
 				return -1;
 			}
 
-			arg.value = _gpu_info->etnaviv_param[arg.param];
+			arg.value = _gpu_info->param[arg.param];
 			return 0;
 		}
 
@@ -726,7 +729,7 @@ class Drm_call
 			Handle_id const id { .value = gem_close.handle };
 
 			bool const handled = _apply_buffer(id, [&] (Buffer_handle &bh) {
-				_free_buffer(Gpu::Handle { ._valid = true, .value = gem_close.handle });
+				_free_buffer(Gpu::Buffer_id { .value = gem_close.handle });
 
 				Genode::destroy(_heap, &bh);
 			});
@@ -880,7 +883,7 @@ class Drm_call
 				_gpu_session->request_complete_sigh(_request_completion_sigh);
 
 				// XXX try
-				_gpu_info = _env.rm().attach(_gpu_session->info_dataspace());
+				_gpu_info = _gpu_session->attached_info<Gpu::Info_etnaviv>();
 
 				_local_exec = _alloc_buffer(EXEC_BUFFER_SIZE);
 				if (!_local_exec.valid()) {
@@ -901,16 +904,12 @@ class Drm_call
 
 		~Drm_call()
 		{
-			if (_gpu_info) {
-				_env.rm().detach(_gpu_info);
-			}
-
 			if (_local_exec_buffer) {
 				_env.rm().detach(_local_exec_buffer);
 			}
 
 			if (_local_exec.valid()) {
-				_free_buffer(_local_exec.handle);
+				_free_buffer(_local_exec.id);
 			}
 		}
 
