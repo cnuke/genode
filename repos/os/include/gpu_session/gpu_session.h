@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2017 Genode Labs GmbH
+ * Copyright (C) 2017-2021 Genode Labs GmbH
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -16,18 +16,14 @@
 
 #include <base/output.h>
 #include <session/session.h>
+#include <gpu/request.h>
 
 namespace Gpu {
 
 	using addr_t = Genode::uint64_t;
 
 	struct Info;
-	struct Handle;
-	struct Request;
-	struct Operation;
 	struct Session;
-
-	enum class MT { UNKNOWN, READ, WRITE, NOSYNC };
 }
 
 
@@ -38,152 +34,9 @@ namespace Gpu {
  */
 struct Gpu::Info
 {
-	using Chip_id    = Genode::uint16_t;
-	using Features   = Genode::uint32_t;
-	using size_t     = Genode::size_t;
-	using Context_id = Genode::uint32_t;
-
-	Chip_id    chip_id;
-	Features   features;
-	size_t     aperture_size;
-	Context_id ctx_id;
-
-	/*
-	 * Size the array based on the list of params in
-	 * etnaviv_drm.h that allow for 1:1 access.
-	 */
-	enum { MAX_ETNAVIV_PARAMS = 32, };
-	using Etnaviv_param = Genode::uint64_t;
-	Etnaviv_param etnaviv_param[MAX_ETNAVIV_PARAMS] { };
-
 	struct Execution_buffer_sequence {
 		Genode::uint64_t id;
 	} last_completed;
-
-	struct Revision      { Genode::uint8_t value; } revision;
-	struct Slice_mask    { unsigned value; }        slice_mask;
-	struct Subslice_mask { unsigned value; }        subslice_mask;
-	struct Eu_total      { unsigned value; }        eus;
-	struct Subslices     { unsigned value; }        subslices;
-
-	Info(Chip_id chip_id, Features features, size_t aperture_size,
-	     Context_id ctx_id, Execution_buffer_sequence last,
-	     Revision rev, Slice_mask s_mask, Subslice_mask ss_mask,
-	     Eu_total eu, Subslices subslice)
-	:
-		chip_id(chip_id), features(features),
-		aperture_size(aperture_size), ctx_id(ctx_id),
-		last_completed(last),
-		revision(rev),
-		slice_mask(s_mask),
-		subslice_mask(ss_mask),
-		eus(eu),
-		subslices(subslice)
-	{ }
-
-	Info()
-	:
-		chip_id { Chip_id { 0 } },
-		features { Features { 0 } },
-		aperture_size { 0 },
-		ctx_id { Context_id { 0 } },
-		last_completed { Execution_buffer_sequence { 0 } },
-		revision { Revision { 0 } },
-		slice_mask { Slice_mask { 0 } },
-		subslice_mask { Subslice_mask { 0 } },
-		eus { Eu_total { 0 } },
-		subslices { Subslices { 0 } }
-	{ }
-};
-
-
-struct Gpu::Handle
-{
-	bool _valid;
-
-	Genode::uint32_t value;
-
-	bool valid() const
-	{
-		return _valid;
-	}
-};
-
-
-struct Gpu::Operation
-{
-	using Seqno = Gpu::Info::Execution_buffer_sequence;
-
-	enum class Type {
-		INVALID = 0,
-		ALLOC   = 1,
-		FREE    = 2,
-		MAP     = 3,
-		UNMAP   = 4,
-		EXEC    = 5,
-		WAIT    = 6,
-		VIEW    = 7,
-	};
-
-	Type type;
-
-	unsigned long gpu_addr;
-	bool          aperture;
-	bool          ggtt;
-	unsigned      mode;
-
-	unsigned long size;
-	Handle        handle;
-	Seqno         seqno;
-	MT mt;
-
-	bool valid() const
-	{
-		return type != Type::INVALID;
-	}
-
-	static char const *type_name(Type type)
-	{
-		switch (type) {
-		case Type::INVALID: return "INVALID";
-		case Type::ALLOC:   return "ALLOC";
-		case Type::FREE:    return "FREE";
-		case Type::MAP:     return "MAP";
-		case Type::UNMAP:   return "UNMAP";
-		case Type::EXEC:    return "EXEC";
-		case Type::WAIT:    return "WAIT";
-		case Type::VIEW:    return "VIEW";
-		}
-		return "INVALID";
-	}
-
-	void print(Genode::Output &out) const
-	{
-		Genode::print(out, type_name(type));
-	}
-};
-
-
-struct Gpu::Request
-{
-	struct Tag { unsigned long value; };
-
-	Operation operation;
-
-	bool success;
-
-	Tag tag;
-
-	bool valid() const
-	{
-		return operation.valid();
-	}
-
-	void print(Genode::Output &out) const
-	{
-		Genode::print(out, "tag=", tag.value, " success=", success,
-		                   " operation=", operation);
-	}
 };
 
 
@@ -221,23 +74,12 @@ struct Gpu::Session : public Genode::Session
 	{
 	}
 
-	template <typename FN> void for_each_completed_request(FN const &fn)
-	{
-		while (true) {
-			Gpu::Request const r = completed_request();
-			if (!r.valid()) {
-				break;
-			}
-			fn(r);
-		}
-	}
-
-	virtual Genode::Dataspace_capability dataspace(Gpu::Handle)
+	virtual Genode::Dataspace_capability dataspace(Gpu::Buffer_id)
 	{
 		return Genode::Dataspace_capability();
 	}
 
-	virtual Genode::Dataspace_capability mapped_dataspace(Gpu::Handle)
+	virtual Genode::Dataspace_capability mapped_dataspace(Gpu::Buffer_id)
 	{
 		return Genode::Dataspace_capability();
 	}
@@ -345,8 +187,8 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_enqueue_request, bool, enqueue_request, Gpu::Request);
 	GENODE_RPC(Rpc_request_complete_sigh, void, request_complete_sigh,
 	           Genode::Signal_context_capability);
-	GENODE_RPC(Rpc_dataspace, Genode::Dataspace_capability, dataspace, Gpu::Handle);
-	GENODE_RPC(Rpc_mapped_dataspace, Genode::Dataspace_capability, mapped_dataspace, Gpu::Handle);
+	GENODE_RPC(Rpc_dataspace, Genode::Dataspace_capability, dataspace, Gpu::Buffer_id);
+	GENODE_RPC(Rpc_mapped_dataspace, Genode::Dataspace_capability, mapped_dataspace, Gpu::Buffer_id);
 	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
 
 	GENODE_RPC(Rpc_info, Info, info);
