@@ -21,6 +21,7 @@
 #include <base/sleep.h>
 
 #include <gpu_session/connection.h>
+#include <gpu/info_iris.h>
 #include <util/retry.h>
 
 extern "C" {
@@ -158,13 +159,19 @@ class Drm_call
 		Genode::Env      &_env;
 		Genode::Heap      _heap               { _env.ram(), _env.rm() };
 		Gpu::Connection   _gpu_session        { _env };
-		Gpu::Info         _gpu_info           { _gpu_session.info() };
+
+		Gpu::Info_iris  const &_gpu_info      { *_gpu_session.attached_info<Gpu::Info_iris>() };
 		size_t            _available_gtt_size { _gpu_info.aperture_size };
 
 		using Offset = unsigned long;
 
-		struct Gpu_virtual_address {
-			uint64_t addr;
+		struct Gpu_virtual_address : Gpu::Virtual_address
+		{
+			Gpu_virtual_address(unsigned long value)
+			{
+				// XXX throw rather than cap silently?
+				Gpu::Virtual_address::value = Utils::limit_to_48bit(value);
+			}
 		};
 
 		struct Buffer_handle;
@@ -182,19 +189,19 @@ class Drm_call
 			Genode::Dataspace_capability map_cap    { };
 			Offset                       map_offset { 0 };
 
-			Gpu_virtual_address          gpu_vaddr { };
-			Gpu::Info::Execution_buffer_sequence seqno { };
+			Gpu_virtual_address          gpu_vaddr { 0 };
+			Gpu::Seqno                   seqno { };
 
 			bool                         gpu_vaddr_valid { false };
 			bool                         busy            { false };
 
 			Buffer_handle(Genode::Id_space<Buffer_handle> &space,
 			              Genode::Dataspace_capability cap,
-			              Genode::uint32_t handle,
+			              Gpu::Buffer_id id,
 			              Genode::size_t size)
 			:
 				cap(cap), size(size),
-				handle { *this, space, Handle_id { .value = handle } }
+				handle { *this, space, Handle_id { .value = id.value } }
 			{
 				if (!cap.valid() || !size)
 					Genode::warning("invalid Buffer_handle ?");
@@ -281,14 +288,13 @@ class Drm_call
 			return Gpu::Request {
 				.operation = Gpu::Operation {
 					.type = Gpu::Operation::Type::INVALID,
-					.gpu_addr = 0,
+					.gpu_vaddr = Gpu::Virtual_address { 0 },
 					.aperture = false,
-					.ggtt = false,
 					.mode = 0,
 					.size = 0,
-					.handle = Gpu::Handle { ._valid = false, .value = 0 },
-					.seqno = Gpu::Operation::Seqno { .id = 0 },
-					.mt = Gpu::MT::UNKNOWN,
+					.id = Gpu::Buffer_id { .value = 0 },
+					.seqno = Gpu::Seqno { .value = 0 },
+					.buffer_mapping = Gpu::Buffer_mapping::UNKNOWN,
 				},
 				.success = false,
 				.tag = Gpu::Request::Tag { .value = tag++ },
@@ -298,11 +304,11 @@ class Drm_call
 		struct Cap_handle
 		{
 			Genode::Dataspace_capability cap { };
-			Gpu::Handle handle { };
+			Gpu::Buffer_id id { };
 
 			bool valid() const
 			{
-				return cap.valid() && handle.valid();
+				return cap.valid() && id.valid();
 			}
 		};
 
@@ -324,10 +330,10 @@ class Drm_call
 				bool success = _wait_for_request(r);
 				if (success) {
 					Genode::Dataspace_capability cap =
-						_gpu_session.dataspace(r.operation.handle);
+						_gpu_session.dataspace(r.operation.id);
 					result = Cap_handle {
 						.cap = cap,
-						.handle = r.operation.handle,
+						.id = r.operation.id,
 					};
 					break;
 				}
@@ -345,11 +351,11 @@ class Drm_call
 			return result;
 		}
 
-		void __free_buffer(Gpu::Handle handle)
+		void __free_buffer(Gpu::Buffer_id id)
 		{
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::FREE;
-			r.operation.handle = handle;
+			r.operation.id = id;
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -359,7 +365,7 @@ class Drm_call
 			bool const success = _wait_for_request(r);
 			if (!success) {
 				Genode::warning("could not free buffer: ",
-				                r.operation.handle.value);
+				                r.operation.id.value);
 			}
 		}
 
@@ -368,17 +374,17 @@ class Drm_call
 		{
 			if (buffer.gpu_vaddr_valid)
 				Genode::warning(__func__, " already have a gpu virtual address ",
-				                Genode::Hex(buffer.gpu_vaddr.addr), " vs ",
-				                Genode::Hex(vaddr.addr));
+				                Genode::Hex(buffer.gpu_vaddr.value), " vs ",
+				                Genode::Hex(vaddr.value));
 
 			// /* XXX out of cap XXX */
 			// /* XXX out of memory XXX */
-			Gpu::Handle const handle { ._valid = true, .value = (uint32_t)buffer.handle.id().value };
+			Gpu::Buffer_id const id { .value = (uint32_t)buffer.handle.id().value };
 
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::MAP;
-			r.operation.handle = handle;
-			r.operation.gpu_addr = Utils::limit_to_48bit(vaddr.addr);
+			r.operation.type     = Gpu::Operation::Type::MAP;
+			r.operation.id       = id;
+			r.operation.gpu_vaddr = vaddr;
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -401,9 +407,9 @@ class Drm_call
 			if (!buffer.gpu_vaddr_valid) return;
 
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::UNMAP;
-			r.operation.handle = Gpu::Handle { ._valid = true, .value = (uint32_t)buffer.handle.id().value };
-			r.operation.gpu_addr = Utils::limit_to_48bit(buffer.gpu_vaddr.addr);
+			r.operation.type      = Gpu::Operation::Type::UNMAP;
+			r.operation.id        = Gpu::Buffer_id { .value = (uint32_t)buffer.handle.id().value };
+			r.operation.gpu_vaddr = buffer.gpu_vaddr;
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -412,7 +418,7 @@ class Drm_call
 
 			bool const success = _wait_for_request(r);
 			if (!success) {
-				Genode::warning("unmapping PPGTT ", Genode::Hex(buffer.gpu_vaddr.addr),
+				Genode::warning("unmapping PPGTT ", Genode::Hex(buffer.gpu_vaddr.value),
 				                " failed");
 				return;
 			}
@@ -430,10 +436,9 @@ class Drm_call
 			h.map_cap = Genode::Dataspace_capability();
 
 			Gpu::Request r = _initialize_request();
-			r.operation.type     = Gpu::Operation::Type::UNMAP;
-			r.operation.handle   = Gpu::Handle { ._valid = true,
-			                                     .value = (uint32_t)h.handle.id().value };
-			r.operation.gpu_addr = 0;
+			r.operation.type = Gpu::Operation::Type::UNMAP;
+			r.operation.id   = Gpu::Buffer_id { .value = (uint32_t)h.handle.id().value };
+			r.operation.gpu_vaddr = Gpu::Virtual_address { 0 };
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -459,7 +464,7 @@ class Drm_call
 				if (bh.gpu_vaddr_valid) {
 					_unmap_buffer_ppgtt(bh);
 				}
-				__free_buffer(Gpu::Handle { ._valid = true, .value = (uint32_t)bh.handle.id().value});
+				__free_buffer(Gpu::Buffer_id { .value = (uint32_t)bh.handle.id().value});
 
 				Genode::destroy(&_heap, (&bh));
 			});
@@ -481,11 +486,11 @@ class Drm_call
 				return offset;
 			}
 
-			Gpu::Handle const handle { ._valid = true, .value = (uint32_t)bh.handle.id().value };
+			Gpu::Buffer_id const id { .value = (uint32_t)bh.handle.id().value };
 
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::MAP;
-			r.operation.handle = handle;
+			r.operation.type     = Gpu::Operation::Type::MAP;
+			r.operation.id       = id;
 			r.operation.aperture = true;
 
 			if (!_gpu_session.enqueue_request(r)) {
@@ -496,7 +501,7 @@ class Drm_call
 			bool success = _wait_for_request(r);
 			if (success) {
 				Genode::Dataspace_capability cap =
-					_gpu_session.mapped_dataspace(handle);
+					_gpu_session.mapped_dataspace(id);
 				if (!cap.valid()) {
 					success = false;
 				} else {
@@ -534,12 +539,12 @@ class Drm_call
 			return offset;
 		}
 
-		bool _set_tiling(Gpu::Handle handle, uint32_t mode)
+		bool _set_tiling(Gpu::Buffer_id id, uint32_t mode)
 		{
 			Gpu::Request r = _initialize_request();
-			r.operation.type   = Gpu::Operation::Type::VIEW;
-			r.operation.handle = handle;
-			r.operation.mode   = mode;
+			r.operation.type = Gpu::Operation::Type::VIEW;
+			r.operation.id   = id;
+			r.operation.mode = mode;
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue request");
@@ -600,12 +605,12 @@ class Drm_call
 			try {
 				Buffer_handle *buffer =
 					new (&_heap) Buffer_handle(_buffer_handles, cap_handle.cap,
-					                           cap_handle.handle.value, size);
+					                           cap_handle.id, size);
 				p->handle = buffer->handle.id().value;
 				p->size = size;
 				return 0;
 			} catch (...) {
-				__free_buffer(cap_handle.handle);
+				__free_buffer(cap_handle.id);
 			}
 			return -1;
 		}
@@ -803,9 +808,9 @@ class Drm_call
 
 				uint32_t const m = (stride << 16) | (mode == 1 ? 1 : 0);
 
-				Gpu::Handle const handle =
-					Gpu::Handle { ._valid = true, .value = (uint32_t)bh.handle.id().value };
-				ok = _set_tiling(handle, m);
+				Gpu::Buffer_id const id =
+					Gpu::Buffer_id { .value = (uint32_t)bh.handle.id().value };
+				ok = _set_tiling(id, m);
 			});
 
 			if (!handled)
@@ -904,8 +909,9 @@ class Drm_call
 					if (bh.busy)
 						Genode::warning("handle: ", obj[i].handle, " reused but is busy");
 
-					if (bh.gpu_vaddr_valid && bh.gpu_vaddr.addr != obj[i].offset) {
-						Genode::error("unmap already mapped ", bh.handle, " ", Genode::Hex(bh.gpu_vaddr.addr), "->", Genode::Hex(obj[i].offset));
+					if (bh.gpu_vaddr_valid && bh.gpu_vaddr.value != obj[i].offset) {
+						Genode::error("unmap already mapped ", bh.handle, " ",
+						              Genode::Hex(bh.gpu_vaddr.value), "->", Genode::Hex(obj[i].offset));
 						_unmap_buffer_ppgtt(bh);
 					}
 
@@ -936,8 +942,7 @@ class Drm_call
 
 			Gpu::Request r = _initialize_request();
 			r.operation.type = Gpu::Operation::Type::EXEC;
-			r.operation.handle = Gpu::Handle { ._valid = true,
-			                                   .value = (uint32_t)command_buffer->handle.id().value };
+			r.operation.id   = Gpu::Buffer_id { .value = (uint32_t)command_buffer->handle.id().value };
 
 			if (!_gpu_session.enqueue_request(r)) {
 				Genode::error(__func__, ": could not enqueue_request");
@@ -1020,7 +1025,7 @@ class Drm_call
 				if (success) {
 					_for_each_buffer([&] (Buffer_handle &h) {
 						if (!h.busy) return;
-						if (h.seqno.id > bh.seqno.id) return;
+						if (h.seqno.value > bh.seqno.value) return;
 						h.busy = false;
 
 						/*
