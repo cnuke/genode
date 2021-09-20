@@ -19,6 +19,7 @@
 #include <root/component.h>
 #include <session/session.h>
 #include <gpu_session/gpu_session.h>
+#include <gpu/info_etnaviv.h>
 
 /* Linux emulation */
 #include <lx_kit/env.h>
@@ -153,11 +154,11 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 		Buffer_handle_registry _buffer_handle_registry { _alloc };
 
 
-		Gpu::Info _info { };
+		Gpu::Info_etnaviv _info { };
 
-		static int _populate_info(void *drm, Gpu::Info &info)
+		static int _populate_info(void *drm, Gpu::Info_etnaviv &info)
 		{
-			for (Gpu::Info::Etnaviv_param &p : info.etnaviv_param) {
+			for (Gpu::Info_etnaviv::Param &p : info.param) {
 				p = 0;
 			}
 
@@ -210,23 +211,23 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					return -1;
 				}
 
-				info.etnaviv_param[p] = value;
+				info.param[p] = value;
 			}
 			return 0;
 		}
 
-		static int _convert_mt(Gpu::MT mt)
+		static int _convert_bm(Gpu::Buffer_mapping bm)
 		{
-			using MT = Gpu::MT;
+			using BM = Gpu::Buffer_mapping;
 
-			switch (mt) {
-			case MT::READ:
+			switch (bm) {
+			case BM::READ:
 				return 1;
-			case MT::WRITE:
+			case BM::WRITE:
 				return 2;
-			case MT::NOSYNC:
+			case BM::NOSYNC:
 				return 4;
-			case MT::UNKNOWN: [[fallthrough]];
+			case BM::UNKNOWN: [[fallthrough]];
 			default:
 					return 0;
 			}
@@ -261,7 +262,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			Local_gpu_request local_request;
 			void *drm_session;
 
-			Gpu::Info &info;
+			Gpu::Info_etnaviv &info;
 
 			Buffer_handle_registry &buffer_handle_registry;
 
@@ -362,13 +363,13 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 							genode_lookup_cap(args.drm_session, offset, size);
 						registry.insert(handle, cap);
 
-						r.operation.handle = Gpu::Handle { ._valid = true, .value = handle };
+						r.operation.id = Gpu::Buffer_id { .value = handle };
 						r.success = true;
 						break;
 					}
 					case OP::FREE:
 					{
-						uint32_t const handle = r.operation.handle.value;
+						uint32_t const handle = r.operation.id.value;
 
 						(void)lx_drm_ioctl_gem_close(args.drm_session, handle);
 						registry.remove(handle);
@@ -378,7 +379,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 					case OP::EXEC:
 					{
-						uint32_t const handle = r.operation.handle.value;
+						uint32_t const handle = r.operation.id.value;
 
 						auto exec_buffer = [&] (uint32_t handle, Genode::Dataspace_capability cap) {
 							void const *gem_submit = (void*)rm.attach(cap);
@@ -393,7 +394,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 								return;
 							}
 
-							r.operation.seqno.id = fence_id;
+							r.operation.seqno.value = fence_id;
 							r.success = true;
 						};
 
@@ -402,7 +403,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 					case OP::WAIT:
 					{
-						uint32_t const fence_id = r.operation.seqno.id;
+						uint32_t const fence_id = r.operation.seqno.value;
 
 						int const err =
 							lx_drm_ioctl_etnaviv_wait_fence(args.drm_session, fence_id);
@@ -415,8 +416,8 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 					case OP::MAP:
 					{
-						uint32_t const handle = r.operation.handle.value;
-						int const mt = _convert_mt(r.operation.mt);
+						uint32_t const handle = r.operation.id.value;
+						int const mt = _convert_bm(r.operation.buffer_mapping);
 
 						int const err =
 							lx_drm_ioctl_etnaviv_cpu_prep(args.drm_session, handle, mt);
@@ -429,7 +430,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 					}
 					case OP::UNMAP:
 					{
-						uint32_t const handle = r.operation.handle.value;
+						uint32_t const handle = r.operation.id.value;
 						(void)lx_drm_ioctl_etnaviv_cpu_fini(args.drm_session, handle);
 
 						r.success = true;
@@ -514,7 +515,6 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 
 		void submit_completion_signal(uint32_t fence_id)
 		{
-			_info.last_completed.id = fence_id;
 			Genode::Signal_transmitter(_completion_sigh).submit();
 		}
 
@@ -541,7 +541,7 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			case OP::MAP:   [[fallthrough]];
 			case OP::UNMAP: [[fallthrough]];
 			case OP::EXEC:
-				managed = _buffer_handle_registry.managed(request.operation.handle.value);
+				managed = _buffer_handle_registry.managed(request.operation.id.value);
 				break;
 			default:
 				break;
@@ -603,14 +603,14 @@ struct Gpu::Session_component : public Genode::Session_object<Gpu::Session>,
 			_requester_complete_sigh = sigh;
 		}
 
-		Genode::Dataspace_capability dataspace(Gpu::Handle handle) override
+		Genode::Dataspace_capability dataspace(Gpu::Buffer_id id) override
 		{
-			return _buffer_handle_registry.lookup_buffer(handle.value);
+			return _buffer_handle_registry.lookup_buffer(id.value);
 		}
 
-		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override
+		Genode::Dataspace_capability mapped_dataspace(Gpu::Buffer_id id) override
 		{
-			return _buffer_handle_registry.lookup_buffer(handle.value);
+			return _buffer_handle_registry.lookup_buffer(id.value);
 		}
 
 		Genode::Dataspace_capability info_dataspace() override
