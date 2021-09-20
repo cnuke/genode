@@ -1095,6 +1095,8 @@ struct Igd::Device
 		Mmio::HWS_PGA_RCSUNIT::access_t const addr = _hw_status_ctx->gmaddr();
 		_mmio.write_post<Igd::Mmio::HWS_PGA_RCSUNIT>(addr);
 
+		_mmio.write<Mmio::Arbiter_control::Gaps_tsv_enable>(1);
+
 		_mmio.dump();
 		_mmio.context_status_pointer_dump();
 

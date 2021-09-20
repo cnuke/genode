@@ -960,6 +960,12 @@ class Igd::Mmio : public Genode::Mmio
 		struct MI_MODE         : Register<0x209c, 32> { };
 		struct ECOSKPD         : Register<0x21D0, 32> { };
 
+		/* WaEnableGapsTsvCreditFix:skl,kbl,cfl */
+		struct Arbiter_control : Register<0xb004, 32> {
+			struct Gaps_tsv_enable : Bitfield<7, 1> { };
+		};
+
+
 	private:
 
 		Mmio::Delayer &_delayer;
