@@ -23,6 +23,7 @@
 #include <base/session_object.h>
 #include <dataspace/client.h>
 #include <gpu_session/gpu_session.h>
+#include <gpu/info_iris.h>
 #include <io_mem_session/connection.h>
 #include <irq_session/connection.h>
 #include <platform_device/client.h>
@@ -130,11 +131,11 @@ struct Igd::Device
 
 
 	Device_info              _info          { };
-	Gpu::Info::Revision      _revision      { };
-	Gpu::Info::Slice_mask    _slice_mask    { };
-	Gpu::Info::Subslice_mask _subslice_mask { };
-	Gpu::Info::Eu_total      _eus           { };
-	Gpu::Info::Subslices     _subslices     { };
+	Gpu::Info_iris::Revision      _revision      { };
+	Gpu::Info_iris::Slice_mask    _slice_mask    { };
+	Gpu::Info_iris::Subslice_mask _subslice_mask { };
+	Gpu::Info_iris::Eu_total      _eus           { };
+	Gpu::Info_iris::Subslices     _subslices     { };
 
 	void _pci_info(char const *descr)
 	{
@@ -1174,7 +1175,7 @@ struct Igd::Device
 
 		}
 
-		_eus = Gpu::Info::Eu_total { eu_total };
+		_eus = Gpu::Info_iris::Eu_total { eu_total };
 	}
 
 	/*********************
@@ -1489,7 +1490,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 		struct Buffer
 		{
-			Gpu::Handle handle;
+			Gpu::Buffer_id id;
 			Genode::Dataspace_capability cap;
 
 			Gpu::addr_t ppgtt_va       { };
@@ -1500,8 +1501,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 			Igd::Ggtt::Mapping map { };
 
-			Buffer(Gpu::Handle handle, Genode::Dataspace_capability cap)
-			: handle { handle }, cap(cap) { }
+			Buffer(Gpu::Buffer_id id, Genode::Dataspace_capability cap)
+			: id { id }, cap(cap) { }
 
 			virtual ~Buffer() { }
 		};
@@ -1607,15 +1608,15 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				try {
 					Genode::Dataspace_capability cap = _device.alloc_buffer(_heap, size);
 
-					Gpu::Handle handle { ._valid = true, .value = ++handle_counter };
+					Gpu::Buffer_id id { .value = ++handle_counter };
 					try {
-						new (&_heap) Genode::Registered<Buffer>(_buffer_registry, handle, cap);
+						new (&_heap) Genode::Registered<Buffer>(_buffer_registry, id, cap);
 					} catch (...) {
 						if (cap.valid())
 							_device.free_buffer(_heap, cap);
 						break;
 					}
-					tmp.operation.handle = handle;
+					tmp.operation.id = id;
 					tmp.success = true;
 				} catch (Igd::Device::Out_of_ram) { }
 				break;
@@ -1623,7 +1624,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			case OP::FREE:
 			{
 				auto lookup_and_free = [&] (Buffer &buffer) {
-					if (buffer.handle.value != tmp.operation.handle.value) {
+					if (buffer.id.value != tmp.operation.id.value) {
 						return;
 					}
 
@@ -1644,7 +1645,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				bool found = false;
 
 				auto lookup_and_setup = [&] (Buffer &buffer) {
-					if (found || buffer.handle.value != tmp.operation.handle.value) {
+					if (found || buffer.id.value != tmp.operation.id.value) {
 						return;
 					}
 
@@ -1662,22 +1663,22 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				}
 
 				_device.vgpu_activate(_vgpu);
-				tmp.operation.seqno.id = _vgpu.current_seqno();
+				tmp.operation.seqno.value = _vgpu.current_seqno();
 				tmp.success = true;
 				break;
 			}
 			case OP::WAIT:
 			{
-				_vgpu.wait_for(_wait_sigh, tmp.operation.seqno.id);
+				_vgpu.wait_for(_wait_sigh, tmp.operation.seqno.value);
 				break;
 			}
 			case OP::MAP:
 			{
-				bool const ggtt = tmp.operation.gpu_addr == 0;
+				bool const ggtt = tmp.operation.gpu_vaddr.value == 0;
 				if (ggtt) {
 					bool mapped = false;
 					auto lookup_and_map = [&] (Buffer &buffer) {
-						if (buffer.handle.value != tmp.operation.handle.value) {
+						if (buffer.id.value != tmp.operation.id.value) {
 							return;
 						}
 
@@ -1707,7 +1708,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 					enum { ALLOC_FAILED, MAP_FAILED, OK } result = ALLOC_FAILED;
 
 					auto lookup_and_map = [&] (Buffer &buffer) {
-						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						bool const match = buffer.id.value == tmp.operation.id.value;
 						if (!match) {
 							return;
 						}
@@ -1722,13 +1723,14 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 							/* XXX check that actual_size matches alloc_buffer size */
 							Genode::size_t const actual_size = buf.size();
 							Genode::addr_t const phys_addr   = buf.phys_addr();
-							_vgpu.rcs_map_ppgtt(tmp.operation.gpu_addr, phys_addr, actual_size);
-							buffer.ppgtt_va = tmp.operation.gpu_addr;
+							_vgpu.rcs_map_ppgtt(tmp.operation.gpu_vaddr.value,
+							                    phys_addr, actual_size);
+							buffer.ppgtt_va = tmp.operation.gpu_vaddr.value;
 							buffer.ppgtt_va_valid = true;
 							result = OK;
 						} catch (Igd::Device::Could_not_map_buffer) {
 							Genode::error("could not map buffer object (",
-							              Genode::Hex(tmp.operation.gpu_addr), ") into PPGTT");
+							              Genode::Hex(tmp.operation.gpu_vaddr.value), ") into PPGTT");
 							result = MAP_FAILED;
 							return;
 						}
@@ -1755,11 +1757,11 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			}
 			case OP::UNMAP:
 			{
-				bool const ggtt = tmp.operation.gpu_addr == 0;
+				bool const ggtt = tmp.operation.gpu_vaddr.value == 0;
 				if (ggtt) {
 					bool unmapped = false;
 					auto lookup_and_unmap = [&] (Buffer &buffer) {
-						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						bool const match = buffer.id.value == tmp.operation.id.value;
 						if (!match) {
 							return;
 						}
@@ -1782,7 +1784,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 					tmp.success = true;
 				} else {
 					auto lookup_and_unmap = [&] (Buffer &buffer) {
-						bool const match = buffer.handle.value == tmp.operation.handle.value;
+						bool const match = buffer.id.value == tmp.operation.id.value;
 						if (!match) {
 							return;
 						}
@@ -1792,9 +1794,9 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 							return;
 						}
 
-						if (buffer.ppgtt_va != tmp.operation.gpu_addr) {
+						if (buffer.ppgtt_va != tmp.operation.gpu_vaddr.value) {
 							Genode::error("buffer not mapped at ",
-							              Genode::Hex(tmp.operation.gpu_addr));
+							              Genode::Hex(tmp.operation.gpu_vaddr.value));
 							return;
 						}
 
@@ -1818,7 +1820,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 				Buffer *b = nullptr;
 				auto lookup = [&] (Buffer &buffer) {
-					bool const found = buffer.handle.value == tmp.operation.handle.value;
+					bool const found = buffer.id.value == tmp.operation.id.value;
 					if (!found || !buffer.map.cap.valid()) {
 						return;
 					}
@@ -1887,12 +1889,12 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			_request_completed_sigh = sigh;
 		}
 
-		Genode::Dataspace_capability dataspace(Gpu::Handle handle) override
+		Genode::Dataspace_capability dataspace(Gpu::Buffer_id id) override
 		{
 			Genode::Dataspace_capability cap { };
 
 			auto lookup = [&] (Buffer &buffer) {
-				bool const match = buffer.handle.value == handle.value;
+				bool const match = buffer.id.value == id.value;
 				if (!match) {
 					return;
 				}
@@ -1904,12 +1906,12 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			return cap;
 		}
 
-		Genode::Dataspace_capability mapped_dataspace(Gpu::Handle handle) override
+		Genode::Dataspace_capability mapped_dataspace(Gpu::Buffer_id id) override
 		{
 			Genode::Dataspace_capability cap { };
 
 			auto lookup = [&] (Buffer &buffer) {
-				bool const match = buffer.handle.value == handle.value;
+				bool const match = buffer.id.value == id.value;
 				if (!match) {
 					return;
 				}
@@ -1924,8 +1926,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 		Genode::Dataspace_capability info_dataspace() override
 		{
 			Genode::size_t const aperture_size = Igd::Device::Vgpu::APERTURE_SIZE;
-			Info _info(_device.id(), _device.features(), aperture_size,
-			           _vgpu.id(), { .id = _vgpu.completed_seqno() },
+			Info_iris _info(_device.id(), _device.features(), aperture_size,
+			           _vgpu.id(),
 			           _device._revision,
 			           _device._slice_mask,
 			           _device._subslice_mask,
@@ -1952,14 +1954,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 		Info info() const override
 		{
-			Genode::size_t const aperture_size = Igd::Device::Vgpu::APERTURE_SIZE;
-			return Info(_device.id(), _device.features(), aperture_size,
-			            _vgpu.id(), { .id = _vgpu.completed_seqno() },
-			            _device._revision,
-			            _device._slice_mask,
-			            _device._subslice_mask,
-			            _device._eus,
-			            _device._subslices);
+			return Info();
 		}
 
 		Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap,
@@ -2009,7 +2004,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 				try {
 					new (&_heap) Genode::Registered<Buffer>(_buffer_registry,
-						Gpu::Handle { ._valid = true, .value = ++handle_counter }, cap);
+						Gpu::Buffer_id { .value = ++handle_counter }, cap);
 				} catch (...) {
 					if (cap.valid())
 						_device.free_buffer(_heap, cap);
