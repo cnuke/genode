@@ -353,7 +353,8 @@ class Drm_call
 
 			try {
 				_gpu_session.upgrade_ram(4096);
-				bh.map_cap    = _gpu_session.map_buffer(bh.id(), true);
+				bh.map_cap    = _gpu_session.map_buffer(bh.id(), true,
+				                                        Gpu::Mapping_type::INVALID);
 				bh.map_offset = static_cast<Offset>(_env.rm().attach(bh.map_cap));
 				offset       = bh.map_offset;
 

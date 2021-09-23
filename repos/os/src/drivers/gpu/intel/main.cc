@@ -1653,7 +1653,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 		}
 
 		Genode::Dataspace_capability map_buffer(Gpu::Buffer_id id,
-		                                        bool aperture) override
+		                                        bool aperture,
+		                                        Gpu::Mapping_type) override
 		{
 			Genode::Dataspace_capability map_cap;
 
