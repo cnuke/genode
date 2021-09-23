@@ -21,7 +21,6 @@ namespace Gpu {
 	using addr_t = Genode::uint64_t;
 
 	struct Execution_buffer_sequence;
-	struct Info;
 	struct Buffer_id;
 	struct Session;
 }
@@ -32,48 +31,6 @@ namespace Gpu {
 struct Gpu::Execution_buffer_sequence
 {
 	Genode::uint64_t id;
-};
-
-
-/*
- * Gpu information
- *
- * Used to query information in the DRM backend
- */
-struct Gpu::Info
-{
-	using Chip_id    = Genode::uint16_t;
-	using Features   = Genode::uint32_t;
-	using size_t     = Genode::size_t;
-	using Context_id = Genode::uint32_t;
-
-	Chip_id    chip_id;
-	Features   features;
-	size_t     aperture_size;
-	Context_id ctx_id;
-
-	Execution_buffer_sequence last_completed;
-
-	struct Revision      { Genode::uint8_t value; } revision;
-	struct Slice_mask    { unsigned value; }        slice_mask;
-	struct Subslice_mask { unsigned value; }        subslice_mask;
-	struct Eu_total      { unsigned value; }        eus;
-	struct Subslices     { unsigned value; }        subslices;
-
-	Info(Chip_id chip_id, Features features, size_t aperture_size,
-	     Context_id ctx_id, Execution_buffer_sequence last,
-	     Revision rev, Slice_mask s_mask, Subslice_mask ss_mask,
-	     Eu_total eu, Subslices subslice)
-	:
-		chip_id(chip_id), features(features),
-		aperture_size(aperture_size), ctx_id(ctx_id),
-		last_completed(last),
-		revision(rev),
-		slice_mask(s_mask),
-		subslice_mask(ss_mask),
-		eus(eu),
-		subslices(subslice)
-	{ }
 };
 
 
@@ -108,9 +65,9 @@ struct Gpu::Session : public Genode::Session
 	 ***********************/
 
 	/**
-	 * Query GPU information
+	 * Get GPU information dataspace
 	 */
-	virtual Info info() const = 0;
+	virtual Genode::Dataspace_capability info_dataspace() const = 0;
 
 	/**
 	 * Execute commands from given buffer
@@ -200,7 +157,7 @@ struct Gpu::Session : public Genode::Session
 	 ** RPC interface **
 	 *******************/
 
-	GENODE_RPC(Rpc_info, Info, info);
+	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
@@ -223,8 +180,8 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Gpu::Buffer_id, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info, Rpc_exec_buffer,
-	                     Rpc_completion_sigh, Rpc_alloc_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_exec_buffer,
+	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
 	                     Rpc_set_tiling);
