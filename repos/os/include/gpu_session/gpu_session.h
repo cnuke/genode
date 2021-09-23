@@ -20,6 +20,11 @@ namespace Gpu {
 
 	using addr_t = Genode::uint64_t;
 
+	/*
+	 * Type of mapping
+	 */
+	enum class Mapping_type { IGNORED, READ, WRITE, NOSYNC };
+
 	struct Execution_buffer_sequence;
 	struct Buffer_id;
 	struct Session;
@@ -124,11 +129,13 @@ struct Gpu::Session : public Genode::Session
 	 * \param id        buffer id
 	 * \param aperture  if true create CPU accessible mapping through
 	 *                  GGTT window, otherwise create PPGTT mapping
+	 * \param mt        how the buffer is mapped
 	 *
 	 * \throw Mapping_buffer_failed
 	 */
 	virtual Genode::Dataspace_capability map_buffer(Buffer_id id,
-	                                                bool aperture) = 0;
+	                                                bool aperture,
+	                                                Mapping_type mt) = 0;
 
 	/**
 	 * Unmap buffer
@@ -181,7 +188,7 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_ram),
-	                 Gpu::Buffer_id, bool);
+	                 Gpu::Buffer_id, bool, Gpu::Mapping_type);
 	GENODE_RPC(Rpc_unmap_buffer, void, unmap_buffer,
 	           Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
