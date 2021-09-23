@@ -21,6 +21,7 @@
 #include <base/sleep.h>
 
 #include <gpu_session/connection.h>
+#include <util/bit_allocator.h>
 #include <util/retry.h>
 
 extern "C" {
@@ -173,6 +174,9 @@ class Drm_call
 		typedef Genode::Id_space<Buffer_handle>::Element Handle;
 		typedef Genode::Id_space<Buffer_handle>::Id      Handle_id;
 
+		enum { MAX_BUFFER_OBJECTS = 4096, };
+		Genode::Bit_allocator<MAX_BUFFER_OBJECTS> _buffer_id_alloc { };
+
 		struct Buffer_handle
 		{
 			Genode::Dataspace_capability const cap;
@@ -192,10 +196,11 @@ class Drm_call
 
 			Buffer_handle(Genode::Dataspace_capability cap,
 			              Genode::size_t              size,
+			              Gpu::Buffer_id              id,
 			              Genode::Id_space<Buffer_handle> &space)
 			:
 				cap(cap), size(size),
-				handle(*this, space)
+				handle(*this, space, Handle_id { .value = id.value })
 			{
 				if (!cap.valid() || !size)
 					Genode::warning("invalid Buffer_handle ?");
@@ -218,6 +223,11 @@ class Drm_call
 
 			addr_t mmap_addr() {
 				return reinterpret_cast<addr_t>(buffer_attached->local_addr<addr_t>());
+			}
+
+			Gpu::Buffer_id id() const
+			{
+				return Gpu::Buffer_id { .value = handle.id().value };
 			}
 		};
 
@@ -250,7 +260,7 @@ class Drm_call
 
 /* XXX out of cap XXX */
 			bool const ppgtt = Genode::retry<Gpu::Session::Out_of_ram>(
-				[&]() { return _gpu_session.map_buffer_ppgtt(buffer.cap,
+				[&]() { return _gpu_session.map_buffer_ppgtt(buffer.id(),
 				                                             Utils::limit_to_48bit(vaddr.addr)); },
 				[&]() { _gpu_session.upgrade_ram(4096); }
 			);
@@ -269,26 +279,32 @@ class Drm_call
 		{
 			if (!buffer.gpu_vaddr_valid) return;
 
-			_gpu_session.unmap_buffer_ppgtt(buffer.cap, Utils::limit_to_48bit(buffer.gpu_vaddr.addr));
+			_gpu_session.unmap_buffer_ppgtt(buffer.id(),
+			             Utils::limit_to_48bit(buffer.gpu_vaddr.addr));
 			buffer.gpu_vaddr_valid = false;
 		}
 
 		template <typename FUNC>
 		void _alloc_buffer(uint64_t const size, FUNC const &fn)
 		{
+			Gpu::Buffer_id next_buffer_id = Gpu::Buffer_id { _buffer_id_alloc.alloc() };
+
 			Genode::size_t donate = size;
 			Genode::Dataspace_capability cap = Genode::retry<Gpu::Session::Out_of_ram>(
-			[&] () { return _gpu_session.alloc_buffer(size); },
+			[&] () { return _gpu_session.alloc_buffer(next_buffer_id, size); },
 			[&] () {
 				_gpu_session.upgrade_ram(donate);
 				donate /= 4;
 			});
 
 			try {
-				Buffer * buffer = new (&_heap) Buffer(_buffer_registry, cap, size, _buffer_handles);
+				Buffer * buffer =
+					new (&_heap) Buffer(_buffer_registry, cap, size,
+					                    next_buffer_id, _buffer_handles);
 				fn(buffer->handle);
 			} catch (...) {
-				_gpu_session.free_buffer(cap);
+				_buffer_id_alloc.free(next_buffer_id.value);
+				_gpu_session.free_buffer(next_buffer_id);
 				throw;
 			}
 		}
@@ -298,7 +314,7 @@ class Drm_call
 			_env.rm().detach(h.map_offset);
 			h.map_offset = 0;
 
-			_gpu_session.unmap_buffer(h.map_cap);
+			_gpu_session.unmap_buffer(h.id());
 			h.map_cap = Genode::Dataspace_capability();
 
 			_available_gtt_size += h.size;
@@ -311,10 +327,11 @@ class Drm_call
 					_unmap_buffer(bh);
 
 				if (bh.gpu_vaddr_valid) {
-					_gpu_session.unmap_buffer_ppgtt(bh.cap, bh.gpu_vaddr.addr);
+					_gpu_session.unmap_buffer_ppgtt(bh.id(), bh.gpu_vaddr.addr);
 					bh.gpu_vaddr_valid = false;
 				}
-				_gpu_session.free_buffer(bh.cap);
+				_buffer_id_alloc.free(bh.id().value);
+				_gpu_session.free_buffer(bh.id());
 
 				Genode::destroy(&_heap, &bh);
 			});
@@ -338,13 +355,13 @@ class Drm_call
 
 			try {
 				_gpu_session.upgrade_ram(4096);
-				bh.map_cap    = _gpu_session.map_buffer(bh.cap, true);
+				bh.map_cap    = _gpu_session.map_buffer(bh.id(), true);
 				bh.map_offset = static_cast<Offset>(_env.rm().attach(bh.map_cap));
 				offset       = bh.map_offset;
 
 				_available_gtt_size -= bh.size;
 			} catch (...) {
-				if (bh.map_cap.valid()) { _gpu_session.unmap_buffer(bh.map_cap); }
+				if (bh.map_cap.valid()) { _gpu_session.unmap_buffer(bh.id()); }
 				bh.map_cap = Genode::Dataspace_capability();
 				Genode::error("could not attach GEM buffer handle: ", bh.handle);
 				Genode::sleep_forever();
@@ -633,7 +650,7 @@ class Drm_call
 					return;
 
 				uint32_t const m = (stride << 16) | (mode == 1 ? 1 : 0);
-				ok = _gpu_session.set_tiling(bh.map_cap, m);
+				ok = _gpu_session.set_tiling(bh.id(), m);
 			});
 
 			if (!handled)
@@ -762,7 +779,7 @@ class Drm_call
 			if (!command_buffer)
 				return -1;
 
-			command_buffer->seqno = _gpu_session.exec_buffer(command_buffer->cap,
+			command_buffer->seqno = _gpu_session.exec_buffer(command_buffer->id(),
 			                                                 p->batch_len);
 
 			for (uint64_t i = 0; i < p->buffer_count; i++) {
@@ -777,7 +794,7 @@ class Drm_call
 			 * of signal ep, the original drm_i915_gem_wait simply 0 now
 			 */
 			struct drm_i915_gem_wait wait = {
-				.bo_handle = (__u32)command_buffer->handle.id().value,
+				.bo_handle = (__u32)command_buffer->id().value,
 				.flags = 0,
 				.timeout_ns = -1LL
 			};
