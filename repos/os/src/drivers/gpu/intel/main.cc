@@ -1573,8 +1573,8 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			            _device._subslices);
 		}
 
-		Gpu::Info::Execution_buffer_sequence exec_buffer(Buffer_id id,
-		                                                 Genode::size_t) override
+		Gpu::Execution_buffer_sequence exec_buffer(Buffer_id id,
+		                                           Genode::size_t) override
 		{
 			bool found = false;
 
