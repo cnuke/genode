@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2017 Genode Labs GmbH
+ * Copyright (C) 2017-2021 Genode Labs GmbH
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -20,9 +20,18 @@ namespace Gpu {
 
 	using addr_t = Genode::uint64_t;
 
+	struct Execution_buffer_sequence;
 	struct Info;
 	struct Session;
 }
+
+/*
+ * Execution buffer sequence number
+ */
+struct Gpu::Execution_buffer_sequence
+{
+	Genode::uint64_t id;
+};
 
 
 /*
@@ -42,9 +51,7 @@ struct Gpu::Info
 	size_t     aperture_size;
 	Context_id ctx_id;
 
-	struct Execution_buffer_sequence {
-		Genode::uint64_t id;
-	} last_completed;
+	Execution_buffer_sequence last_completed;
 
 	struct Revision      { Genode::uint8_t value; } revision;
 	struct Slice_mask    { unsigned value; }        slice_mask;
@@ -104,7 +111,7 @@ struct Gpu::Session : public Genode::Session
 	 *
 	 * \throw Invalid_state is thrown if the provided buffer is not valid, e.g not mapped
 	 */
-	virtual Gpu::Info::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
+	virtual Gpu::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
 
 	/**
 	 * Register completion signal handler
@@ -182,7 +189,7 @@ struct Gpu::Session : public Genode::Session
 	 *******************/
 
 	GENODE_RPC(Rpc_info, Info, info);
-	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Info::Execution_buffer_sequence, exec_buffer,
+	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Genode::Dataspace_capability, Genode::size_t);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,

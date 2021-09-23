@@ -185,7 +185,7 @@ class Drm_call
 			Offset                       map_offset { 0 };
 
 			Gpu_virtual_address          gpu_vaddr { };
-			Gpu::Info::Execution_buffer_sequence seqno { };
+			Gpu::Execution_buffer_sequence seqno { };
 
 			bool                         gpu_vaddr_valid { false };
 			bool                         busy            { false };
