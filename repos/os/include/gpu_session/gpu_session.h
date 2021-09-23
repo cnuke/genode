@@ -21,9 +21,20 @@ namespace Gpu {
 	using addr_t = Genode::uint64_t;
 
 	struct Execution_buffer_sequence;
+	struct Buffer_id;
 	struct Info;
 	struct Session;
 }
+
+
+/*
+ * Local buffer identifier
+ */
+struct Gpu::Buffer_id
+{
+	unsigned long value;
+};
+
 
 /*
  * Execution buffer sequence number
@@ -45,9 +56,10 @@ struct Gpu::Info { };
  */
 struct Gpu::Session : public Genode::Session
 {
-	struct Out_of_ram    : Genode::Exception { };
-	struct Out_of_caps   : Genode::Exception { };
-	struct Invalid_state : Genode::Exception { };
+	struct Out_of_ram     : Genode::Exception { };
+	struct Out_of_caps    : Genode::Exception { };
+	struct Invalid_state  : Genode::Exception { };
+	struct Conflicting_id : Genode::Exception { };
 	struct Mapping_buffer_failed  : Genode::Exception { };
 
 	enum { REQUIRED_QUOTA = 1024 * 1024, CAP_QUOTA = 8, };
@@ -73,14 +85,14 @@ struct Gpu::Session : public Genode::Session
 	/**
 	 * Execute commands from given buffer
 	 *
-	 * \param cap   capability to buffer object containing the exec buffer
+	 * \param id    buffer id
 	 * \param size  size of the batch buffer in bytes
 	 *
 	 * \return execution buffer sequence number for complete checks
 	 *
 	 * \throw Invalid_state is thrown if the provided buffer is not valid, e.g not mapped
 	 */
-	virtual Gpu::Execution_buffer_sequence exec_buffer(Genode::Dataspace_capability cap, Genode::size_t size) = 0;
+	virtual Gpu::Execution_buffer_sequence exec_buffer(Buffer_id id, Genode::size_t size) = 0;
 
 	/**
 	 * Register completion signal handler
@@ -93,65 +105,75 @@ struct Gpu::Session : public Genode::Session
 	/**
 	 * Allocate buffer dataspace
 	 *
+	 * \param id    buffer id to be associated with the buffer
 	 * \param size  size of buffer in bytes
 	 *
 	 * \throw Out_of_ram
 	 * \throw Out_of_caps
+	 * \throw Conflicting_id
 	 */
-	virtual Genode::Dataspace_capability alloc_buffer(Genode::size_t size) = 0;
+	virtual Genode::Dataspace_capability alloc_buffer(Buffer_id id, Genode::size_t size) = 0;
+
+	/**
+	 * Obtain dataspace for given buffer id
+	 *
+	 * \param id  buffer id
+	 *
+	 * \throw Invalid_id
+	 */
+	// virtual Genode::Dataspace_capability buffer_dataspace(Buffer_id id) = 0;
 
 	/**
 	 * Free buffer dataspace
 	 *
 	 * \param ds  dataspace capability for buffer
 	 */
-	virtual void free_buffer(Genode::Dataspace_capability ds) = 0;
+	virtual void free_buffer(Buffer_id id) = 0;
 
 	/**
 	 * Map buffer
 	 *
-	 * \param ds        dataspace capability for buffer
+	 * \param id        buffer id
 	 * \param aperture  if true create CPU accessible mapping through
 	 *                  GGTT window, otherwise create PPGTT mapping
 	 *
 	 * \throw Mapping_buffer_failed
 	 */
-	virtual Genode::Dataspace_capability map_buffer(Genode::Dataspace_capability ds,
+	virtual Genode::Dataspace_capability map_buffer(Buffer_id id,
 	                                                bool aperture) = 0;
 
 	/**
 	 * Unmap buffer
 	 *
-	 * \param ds  dataspace capability for buffer
+	 * \param id  buffer id
 	 */
-	virtual void unmap_buffer(Genode::Dataspace_capability ds) = 0;
+	virtual void unmap_buffer(Buffer_id id) = 0;
 
 	/**
 	 * Map buffer in PPGTT
 	 *
-	 * \param ds  dataspace capability for buffer
+	 * \param id  buffer id
 	 * \param va  virtual address
 	 *
 	 * \throw Mapping_buffer_failed
 	 * \throw Out_of_ram
 	 */
-	virtual bool map_buffer_ppgtt(Genode::Dataspace_capability ds,
-	                              Gpu::addr_t va) = 0;
+	virtual bool map_buffer_ppgtt(Buffer_id id, Gpu::addr_t va) = 0;
 
 	/**
 	 * Unmap buffer
 	 *
-	 * \param ds  dataspace capability for buffer
+	 * \param id  buffer id
 	 */
-	virtual void unmap_buffer_ppgtt(Genode::Dataspace_capability ds, Gpu::addr_t) = 0;
+	virtual void unmap_buffer_ppgtt(Buffer_id id, Gpu::addr_t) = 0;
 
 	/**
 	 * Set tiling for buffer
 	 *
-	 * \param ds    dataspace capability for buffer
+	 * \param id    buffer id
 	 * \param mode  tiling mode
 	 */
-	virtual bool set_tiling(Genode::Dataspace_capability ds, unsigned mode) = 0;
+	virtual bool set_tiling(Buffer_id id, unsigned mode) = 0;
 
 	/*******************
 	 ** RPC interface **
@@ -161,25 +183,25 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_info, Info, info);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
-	                 Genode::Dataspace_capability, Genode::size_t);
+	                 Gpu::Buffer_id, Genode::size_t);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,
 	           Genode::Signal_context_capability);
 	GENODE_RPC_THROW(Rpc_alloc_buffer, Genode::Dataspace_capability, alloc_buffer,
 	                 GENODE_TYPE_LIST(Out_of_ram),
-	                 Genode::size_t);
-	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Genode::Dataspace_capability);
+	                 Gpu::Buffer_id, Genode::size_t);
+	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_map_buffer, Genode::Dataspace_capability, map_buffer,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_ram),
-	                 Genode::Dataspace_capability, bool);
+	                 Gpu::Buffer_id, bool);
 	GENODE_RPC(Rpc_unmap_buffer, void, unmap_buffer,
-	           Genode::Dataspace_capability);
+	           Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_ram),
-	                 Genode::Dataspace_capability, Gpu::addr_t);
+	                 Gpu::Buffer_id, Gpu::addr_t);
 	GENODE_RPC(Rpc_unmap_buffer_ppgtt, void, unmap_buffer_ppgtt,
-	           Genode::Dataspace_capability, Gpu::addr_t);
+	           Gpu::Buffer_id, Gpu::addr_t);
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
-	           Genode::Dataspace_capability, unsigned);
+	           Gpu::Buffer_id, unsigned);
 
 	GENODE_RPC_INTERFACE(Rpc_info, Rpc_info_dataspace, Rpc_exec_buffer,
 	                     Rpc_completion_sigh, Rpc_alloc_buffer,
