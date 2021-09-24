@@ -27,7 +27,6 @@ namespace Gpu {
 
 	struct Execution_buffer_sequence;
 	struct Buffer_id;
-	struct Info;
 	struct Session;
 }
 
@@ -48,12 +47,6 @@ struct Gpu::Execution_buffer_sequence
 {
 	Genode::uint64_t id;
 };
-
-
-/*
- * Dummy gpu information
- */
-struct Gpu::Info { };
 
 
 /*
@@ -81,11 +74,6 @@ struct Gpu::Session : public Genode::Session
 	 * Get GPU information dataspace
 	 */
 	virtual Genode::Dataspace_capability info_dataspace() const = 0;
-
-	/**
-	 * Query GPU information
-	 */
-	virtual Info info() const = 0;
 
 	/**
 	 * Execute commands from given buffer
@@ -197,7 +185,6 @@ struct Gpu::Session : public Genode::Session
 	 *******************/
 
 	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
-	GENODE_RPC(Rpc_info, Info, info);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
@@ -222,7 +209,7 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Gpu::Buffer_id, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info, Rpc_info_dataspace, Rpc_exec_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_exec_buffer,
 	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,

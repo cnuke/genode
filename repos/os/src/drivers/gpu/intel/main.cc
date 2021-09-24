@@ -1566,11 +1566,6 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			return _vgpu.info_dataspace();
 		}
 
-		Info info() const override
-		{
-			return Info();
-		}
-
 		Gpu::Execution_buffer_sequence exec_buffer(Gpu::Buffer_id id,
 		                                           Genode::size_t) override
 		{
