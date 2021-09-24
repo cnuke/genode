@@ -82,6 +82,16 @@ struct Gpu::Session : public Genode::Session
 	virtual Gpu::Execution_buffer_sequence exec_buffer(Buffer_id id, Genode::size_t size) = 0;
 
 	/**
+	 * Check if execution buffer has been completed
+	 *
+	 * \param seqno  sequence number of the execution buffer
+	 *
+	 * \return true if execution buffer has been finished, otherwise
+	 *         false is returned
+	 */
+	virtual bool complete(Execution_buffer_sequence seqno) = 0;
+
+	/**
 	 * Register completion signal handler
 	 *
 	 * \param sigh  signal handler that is called when the execution
@@ -161,6 +171,8 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Execution_buffer_sequence, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
+	GENODE_RPC(Rpc_complete, bool, complete,
+	           Gpu::Execution_buffer_sequence);
 	GENODE_RPC(Rpc_completion_sigh, void, completion_sigh,
 	           Genode::Signal_context_capability);
 	GENODE_RPC_THROW(Rpc_alloc_buffer, Genode::Dataspace_capability, alloc_buffer,

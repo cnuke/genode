@@ -164,7 +164,6 @@ class Drm_call
 		Gpu::Info_intel  const &_gpu_info {
 			*_gpu_session.attached_info<Gpu::Info_intel>() };
 		size_t            _available_gtt_size { _gpu_info.aperture_size };
-		bool              _complete           { false };
 
 		using Offset = unsigned long;
 
@@ -409,11 +408,7 @@ class Drm_call
 		 ** execbuffer completion **
 		 ***************************/
 
-		void _handle_completion()
-		{
-			/* wake up possible waiters */
-			_complete = true;
-		}
+		void _handle_completion() { }
 
 		Genode::Io_signal_handler<Drm_call> _completion_sigh {
 			_env.ep(), *this, &Drm_call::_handle_completion };
@@ -835,8 +830,10 @@ class Drm_call
 			bool busy = true;
 
 			while (busy) {
+				Gpu::Execution_buffer_sequence seqno { };
 				bool handled = _apply_buffer(id, [&](Buffer_handle &bh) {
 					busy = bh.busy;
+					seqno = bh.seqno;
 				});
 
 				if (!handled) {
@@ -854,7 +851,7 @@ class Drm_call
 					return -1;
 				}
 
-				wait_for_completion();
+				wait_for_completion(seqno);
 			}
 
 			return 0;
@@ -1161,12 +1158,14 @@ class Drm_call
 			              : _generic_ioctl(command_number(request), arg);
 		}
 
-		void wait_for_completion()
+		void wait_for_completion(Gpu::Execution_buffer_sequence seqno)
 		{
-			_complete = false;
-
-			while (_complete == false)
+			while (true) {
+				if (_gpu_session.complete(seqno)) {
+					break;
+				}
 				_env.ep().wait_and_dispatch_one_io_signal();
+			}
 
 			/* mark done buffer objects */
 
