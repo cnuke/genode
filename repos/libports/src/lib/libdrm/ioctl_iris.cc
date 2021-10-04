@@ -253,12 +253,20 @@ class Drm_call
 				                Genode::Hex(buffer.gpu_vaddr.addr), " vs ",
 				                Genode::Hex(vaddr.addr));
 
-/* XXX out of cap XXX */
 			bool const ppgtt = Genode::retry<Gpu::Session::Out_of_ram>(
-				[&]() { return _gpu_session.map_buffer_ppgtt(buffer.id(),
-				                                             Utils::limit_to_48bit(vaddr.addr)); },
-				[&]() { _gpu_session.upgrade_ram(4096); }
-			);
+			[&]() {
+				return Genode::retry<Gpu::Session::Out_of_caps>(
+				[&] () {
+					return _gpu_session.map_buffer_ppgtt(buffer.id(),
+						Utils::limit_to_48bit(vaddr.addr));
+				},
+				[&] () {
+					_gpu_session.upgrade_caps(2);
+				});
+			},
+			[&] () {
+				_gpu_session.upgrade_ram(4096);
+			});
 
 			if (!ppgtt) {
 				Genode::error("could not insert buffer into PPGTT");
@@ -286,8 +294,14 @@ class Drm_call
 			Buffer *buffer = nullptr;
 			Genode::retry<Gpu::Session::Out_of_ram>(
 			[&] () {
-				buffer =
-					new (&_heap) Buffer(_gpu_session, size, _buffer_space);
+				Genode::retry<Gpu::Session::Out_of_caps>(
+				[&] () {
+					buffer =
+						new (&_heap) Buffer(_gpu_session, size, _buffer_space);
+				},
+				[&] () {
+					_gpu_session.upgrade_caps(2);
+				});
 			},
 			[&] () {
 				_gpu_session.upgrade_ram(donate);
