@@ -37,6 +37,9 @@ class Igd::Ppgtt_allocator : public Genode::Translation_table_allocator
 
 	public:
 
+		struct Out_of_caps : Genode::Exception { };
+		struct Out_of_ram  : Genode::Exception { };
+
 		Ppgtt_allocator(Genode::Region_map      &rm,
 		                Utils::Backend_alloc    &backend)
 		: _rm(rm), _backend(backend) { }
@@ -47,11 +50,17 @@ class Igd::Ppgtt_allocator : public Genode::Translation_table_allocator
 
 		bool alloc(size_t size, void **out_addr) override
 		{
-			Genode::Ram_dataspace_capability ds = _backend.alloc(size);
-			if (!ds.valid()) { return false; }
+			try {
+				Genode::Ram_dataspace_capability ds = _backend.alloc(size, true);
+				if (!ds.valid()) { return false; }
 
-			*out_addr = _rm.attach(ds);
-			return _map.add(ds, *out_addr);
+				*out_addr = _rm.attach(ds);
+				return _map.add(ds, *out_addr);
+			} catch (Utils::Backend_alloc::Out_of_caps) {
+				throw Out_of_caps();
+			} catch (Utils::Backend_alloc::Out_of_ram) {
+				throw Out_of_ram();
+			}
 		}
 
 		void free(void *addr, size_t) override

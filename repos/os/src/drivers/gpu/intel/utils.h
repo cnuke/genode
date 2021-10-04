@@ -29,7 +29,10 @@ namespace Utils {
 	 */
 	struct Backend_alloc : Genode::Interface
 	{
-		virtual Ram alloc(Genode::size_t) = 0;
+		struct Out_of_caps : Genode::Exception { };
+		struct Out_of_ram  : Genode::Exception { };
+
+		virtual Ram alloc(Genode::size_t, bool) = 0;
 		virtual void free(Ram) = 0;
 	};
 

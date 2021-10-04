@@ -177,25 +177,25 @@ namespace Genode
 				_backend(backend)
 			{
 				/* XXX addr PAT helper instead of hardcoding */
-				page.ds    = _backend.alloc(PAGE_SIZE);
+				page.ds    = _backend.alloc(PAGE_SIZE, false);
 				page.addr  = Genode::Dataspace_client(page.ds).phys_addr();
 				page.addr |= 1;
 				page.addr |= 1 << 1;
 				page.next  = nullptr;
 
-				pt.ds      = _backend.alloc(PAGE_SIZE);
+				pt.ds      = _backend.alloc(PAGE_SIZE, false);
 				pt.addr    = Genode::Dataspace_client(pt.ds).phys_addr();
 				pt.addr   |= 1;
 				pt.addr   |= 1 << 1;
 				pt.next    = &page;
 
-				pd.ds      = _backend.alloc(PAGE_SIZE);
+				pd.ds      = _backend.alloc(PAGE_SIZE, false);
 				pd.addr    = Genode::Dataspace_client(pd.ds).phys_addr();
 				pd.addr   |= 1;
 				pd.addr   |= 1 << 1;
 				pd.next    = &pt;
 
-				pdp.ds     = _backend.alloc(PAGE_SIZE);
+				pdp.ds     = _backend.alloc(PAGE_SIZE, false);
 				pdp.addr   = Genode::Dataspace_client(pdp.ds).phys_addr();
 				pdp.addr  |= 1;
 				pdp.addr  |= 1 << 1;
@@ -273,9 +273,11 @@ class Genode::Level_4_translation_table
 				Descriptor::access_t table_entry =
 					Descriptor::create(flags, pa);
 
+				/* XXX ignore double insertion for now
 				if (!Descriptor::scratch(desc, scratch->addr)) {
 					throw Double_insertion();
 				}
+				*/
 				desc = table_entry;
 			}
 		};
@@ -469,8 +471,7 @@ class Genode::Page_directory
 					if (!alloc) { throw Allocator::Out_of_memory(); }
 
 					/* create and link next level table */
-					try { table = new (alloc) ENTRY(scratch->next); }
-					catch (...) { throw Allocator::Out_of_memory(); }
+					table = new (alloc) ENTRY(scratch->next);
 					ENTRY * phys_addr = (ENTRY*) alloc->phys_addr(table);
 
 					Gpu::addr_t const pa = (Gpu::addr_t)(phys_addr ? phys_addr : table);
@@ -661,8 +662,7 @@ class Genode::Pml4_table
 						if (!alloc) { throw Allocator::Out_of_memory(); }
 
 						/* create and link next level table */
-						try { table = new (alloc) ENTRY(scratch->next); }
-						catch (...) { throw Allocator::Out_of_memory(); }
+						table = new (alloc) ENTRY(scratch->next);
 
 						ENTRY * phys_addr = (ENTRY*) alloc->phys_addr(table);
 						Gpu::addr_t const pa = (Gpu::addr_t)(phys_addr ? phys_addr : table);
