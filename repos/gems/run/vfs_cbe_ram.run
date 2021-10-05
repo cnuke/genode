@@ -1,0 +1,300 @@
+
+if {[expr ![info exists ::env(CBE_KEEP)]]} {
+exec rm -rf var/libcache/cbe
+exec rm -rf var/libcache/cbe_cxx
+exec rm -rf var/libcache/cbe_common
+exec rm -rf var/libcache/cbe_common_cxx
+exec rm -rf var/libcache/cbe_init
+exec rm -rf var/libcache/cbe_init_cxx
+exec rm -rf var/libcache/cbe_check
+exec rm -rf var/libcache/cbe_check_cxx
+exec rm -rf var/libcache/cbe_dump
+exec rm -rf var/libcache/cbe_dump_cxx
+}
+
+append build_components {
+	core init timer
+	server/vfs
+	server/vfs_block
+	lib/vfs/import
+	app/sequence
+	app/block_tester
+
+	app/cbe_init_trust_anchor
+	app/cbe_init
+	lib/vfs/cbe
+	lib/vfs/cbe_crypto/aes_cbc
+	lib/vfs/cbe_crypto/memcopy
+	lib/vfs/cbe_trust_anchor
+}
+
+build $build_components
+
+create_boot_directory
+
+append config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="RAM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100"/>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="vfs" caps="500">
+		<resource name="RAM" quantum="300M"/>
+		<provides> <service name="File_system"/> </provides>
+		<config>
+			<vfs>
+				<ram/>
+				<import>
+					<zero name="cbe_block.img" size="32M"/>
+				</import>
+			</vfs>
+			<default-policy root="/" writeable="yes"/>
+		</config>
+	</start>
+
+	<start name="vfs_trust_anchor" caps="120">
+		<binary name="vfs"/>
+		<resource name="RAM" quantum="16M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<vfs>
+				<dir name="ta_storage">
+					<fs/>
+				</dir>
+
+				<dir name="dev">
+					<cbe_trust_anchor name="cbe_trust_anchor"
+					                  storage_dir="/ta_storage"/>
+				</dir>
+			</vfs>
+
+			<default-policy root="/dev/cbe_trust_anchor" writeable="yes"/>
+		</config>
+		<route>
+			<service name="File_system"> <child name="vfs"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="cbe" caps="2000">
+		<binary name="sequence"/>
+		<resource name="RAM" quantum="300M"/>
+		<config>
+
+			<start name="cbe_init_trust_anchor">
+				<resource name="RAM" quantum="4M"/>
+				<config passphrase="foobar" trust_anchor_dir="/trust_anchor">
+					<vfs>
+						<dir name="trust_anchor">
+							<fs label="ta"/>
+						</dir>
+					</vfs>
+				</config>
+			</start>
+
+			<start name="init" caps="1600">
+				<resource name="RAM" quantum="256M"/>
+				<config verbose="yes">
+
+					<parent-provides>
+						<service name="ROM"/>
+						<service name="PD"/>
+						<service name="RM"/>
+						<service name="CPU"/>
+						<service name="LOG"/>
+						<service name="Nic"/>
+						<service name="Timer"/>
+						<service name="File_system"/>
+						<service name="Terminal"/>
+					</parent-provides>
+
+					<default-route> <any-service> <parent/> </any-service> </default-route>
+
+					<default caps="100"/>
+
+					<start name="vfs_block" caps="100">
+						<resource name="RAM" quantum="4M"/>
+						<provides> <service name="Block"/> </provides>
+						<config>
+							<vfs>
+								<fs label="fs"/>
+							</vfs>
+							<default-policy file="/cbe_block.img" block_size="4096" writeable="yes"/>
+						</config>
+					</start>
+
+					<start name="cbe_init">
+						<resource name="RAM" quantum="4M"/>
+						<exit propagate="yes"/>
+						<config trust_anchor_dir="/trust_anchor">
+							<vfs>
+								<dir name="trust_anchor">
+									<fs label="ta"/>
+								</dir>
+							</vfs>
+
+							<key id="12"/>
+							<virtual-block-device
+								nr_of_levels="3"
+								nr_of_children="64"
+								nr_of_leafs="512" />
+
+							<free-tree
+								nr_of_levels="3"
+								nr_of_children="64"
+								nr_of_leafs="2048" />
+						</config>
+						<route>
+							<service name="Block"> <child name="vfs_block"/> </service>
+							<any-service> <parent/> </any-service>
+						</route>
+					</start>
+				</config>
+				<route>
+					<service name="File_system"> <parent label="fs"/> </service>
+					<any-service> <parent/> </any-service>
+				</route>
+			</start>
+
+			<start name="init" caps="1600">
+				<resource name="RAM" quantum="256M"/>
+				<config verbose="yes">
+
+					<parent-provides>
+						<service name="ROM"/>
+						<service name="PD"/>
+						<service name="RM"/>
+						<service name="CPU"/>
+						<service name="LOG"/>
+						<service name="Nic"/>
+						<service name="Timer"/>
+						<service name="File_system"/>
+						<service name="Terminal"/>
+					</parent-provides>
+
+					<default-route> <any-service> <parent/> </any-service> </default-route>
+
+					<default caps="100"/>
+
+					<start name="vfs_cbe" caps="200">
+						<binary name="vfs"/>
+						<resource name="RAM" quantum="16M"/>
+						<provides><service name="File_system"/></provides>
+						<config>
+							<vfs>
+								<dir name="block">
+									<fs buffer_size="1M" label="fs_backend"/>
+								</dir>
+								<cbe_crypto_aes_cbc name="cbe_crypto"/>
+								<dir name="ta">
+									<fs buffer_size="1M" label="ta"/>
+								</dir>
+								<dir name="dev">
+									<cbe name="cbe" debug="yes" verbose="yes"
+										 block="/block/cbe_block.img"
+										 crypto="/cbe_crypto"
+										 trust_anchor="/ta"/>
+								</dir>
+							</vfs>
+
+							<default-policy root="/dev" writeable="yes"/>
+						</config>
+						<route>
+							<service name="File_system" label="fs_backend"> <parent label="fs"/> </service>
+							<service name="File_system" label="ta">         <parent label="ta"/> </service>
+							<any-service> <parent/> </any-service>
+						</route>
+					</start>
+
+					<start name="cbe_block" caps="100">
+						<binary name="vfs_block"/>
+						<resource name="RAM" quantum="4M"/>
+						<provides> <service name="Block"/> </provides>
+						<config>
+							<vfs>
+								<fs/>
+							</vfs>
+							<default-policy file="/cbe/current/data" block_size="4096" writeable="yes"/>
+						</config>
+						<route>
+							<service name="File_system"> <child name="vfs_cbe"/> </service>
+							<any-service> <parent/> </any-service>
+						</route>
+					</start>
+
+					<start name="block_tester">
+						<binary name="block_tester" />
+						<resource name="RAM" quantum="32M"/>
+						<config verbose="yes" report="no" log="yes" stop_on_error="no">
+							<tests>
+								<sequential copy="no" length="8K" size="4K"/>
+							</tests>
+						</config>
+						<route>
+							<service name="Block"><child name="cbe_block"/></service>
+							<any-service> <parent/> <any-child /> </any-service>
+						</route>
+					</start>
+
+				</config>
+			</start>
+		</config>
+		<route>
+			<service name="File_system" label_last="fs">
+				<child name="vfs"/>
+			</service>
+			<service name="File_system" label_last="ta">
+				<child name="vfs_trust_anchor"/>
+			</service>
+			<service name="Block"> <child name="vfs_block"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+append boot_modules {
+	block_tester
+	cbe_cxx.lib.so
+	cbe_init cbe_init_cxx.lib.so
+	cbe_init_trust_anchor
+	core
+	init
+	ld.lib.so
+	libc.lib.so
+	libcrypto.lib.so
+	libsparkcrypto.lib.so
+	sequence
+	spark.lib.so
+	timer
+	vfs vfs.lib.so
+	vfs_block
+	vfs_cbe.lib.so
+	vfs_cbe_crypto_aes_cbc.lib.so
+	vfs_cbe_trust_anchor.lib.so
+	vfs_import.lib.so
+}
+
+build_boot_image $boot_modules
+
+run_genode_until {.*child "block_tester" exited with exit value 0.*\n} 240
+
