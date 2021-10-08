@@ -95,9 +95,36 @@ class Vfs_block::File
 
 		Block::Session::Info _block_info { };
 
+		struct Sync
+		{
+			enum { INITIAL, QUEUED, COMPLETE } state { INITIAL };
+
+			Vfs::Vfs_handle &vfs_handle;
+
+			Sync(Vfs::Vfs_handle &vfs_handle) : vfs_handle(vfs_handle) { }
+
+			bool complete()
+			{
+				switch (state) {
+					case Sync::INITIAL:
+						if (!vfs_handle.fs().queue_sync(&vfs_handle))
+							return false;
+						state = Sync::QUEUED; [[ fallthrough ]];
+					case Sync::QUEUED:
+						if (vfs_handle.fs().complete_sync(&vfs_handle) == Vfs::File_io_service::SYNC_QUEUED)
+							return false;
+						state = Sync::COMPLETE; [[ fallthrough ]];
+					case Sync::COMPLETE:
+						break;
+				}
+				return true;
+			}
+		};
+
 	public:
 
-		File(Genode::Allocator         &alloc,
+		File(Genode::Entrypoint        &ep,
+		     Genode::Allocator         &alloc,
 		     Vfs::File_system          &vfs,
 		     Signal_context_capability  sigh,
 		     File_info           const &info)
@@ -118,6 +145,11 @@ class Vfs_block::File
 				error("Could not open '", info.path.string(), "'");
 				throw Genode::Exception();
 			}
+
+			Sync sync { *_vfs_handle };
+
+			while (!sync.complete())
+				ep.wait_and_dispatch_one_io_signal();
 
 			using Stat_result = DS::Stat_result;
 			Vfs::Directory_service::Stat stat { };
@@ -378,7 +410,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 
 		try {
 			_block_ds.construct(_env.ram(), _env.rm(), tx_buf_size);
-			_block_file.construct(_heap, _vfs_env.root_dir(),
+			_block_file.construct(_env.ep(), _heap, _vfs_env.root_dir(),
 			                      _request_handler, file_info);
 			_block_session.construct(_env.rm(), _env.ep(),
 			                         _block_ds->cap(),
