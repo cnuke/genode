@@ -1580,10 +1580,10 @@ class Vfs_cbe::Wrapper
 		void _dump_state()
 		{
 			if (_debug) {
-				static uint64_t cnt = 0;
 				log("FE: ", Frontend_request::state_to_string(_frontend_request.state),
-				     " (", _frontend_request.cbe_request, ") ",
-				    "BE: ", *_backend_job, " ", ++cnt);
+				     " (", _frontend_request.cbe_request, ") ");
+				if (_backend_job.constructed())
+					log("BE: ", *_backend_job);
 			}
 		}
 
