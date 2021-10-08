@@ -17,6 +17,7 @@ append build_components {
 	server/vfs
 	server/vfs_block
 	lib/vfs/import
+	lib/vfs/jitterentropy
 	app/sequence
 	app/block_tester
 
@@ -81,6 +82,7 @@ append config {
 				</dir>
 
 				<dir name="dev">
+					<jitterentropy/>
 					<cbe_trust_anchor name="cbe_trust_anchor"
 					                  storage_dir="/ta_storage"/>
 				</dir>
@@ -292,6 +294,7 @@ append boot_modules {
 	vfs_cbe_crypto_aes_cbc.lib.so
 	vfs_cbe_trust_anchor.lib.so
 	vfs_import.lib.so
+	vfs_jitterentropy.lib.so
 }
 
 build_boot_image $boot_modules
