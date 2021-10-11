@@ -7,6 +7,13 @@ if {[have_spec nova]} {
 	proc kernel_output { } { return "novga serial logmem" }
 }
 
+append build_components {
+	drivers/gpu/intel
+	test/mesa_demo/gears
+}
+
+build $build_components
+
 create_boot_directory
 
 import_from_depot [depot_user]/src/[base_src] \
@@ -695,6 +702,6 @@ exec sh -c "tar cf [run_dir]/genode/depot_users.tar -C [genode_dir] \
 # Create boot image
 #
 
-append boot_modules { }
+append boot_modules { libdrm.lib.so intel_gpu_drv }
 
 build_boot_image $boot_modules
