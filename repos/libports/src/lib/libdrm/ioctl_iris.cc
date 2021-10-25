@@ -1318,7 +1318,7 @@ class Drm_call
 
 			Gpu::Buffer_id const id { .value = p->handle };
 			try {
-				_buffer_space.apply<Buffer>(id, [&](Buffer const &b) {
+				_buffer_space.apply<Buffer>(id, [&](Buffer const &) {
 
 					if (!prime_handle.value)
 						prime_handle = id;
