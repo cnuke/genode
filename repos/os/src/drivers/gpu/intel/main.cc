@@ -447,7 +447,7 @@ struct Igd::Device
 		:
 			ctx (device._env.rm(), alloc, device, CONTEXT::CONTEXT_PAGES, 1 /* omit GuC page */),
 			ring(device._env.rm(), alloc, device, CONTEXT::RING_PAGES, 0),
-			ppgtt_allocator(device._env.rm(), device._pci_backend_alloc),
+			ppgtt_allocator(alloc, device._env.rm(), device._pci_backend_alloc),
 			ppgtt_scratch(device._pci_backend_alloc)
 		{
 			/* PPGTT */
