@@ -1,11 +1,13 @@
 _/raw/vbox5-nova-block
-_/src/vbox5-nova
 _/src/base-nova
-_/src/libc
 _/src/init
+_/src/jpeg
 _/src/libc
-_/src/posix
-_/src/zlib
+_/src/libc
 _/src/libiconv
+_/src/libyuv
+_/src/posix
 _/src/stdcxx
+_/src/vbox5-nova
 _/src/vfs
+_/src/zlib
