@@ -9,6 +9,8 @@ if {[have_spec nova]} {
 
 append build_components {
 	drivers/gpu/intel
+	lib/mesa/iris
+	lib/mesa
 	test/mesa_demo/gears
 }
 
@@ -702,6 +704,6 @@ exec sh -c "tar cf [run_dir]/genode/depot_users.tar -C [genode_dir] \
 # Create boot image
 #
 
-append boot_modules { libdrm.lib.so intel_gpu_drv }
+append boot_modules { libdrm.lib.so intel_gpu_drv mesa_gpu-iris.lib.so mesa.lib.so }
 
 build_boot_image $boot_modules
