@@ -37,15 +37,22 @@ class Igd::Ppgtt_allocator : public Genode::Translation_table_allocator
 
 		Genode::Allocator_avl    _range;
 
+		Genode::Cap_quota_guard &_cap_quota_guard;
+		Genode::Ram_quota_guard &_ram_quota_guard;
+
 	public:
 
 		Ppgtt_allocator(Genode::Allocator       &md_alloc,
 		                Genode::Region_map      &rm,
-		                Utils::Backend_alloc    &backend)
+		                Utils::Backend_alloc    &backend,
+		                Genode::Cap_quota_guard &cap_guard,
+		                Genode::Ram_quota_guard &ram_guard)
 		:
 			_rm         { rm },
 			_backend    { backend },
-			_range      { &md_alloc }
+			_range      { &md_alloc },
+			_cap_quota_guard { cap_guard },
+			_ram_quota_guard { ram_guard }
 		{ }
 
 		~Ppgtt_allocator()
@@ -67,7 +74,10 @@ class Igd::Ppgtt_allocator : public Genode::Translation_table_allocator
 				return true;
 			}
 
-			size_t alloc_size = 1024*1024;
+			size_t const alloc_size = 1024*1024;
+
+			_cap_quota_guard.withdraw(Genode::Cap_quota { 16 });
+			_ram_quota_guard.withdraw(Genode::Ram_quota { alloc_size });
 
 			Genode::Ram_dataspace_capability ds =
 				_backend.alloc(alloc_size);

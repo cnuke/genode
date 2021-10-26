@@ -443,11 +443,14 @@ struct Igd::Device
 
 		Engine(Igd::Device         &device,
 		       uint32_t             id,
-		       Allocator           &alloc)
+		       Allocator           &alloc,
+		       Cap_quota_guard     &cap_guard,
+		       Ram_quota_guard     &ram_guard)
 		:
 			ctx (device._env.rm(), alloc, device, CONTEXT::CONTEXT_PAGES, 1 /* omit GuC page */),
 			ring(device._env.rm(), alloc, device, CONTEXT::RING_PAGES, 0),
-			ppgtt_allocator(alloc, device._env.rm(), device._pci_backend_alloc),
+			ppgtt_allocator(alloc, device._env.rm(), device._pci_backend_alloc,
+			                cap_guard, ram_guard),
 			ppgtt_scratch(device._pci_backend_alloc)
 		{
 			/* PPGTT */
@@ -557,11 +560,12 @@ struct Igd::Device
 		}
 
 		Vgpu(Device &device, Allocator &alloc,
-		     Ram_allocator &ram, Region_map &rm)
+		     Ram_allocator &ram, Region_map &rm,
+		     Cap_quota_guard &cap_guard, Ram_quota_guard &ram_guard)
 		:
 			_device(device),
 			_id(_id_alloc()),
-			rcs(_device, _id + Rcs_context::HW_ID, alloc),
+			rcs(_device, _id + Rcs_context::HW_ID, alloc, cap_guard, ram_guard),
 			_info_dataspace(ram, rm, INFO_SIZE)
 		{
 			_device.vgpu_created();
@@ -1486,9 +1490,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			 */
 			Cap_quota const map_buffer_cap_amount       {    2 };
 			Ram_quota const map_buffer_ram_amount       { 1024 };
-			Cap_quota const map_buffer_ppgtt_cap_amount {    2 };
-			Ram_quota const map_buffer_ppgtt_ram_amount { 4096 };
-			Cap_quota const alloc_buffer_cap_amount     {    4 };
+			Cap_quota const alloc_buffer_cap_amount     {    1 };
 
 			struct Reservation
 			{
@@ -1534,12 +1536,6 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			{
 				return Reservation { _cap_quota_guard, map_buffer_ppgtt_cap_amount,
 				                     _ram_quota_guard, map_buffer_ppgtt_ram_amount };
-			}
-
-			void unmap_buffer_ppgtt()
-			{
-				_cap_quota_guard.replenish(map_buffer_ppgtt_cap_amount);
-				_ram_quota_guard.replenish(map_buffer_ppgtt_ram_amount);
 			}
 
 			Reservation alloc_buffer(Ram_quota ram_amount)
@@ -1625,7 +1621,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			_rm(rm),
 			_ram(ram, _ram_quota_guard(), _cap_quota_guard()),
 			_device(device),
-			_vgpu(_device, _heap, ram, rm)
+			_vgpu(_device, _heap, ram, rm, _cap_quota_guard(), _ram_quota_guard())
 		{ }
 
 		~Session_component()
@@ -1645,7 +1641,6 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				Genode::Dataspace_client buf(buffer.cap);
 				Genode::size_t const actual_size = buf.size();
 				_vgpu.rcs_unmap_ppgtt(buffer.ppgtt_va, actual_size);
-				_resource_guard.unmap_buffer_ppgtt();
 
 				_device.free_buffer(_heap, buffer.cap);
 				Genode::destroy(&_heap, &buffer);
@@ -1873,14 +1868,16 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 
 				try {
 
-					Resource_guard::Reservation reserve = _resource_guard.map_buffer_ppgtt();
-
+					/*
+					 * The page-table allocator will request backing store
+					 * for the page-tables in (16, 1M) chunks. The client
+					 * knows this and will act accordingly.
+					 */
 					_vgpu.rcs_map_ppgtt(va, buffer.phys_addr, buffer.size);
 					buffer.ppgtt_va = va;
 					buffer.ppgtt_va_valid = true;
 					result = OK;
 
-					reserve.acknowledge();
 				} catch (Cap_quota_guard::Limit_exceeded) {
 					result = ALLOC_FAILED_CAPS;
 					return;
@@ -1931,8 +1928,6 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 				Genode::size_t const actual_size = buf.size();
 				_vgpu.rcs_unmap_ppgtt(va, actual_size);
 				buffer.ppgtt_va_valid = false;
-
-				_resource_guard.unmap_buffer_ppgtt();
 			};
 			_apply_buffer(id, lookup_and_unmap);
 		}
