@@ -364,8 +364,7 @@ class Drm_call
 			}
 
 			enum {
-				ALLOC_BUFFER_CAP_AMOUNT     = 4,
-				MAP_BUFFER_PPGTT_CAP_AMOUNT = 2,
+				ALLOC_BUFFER_CAP_AMOUNT     = 1,
 				MAP_BUFFER_CAP_AMOUNT       = 2,
 				MAP_BUFFER_RAM_AMOUNT       = 1024,
 			};
@@ -444,36 +443,48 @@ class Drm_call
 				return buffer;
 			}
 
-			void free_buffer(Genode::size_t size)
+			void free_buffer(Buffer const &b)
 			{
 				alloc_count--;
 				Cap_quota const caps { ALLOC_BUFFER_CAP_AMOUNT };
 				_replenish(caps);
-				_replenish(Ram_quota { size });
+				Ram_quota const ram { b.size };
+				_replenish(ram);
 			}
 
 			bool map_buffer_ppgtt(Buffer &buffer, Gpu_virtual_address vaddr)
 			{
-				Cap_quota caps { MAP_BUFFER_PPGTT_CAP_AMOUNT };
-
-				/* round to next page size */
-				Genode::size_t size = buffer.size;
-				size /= 512;
-				size = ((size + 0xffful) & ~0xffful);
-
-				Ram_quota ram { size };
+				Cap_quota donated_caps { 0 };
+				Ram_quota donated_ram { 0 };
 
 				bool successful = false;
 				try {
-					_perform_gpu_op(caps, ram, [&] () {
-						successful = _gpu.map_buffer_ppgtt(buffer.id(),
-						                                   Utils::limit_to_48bit(vaddr.addr));
-						if (successful) {
-							buffer.gpu_vaddr       = vaddr;
-							buffer.gpu_vaddr_valid = true;
-						}
-					});
-				} catch (Upgrade_failed) {
+					Genode::retry<Gpu::Session::Out_of_ram>(
+					[&] () {
+						Genode::retry<Gpu::Session::Out_of_caps>(
+						[&] () {
+							successful =
+								_gpu.map_buffer_ppgtt(buffer.id(),
+								                      Utils::limit_to_48bit(vaddr.addr));
+							if (successful) {
+								buffer.gpu_vaddr       = vaddr;
+								buffer.gpu_vaddr_valid = true;
+							}
+						},
+						[&] () {
+							donated_caps.value += 16;
+							_upgrade(donated_caps);
+						}, 2);
+					},
+					[&] () {
+						donated_ram.value += 1u << 20;
+						_upgrade(donated_ram);
+					}, 2);
+
+					_withdraw(donated_caps);
+					_withdraw(donated_ram);
+
+				} catch (Gpu::Session::Mapping_buffer_failed) {
 					return false;
 				}
 
@@ -487,17 +498,6 @@ class Drm_call
 					return;
 
 				map_ppgtt_count--;
-
-				Cap_quota const caps { MAP_BUFFER_PPGTT_CAP_AMOUNT };
-				_replenish(caps);
-
-				/* round to next page size */
-				Genode::size_t size = buffer.size;
-				size /= 512;
-				size = ((size + 0xffful) & ~0xffful);
-
-				Ram_quota const ram { size };
-				_replenish(ram);
 
 				_gpu.unmap_buffer_ppgtt(buffer.id(), buffer.gpu_vaddr.addr);
 				buffer.gpu_vaddr_valid = false;
@@ -658,7 +658,7 @@ class Drm_call
 					_unmap_buffer(b);
 					_unmap_buffer_ppgtt(b);
 
-					_resources.free_buffer(b.size);
+					_resources.free_buffer(b);
 
 					Genode::destroy(&_heap, &b);
 				});
