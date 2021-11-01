@@ -14,7 +14,7 @@ import_from_depot $imports
 
 set build_components {
 	core init timer
-	drivers/gpu/etnaviv
+	drivers/gpu/imx8mq
 	lib/mesa/softpipe
 	lib/mesa/etnaviv
 
@@ -163,6 +163,7 @@ set config {
 		</provides>
 		<config ld_verbose="yes"/>
 		<route>
+			<service name="ROM" label="dtb"> <parent label="imx8mq_gpu_drv-imx8q_evk.dtb"/> </service>
 			<service name="Timer"> <child name="timer"/> </service>
 			<service name="Gui"> <child name="nitpicker"/> </service>
 			<service name="Platform"> <child name="drivers"/> </service>
@@ -194,6 +195,7 @@ append boot_modules {
 
 	usb_policy
 	numlock
+	imx8mq_gpu_drv-imx8q_evk.dtb
 }
 
 build_boot_image $boot_modules
