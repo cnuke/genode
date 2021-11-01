@@ -98,7 +98,7 @@ void genode_gpu_init(struct genode_env               *env,
  ** Gpu session lifetime management **
  **************************************/
 
-void genode_gpu_announce_service();
+void genode_gpu_announce_service(void);
 
 
 /************************************

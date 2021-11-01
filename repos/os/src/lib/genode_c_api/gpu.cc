@@ -193,7 +193,7 @@ Dataspace_capability genode_gpu_session::map_buffer(Gpu::Buffer_id id,
 
 void genode_gpu_session::unmap_buffer(Gpu::Buffer_id id)
 {
-	_callbacks->unmap_buffer(id.value);
+	_callbacks->unmap_buffer_fn(id.value);
 }
 
 
