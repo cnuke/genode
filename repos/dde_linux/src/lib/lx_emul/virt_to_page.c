@@ -45,8 +45,11 @@ struct page *lx_emul_virt_to_pages(void const *virt, unsigned count)
 
 void lx_emul_forget_pages(void const *virt, unsigned long size)
 {
-	for (;;) {
-		struct page *page = lx_emul_associated_page(virt, size);
+	unsigned long i;
+
+	void const *virt_addr = virt_addr;
+	for (i = 0; i < size; i += 4096) {
+		struct page *page = lx_emul_associated_page(virt + i, 4096);
 		if (!page)
 			return;
 
