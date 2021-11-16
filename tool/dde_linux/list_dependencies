@@ -50,7 +50,7 @@ TARGET_ABS := $(shell realpath $(TARGET_DIR))
 ifeq ($(realpath $(LINUX_KERNEL_DIR)),)
 $(error You have to state a valid LINUX_KERNEL_DIR, try help)
 endif
-LINUX_KERNEL_DIR_ABS := $(realpath $(LINUX_KERNEL_DIR))
+LINUX_KERNEL_DIR_ABS := $(shell realpath -s $(LINUX_KERNEL_DIR))
 
 ifeq ($(realpath $(SOURCE_LIST_FILE)),)
 $(error You have to state a valid SOURCE_LIST_FILE, try help)
