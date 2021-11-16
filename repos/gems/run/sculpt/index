@@ -22,7 +22,6 @@
     <pkg path="file_vault"      info="encrypted file store"/>
     <pkg path="black_hole"      info="pseudo service provider"/>
     <pkg path="usb_webcam"      info="USB webcam"/>
-    <pkg path="bsd_audio_drv"   info="audio driver" arch="x86_64"/>
     <pkg path="mixer"           info="audio mixer"/>
   </index>
 
@@ -39,8 +38,9 @@
   </index>
 
   <index name="Mesa 3D">
-    <pkg path="mesa_gpu-cpu"   info="software-rendering driver"/>
-    <pkg path="mesa_gpu-intel" info="Intel GPU driver (IRIS)" arch="x86_64"/>
+    <pkg path="mesa_gpu-cpu"     info="software-rendering driver"/>
+    <pkg path="mesa_gpu-intel"   info="Intel GPU driver (IRIS)" arch="x86_64"/>
+    <pkg path="mesa_gpu-etnaviv" info="iMX8MQ GPU driver (etnaviv)" arch="arm_v8a"/>
   </index>
 
 </index>
