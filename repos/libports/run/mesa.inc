@@ -26,6 +26,7 @@ import_from_depot $imports
 
 set build_components {
 	drivers/gpu/intel
+	drivers/framebuffer/intel
 	lib/mesa/softpipe
 	core init timer
 }
@@ -78,6 +79,7 @@ set config {
 			<service name="Capture"> <child name="nitpicker"/> </service>
 			<service name="Event">   <child name="nitpicker"/> </service>
 			<service name="Report">  <child name="report_rom"/> </service>
+			<service name="Platform" label="intel_gpu">  <child name="intel_gpu_drv"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
@@ -123,12 +125,26 @@ append config {
 }
 
 append_if $use_iris config {
+	<start name="intel_fb_drv" caps="200">
+		<resource name="RAM" quantum="40M"/>
+		<config/>
+		<route>
+			<service name="Platform"> <child name="intel_gpu_drv"/> </service>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+
 	<start name="intel_gpu_drv" caps="2000">
 		<resource name="RAM" quantum="40M"/>
 		<provides>
 			<service name="Gpu"/>
 			<service name="Platform"/>
 		</provides>
+		<config>
+        <device vendor="0x8086" device="0x1606" generation="8" platform="broadwell" description="HD Graphics (BDW GT1 ULT)"/>
+        <device vendor="0x8086" device="0x1616" generation="8" platform="broadwell" description="HD Graphics 5500 (BDW GT2 ULT)"/>
+        <device vendor="0x8086" device="0x1622" generation="8" platform="broadwell" description="Iris Pro Graphics 6200 (BDW GT3e)"/>
+		</config>
 		<route>
 			<service name="Platform"> <child name="drivers"/> </service>
 			<any-service> <parent /> <any-child/> </any-service>
@@ -162,7 +178,7 @@ set boot_modules {
 
 append_if $use_iris boot_modules {
 	mesa_gpu-iris.lib.so libdrm.lib.so
-	intel_gpu_drv
+	intel_gpu_drv intel_fb_drv
 }
 
 append_if $use_etnaviv boot_modules {
