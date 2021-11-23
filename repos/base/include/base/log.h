@@ -204,6 +204,9 @@ class Genode::Log_tsc_probe : Noncopyable
 
 				using Genode::print;
 
+				print(out, value);
+				return;
+
 				if      (value > 100*G) print(out, value/G, "G");
 				else if (value > 100*M) print(out, value/M, "M");
 				else if (value > 100*K) print(out, value/K, "K");
@@ -257,7 +260,7 @@ class Genode::Log_tsc_probe : Noncopyable
 						return;
 
 					log(" TSC ", name, ": ", Pretty_tsc { _tsc_sum }, " "
-					    "(", _calls, " calls, last ", Pretty_tsc { duration }, ")");
+					    "(", _calls, " calls, last ", Pretty_tsc { duration }, "");
 					_cycle_count = 0;
 				}
 
