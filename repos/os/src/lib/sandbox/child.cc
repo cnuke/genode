@@ -647,13 +647,32 @@ void Sandbox::Child::filter_session_args(Service::Name const &service,
 	}
 
 	/*
-	 * Unset the 'managing_system' argument unless
-	 * explicitly permitted by the child configuration.
+	 * Unset the 'managing_system' argument unless explicitly permitted by the
+	 * child configuration.
 	 */
 	if (service == Pd_session::service_name()) {
-		bool arg = (!_managing_system) ? false
-			: Arg_string::find_arg(args, "managing_system").bool_value(true);
-		Arg_string::set_arg(args, args_len, "managing_system", arg);
+
+		/*
+		 * For an environment PD session created by us for a direct child, the
+		 * client's 'managing_system' argument is inferred from the child's
+		 * <start> node. Otherwise, for PD sessions initiated by a subsystem,
+		 * the argument is provided by the originator of the session request.
+		 */
+		bool const direct_child = (session_label_from_args(args) == name());
+
+		if (direct_child && _managing_system)
+			Arg_string::set_arg(args, args_len, "managing_system", "yes");
+
+		bool const client_arg = Arg_string::find_arg(args, "managing_system").bool_value(false);
+
+		/*
+		 * Preserve the client's wish for a 'managing_system' permission only
+		 * if the <start> node of the subsystem allows.
+		 */
+		bool const permitted = (_managing_system && client_arg);
+
+		if (!permitted)
+			Arg_string::remove_arg(args, "managing_system");
 	}
 }
 

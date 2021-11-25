@@ -49,7 +49,7 @@ class Genode::Pd_root : public Genode::Root_component<Genode::Pd_session_compone
 
 			addr_t const start = 0;
 			addr_t const end   = (sizeof(long) == 4) /* 32bit arch ? */
-			                     ? 0xbfffffffUL : 0xffffffffUL;
+			                   ? 0xbfffffffUL : 0xffffffffUL;
 
 			return Ram_dataspace_factory::Phys_range { start, end };
 		}
