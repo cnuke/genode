@@ -592,10 +592,17 @@ class Gpu::Call
 
 		int _drm_version(drm_version &version)
 		{
-			// TODO make sure user ptr are properly accounted for
+			static char buffer[1] = { '\0' };
+
 			version.version_major = 1;
 			version.version_minor = 3;
 			version.version_patchlevel = 0;
+			version.name_len = 0;
+			version.name = buffer;
+			version.date_len = 0;
+			version.date = buffer;
+			version.desc_len = 0;
+			version.desc = buffer;
 
 			return 0;
 		}
