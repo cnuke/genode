@@ -71,7 +71,7 @@ class Bsd::Slab_backend_alloc : public Genode::Allocator,
 				return Alloc_error::DENIED;
 			}
 
-			_ram.try_alloc(BLOCK_SIZE).convert<Extend_result>(
+			return _ram.try_alloc(BLOCK_SIZE).convert<Extend_result>(
 
 				[&] (Ram_dataspace_capability ds) -> Extend_result {
 
