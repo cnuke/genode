@@ -328,6 +328,12 @@ void Thread::_call_start_thread()
 
 	/* join protection domain */
 	thread._pd = (Pd *) user_arg_3();
+	Genode::raw("join: ", thread._pd->platform_pd().label());
+	if (Genode::strcmp(thread._pd->platform_pd().label(), "init -> imx8mq_gpu_drv") == 0) {
+		Genode::raw("found imx8mq_gpu_drv");
+		gpu_drv |= true;
+	}
+
 	thread._ipc_init(*(Native_utcb *)user_arg_4(), *this);
 	thread._become_active();
 }
@@ -761,12 +767,32 @@ void Kernel::Thread::_call_invalidate_tlb()
 }
 
 
+static unsigned call_counter;
+
+static unsigned calls[128];
+
+
 void Thread::_call()
 {
 	try {
 
 	/* switch over unrestricted kernel calls */
 	unsigned const call_id = user_arg_0();
+
+	if (gpu_drv && call_id < 100) {
+		if (++call_counter % 10000 == 0) {
+			for (unsigned i = 0; i < 128; i++) {
+				if (calls[i] == 0)
+					continue;
+
+				Genode::raw(i, ": ", calls[i]);
+				calls[i] = 0;
+			}
+		}
+
+		calls[call_id]++;
+	}
+
 	switch (call_id) {
 	case call_id_cache_coherent_region():    _call_cache_coherent_region(); return;
 	case call_id_cache_clean_inv_region():   _call_cache_clean_invalidate_data_region(); return;
@@ -873,7 +899,7 @@ Thread::Thread(Board::Address_space_id_allocator &addr_space_id_alloc,
                Pd                                &core_pd,
                unsigned                    const  priority,
                unsigned                    const  quota,
-               char                 const *const  label,
+               char                 const *const  label_,
                bool                               core)
 :
 	Kernel::Object       { *this },
@@ -884,7 +910,7 @@ Thread::Thread(Board::Address_space_id_allocator &addr_space_id_alloc,
 	_core_pd             { core_pd },
 	_ipc_node            { *this },
 	_state               { AWAITS_START },
-	_label               { label },
+	_label               { label_ },
 	_core                { core },
 	regs                 { core }
 { }

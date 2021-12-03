@@ -286,6 +286,8 @@ class Kernel::Thread : private Kernel::Object, public Cpu_job, private Timeout
 
 		Genode::Align_at<Genode::Cpu::Context> regs;
 
+		bool gpu_drv { false };
+
 		/**
 		 * Constructor
 		 *
