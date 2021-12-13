@@ -98,12 +98,6 @@ void Kernel::Thread::_call_cache_clean_invalidate_data_region() { }
 void Kernel::Thread::_call_cache_invalidate_data_region() { }
 
 
-void Kernel::Thread::_call_cache_line_size()
-{
-	user_arg_0(0);
-}
-
-
 void Kernel::Thread::proceed(Cpu & cpu)
 {
 	/*
