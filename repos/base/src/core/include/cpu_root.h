@@ -43,6 +43,17 @@ namespace Genode {
 				if (ram_quota < Trace::Control_area::SIZE)
 					throw Insufficient_ram_quota();
 
+				/*
+				 * If either xpos or ypos are set to non-zero check
+				 * if they fall into the proper range.
+				 */
+				bool const valid_xpos = !affinity.location().xpos()
+					|| (unsigned)affinity.location().xpos() < affinity.space().width();
+				bool const valid_ypos = !affinity.location().ypos()
+					|| (unsigned)affinity.location().ypos() < affinity.space().height();
+				if (!valid_xpos || !valid_ypos)
+					throw Service_denied();
+
 				return new (md_alloc())
 					Cpu_session_component(*this->ep(),
 					                      session_resources_from_args(args),
