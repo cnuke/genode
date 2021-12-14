@@ -16,7 +16,7 @@ if {[expr ![have_board pbxa9] && ![have_spec x86]]} {
 # Build
 #
 
-set build_components {
+append build_components {
 	core init timer
 	test/libc_vfs
 }
@@ -27,6 +27,7 @@ lappend_if $use_ahci_drv    build_components drivers/ahci
 lappend_if $use_sd_card_drv build_components drivers/platform
 lappend_if $use_sd_card_drv build_components drivers/sd_card/pl180
 lappend_if $use_vfs_block   build_components server/vfs_block
+lappend_if $use_vfs_block   build_components lib/vfs/import
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
 append_platform_drv_build_components
@@ -64,7 +65,7 @@ append config "
 append config {
 		<resource name="RAM" quantum="4M"/>
 		<provides> <service name="File_system"/> </provides>
-		<config>
+		<config ld_verbose="yes">
 			<default-policy root="/" writeable="yes" />
 			<vfs>
 				<dir name="dev">
@@ -166,8 +167,6 @@ lappend_if $use_vfs_block    boot_modules vfs_import.lib.so
 
 append_platform_drv_boot_modules
 
-build_boot_image $boot_modules
-
 #
 # Execute test case
 #
@@ -180,6 +179,8 @@ catch { exec sh -c $cmd }
 set cmd "$mkfs $mkfs_opts $disk_image"
 puts "formating disk image: $cmd"
 catch { exec sh -c $cmd }
+
+build_boot_image $boot_modules
 
 #
 # Qemu
