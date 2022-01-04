@@ -5,6 +5,7 @@ gpu:     intel
 
 # supplemental depot content added to the system image
 import: pkg/sculpt_drivers-pc
+import: src/vfs_lwext4
 
 # selection of launcher-menu entries
 launcher: vm_fs shared_fs download_debug_info black_hole trace_logger
