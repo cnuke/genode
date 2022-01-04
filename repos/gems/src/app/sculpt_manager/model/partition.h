@@ -29,13 +29,13 @@ namespace Sculpt {
 
 struct Sculpt::File_system
 {
-	enum Type { UNKNOWN, EXT2, FAT32, GEMDOS } type;
+	enum Type { UNKNOWN, EXT2, EXT4, FAT32, GEMDOS } type;
 
 	bool inspected = false;
 
-	bool accessible() const { return type == EXT2 || type == FAT32 || type == GEMDOS; }
+	bool accessible() const { return type == EXT2 || type == EXT4 || type == FAT32 || type == GEMDOS; }
 
-	bool expandable() const { return type == EXT2; }
+	bool expandable() const { return type == EXT2 || type == EXT4; }
 
 	File_system(Type type) : type(type) { }
 };
@@ -68,7 +68,11 @@ struct Sculpt::Partition : List_model<Partition>::Element
 	bool expand_in_progress() const { return gpt_expand_in_progress
 	                                      || fs_resize_in_progress; }
 
-	bool checkable() const { return file_system.type == File_system::EXT2; }
+	bool checkable() const
+	{
+		return file_system.type == File_system::EXT2
+		    || file_system.type == File_system::EXT4;
+	}
 
 	bool expandable() const
 	{
@@ -101,6 +105,7 @@ struct Sculpt::Partition : List_model<Partition>::Element
 		{
 			auto const file_system = node.attribute_value("file_system", String<16>());
 			File_system::Type const fs_type = (file_system == "Ext2")   ? File_system::EXT2
+			                                : (file_system == "Ext4")   ? File_system::EXT4
 			                                : (file_system == "GEMDOS") ? File_system::GEMDOS
 			                                : (file_system == "FAT32")  ? File_system::FAT32
 			                                :                             File_system::UNKNOWN;
