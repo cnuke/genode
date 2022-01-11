@@ -18,8 +18,8 @@ BUILD_OUTPUT_FILTER = 2>&1 | sed "s/^/      [Linux]  /"
 kernel_config.tag:
 	$(MSG_CONFIG)Linux
 	$(VERBOSE)$(MAKE) -C $(LX_DIR) O=$(PWD) $(LX_MK_ARGS) tinyconfig $(BUILD_OUTPUT_FILTER)
-	$(VERBOSE)$(LX_DIR)/scripts/config $(addprefix --enable ,$(LX_ENABLE))
-	$(VERBOSE)$(LX_DIR)/scripts/config $(addprefix --disable ,$(LX_DISABLE))
+	$(VERBOSE)$(LX_DIR)/scripts/config --file $(PWD)/.config $(addprefix --enable ,$(LX_ENABLE))
+	$(VERBOSE)$(LX_DIR)/scripts/config --file $(PWD)/.config $(addprefix --disable ,$(LX_DISABLE))
 	$(VERBOSE)$(MAKE) $(LX_MK_ARGS) olddefconfig $(BUILD_OUTPUT_FILTER)
 	$(VERBOSE)$(MAKE) $(LX_MK_ARGS) prepare      $(BUILD_OUTPUT_FILTER)
 	$(VERBOSE)touch $@

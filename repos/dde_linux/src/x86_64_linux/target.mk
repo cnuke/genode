@@ -1,8 +1,8 @@
 TARGET   := x86_64_linux
 REQUIRES := x86_64
 
-#CUSTOM_TARGET_DEPS := kernel_build.phony
-CUSTOM_TARGET_DEPS := run_kernel.phony
+CUSTOM_TARGET_DEPS := kernel_build.phony
+#CUSTOM_TARGET_DEPS := run_kernel.phony
 
 LX_DIR := $(call select_from_ports,x86_linux)/src/linux
 PWD    := $(shell pwd)

@@ -29,10 +29,7 @@ SRC_CC  += lx_emul/time.cc
 SRC_C   += lx_emul/clocksource.c
 SRC_C   += lx_emul/irqchip.c
 SRC_C   += lx_emul/start.c
-SRC_C   += lx_emul/shadow/arch/x86/kernel/smp.c
-SRC_C   += lx_emul/shadow/arch/x86/mm/ioremap.c
-#SRC_C   += lx_emul/shadow/drivers/clk/clk.c
-#SRC_C   += lx_emul/shadow/drivers/clk/clkdev.c
+SRC_C   += lx_emul/spec/x86/start.c
 SRC_C   += lx_emul/shadow/fs/exec.c
 SRC_C   += lx_emul/shadow/kernel/cpu.c
 SRC_C   += lx_emul/shadow/kernel/dma/mapping.c
@@ -41,12 +38,9 @@ SRC_C   += lx_emul/shadow/kernel/fork.c
 SRC_C   += lx_emul/shadow/kernel/irq/spurious.c
 SRC_C   += lx_emul/shadow/kernel/pid.c
 SRC_C   += lx_emul/shadow/kernel/printk/printk.c
-SRC_C   += lx_emul/shadow/kernel/rcu/srcutree.c
 SRC_C   += lx_emul/shadow/kernel/rcu/tree.c
 SRC_C   += lx_emul/shadow/kernel/sched/core.c
-SRC_C   += lx_emul/shadow/kernel/smp.c
 SRC_C   += lx_emul/shadow/kernel/softirq.c
-SRC_C   += lx_emul/shadow/kernel/stop_machine.c
 SRC_C   += lx_emul/shadow/lib/devres.c
 SRC_C   += lx_emul/shadow/lib/smp_processor_id.c
 SRC_C   += lx_emul/shadow/mm/memblock.c
@@ -69,10 +63,13 @@ SRC_S   += lx_kit/spec/x86_64/setjmp.S
 _LX_EMUL_INIT_H := $(call select_from_repositories,src/include/lx_emul/init.h)
 DDE_LINUX_SRC_INC_DIR := $(_LX_EMUL_INIT_H:/lx_emul/init.h=)
 SHADOW_INC_DIR := $(addsuffix /lx_emul/shadow, $(DDE_LINUX_SRC_INC_DIR))
+SPEC_SHADOW_INC_DIR := $(addsuffix /lx_emul/shadow, $(DDE_LINUX_SRC_INC_DIR)/spec/x86_64)
 
 INC_DIR += $(DDE_LINUX_SRC_INC_DIR)
 INC_DIR += $(DDE_LINUX_SRC_INC_DIR)/spec/x86
+INC_DIR += $(DDE_LINUX_SRC_INC_DIR)/spec/x86_64
 INC_DIR += $(SHADOW_INC_DIR)
+INC_DIR += $(SPEC_SHADOW_INC_DIR)
 INC_DIR += $(REP_DIR)/src/include/lx_generated
 
 DDE_LINUX_SRC_LIB_DIR := $(DDE_LINUX_SRC_INC_DIR:/include=/lib)
@@ -117,6 +114,8 @@ CC_C_OPT += -Wno-restrict -Wno-maybe-uninitialized -Werror=date-time
 CC_C_OPT += -Werror=incompatible-pointer-types -Werror=designated-init
 CC_C_OPT += -Wno-packed-not-aligned
 
+CC_C_OPT += -Wno-discarded-qualifiers
+
 LX_SRC   = $(shell grep ".*\.c" $(PRG_DIR)/source.list)
 SRC_S   += $(shell grep ".*\.S" $(PRG_DIR)/source.list)
 SRC_C   += $(LX_SRC)
@@ -139,8 +138,8 @@ $(eval $(call CC_OPT_LX_RULES,generated_dummies))
 $(eval $(call CC_OPT_LX_RULES,dummies))
 
 
-# Turn off some warnings
-
+# Handle specific source requirements
+CC_OPT_drivers/usb/host/xhci-trace += -I$(LX_SRC_DIR)/drivers/usb/host
 
 #
 # Generate crc32table.h header
@@ -170,3 +169,6 @@ gen_crc32table: $(LX_SRC_DIR)/lib/gen_crc32table.c
 
 GLOBAL_DEPS += $(wildcard $(addsuffix /linux/*.h,$(SHADOW_INC_DIR))) \
                $(wildcard $(addsuffix /asm/*.h,$(SHADOW_INC_DIR)))
+
+GLOBAL_DEPS += $(wildcard $(addsuffix /linux/*.h,$(SPEC_SHADOW_INC_DIR))) \
+               $(wildcard $(addsuffix /asm/*.h,$(SPEC_SHADOW_INC_DIR)))
