@@ -18,6 +18,7 @@
 #include <util/string.h>
 #include <base/exception.h>
 #include <io_mem_session/client.h>
+#include <platform_session/connection.h>
 #include <irq_session/client.h>
 
 namespace Platform {
@@ -26,26 +27,6 @@ namespace Platform {
 
 	using namespace Genode;
 }
-
-
-struct Platform::Connection
-{
-	Connection(Genode::Env &) {}
-
-	void update()
-	{
-		Genode::error(__func__, ": not implemented");
-	}
-
-	template <typename FN>
-	void with_xml(FN const & fn)
-	{
-		(void)fn;
-
-		Genode::error(__func__, ": not implemented");
-	}
-
-};
 
 
 class Platform::Device : Interface, Noncopyable
