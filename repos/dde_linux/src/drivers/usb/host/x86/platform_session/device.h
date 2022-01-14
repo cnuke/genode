@@ -86,4 +86,5 @@ class Platform::Device::Irq : Noncopyable
 		void sigh_omit_initial_signal(Signal_context_capability) { }
 };
 
+
 #endif /* _PLATFORM_SESSION__DEVICE_H_ */

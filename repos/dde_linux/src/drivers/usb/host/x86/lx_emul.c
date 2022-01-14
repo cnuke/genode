@@ -103,3 +103,9 @@ void dma_unmap_page_attrs(struct device * dev,
 }
 
 
+#include <linux/slab.h>
+
+void * kmalloc_order(size_t size, gfp_t flags, unsigned int order)
+{
+	return kmalloc(size, flags);
+}

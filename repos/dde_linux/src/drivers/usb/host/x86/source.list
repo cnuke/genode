@@ -11,9 +11,9 @@ drivers/base/driver.c
 drivers/base/platform.c
 drivers/base/property.c
 drivers/clk/clk-devres.c
+drivers/pci/pci-driver.c
 drivers/usb/common/common.c
 drivers/usb/common/debug.c
-drivers/usb/common/ulpi.c
 drivers/usb/core/buffer.c
 drivers/usb/core/config.c
 drivers/usb/core/devices.c
@@ -43,7 +43,6 @@ drivers/usb/host/xhci-ext-caps.c
 drivers/usb/host/xhci-hub.c
 drivers/usb/host/xhci-mem.c
 drivers/usb/host/xhci-pci.c
-drivers/usb/host/xhci-plat.c
 drivers/usb/host/xhci-ring.c
 drivers/usb/host/xhci-trace.c
 drivers/usb/host/xhci.c
@@ -84,6 +83,7 @@ lib/bitmap.c
 lib/crc32.c
 lib/ctype.c
 lib/debug_locks.c
+lib/find_bit.c
 lib/hexdump.c
 lib/idr.c
 lib/irq_regs.c
