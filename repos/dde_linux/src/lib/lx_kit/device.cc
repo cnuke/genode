@@ -168,6 +168,75 @@ void Device::irq_ack(unsigned number)
 }
 
 
+bool Device::matches(unsigned bus, unsigned devfn) const
+{
+	return _bus == bus && _devfn == devfn;
+}
+
+
+void Device::bus_devfn(unsigned *bus, unsigned *devfn) const
+{
+	if (bus)
+		*bus = _bus;
+
+	if (devfn)
+		*devfn = _devfn;
+}
+
+
+static Platform::Device::Config_space::Access_size access_size(unsigned len)
+{
+	using AS = Platform::Device::Config_space::Access_size;
+	AS as = AS::ACCESS_8BIT;
+	if (len == 4)      as = AS::ACCESS_32BIT;
+	else if (len == 2) as = AS::ACCESS_16BIT;
+	else               as = AS::ACCESS_8BIT;
+
+	return as;
+}
+
+
+bool Device::read_config(unsigned reg, unsigned len, unsigned *val)
+{
+	if (!_pdev.constructed())
+		enable();
+
+	if (!val)
+		return false;
+
+	using AS = Platform::Device::Config_space::Access_size;
+	AS const as = access_size(len);
+
+	*val = Platform::Device::Config_space(*_pdev).read((unsigned char)reg, as);
+	return true;
+}
+
+
+bool Device::write_config(unsigned reg, unsigned len, unsigned val)
+{
+	if (!_pdev.constructed())
+		return false;
+
+	using AS = Platform::Device::Config_space::Access_size;
+	AS const as = access_size(len);
+
+	Platform::Device::Config_space(*_pdev).write((unsigned char)reg, val, as);
+	return true;
+}
+
+
+unsigned Device::vendor_id() const
+{
+	return _vendor_id;
+}
+
+
+unsigned Device::device_id() const
+{
+	return _device_id;
+}
+
+
 void Device::enable()
 {
 	if (_pdev.constructed())
@@ -190,6 +259,7 @@ void Device::enable()
 		});
 	});
 }
+
 
 
 Device::Device(Entrypoint           & ep,
@@ -218,6 +288,35 @@ Device::Device(Entrypoint           & ep,
 		Device::Name name = node.attribute_value("name", Device::Name());
 		_clocks.insert(new (heap) Device::Clock(i++, name));
 	});
+
+	/* tunnel PCI informations for now */
+	xml.for_each_sub_node("property", [&] (Xml_node node) {
+		using Name = Genode::String<16>;
+		Name name = node.attribute_value("name", Name());
+		if (name == "vendor_id") {
+			_vendor_id = node.attribute_value("value", _vendor_id);
+		} else
+		if (name == "device_id") {
+			_device_id = node.attribute_value("value", _device_id);
+		} else
+		if (name == "class_code") {
+			_class_code = node.attribute_value("value", _class_code);
+		} else
+		if (name == "bus") {
+			_bus = node.attribute_value("value", _bus);
+		} else
+		if (name == "dev") {
+			unsigned dev = node.attribute_value("value", 0u);
+			_devfn |= dev << 3;
+		} else
+		if (name == "func") {
+			_devfn |= node.attribute_value("value", 0u);
+		}
+	});
+
+	if (_type.name == "pci") {
+		Genode::error(" XXXX ", _bus, ":", Genode::Hex(_devfn));
+	}
 }
 
 

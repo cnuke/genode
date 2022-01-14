@@ -30,4 +30,6 @@ void time_init(void)
 }
 
 
-void lx_emul_setup_arch(void *dtb) { }
+void lx_emul_setup_arch(void *dtb)
+{
+}

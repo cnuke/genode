@@ -25,6 +25,7 @@ SRC_CC  += lx_emul/log.cc
 SRC_CC  += lx_emul/page_virt.cc
 SRC_CC  += lx_emul/task.cc
 SRC_CC  += lx_emul/time.cc
+SRC_CC  += lx_emul/pci_config_space.cc
 
 SRC_C   += lx_emul/clocksource.c
 SRC_C   += lx_emul/irqchip.c
@@ -40,6 +41,7 @@ SRC_C   += lx_emul/shadow/kernel/pid.c
 SRC_C   += lx_emul/shadow/kernel/printk/printk.c
 SRC_C   += lx_emul/shadow/kernel/rcu/tree.c
 SRC_C   += lx_emul/shadow/kernel/sched/core.c
+SRC_C   += lx_emul/shadow/kernel/sched/sched.c
 SRC_C   += lx_emul/shadow/kernel/softirq.c
 SRC_C   += lx_emul/shadow/lib/devres.c
 SRC_C   += lx_emul/shadow/lib/smp_processor_id.c

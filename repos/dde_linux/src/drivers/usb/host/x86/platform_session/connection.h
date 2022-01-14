@@ -26,43 +26,37 @@ namespace Platform {
 	using namespace Genode;
 }
 
+#define Platform Legacy_platform
+#include_next <platform_session/connection.h>
+#undef Platform
+
 
 struct Platform::Connection
 {
-	Connection(Genode::Env &)
+	Genode::Env &_env;
+
+	char _node_buffer[4096u] { };
+	Genode::Constructible<Genode::Xml_node> _devices_node { };
+
+	Genode::Constructible<Legacy_platform::Connection> _legacy_platform { };
+	Legacy_platform::Device_capability _device_cap { };
+
+	Connection(Genode::Env &);
+
+	void update();
+
+	template <typename FN> void with_xml(FN const & fn)
 	{
-		Genode::error(__func__, ": this: ", this, " not implemented");
+		if (_devices_node.constructed())
+			fn(*_devices_node);
 	}
 
-	void update()
-	{
-		Genode::error(__func__, ": not implemented");
-	}
+	Ram_dataspace_capability alloc_dma_buffer(size_t size, Cache cache);
 
-	template <typename FN>
-	void with_xml(FN const & fn)
-	{
-		(void)fn;
+	void free_dma_buffer(Ram_dataspace_capability);
 
-		Genode::error(__func__, ": not implemented");
-	}
-
-	Ram_dataspace_capability alloc_dma_buffer(size_t size, Cache cache)
-	{
-		Genode::error(__func__, ": size: ", size, " cache: ", (unsigned)cache, " not implemented");
-		return Ram_dataspace_capability();
-	}
-
-	void free_dma_buffer(Ram_dataspace_capability)
-	{
-		Genode::error(__func__, ": not implemented");
-	}
-
-	addr_t dma_addr(Ram_dataspace_capability)
-	{
-		Genode::error(__func__, ": not implemented");
-		return 0;
-	}
+	addr_t dma_addr(Ram_dataspace_capability);
 };
+
 
 #endif /* _PLATFORM_SESSION__CONNECTION_H_ */

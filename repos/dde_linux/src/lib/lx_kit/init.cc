@@ -19,8 +19,8 @@
 namespace Lx_kit { class Initcalls; }
 
 
-void Lx_kit::Initcalls::add(int (*initcall)(void), unsigned int prio) {
-	_call_list.insert(new (_heap) E(prio, initcall)); }
+void Lx_kit::Initcalls::add( char const *name, int (*initcall)(void), unsigned int prio) {
+	_call_list.insert(new (_heap) E(name, prio, initcall)); }
 
 
 void Lx_kit::Initcalls::execute_in_order()
@@ -34,7 +34,11 @@ void Lx_kit::Initcalls::execute_in_order()
 
 	for (unsigned i = min; i <= max; i++) {
 		for (E * entry = _call_list.first(); entry; entry = entry->next()) {
-			if (entry->prio == i) entry->call();
+			if (entry->prio == i) {
+				// Genode::error(__func__, ": execute: '", entry->name, "'");
+				entry->call();
+				// Genode::error(__func__, ": execute: '", entry->name, "' done");
+			}
 		}
 	}
 }
