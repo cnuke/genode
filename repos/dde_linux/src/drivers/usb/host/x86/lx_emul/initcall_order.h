@@ -142,6 +142,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_atkbd_init6",
 	"__initcall_psmouse_init6",
 	"__initcall_pmc_atom_init6",
+	"__initcall_usbnet_init6",
 	"__initcall_update_mp_table7",
 	"__initcall_lapic_insert_resource7",
 	"__initcall_print_ICs7",

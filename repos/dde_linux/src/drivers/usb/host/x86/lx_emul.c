@@ -103,3 +103,145 @@ void dma_unmap_page_attrs(struct device * dev,
 }
 
 
+#include <linux/slab.h>
+
+void * kmalloc_order(size_t size, gfp_t flags, unsigned int order)
+{
+	return kmalloc(size, flags);
+}
+
+
+#include <linux/fs.h>
+#include <linux/mount.h>
+#include <linux/slab.h>
+
+int simple_pin_fs(struct file_system_type * type, struct vfsmount ** mount, int * count)
+{
+	*mount = kmalloc(sizeof(struct vfsmount), GFP_KERNEL);
+	return 0;
+}
+
+
+#include <linux/fs.h>
+
+void simple_release_fs(struct vfsmount ** mount,int * count)
+{
+	kfree(*mount);
+}
+
+
+#include <linux/fs.h>
+
+struct inode * alloc_anon_inode(struct super_block * s)
+{
+	return kmalloc(sizeof(struct inode), GFP_KERNEL);
+}
+
+
+#include <asm/x86_init.h>
+
+static int x86_init_pci_init(void)
+{
+	printk("%s:%d TODO\n", __func__, __LINE__);
+	return 1;
+}
+
+
+static void x86_init_pci_init_irq(void)
+{
+	printk("%s:%d TODO\n", __func__, __LINE__);
+}
+
+
+struct x86_init_ops x86_init = {
+	.pci = {
+		.init     = x86_init_pci_init,
+		.init_irq = x86_init_pci_init_irq,
+	},
+};
+
+
+#include <lx_emul/pci_config_space.h>
+
+#include <linux/pci.h>
+#include <asm/pci.h>
+#include <asm/pci_x86.h>
+
+static int pci_raw_ops_read(unsigned int domain, unsigned int bus, unsigned int devfn,
+                            int reg, int len, u32 *val)
+{
+	// printk("%s:%d %x:%x %d %d\n", __func__, __LINE__, bus, devfn, reg, len);
+	return lx_emul_pci_read_config(bus, devfn, (unsigned)reg, (unsigned)len, val);
+}
+
+
+static int pci_raw_ops_write(unsigned int domain, unsigned int bus, unsigned int devfn,
+                             int reg, int len, u32 val)
+{
+	// printk("%s:%d %x:%x %d %d %u\n", __func__, __LINE__, bus, devfn, reg, len, val);
+	return lx_emul_pci_write_config(bus, devfn, (unsigned)reg, (unsigned)len, val);
+}
+
+
+const struct pci_raw_ops genode_raw_pci_ops = {
+	.read  = pci_raw_ops_read,
+	.write = pci_raw_ops_write,
+};
+
+const struct pci_raw_ops *raw_pci_ops = &genode_raw_pci_ops;
+
+
+static int pci_read(struct pci_bus *bus, unsigned int devfn, int where, int size, u32 *value)
+{
+    return pci_raw_ops_read(0, bus->number, devfn, where, size, value);
+}
+
+
+static int pci_write(struct pci_bus *bus, unsigned int devfn, int where, int size, u32 value)
+{
+    return pci_raw_ops_write(0, bus->number, devfn, where, size, value);
+}
+
+
+struct pci_ops pci_root_ops = {
+    .read  = pci_read,
+    .write = pci_write,
+};
+
+
+void pcibios_scan_root(int busnum)
+{
+	struct pci_bus *bus;
+	struct pci_sysdata *sd;
+	LIST_HEAD(resources);
+
+	sd = kzalloc(sizeof(*sd), GFP_KERNEL);
+	if (!sd) {
+		printk(KERN_ERR "PCI: OOM, skipping PCI bus %02x\n", busnum);
+		return;
+	}
+	sd->node = NUMA_NO_NODE;
+	pci_add_resource(&resources, &ioport_resource);
+	pci_add_resource(&resources, &iomem_resource);
+
+	printk(KERN_DEBUG "PCI: Probing PCI hardware (bus %02x)\n", busnum);
+	bus = pci_scan_root_bus(NULL, busnum, &pci_root_ops, sd, &resources);
+
+	printk("%s:%d bus: %px\n", __func__, __LINE__, bus);
+	if (!bus) {
+		pci_free_resource_list(&resources);
+		kfree(sd);
+		return;
+	}
+	pci_bus_add_devices(bus);
+	printk("%s:%d bus: %px\n", __func__, __LINE__, bus);
+}
+
+
+#include <linux/pci.h>
+
+void pci_assign_irq(struct pci_dev * dev)
+{
+	printk("%s: dev: %p TODO\n", __func__, dev);
+	lx_emul_trace(__func__);
+}

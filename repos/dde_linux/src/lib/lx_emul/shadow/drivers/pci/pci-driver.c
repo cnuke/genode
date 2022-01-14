@@ -16,11 +16,6 @@
 
 #include <linux/pci.h>
 
-
-const struct attribute_group *pci_bus_groups[] = { 0 };
-const struct attribute_group *pci_dev_groups[] = { 0 };
-
-
 void pci_clear_mwi(struct pci_dev * dev)
 {
 	lx_emul_trace_and_stop(__func__);

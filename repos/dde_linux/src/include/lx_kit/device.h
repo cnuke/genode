@@ -97,6 +97,12 @@ class Lx_kit::Device : List<Device>::Element
 		List<Clock>                     _clocks  {};
 		Constructible<Platform::Device> _pdev    {};
 
+		unsigned _bus        { 0 };
+		unsigned _devfn      { 0 };
+		unsigned _vendor_id  { 0 };
+		unsigned _device_id  { 0 };
+		unsigned _class_code { 0 };
+
 		template <typename FN>
 		void _for_each_io_mem(FN const & fn) {
 			for (Io_mem * i = _io_mems.first(); i; i = i->next()) fn(*i); }
@@ -122,6 +128,13 @@ class Lx_kit::Device : List<Device>::Element
 		bool   irq_unmask(unsigned irq);
 		void   irq_mask(unsigned irq);
 		void   irq_ack(unsigned irq);
+
+		bool   matches(unsigned bus, unsigned devfn) const;
+		void   bus_devfn(unsigned *bus, unsigned *devfn) const;
+		bool   read_config(unsigned reg, unsigned len, unsigned *val);
+		bool   write_config(unsigned reg, unsigned len, unsigned  val);
+		unsigned vendor_id() const;
+		unsigned device_id() const;
 };
 
 
