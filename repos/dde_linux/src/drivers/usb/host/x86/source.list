@@ -1,6 +1,7 @@
 arch/x86/lib/memcpy_64.S
 arch/x86/lib/memmove_64.S
 arch/x86/lib/memset_64.S
+arch/x86/pci/legacy.c
 drivers/base/bus.c
 drivers/base/class.c
 drivers/base/component.c
@@ -11,7 +12,17 @@ drivers/base/driver.c
 drivers/base/platform.c
 drivers/base/property.c
 drivers/clk/clk-devres.c
+drivers/pci/access.c
+drivers/pci/bus.c
+drivers/pci/msi.c
+drivers/pci/pci.c
 drivers/pci/pci-driver.c
+drivers/pci/pci-sysfs.c
+drivers/pci/probe.c
+drivers/pci/quirks.c
+drivers/pci/rom.c
+drivers/pci/search.c
+drivers/pci/setup-res.c
 drivers/usb/common/common.c
 drivers/usb/common/debug.c
 drivers/usb/core/buffer.c
@@ -60,6 +71,7 @@ kernel/locking/osq_lock.c
 kernel/locking/rwsem.c
 kernel/notifier.c
 kernel/panic.c
+kernel/resource.c
 kernel/sched/clock.c
 kernel/sched/completion.c
 kernel/sched/swait.c
@@ -92,6 +104,8 @@ lib/klist.c
 lib/kobject.c
 lib/kstrtox.c
 lib/list_sort.c
+lib/iomap.c
+lib/pci_iomap.c
 lib/radix-tree.c
 lib/rbtree.c
 lib/scatterlist.c

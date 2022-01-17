@@ -1,10 +1,18 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2022-01-14
+ * \date   2022-01-17
  */
 
 #include <lx_emul.h>
+
+
+#include <linux/proc_fs.h>
+
+void * PDE_DATA(const struct inode * inode)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/ratelimit_types.h>
@@ -18,14 +26,6 @@ int ___ratelimit(struct ratelimit_state * rs,const char * func)
 #include <linux/clk-provider.h>
 
 const char * __clk_get_name(const struct clk * clk)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/ioport.h>
-
-struct resource * __devm_request_region(struct device * dev,struct resource * parent,resource_size_t start,resource_size_t n,const char * name)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -198,6 +198,14 @@ asmlinkage __visible void dump_stack(void)
 }
 
 
+#include <linux/capability.h>
+
+bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/gfp.h>
 
 void free_pages(unsigned long addr,unsigned int order)
@@ -246,27 +254,30 @@ void gen_pool_free_owner(struct gen_pool * pool,unsigned long addr,size_t size,v
 }
 
 
+#include <linux/kernel.h>
+
+int get_option(char ** str,int * pint)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/uuid.h>
 
 const u8 guid_index[16] = {};
 
 
-#include <linux/utsname.h>
+#include <linux/pseudo_fs.h>
 
-struct uts_namespace init_uts_ns;
+struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magic)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/init.h>
 
 bool initcall_debug;
-
-
-#include <linux/ioport.h>
-
-int insert_resource(struct resource * parent,struct resource * new)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/sched.h>
@@ -293,14 +304,20 @@ long __sched io_schedule_timeout(long timeout)
 }
 
 
-#include <linux/ioport.h>
+#include <asm-generic/logic_io.h>
 
-struct resource iomem_resource;
+void __iomem * ioremap(resource_size_t phys_addr,unsigned long size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
-#include <linux/ioport.h>
+#include <asm-generic/logic_io.h>
 
-struct resource ioport_resource;
+void iounmap(volatile void __iomem * addr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/irq_work.h>
@@ -340,6 +357,14 @@ void kernfs_put(struct kernfs_node * kn)
 }
 
 
+#include <linux/fs.h>
+
+void kill_anon_super(struct super_block * sb)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/sched/signal.h>
 
 int kill_pid_usb_asyncio(int sig,int errno,sigval_t addr,struct pid * pid,const struct cred * cred)
@@ -359,6 +384,22 @@ int kobject_synth_uevent(struct kobject * kobj,const char * buf,size_t count)
 #include <linux/kobject.h>
 
 int kobject_uevent_env(struct kobject * kobj,enum kobject_action action,char * envp_ext[])
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <asm-generic/logic_io.h>
+
+void memcpy_fromio(void * to,const volatile void __iomem * from,size_t n)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kernel.h>
+
+unsigned long long memparse(const char * ptr,char ** retptr)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -408,12 +449,70 @@ bool parse_option_str(const char * str,const char * option)
 }
 
 
+extern bool pat_enabled(void);
+bool pat_enabled(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_allocate_vc_save_buffers(struct pci_dev * dev);
+void pci_allocate_vc_save_buffers(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/pci.h>
 
 void pci_assign_irq(struct pci_dev * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+
+
+#include <linux/pci.h>
+
+void pci_assign_unassigned_bridge_resources(struct pci_dev * bridge)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_assign_unassigned_bus_resources(struct pci_bus * bus)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern unsigned long pci_cardbus_resource_alignment(struct resource * res);
+unsigned long pci_cardbus_resource_alignment(struct resource * res)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_dev_assign_slot(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+struct pci_host_bridge * pci_find_host_bridge(struct pci_bus * bus)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+unsigned int pci_flags;
 
 
 extern struct device * pci_get_host_bridge_device(struct pci_dev * dev);
@@ -423,8 +522,117 @@ struct device * pci_get_host_bridge_device(struct pci_dev * dev)
 }
 
 
+#include <linux/pci.h>
+
+int pci_mmap_resource_range(struct pci_dev * pdev,int bar,struct vm_area_struct * vma,enum pci_mmap_state mmap_state,int write_combine)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int pci_proc_attach_device(struct pci_dev * dev);
+int pci_proc_attach_device(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 extern void pci_put_host_bridge_device(struct device * dev);
 void pci_put_host_bridge_device(struct device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void __init pci_realloc_get_opt(char * str);
+void __init pci_realloc_get_opt(char * str)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_restore_vc_state(struct pci_dev * dev);
+void pci_restore_vc_state(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int pci_save_vc_state(struct pci_dev * dev);
+int pci_save_vc_state(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_stop_and_remove_bus_device_locked(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_vpd_init(struct pci_dev * dev);
+void pci_vpd_init(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_vpd_release(struct pci_dev * dev);
+void pci_vpd_release(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern unsigned int pcibios_assign_all_busses(void);
+unsigned int pcibios_assign_all_busses(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pcibios_bus_to_resource(struct pci_bus * bus,struct resource * res,struct pci_bus_region * region)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int __init pcibios_init(void);
+int __init pcibios_init(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pcibios_resource_to_bus(struct pci_bus * bus,struct pci_bus_region * region,struct resource * res)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_init_link_state(struct pci_dev * pdev);
+void pcie_aspm_init_link_state(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_pm_state_change(struct pci_dev * pdev);
+void pcie_aspm_pm_state_change(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_powersave_config_link(struct pci_dev * pdev);
+void pcie_aspm_powersave_config_link(struct pci_dev * pdev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -446,6 +654,14 @@ void put_pid(struct pid * pid)
 }
 
 
+#include <linux/pci.h>
+
+int raw_pci_read(unsigned int domain,unsigned int bus,unsigned int devfn,int reg,int len,u32 * val)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/refcount.h>
 
 bool refcount_dec_not_one(refcount_t * r)
@@ -457,14 +673,6 @@ bool refcount_dec_not_one(refcount_t * r)
 #include <linux/refcount.h>
 
 void refcount_warn_saturate(refcount_t * r,enum refcount_saturation_type t)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/ioport.h>
-
-int release_resource(struct resource * old)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -488,7 +696,7 @@ void sched_set_fifo(struct task_struct * p)
 
 #include <linux/seq_file.h>
 
-void seq_vprintf(struct seq_file * m,const char * f,va_list args)
+void seq_printf(struct seq_file * m,const char * f,...)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -606,6 +814,14 @@ void sysfs_remove_dir(struct kobject * kobj)
 #include <linux/sysfs.h>
 
 void sysfs_remove_file_ns(struct kobject * kobj,const struct attribute * attr,const void * ns)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+bool sysfs_remove_file_self(struct kobject * kobj,const struct attribute * attr)
 {
 	lx_emul_trace_and_stop(__func__);
 }

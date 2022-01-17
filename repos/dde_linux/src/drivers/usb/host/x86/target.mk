@@ -11,7 +11,7 @@ SRC_C   += lx_emul.c
 SRC_C   += usb.c
 SRC_C   += $(notdir $(wildcard $(PRG_DIR)/generated_dummies.c))
 SRC_C   += lx_emul/spec/x86/common_dummies.c
-SRC_C   += lx_emul/shadow/drivers/pci/pci-driver.c
+#SRC_C   += lx_emul/shadow/drivers/pci/pci-driver.c
 
 vpath lx_emul/spec/x86/common_dummies.c $(REP_DIR)/src/lib
 

@@ -31,10 +31,12 @@ class Lx_kit::Initcalls
 
 		struct E : List<E>::Element
 		{
+			char const *name;
 			unsigned int prio;
 			int (* call) (void);
 
-			E(unsigned int p, int (*fn)(void)) : prio(p), call(fn) {}
+			E(char const *name, unsigned int p, int (*fn)(void))
+			: name(name), prio(p), call(fn) {}
 		};
 
 		Heap  & _heap;
@@ -42,7 +44,7 @@ class Lx_kit::Initcalls
 
 	public:
 
-		void add(int (*initcall)(void), unsigned int prio);
+		void add(char const *name, int (*initcall)(void), unsigned int prio);
 		void execute_in_order();
 
 		Initcalls(Heap & heap) : _heap(heap) {}
