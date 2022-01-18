@@ -35,9 +35,9 @@ void Lx_kit::Initcalls::execute_in_order()
 	for (unsigned i = min; i <= max; i++) {
 		for (E * entry = _call_list.first(); entry; entry = entry->next()) {
 			if (entry->prio == i) {
-				Genode::error(__func__, ": execute: '", entry->name, "'");
+				// Genode::error(__func__, ": execute: '", entry->name, "'");
 				entry->call();
-				Genode::error(__func__, ": execute: '", entry->name, "' done");
+				// Genode::error(__func__, ": execute: '", entry->name, "' done");
 			}
 		}
 	}

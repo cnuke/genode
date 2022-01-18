@@ -111,18 +111,57 @@ void * kmalloc_order(size_t size, gfp_t flags, unsigned int order)
 }
 
 
+#include <linux/fs.h>
+#include <linux/mount.h>
+#include <linux/slab.h>
+
+int simple_pin_fs(struct file_system_type * type, struct vfsmount ** mount, int * count)
+{
+	*mount = kmalloc(sizeof(struct vfsmount), GFP_KERNEL);
+	return 0;
+}
+
+
+#include <linux/fs.h>
+
+void simple_release_fs(struct vfsmount ** mount,int * count)
+{
+	kfree(*mount);
+}
+
+
+#include <linux/fs.h>
+
+struct inode * alloc_anon_inode(struct super_block * s)
+{
+	return kmalloc(sizeof(struct inode), GFP_KERNEL);
+}
+
+
 #include <asm/x86_init.h>
 
 static int x86_init_pci_init(void)
 {
+	printk("%s:%d TODO\n", __func__, __LINE__);
 	return 1;
 }
 
 
+static void x86_init_pci_init_irq(void)
+{
+	printk("%s:%d TODO\n", __func__, __LINE__);
+}
+
+
 struct x86_init_ops x86_init = {
-	.pci = { .init = x86_init_pci_init, },
+	.pci = {
+		.init     = x86_init_pci_init,
+		.init_irq = x86_init_pci_init_irq,
+	},
 };
 
+
+#include <lx_emul/pci_config_space.h>
 
 #include <linux/pci.h>
 #include <asm/pci.h>
@@ -131,16 +170,16 @@ struct x86_init_ops x86_init = {
 static int pci_raw_ops_read(unsigned int domain, unsigned int bus, unsigned int devfn,
                             int reg, int len, u32 *val)
 {
-	printk("%s:%d TODO\n", __func__, __LINE__);
-	return -1;
+	// printk("%s:%d %x:%x %d %d\n", __func__, __LINE__, bus, devfn, reg, len);
+	return lx_emul_pci_read_config(bus, devfn, (unsigned)reg, (unsigned)len, val);
 }
 
 
 static int pci_raw_ops_write(unsigned int domain, unsigned int bus, unsigned int devfn,
                              int reg, int len, u32 val)
 {
-	printk("%s:%d TODO\n", __func__, __LINE__);
-	return -1;
+	// printk("%s:%d %x:%x %d %d %u\n", __func__, __LINE__, bus, devfn, reg, len, val);
+	return lx_emul_pci_write_config(bus, devfn, (unsigned)reg, (unsigned)len, val);
 }
 
 
@@ -195,31 +234,14 @@ void pcibios_scan_root(int busnum)
 		return;
 	}
 	pci_bus_add_devices(bus);
+	printk("%s:%d bus: %px\n", __func__, __LINE__, bus);
 }
 
 
-#include <linux/fs.h>
-#include <linux/mount.h>
-#include <linux/slab.h>
+#include <linux/pci.h>
 
-int simple_pin_fs(struct file_system_type * type, struct vfsmount ** mount, int * count)
+void pci_assign_irq(struct pci_dev * dev)
 {
-	*mount = kmalloc(sizeof(struct vfsmount), GFP_KERNEL);
-	return 0;
-}
-
-
-#include <linux/fs.h>
-
-void simple_release_fs(struct vfsmount ** mount,int * count)
-{
-	kfree(*mount);
-}
-
-
-#include <linux/fs.h>
-
-struct inode * alloc_anon_inode(struct super_block * s)
-{
-	return kmalloc(sizeof(struct inode), GFP_KERNEL);
+	printk("%s: dev: %p TODO\n", __func__, dev);
+	lx_emul_trace(__func__);
 }

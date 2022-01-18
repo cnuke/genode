@@ -37,19 +37,27 @@ class Platform::Device : Interface, Noncopyable
 
 		struct Mmio;
 		struct Irq;
+		struct Config_space;
 
 		using Name = String<64>;
 
 	public:
 
+		Connection &_platform;
+
 		struct Index { unsigned value; };
 
-		explicit Device(Connection &) { }
+		explicit Device(Connection &platform)
+		: _platform { platform } { }
 
 		struct Type { String<64> name; };
 
-		Device(Connection &, Type) {}
-		Device(Connection &, Name) {}
+		Device(Connection &platform, Type)
+		: _platform { platform } { }
+
+		Device(Connection &platform, Name)
+		: _platform { platform } { }
+
 		~Device() { }
 };
 
@@ -84,6 +92,21 @@ class Platform::Device::Irq : Noncopyable
 		void ack() { }
 		void sigh(Signal_context_capability) { }
 		void sigh_omit_initial_signal(Signal_context_capability) { }
+};
+
+
+class Platform::Device::Config_space : Noncopyable
+{
+	public:
+
+		Device &_device;
+
+		enum class Access_size : unsigned { ACCESS_8BIT, ACCESS_16BIT, ACCESS_32BIT };
+
+		Config_space(Device &device) : _device { device } { }
+
+		unsigned read(unsigned char address, Access_size size);
+		void     write(unsigned char address, unsigned value, Access_size size);
 };
 
 

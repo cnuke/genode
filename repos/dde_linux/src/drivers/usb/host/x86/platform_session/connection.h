@@ -35,7 +35,11 @@ struct Platform::Connection
 {
 	Genode::Env &_env;
 
+	char _node_buffer[4096u] { };
+	Genode::Constructible<Genode::Xml_node> _devices_node { };
+
 	Genode::Constructible<Legacy_platform::Connection> _legacy_platform { };
+	Legacy_platform::Device_capability _device_cap { };
 
 	Connection(Genode::Env &);
 
@@ -43,8 +47,8 @@ struct Platform::Connection
 
 	template <typename FN> void with_xml(FN const & fn)
 	{
-		Genode::Xml_node xml { "<emtpy/>", 8 };
-		fn(xml);
+		if (_devices_node.constructed())
+			fn(*_devices_node);
 	}
 
 	Ram_dataspace_capability alloc_dma_buffer(size_t size, Cache cache);
@@ -53,5 +57,6 @@ struct Platform::Connection
 
 	addr_t dma_addr(Ram_dataspace_capability);
 };
+
 
 #endif /* _PLATFORM_SESSION__CONNECTION_H_ */

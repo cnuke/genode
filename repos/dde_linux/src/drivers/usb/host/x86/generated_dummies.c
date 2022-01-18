@@ -441,36 +441,6 @@ int param_set_copystring(const char * val,const struct kernel_param * kp)
 }
 
 
-#include <linux/kernel.h>
-
-bool parse_option_str(const char * str,const char * option)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern bool pat_enabled(void);
-bool pat_enabled(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pci_allocate_vc_save_buffers(struct pci_dev * dev);
-void pci_allocate_vc_save_buffers(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-void pci_assign_irq(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/pci.h>
 
 void pci_assign_unassigned_bridge_resources(struct pci_dev * bridge)
@@ -496,49 +466,12 @@ unsigned long pci_cardbus_resource_alignment(struct resource * res)
 
 #include <linux/pci.h>
 
-void pci_dev_assign_slot(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-struct pci_host_bridge * pci_find_host_bridge(struct pci_bus * bus)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
 unsigned int pci_flags;
-
-
-extern struct device * pci_get_host_bridge_device(struct pci_dev * dev);
-struct device * pci_get_host_bridge_device(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/pci.h>
 
 int pci_mmap_resource_range(struct pci_dev * pdev,int bar,struct vm_area_struct * vma,enum pci_mmap_state mmap_state,int write_combine)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern int pci_proc_attach_device(struct pci_dev * dev);
-int pci_proc_attach_device(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pci_put_host_bridge_device(struct device * dev);
-void pci_put_host_bridge_device(struct device * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -573,13 +506,6 @@ void pci_stop_and_remove_bus_device_locked(struct pci_dev * dev)
 }
 
 
-extern void pci_vpd_init(struct pci_dev * dev);
-void pci_vpd_init(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern void pci_vpd_release(struct pci_dev * dev);
 void pci_vpd_release(struct pci_dev * dev)
 {
@@ -589,29 +515,6 @@ void pci_vpd_release(struct pci_dev * dev)
 
 extern unsigned int pcibios_assign_all_busses(void);
 unsigned int pcibios_assign_all_busses(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-void pcibios_bus_to_resource(struct pci_bus * bus,struct resource * res,struct pci_bus_region * region)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern int __init pcibios_init(void);
-int __init pcibios_init(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-void pcibios_resource_to_bus(struct pci_bus * bus,struct pci_bus_region * region,struct resource * res)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -749,14 +652,6 @@ void synchronize_srcu(struct srcu_struct * ssp)
 
 #include <linux/sysfs.h>
 
-int sysfs_create_bin_file(struct kobject * kobj,const struct bin_attribute * attr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
 int sysfs_create_group(struct kobject * kobj,const struct attribute_group * grp)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -838,14 +733,6 @@ void sysfs_remove_group(struct kobject * kobj,const struct attribute_group * grp
 #include <linux/sysfs.h>
 
 void sysfs_remove_groups(struct kobject * kobj,const struct attribute_group ** groups)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
-void sysfs_remove_link(struct kobject * kobj,const char * name)
 {
 	lx_emul_trace_and_stop(__func__);
 }

@@ -25,6 +25,7 @@ SRC_CC  += lx_emul/log.cc
 SRC_CC  += lx_emul/page_virt.cc
 SRC_CC  += lx_emul/task.cc
 SRC_CC  += lx_emul/time.cc
+SRC_CC  += lx_emul/pci_config_space.cc
 
 SRC_C   += lx_emul/clocksource.c
 SRC_C   += lx_emul/irqchip.c

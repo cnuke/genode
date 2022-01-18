@@ -72,6 +72,15 @@ void rcu_sched_clock_irq(int user)
 
 #include <linux/sysfs.h>
 
+int sysfs_create_bin_file(struct kobject * kobj,const struct bin_attribute * attr)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/sysfs.h>
+
 int sysfs_create_dir_ns(struct kobject * kobj,const void * ns)
 {
 	lx_emul_trace(__func__);
@@ -103,6 +112,14 @@ int sysfs_create_link(struct kobject * kobj,struct kobject * target,const char *
 {
 	lx_emul_trace(__func__);
 	return 0;
+}
+
+
+#include <linux/sysfs.h>
+
+void sysfs_remove_link(struct kobject * kobj,const char * name)
+{
+	lx_emul_trace(__func__);
 }
 
 
@@ -263,6 +280,15 @@ struct pci_fixup __end_pci_fixups_suspend_late[] = { 0 };
 
 int pcibios_last_bus = -1;
 
+
+extern int __init pcibios_init(void);
+int __init pcibios_init(void)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
 #include <linux/utsname.h>
 #include <linux/user_namespace.h>
 
@@ -292,3 +318,44 @@ void unblank_screen(void)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+
+
+extern void pci_allocate_vc_save_buffers(struct pci_dev * dev);
+void pci_allocate_vc_save_buffers(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+extern void pci_vpd_init(struct pci_dev * dev);
+void pci_vpd_init(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+extern int pci_proc_attach_device(struct pci_dev * dev);
+int pci_proc_attach_device(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/kernel.h>
+
+bool parse_option_str(const char * str,const char * option)
+{
+	lx_emul_trace(__func__);
+	return false;
+}
+
+
+extern bool pat_enabled(void);
+bool pat_enabled(void)
+{
+	// XXX pat_enabled necessary?
+	lx_emul_trace(__func__);
+	return false;
+}
+
