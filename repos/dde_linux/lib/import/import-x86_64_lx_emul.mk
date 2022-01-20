@@ -61,6 +61,9 @@ SRC_CC  += lx_kit/task.cc
 SRC_CC  += lx_kit/timeout.cc
 SRC_S   += lx_kit/spec/x86_64/setjmp.S
 
+SRC_CC  += lx_kit/spec/x86_64/platform.cc
+INC_DIR += $(REP_DIR)/src/lib/lx_kit/spec/x86_64
+
 # determine location of lx_emul / lx_kit headers by querying lx_emul/init.h
 _LX_EMUL_INIT_H := $(call select_from_repositories,src/include/lx_emul/init.h)
 DDE_LINUX_SRC_INC_DIR := $(_LX_EMUL_INIT_H:/lx_emul/init.h=)
