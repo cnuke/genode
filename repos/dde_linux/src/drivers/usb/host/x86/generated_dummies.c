@@ -79,14 +79,6 @@ void __tasklet_hi_schedule(struct tasklet_struct * t)
 }
 
 
-#include <linux/interrupt.h>
-
-void __tasklet_schedule(struct tasklet_struct * t)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/fs.h>
 
 void __unregister_chrdev(unsigned int major,unsigned int baseminor,unsigned int count,const char * name)
@@ -145,14 +137,6 @@ async_cookie_t async_schedule_node(async_func_t func,void * data,int node)
 #include <linux/async.h>
 
 void async_synchronize_full(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/rcupdate.h>
-
-void call_rcu(struct rcu_head * head,rcu_callback_t func)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -749,14 +733,6 @@ int task_work_add(struct task_struct * task,struct callback_head * work,enum tas
 #include <linux/task_work.h>
 
 struct callback_head * task_work_cancel(struct task_struct * task,task_work_func_t func)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/interrupt.h>
-
-void tasklet_setup(struct tasklet_struct * t,void (* callback)(struct tasklet_struct *))
 {
 	lx_emul_trace_and_stop(__func__);
 }

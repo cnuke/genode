@@ -4,6 +4,7 @@ TARGET  := x86_usb_host_drv
 LIBS    := base x86_64_lx_emul
 INC_DIR := $(PRG_DIR)
 SRC_CC  += main.cc
+SRC_CC  += misc.cc
 SRC_CC  += time.cc
 SRC_C   += dummies.c
 SRC_C   += lx_emul.c

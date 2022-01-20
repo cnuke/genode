@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+void lx_backtrace(void);
+
 void lx_emul_time_udelay(unsigned long usec);
 
 #ifdef __cplusplus
