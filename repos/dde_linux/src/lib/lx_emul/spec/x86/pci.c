@@ -15,6 +15,14 @@
 #include <linux/slab.h>
 
 
+#include <linux/interrupt.h>
+
+int arch_probe_nr_irqs(void)
+{
+    return 16;
+}
+
+
 #include <asm/x86_init.h>
 
 static int x86_init_pci_init(void)
@@ -115,10 +123,17 @@ void pcibios_scan_root(int busnum)
 }
 
 
+#include <linux/irq.h>
 #include <linux/pci.h>
+
+extern struct irq_chip dde_irqchip_data_chip;
 
 void pci_assign_irq(struct pci_dev * dev)
 {
-	printk("%s: dev: %p TODO\n", __func__, dev);
+	int const err = irq_set_chip(dev->irq, &dde_irqchip_data_chip);
+	printk("%s: dev: %p irq: %d\n", __func__, dev, dev->irq);
+	if (err) {
+		printk("%s: dev: %p irq: %d irq_set_chip failed\n", __func__, dev, dev->irq);
+	}
 	lx_emul_trace(__func__);
 }

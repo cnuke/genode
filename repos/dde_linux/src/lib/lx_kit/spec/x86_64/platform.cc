@@ -112,6 +112,11 @@ Platform::Connection::Connection(Genode::Env &env)
 				xml.attribute("value", to_string(func));
 			});
 
+			xml.node("irq", [&] () {
+				// XXX irq number == 0 so that is matches hwirq, fix me later
+				xml.attribute("number", 0);
+			});
+
 			acquire_resources(device, [&] (unsigned id, R const &r) {
 
 				xml.node(r.type() == R::MEMORY ? "io_mem" : "io_port", [&] () {
