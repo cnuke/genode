@@ -28,7 +28,7 @@ SRC_CC  += lx_emul/time.cc
 SRC_CC  += lx_emul/pci_config_space.cc
 
 SRC_C   += lx_emul/clocksource.c
-SRC_C   += lx_emul/irqchip.c
+SRC_C   += lx_emul/spec/x86/irqchip.c
 SRC_C   += lx_emul/start.c
 SRC_C   += lx_emul/spec/x86/start.c
 SRC_C   += lx_emul/shadow/fs/exec.c
