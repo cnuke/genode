@@ -71,21 +71,6 @@ static Genode::String<16> create_device_node(Genode::Xml_generator &xml,
 		xml.attribute("name", name);
 		xml.attribute("type", "pci");
 
-		xml.node("property", [&] () {
-			xml.attribute("name",  "vendor_id");
-			xml.attribute("value", to_string(Hex(device.vendor_id())));
-		});
-
-		xml.node("property", [&] () {
-			xml.attribute("name",  "device_id");
-			xml.attribute("value", to_string(Hex(device.device_id())));
-		});
-
-		xml.node("property", [&] () {
-			xml.attribute("name",  "class_code");
-			xml.attribute("value", to_string(Hex(device.class_code())));
-		});
-
 		for (auto i : bdf) {
 			xml.node("property", [&] () {
 				xml.attribute("name",  i.key);
