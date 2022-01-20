@@ -136,3 +136,36 @@ struct inode * alloc_anon_inode(struct super_block * s)
 {
 	return kmalloc(sizeof(struct inode), GFP_KERNEL);
 }
+
+
+#include <linux/interrupt.h>
+
+// softirq.c
+void tasklet_setup(struct tasklet_struct * t,
+                   void (* callback)(struct tasklet_struct *))
+{
+	// XXX lx_backtrace();
+
+	t->next = NULL;
+	t->state = 0;
+	atomic_set(&t->count, 0);
+	t->callback = callback;
+	t->use_callback = true;
+	t->data = 0;
+}
+
+
+void __tasklet_schedule(struct tasklet_struct * t)
+{
+	// XXX lx_backtrace();
+	t->callback(t);
+}
+
+
+#include <linux/rcupdate.h>
+
+void call_rcu(struct rcu_head * head,rcu_callback_t func)
+{
+	lx_emul_trace(__func__);
+	func(head);
+}
