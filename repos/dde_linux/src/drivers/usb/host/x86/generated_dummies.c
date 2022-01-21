@@ -110,14 +110,6 @@ void ack_bad_irq(unsigned int irq)
 }
 
 
-#include <linux/random.h>
-
-void add_device_randomness(const void * buf,unsigned int size)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/kobject.h>
 
 int add_uevent_var(struct kobj_uevent_env * env,const char * format,...)
@@ -636,14 +628,6 @@ void synchronize_srcu(struct srcu_struct * ssp)
 
 #include <linux/sysfs.h>
 
-int sysfs_create_group(struct kobject * kobj,const struct attribute_group * grp)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
 void sysfs_delete_link(struct kobject * kobj,struct kobject * targ,const char * name)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -685,14 +669,6 @@ void sysfs_remove_bin_file(struct kobject * kobj,const struct bin_attribute * at
 #include <linux/sysfs.h>
 
 void sysfs_remove_dir(struct kobject * kobj)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
-void sysfs_remove_file_ns(struct kobject * kobj,const struct attribute * attr,const void * ns)
 {
 	lx_emul_trace_and_stop(__func__);
 }

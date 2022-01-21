@@ -108,6 +108,15 @@ int sysfs_create_groups(struct kobject * kobj,const struct attribute_group ** gr
 
 #include <linux/sysfs.h>
 
+int sysfs_create_group(struct kobject * kobj,const struct attribute_group * grp)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/sysfs.h>
+
 int sysfs_create_link(struct kobject * kobj,struct kobject * target,const char * name)
 {
 	lx_emul_trace(__func__);
@@ -118,6 +127,14 @@ int sysfs_create_link(struct kobject * kobj,struct kobject * target,const char *
 #include <linux/sysfs.h>
 
 void sysfs_remove_link(struct kobject * kobj,const char * name)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+void sysfs_remove_file_ns(struct kobject * kobj,const struct attribute * attr,const void * ns)
 {
 	lx_emul_trace(__func__);
 }
@@ -165,6 +182,14 @@ int add_random_ready_callback(struct random_ready_callback * rdy)
 {
 	lx_emul_trace(__func__);
 	return 0;
+}
+
+
+#include <linux/random.h>
+
+void add_device_randomness(const void * buf,unsigned int size)
+{
+	lx_emul_trace(__func__);
 }
 
 
