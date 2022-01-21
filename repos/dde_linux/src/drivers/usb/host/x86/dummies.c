@@ -254,41 +254,6 @@ int software_node_notify(struct device * dev,unsigned long action)
 }
 
 
-#include <linux/pci.h>
-
-unsigned long pci_mem_start = 0xaeedbabe;
-
-const struct attribute_group aspm_ctrl_attr_group[] = { 0 };
-const struct attribute_group pci_dev_vpd_attr_group = { };
-
-struct pci_fixup __start_pci_fixups_early[] = { 0 };
-struct pci_fixup __end_pci_fixups_early[] = { 0 };
-struct pci_fixup __start_pci_fixups_header[] = { 0 };
-struct pci_fixup __end_pci_fixups_header[] = { 0 };
-struct pci_fixup __start_pci_fixups_final[] = { 0 };
-struct pci_fixup __end_pci_fixups_final[] = { 0 };
-struct pci_fixup __start_pci_fixups_enable[] = { 0 };
-struct pci_fixup __end_pci_fixups_enable[] = { 0 };
-struct pci_fixup __start_pci_fixups_resume[] = { 0 };
-struct pci_fixup __end_pci_fixups_resume[] = { 0 };
-struct pci_fixup __start_pci_fixups_resume_early[] = { 0 };
-struct pci_fixup __end_pci_fixups_resume_early[] = { 0 };
-struct pci_fixup __start_pci_fixups_suspend[] = { 0 };
-struct pci_fixup __end_pci_fixups_suspend[] = { 0 };
-struct pci_fixup __start_pci_fixups_suspend_late[] = { 0 };
-struct pci_fixup __end_pci_fixups_suspend_late[] = { 0 };
-
-int pcibios_last_bus = -1;
-
-
-extern int __init pcibios_init(void);
-int __init pcibios_init(void)
-{
-	lx_emul_trace(__func__);
-	return 0;
-}
-
-
 #include <linux/utsname.h>
 #include <linux/user_namespace.h>
 
