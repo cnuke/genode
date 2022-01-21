@@ -44,9 +44,15 @@ class Platform::Device : Interface, Noncopyable
 
 		using Name = String<64>;
 
-	public:
+	private:
 
 		Connection &_platform;
+		Legacy_platform::Device_capability _device_cap { };
+		Name _name { };
+
+	public:
+
+		int _bar_checked_for_size[6] { };
 
 		struct Index { unsigned value; };
 
@@ -55,13 +61,16 @@ class Platform::Device : Interface, Noncopyable
 
 		struct Type { String<64> name; };
 
-		Device(Connection &platform, Type)
-		: _platform { platform } { }
+		Device(Connection &platform, Type type);
 
-		Device(Connection &platform, Name)
-		: _platform { platform } { }
+		Device(Connection &platform, Name name);
 
 		~Device() { }
+
+		Name const &name() const
+		{
+			return _name;
+		}
 };
 
 
@@ -101,13 +110,23 @@ class Platform::Device::Irq : Noncopyable
 
 		struct Index { unsigned value; };
 
-		Irq(Device &, Index) { }
+	private:
 
-		explicit Irq(Device &) {}
+		Device &_device;
+		Index   _index;
 
-		void ack() { }
-		void sigh(Signal_context_capability) { }
-		void sigh_omit_initial_signal(Signal_context_capability) { }
+		Genode::Constructible<Genode::Irq_session_client> _irq { };
+
+	public:
+
+		Irq(Device &device, Index index);
+
+		explicit Irq(Device &device)
+		: _device { device }, _index { ~0u } { }
+
+		void ack();
+		void sigh(Signal_context_capability);
+		void sigh_omit_initial_signal(Signal_context_capability);
 };
 
 

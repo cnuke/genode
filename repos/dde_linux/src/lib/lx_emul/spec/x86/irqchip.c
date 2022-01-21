@@ -49,11 +49,11 @@ int lx_emul_irq_task_function(void * data)
 		irq_enter();
 
 		irq = lx_emul_irq_last();
-		printk("%s: irq: %d\n", __func__, irq);
 
 		if (!irq) {
 			ack_bad_irq(irq);
-			WARN_ONCE(true, "Unexpected interrupt %d received!\n", lx_emul_irq_last());
+			WARN_ONCE(true, "Unexpected interrupt %d received!\n",
+			          lx_emul_irq_last());
 		} else {
 			generic_handle_irq(irq);
 		}

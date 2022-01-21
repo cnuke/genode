@@ -20,8 +20,17 @@
 #include <platform_session/device.h>
 
 
+using Str = Genode::String<16>;
+
+template <typename T, typename... TAIL>
+static Str to_string(T const &arg, TAIL &&... args)
+{
+	return Str(arg, args...);
+}
+
+
 template <typename FN>
-static void acquire_resources(Legacy_platform::Device &device,
+static void scan_resources(Legacy_platform::Device &device,
                               FN const &fn)
 {
 	using R = Legacy_platform::Device::Resource;
@@ -34,10 +43,72 @@ static void acquire_resources(Legacy_platform::Device &device,
 }
 
 
-template<typename T>
-static Genode::String<16> to_string(T val)
+static Genode::String<16> create_device_node(Genode::Xml_generator &xml,
+                                             Legacy_platform::Device &device)
 {
-	return Genode::String<16>(Genode::Hex(val));
+	struct {
+		char const    *key;
+		unsigned char  value;
+	} bdf[3] = {
+		{ .key = "bus",  .value = 0u },
+		{ .key = "dev",  .value = 0u },
+		{ .key = "func", .value = 0u },
+	};
+	device.bus_address(&bdf[0].value, &bdf[1].value, &bdf[2].value);
+
+	/* start arbitrarily and count up */
+	static unsigned char irq = 8;
+
+	using namespace Genode;
+
+	Str name = to_string("pci-",
+	                     Hex(bdf[0].value, Hex::OMIT_PREFIX), ":",
+	                     Hex(bdf[1].value, Hex::OMIT_PREFIX), ".",
+	                     Hex(bdf[2].value, Hex::OMIT_PREFIX));
+
+	xml.node("device", [&] () {
+		xml.attribute("name", name);
+		xml.attribute("type", "pci");
+
+		xml.node("property", [&] () {
+			xml.attribute("name",  "vendor_id");
+			xml.attribute("value", to_string(Hex(device.vendor_id())));
+		});
+
+		xml.node("property", [&] () {
+			xml.attribute("name",  "device_id");
+			xml.attribute("value", to_string(Hex(device.device_id())));
+		});
+
+		xml.node("property", [&] () {
+			xml.attribute("name",  "class_code");
+			xml.attribute("value", to_string(Hex(device.class_code())));
+		});
+
+		for (auto i : bdf) {
+			xml.node("property", [&] () {
+				xml.attribute("name",  i.key);
+				xml.attribute("value", to_string(i.value));
+			});
+		}
+
+		xml.node("irq", [&] () {
+			xml.attribute("number", irq++);
+		});
+
+		using R = Legacy_platform::Device::Resource;
+
+		scan_resources(device, [&] (unsigned id, R const &r) {
+
+			xml.node(r.type() == R::MEMORY ? "io_mem" : "io_port", [&] () {
+				xml.attribute("phys_addr", to_string(Hex(r.base())));
+				xml.attribute("size",      to_string(Hex(r.size())));
+				xml.attribute("bar",       id);
+			});
+		});
+	});
+
+	return name;
 }
 
 
@@ -56,101 +127,60 @@ Platform::Connection::Connection(Genode::Env &env)
 	_legacy_platform->upgrade_ram(32768);
 	_legacy_platform->upgrade_caps(8);
 
-	_legacy_platform->with_upgrade([&] () {
-		_device_cap =
-			_legacy_platform->next_device(_device_cap,
-			                              0x0c0300, 0xffff00u);
-	});
-
-	if (!_device_cap.valid()) {
-		Genode::error("could not find valid PCI device");
-		return;
-	}
-
-	Legacy_platform::Device_client device { _device_cap };
-	enum : size_t { DEVICES_NODE_SIZE = sizeof (_node_buffer), };
-	char *buffer = _node_buffer;
-
-	using R = Legacy_platform::Device::Resource;
-
-	unsigned char bus, dev, func;
-	device.bus_address(&bus, &dev, &func);
-
-	Genode::Xml_generator xml { buffer, DEVICES_NODE_SIZE,
+	Genode::Xml_generator xml { _devices_node_buffer,
+	                            sizeof (_devices_node_buffer),
 	                            "devices", [&] () {
-		xml.node("device", [&] () {
-			xml.attribute("name", "pci");
-			xml.attribute("type", "pci");
+		_legacy_platform->with_upgrade([&] () {
 
-			xml.node("property", [&] () {
-				xml.attribute("name",  "vendor_id");
-				xml.attribute("value", to_string(device.vendor_id()));
-			});
+			/* scan the virtual bus but limit to MAX_DEVICES */
+			Legacy_platform::Device_capability cap { };
+			for (auto &dev : _devices_list) {
 
-			xml.node("property", [&] () {
-				xml.attribute("name",  "device_id");
-				xml.attribute("value", to_string(device.device_id()));
-			});
+				cap = _legacy_platform->next_device(cap, 0x0u, 0x0u);
+				if (!cap.valid()) break;
 
-			xml.node("property", [&] () {
-				xml.attribute("name",  "class_code");
-				xml.attribute("value", to_string(device.class_code()));
-			});
-
-			xml.node("property", [&] () {
-				xml.attribute("name",  "bus");
-				xml.attribute("value", to_string(bus));
-			});
-
-			xml.node("property", [&] () {
-				xml.attribute("name",  "dev");
-				xml.attribute("value", to_string(dev));
-			});
-
-			xml.node("property", [&] () {
-				xml.attribute("name",  "func");
-				xml.attribute("value", to_string(func));
-			});
-
-			xml.node("irq", [&] () {
-				// XXX irq number == 0 so that is matches hwirq, fix me later
-				xml.attribute("number", 0);
-			});
-
-			acquire_resources(device, [&] (unsigned id, R const &r) {
-
-				xml.node(r.type() == R::MEMORY ? "io_mem" : "io_port", [&] () {
-					xml.attribute("phys_addr", to_string(r.base()));
-					xml.attribute("size",      r.size());
-					xml.attribute("bar",       id);
-				});
-			});
+				Legacy_platform::Device_client device { cap };
+				Str name = create_device_node(xml, device);
+				dev.construct(name, cap);
+			}
 		});
 	} };
 
-	_devices_node.construct(buffer, DEVICES_NODE_SIZE);
-	Genode::log(*_devices_node);
+	_devices_node.construct(_devices_node_buffer,
+	                        sizeof (_devices_node_buffer));
 }
 
 
-void Platform::Connection::update()
+Legacy_platform::Device_capability
+Platform::Connection::device_cap(char const *name)
 {
-	Genode::error(__func__, ": not implemented");
+	for (auto const &dev : _devices_list) {
+		if (!dev.constructed())
+			continue;
+
+		if (dev->name == name)
+			return dev->cap;
+	}
+
+	return Legacy_platform::Device_capability();
 }
+
+
+void Platform::Connection::update() { }
 
 
 Genode::Ram_dataspace_capability
-Platform::Connection::alloc_dma_buffer(size_t size, Cache cache)
+Platform::Connection::alloc_dma_buffer(size_t size, Cache)
 {
 	return _legacy_platform->with_upgrade([&] () {
-		return _legacy_platform->alloc_dma_buffer(size, cache);
+		return _legacy_platform->alloc_dma_buffer(size, Genode::Cache::UNCACHED);
 	});
 }
 
 
-void Platform::Connection::free_dma_buffer(Ram_dataspace_capability)
+void Platform::Connection::free_dma_buffer(Ram_dataspace_capability ds_cap)
 {
-	Genode::error(__func__, ": not implemented");
+	_legacy_platform->free_dma_buffer(ds_cap);
 }
 
 
@@ -168,7 +198,7 @@ static Legacy_platform::Device::Access_size convert(Platform::Device::Config_spa
 	case PAS::ACCESS_8BIT:
 		return LAS::ACCESS_8BIT;
 	case PAS::ACCESS_16BIT:
-		return LAS::ACCESS_16BIT;
+		 return LAS::ACCESS_16BIT;
 	case PAS::ACCESS_32BIT:
 		return LAS::ACCESS_32BIT;
 	}
@@ -177,19 +207,38 @@ static Legacy_platform::Device::Access_size convert(Platform::Device::Config_spa
 }
 
 
-static int bar_checked_for_size[6];
-
-
-static unsigned bar_size(Genode::Xml_node const &devices, unsigned bar)
+template <typename FN>
+static void apply(Platform::Device const &device,
+                  Genode::Xml_node const &devices,
+                  FN const &fn)
 {
+	using namespace Genode;
+	using N = Platform::Device::Name;
+
+	auto lookup_device = [&] (Xml_node const &node) {
+		if (node.attribute_value("name", N()) == device.name())
+			fn(node);
+	};
+
+	devices.for_each_sub_node("device", lookup_device);
+}
+
+
+static unsigned bar_size(Platform::Device const &dev,
+                         Genode::Xml_node const &devices, unsigned bar)
+{
+	if (bar > 6)
+		return 0;
+
 	using namespace Genode;
 
 	unsigned val = 0;
-	devices.for_each_sub_node("device", [&] (Xml_node device) {
+	apply(dev, devices, [&] (Xml_node device) {
 		device.for_each_sub_node("io_mem", [&] (Xml_node node) {
-			if (node.attribute_value("bar", 6u) == bar) {
-				val = node.attribute_value("size", 0u);
-			}
+			if (node.attribute_value("bar", 6u) != bar)
+				return;
+
+			val = node.attribute_value("size", 0u);
 		});
 	});
 
@@ -197,23 +246,64 @@ static unsigned bar_size(Genode::Xml_node const &devices, unsigned bar)
 }
 
 
+static unsigned char irq_line(Platform::Device const &dev,
+                              Genode::Xml_node const &devices)
+{
+	using namespace Genode;
+
+	enum : unsigned char { INVALID_IRQ_LINE = 0xffu };
+	unsigned char irq = INVALID_IRQ_LINE;
+
+	apply(dev, devices, [&] (Xml_node device) {
+		device.for_each_sub_node("irq", [&] (Xml_node node) {
+			irq = node.attribute_value("number", (unsigned char)INVALID_IRQ_LINE);
+		});
+	});
+
+	return irq;
+}
+
+
+Platform::Device::Device(Connection &platform, Type)
+: _platform { platform } { }
+
+
+Platform::Device::Device(Connection &platform, Name name)
+:
+	_platform   { platform },
+	_device_cap { _platform.device_cap(name.string()) },
+	_name       { name }
+{
+	if (!_device_cap.valid()) {
+		Genode::error(__func__, ": could not get device capability");
+		throw -1;
+	}
+}
+
+
 unsigned Platform::Device::Config_space::read(unsigned char address,
                                               Access_size size)
 {
-	Legacy_platform::Device_client device {
-		_device._platform._device_cap };
-
 	// 32bit BARs only for now
 	if (address >= 0x10 && address <= 0x24) {
 		unsigned const bar = (address - 0x10) / 4;
-		Genode::log(__func__, ": check bar: ", bar);
-		if (bar_checked_for_size[bar]) {
-			bar_checked_for_size[bar] = 0;
-			return bar_size(*_device._platform._devices_node, bar);
+		if (_device._bar_checked_for_size[bar]) {
+			_device._bar_checked_for_size[bar] = 0;
+			return bar_size(_device, *_device._platform._devices_node, bar);
 		}
 	}
 
+	if (address == 0x3c)
+		return irq_line(_device, *_device._platform._devices_node);
+
+	if (address == 0x34)
+		return 0u;
+
+	if (address > 0x3f)
+		return 0u;
+
 	Legacy_platform::Device::Access_size const as = convert(size);
+	Legacy_platform::Device_client device { _device._device_cap };
 	return device.config_read(address, as);
 }
 
@@ -222,40 +312,33 @@ void Platform::Device::Config_space::write(unsigned char address,
                                            unsigned value,
                                            Access_size size)
 {
-	Legacy_platform::Device_client device {
-		_device._platform._device_cap };
-
 	// 32bit BARs only for now
 	if (address >= 0x10 && address <= 0x24) {
 		unsigned const bar = (address - 0x10) / 4;
-		Genode::log(__func__, ": check bar: ", bar);
 		if (value == 0xffffffffu)
-			bar_checked_for_size[bar] = 1;
+			_device._bar_checked_for_size[bar] = 1;
 		return;
 	}
 
+	if (address != 0x04)
+		return;
+
 	Legacy_platform::Device::Access_size const as = convert(size);
+	Legacy_platform::Device_client device { _device._device_cap };
 	device.config_write(address, value, as);
 }
 
 
 Genode::size_t Platform::Device::Mmio::size() const
 {
-	size_t const size = _attached_ds.constructed() ? _attached_ds->size() : 0;
-
-	Genode::log(__func__, ": size: ", size);
-
-	return size;
+	return _attached_ds.constructed() ? _attached_ds->size() : 0;
 }
 
 
 void *Platform::Device::Mmio::_local_addr()
 {
-	Genode::log(__func__, ": index: ", _index.value);
-
 	if (!_attached_ds.constructed()) {
-		Legacy_platform::Device_client device {
-			_device._platform._device_cap };
+		Legacy_platform::Device_client device { _device._device_cap };
 
 		Genode::uint8_t const id =
 			device.phys_bar_to_virt((Genode::uint8_t)_index.value);
@@ -270,4 +353,33 @@ void *Platform::Device::Mmio::_local_addr()
 	}
 
 	return _attached_ds->local_addr<void*>();
+}
+
+
+Platform::Device::Irq::Irq(Platform::Device &device, Index index)
+:
+	_device { device },
+	_index { index }
+{
+	Legacy_platform::Device_client client { _device._device_cap };
+
+	_irq.construct(client.irq((Genode::uint8_t)index.value));
+}
+
+void Platform::Device::Irq::ack()
+{
+	_irq->ack_irq();
+}
+
+
+void Platform::Device::Irq::sigh(Signal_context_capability sigh)
+{
+	_irq->sigh(sigh);
+	_irq->ack_irq();
+}
+
+
+void Platform::Device::Irq::sigh_omit_initial_signal(Signal_context_capability sigh)
+{
+	_irq->sigh(sigh);
 }

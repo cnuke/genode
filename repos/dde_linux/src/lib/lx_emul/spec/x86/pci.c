@@ -102,24 +102,20 @@ void pcibios_scan_root(int busnum)
 
 	sd = kzalloc(sizeof(*sd), GFP_KERNEL);
 	if (!sd) {
-		printk(KERN_ERR "PCI: OOM, skipping PCI bus %02x\n", busnum);
 		return;
 	}
 	sd->node = NUMA_NO_NODE;
 	pci_add_resource(&resources, &ioport_resource);
 	pci_add_resource(&resources, &iomem_resource);
 
-	printk(KERN_DEBUG "PCI: Probing PCI hardware (bus %02x)\n", busnum);
 	bus = pci_scan_root_bus(NULL, busnum, &pci_root_ops, sd, &resources);
 
-	printk("%s:%d bus: %px\n", __func__, __LINE__, bus);
 	if (!bus) {
 		pci_free_resource_list(&resources);
 		kfree(sd);
 		return;
 	}
 	pci_bus_add_devices(bus);
-	printk("%s:%d bus: %px\n", __func__, __LINE__, bus);
 }
 
 
@@ -128,14 +124,18 @@ void pcibios_scan_root(int busnum)
 
 extern struct irq_chip dde_irqchip_data_chip;
 
+
 void pci_assign_irq(struct pci_dev * dev)
 {
-	int const err = irq_set_chip(dev->irq, &dde_irqchip_data_chip);
-	printk("%s: dev: %p irq: %d\n", __func__, dev, dev->irq);
-	if (err) {
-		printk("%s: dev: %p irq: %d irq_set_chip failed\n", __func__, dev, dev->irq);
-	}
-	lx_emul_trace(__func__);
+	/*
+	 * Be lazy and treat irq as hwirq as this is used by the
+	 * dde_irqchip_data_chip for (un-)masking.
+	 */
+	struct irq_data *irq_data = irq_get_irq_data(dev->irq);
+	irq_data->hwirq = dev->irq;
+
+	irq_set_chip_and_handler(dev->irq, &dde_irqchip_data_chip,
+	                         handle_level_irq);
 }
 
 

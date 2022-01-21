@@ -35,13 +35,31 @@ struct Platform::Connection
 {
 	Genode::Env &_env;
 
-	char _node_buffer[4096u] { };
+	char                                    _devices_node_buffer[4096u] { };
 	Genode::Constructible<Genode::Xml_node> _devices_node { };
 
 	Genode::Constructible<Legacy_platform::Connection> _legacy_platform { };
-	Legacy_platform::Device_capability _device_cap { };
+	struct Device
+	{
+		using Name = Genode::String<16>;
+
+		Name name { };
+		Legacy_platform::Device_capability cap { };
+
+		Device(Name const &name, Legacy_platform::Device_capability cap)
+		: name { name }, cap { cap } { }
+	};
+
+	enum : unsigned char { MAX_DEVICES = 4 };
+	Genode::Constructible<Device> _devices_list[MAX_DEVICES] { };
+
+	Legacy_platform::Device_capability device_cap(char const *name);
 
 	Connection(Genode::Env &);
+
+	/********************************
+	 ** Platform session interface **
+	 ********************************/
 
 	void update();
 
