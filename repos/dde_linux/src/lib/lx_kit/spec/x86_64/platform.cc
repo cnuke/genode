@@ -271,3 +271,36 @@ void *Platform::Device::Mmio::_local_addr()
 
 	return _attached_ds->local_addr<void*>();
 }
+
+
+Platform::Device::Irq::Irq(Platform::Device &device, Index index)
+:
+	_device { device },
+	_index { index }
+{
+	Legacy_platform::Device_client client {
+		_device._platform._device_cap };
+
+	_irq.construct(client.irq((Genode::uint8_t)index.value));
+}
+
+void Platform::Device::Irq::ack()
+{
+	Genode::error(__func__, ": index: ", _index.value);
+	_irq->ack_irq();
+}
+
+
+void Platform::Device::Irq::sigh(Signal_context_capability sigh)
+{
+	Genode::error(__func__, ": index: ", _index.value);
+	_irq->sigh(sigh);
+	_irq->ack_irq();
+}
+
+
+void Platform::Device::Irq::sigh_omit_initial_signal(Signal_context_capability sigh)
+{
+	Genode::error(__func__, ": index: ", _index.value);
+	_irq->sigh(sigh);
+}

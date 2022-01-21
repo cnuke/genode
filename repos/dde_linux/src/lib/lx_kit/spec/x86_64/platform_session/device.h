@@ -101,13 +101,23 @@ class Platform::Device::Irq : Noncopyable
 
 		struct Index { unsigned value; };
 
-		Irq(Device &, Index) { }
+	private:
 
-		explicit Irq(Device &) {}
+		Device &_device;
+		Index   _index;
 
-		void ack() { }
-		void sigh(Signal_context_capability) { }
-		void sigh_omit_initial_signal(Signal_context_capability) { }
+		Genode::Constructible<Genode::Irq_session_client> _irq { };
+
+	public:
+
+		Irq(Device &device, Index index);
+
+		explicit Irq(Device &device)
+		: _device { device }, _index { ~0u } { }
+
+		void ack();
+		void sigh(Signal_context_capability);
+		void sigh_omit_initial_signal(Signal_context_capability);
 };
 
 
