@@ -40,5 +40,5 @@ kernel_build.phony: kernel_config.tag
 run_kernel.phony: kernel_build.phony
 	$(MSG_BUILD)Linux
 	$(VERBOSE)qemu-system-x86_64 -nographic -serial mon:stdio \
-		-device nec-usb-xhci,id=xhci -device usb-ehci,id=ehci \
+		-device nec-usb-xhci,id=xhci \
 		-kernel $(PWD)/arch/x86_64/boot/bzImage -append "console=ttyS0"
