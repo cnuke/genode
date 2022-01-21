@@ -158,7 +158,16 @@ void tasklet_setup(struct tasklet_struct * t,
 void __tasklet_schedule(struct tasklet_struct * t)
 {
 	// XXX lx_backtrace();
-	t->callback(t);
+
+	if (test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
+		t->callback(t);
+}
+
+
+void __tasklet_hi_schedule(struct tasklet_struct * t)
+{
+	if (test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
+		t->callback(t);
 }
 
 

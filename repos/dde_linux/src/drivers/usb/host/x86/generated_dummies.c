@@ -71,14 +71,6 @@ void __srcu_read_unlock(struct srcu_struct * ssp,int idx)
 }
 
 
-#include <linux/interrupt.h>
-
-void __tasklet_hi_schedule(struct tasklet_struct * t)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/fs.h>
 
 void __unregister_chrdev(unsigned int major,unsigned int baseminor,unsigned int count,const char * name)
@@ -105,14 +97,6 @@ unsigned long _copy_to_user(void __user * to,const void * from,unsigned long n)
 
 extern void ack_bad_irq(unsigned int irq);
 void ack_bad_irq(unsigned int irq)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/random.h>
-
-void add_device_randomness(const void * buf,unsigned int size)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -320,25 +304,9 @@ bool is_software_node(const struct fwnode_handle * fwnode)
 }
 
 
-#include <linux/mm.h>
-
-bool is_vmalloc_addr(const void * x)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/kobject.h>
 
 struct kobject *kernel_kobj;
-
-
-#include <linux/kernfs.h>
-
-void kernfs_put(struct kernfs_node * kn)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/fs.h>
@@ -636,14 +604,6 @@ void synchronize_srcu(struct srcu_struct * ssp)
 
 #include <linux/sysfs.h>
 
-int sysfs_create_group(struct kobject * kobj,const struct attribute_group * grp)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
 void sysfs_delete_link(struct kobject * kobj,struct kobject * targ,const char * name)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -676,30 +636,6 @@ void sysfs_notify(struct kobject * kobj,const char * dir,const char * attr)
 
 #include <linux/sysfs.h>
 
-void sysfs_remove_bin_file(struct kobject * kobj,const struct bin_attribute * attr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
-void sysfs_remove_dir(struct kobject * kobj)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
-void sysfs_remove_file_ns(struct kobject * kobj,const struct attribute * attr,const void * ns)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
 bool sysfs_remove_file_self(struct kobject * kobj,const struct attribute * attr)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -709,14 +645,6 @@ bool sysfs_remove_file_self(struct kobject * kobj,const struct attribute * attr)
 #include <linux/sysfs.h>
 
 void sysfs_remove_group(struct kobject * kobj,const struct attribute_group * grp)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sysfs.h>
-
-void sysfs_remove_groups(struct kobject * kobj,const struct attribute_group ** groups)
 {
 	lx_emul_trace_and_stop(__func__);
 }
