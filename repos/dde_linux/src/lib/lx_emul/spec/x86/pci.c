@@ -130,11 +130,9 @@ extern struct irq_chip dde_irqchip_data_chip;
 
 void pci_assign_irq(struct pci_dev * dev)
 {
-	int const err = irq_set_chip(dev->irq, &dde_irqchip_data_chip);
+	irq_set_chip_and_handler(dev->irq, &dde_irqchip_data_chip,
+	                         handle_level_irq);
 	printk("%s: dev: %p irq: %d\n", __func__, dev, dev->irq);
-	if (err) {
-		printk("%s: dev: %p irq: %d irq_set_chip failed\n", __func__, dev, dev->irq);
-	}
 	lx_emul_trace(__func__);
 }
 
