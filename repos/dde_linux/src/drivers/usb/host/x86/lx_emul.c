@@ -164,6 +164,13 @@ void __tasklet_schedule(struct tasklet_struct * t)
 }
 
 
+void __tasklet_hi_schedule(struct tasklet_struct * t)
+{
+	if (test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
+		t->callback(t);
+}
+
+
 #include <linux/rcupdate.h>
 
 void call_rcu(struct rcu_head * head,rcu_callback_t func)
