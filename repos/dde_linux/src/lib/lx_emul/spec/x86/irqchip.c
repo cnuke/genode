@@ -49,7 +49,9 @@ int lx_emul_irq_task_function(void * data)
 		irq_enter();
 
 		irq = lx_emul_irq_last();
-		printk("%s: irq: %d\n", __func__, irq);
+		// forcefully override IRQ number - for we rely on
+		// reporting the one Linux read from the config space
+		irq = 11;
 
 		if (!irq) {
 			ack_bad_irq(irq);
