@@ -58,8 +58,7 @@ Platform::Connection::Connection(Genode::Env &env)
 
 	_legacy_platform->with_upgrade([&] () {
 		_device_cap =
-			_legacy_platform->next_device(_device_cap,
-			                              0x0c0300, 0xffff00u);
+			_legacy_platform->next_device(_device_cap, 0x0u, 0x0u);
 	});
 
 	if (!_device_cap.valid()) {
@@ -140,17 +139,17 @@ void Platform::Connection::update()
 
 
 Genode::Ram_dataspace_capability
-Platform::Connection::alloc_dma_buffer(size_t size, Cache cache)
+Platform::Connection::alloc_dma_buffer(size_t size, Cache)
 {
 	return _legacy_platform->with_upgrade([&] () {
-		return _legacy_platform->alloc_dma_buffer(size, cache);
+		return _legacy_platform->alloc_dma_buffer(size, Genode::Cache::UNCACHED);
 	});
 }
 
 
-void Platform::Connection::free_dma_buffer(Ram_dataspace_capability)
+void Platform::Connection::free_dma_buffer(Ram_dataspace_capability ds_cap)
 {
-	Genode::error(__func__, ": not implemented");
+	_legacy_platform->free_dma_buffer(ds_cap);
 }
 
 
@@ -206,12 +205,17 @@ unsigned Platform::Device::Config_space::read(unsigned char address,
 	// 32bit BARs only for now
 	if (address >= 0x10 && address <= 0x24) {
 		unsigned const bar = (address - 0x10) / 4;
-		Genode::log(__func__, ": check bar: ", bar);
 		if (bar_checked_for_size[bar]) {
 			bar_checked_for_size[bar] = 0;
 			return bar_size(*_device._platform._devices_node, bar);
 		}
 	}
+
+	if (address == 0x34)
+		return 0u;
+
+	if (address > 0x3f)
+		return 0u;
 
 	Legacy_platform::Device::Access_size const as = convert(size);
 	return device.config_read(address, as);
@@ -228,31 +232,26 @@ void Platform::Device::Config_space::write(unsigned char address,
 	// 32bit BARs only for now
 	if (address >= 0x10 && address <= 0x24) {
 		unsigned const bar = (address - 0x10) / 4;
-		Genode::log(__func__, ": check bar: ", bar);
 		if (value == 0xffffffffu)
 			bar_checked_for_size[bar] = 1;
 		return;
 	}
 
-	Legacy_platform::Device::Access_size const as = convert(size);
-	device.config_write(address, value, as);
+	if (address == 0x04) {
+		Legacy_platform::Device::Access_size const as = convert(size);
+		device.config_write(address, value, as);
+	}
 }
 
 
 Genode::size_t Platform::Device::Mmio::size() const
 {
-	size_t const size = _attached_ds.constructed() ? _attached_ds->size() : 0;
-
-	Genode::log(__func__, ": size: ", size);
-
-	return size;
+	return _attached_ds.constructed() ? _attached_ds->size() : 0;
 }
 
 
 void *Platform::Device::Mmio::_local_addr()
 {
-	Genode::log(__func__, ": index: ", _index.value);
-
 	if (!_attached_ds.constructed()) {
 		Legacy_platform::Device_client device {
 			_device._platform._device_cap };
@@ -286,14 +285,12 @@ Platform::Device::Irq::Irq(Platform::Device &device, Index index)
 
 void Platform::Device::Irq::ack()
 {
-	Genode::error(__func__, ": index: ", _index.value);
 	_irq->ack_irq();
 }
 
 
 void Platform::Device::Irq::sigh(Signal_context_capability sigh)
 {
-	Genode::error(__func__, ": index: ", _index.value);
 	_irq->sigh(sigh);
 	_irq->ack_irq();
 }
@@ -301,6 +298,5 @@ void Platform::Device::Irq::sigh(Signal_context_capability sigh)
 
 void Platform::Device::Irq::sigh_omit_initial_signal(Signal_context_capability sigh)
 {
-	Genode::error(__func__, ": index: ", _index.value);
 	_irq->sigh(sigh);
 }
