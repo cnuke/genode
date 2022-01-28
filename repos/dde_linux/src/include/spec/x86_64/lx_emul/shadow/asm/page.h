@@ -1,5 +1,5 @@
 /*
- * \brief  Shadows Linux kernel asm/page.h
+ * \brief  Shadows Linux kernel asm-generic/page.h
  * \author Norman Feske
  * \date   2021-06-25
  */
@@ -14,9 +14,13 @@
 #ifndef __ASM_GENERIC_PAGE_H
 #define __ASM_GENERIC_PAGE_H
 
-#ifndef __ASSEMBLY__
+#include <asm/page_types.h>
 
-#include <asm/page_types.h> /* for PAGE_SHIFT */
+#ifdef CONFIG_X86_64
+#include <asm/page_64.h>
+#else
+#include <asm/page_32.h>
+#endif	/* CONFIG_X86_64 */
 
 /*
  * The 'virtual' member of 'struct page' is needed by 'lx_emul_virt_to_phys'
@@ -24,44 +28,50 @@
  */
 #define WANT_PAGE_VIRTUAL
 
-#define clear_page(page)	memset((page), 0, PAGE_SIZE)
-#define copy_page(to,from)	memcpy((to), (from), PAGE_SIZE)
+#ifndef __ASSEMBLY__
 
-#define clear_user_page(page, vaddr, pg)	clear_page(page)
-#define copy_user_page(to, from, vaddr, pg)	copy_page(to, from)
-
-#ifndef __pa
-#define __pa(v) lx_emul_mem_dma_addr((void *)(v))
-#endif
-
-#ifndef __va
 #include <lx_emul/debug.h>
-#define __va(x) ( lx_emul_trace_and_stop("__va"), (void *)0 )
-#endif
-
+#include <lx_emul/page_virt.h>
+#include <lx_emul/alloc.h>
 
 struct page;
 
-#define page_to_virt(p)     ((p)->virtual)
+#include <linux/range.h>
+extern struct range pfn_mapped[];
+extern int nr_pfn_mapped;
 
+static inline void clear_user_page(void *page, unsigned long vaddr,
+				   struct page *pg)
+{
+	clear_page(page);
+}
 
-#define pfn_to_page(pfn) ( (struct page *)(__va((pfn) << PAGE_SHIFT)) )
-#define page_to_pfn(page) ( __pa((page)->virtual) >> PAGE_SHIFT )
+static inline void copy_user_page(void *to, void *from, unsigned long vaddr,
+				  struct page *topage)
+{
+	copy_page(to, from);
+}
 
 typedef struct page *pgtable_t;
 
+#define __va(x) ((void*)lx_emul_mem_virt_addr((void*)(x)))
+#define __pa(x) lx_emul_mem_dma_addr((void *)(x))
+
+#define virt_to_pfn(kaddr)	(__pa(kaddr) >> PAGE_SHIFT)
+#define pfn_to_virt(pfn)	__va((pfn) << PAGE_SHIFT)
+#define pfn_to_kaddr(pfn) __va((pfn) << PAGE_SHIFT)
+
+static inline struct page *virt_to_page(void const *v) { return lx_emul_virt_to_pages(v, 1U); }
+#define page_to_virt(p) ((p)->virtual)
+
+/* needed by mm/internal.h */
+//#define pfn_valid(pfn) (pfn != 0UL)
+
 #define virt_addr_valid(kaddr) (kaddr != 0UL)
-
-#include <lx_emul/alloc.h>
-#include <lx_emul/page_virt.h>
-
-static inline struct page *virt_to_page(void *v) { return lx_emul_virt_to_pages(v, 1U); }
-#define pfn_to_kaddr(pfn)      __va((pfn) << PAGE_SHIFT)
 
 #endif /* __ASSEMBLY__ */
 
-#include <linux/pfn.h>
-
+#include <asm/memory_model.h>
 #include <asm-generic/getorder.h>
 
 #endif /* __ASM_GENERIC_PAGE_H */
