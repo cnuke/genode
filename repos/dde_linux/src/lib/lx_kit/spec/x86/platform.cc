@@ -17,6 +17,7 @@
 
 /* DDE includes */
 #include <lx_kit/env.h>
+#include <lx_kit/device.h>
 #include <platform_session/device.h>
 
 
@@ -382,4 +383,45 @@ void Platform::Device::Irq::sigh(Signal_context_capability sigh)
 void Platform::Device::Irq::sigh_omit_initial_signal(Signal_context_capability sigh)
 {
 	_irq->sigh(sigh);
+}
+
+
+static Platform::Device::Config_space::Access_size access_size(unsigned len)
+{
+	using AS = Platform::Device::Config_space::Access_size;
+	AS as = AS::ACCESS_8BIT;
+	if (len == 4)      as = AS::ACCESS_32BIT;
+	else if (len == 2) as = AS::ACCESS_16BIT;
+	else               as = AS::ACCESS_8BIT;
+
+	return as;
+}
+
+
+bool Lx_kit::Device::read_config(unsigned reg, unsigned len, unsigned *val)
+{
+	if (!_pdev.constructed())
+		enable();
+
+	if (!val)
+		return false;
+
+	using AS = Platform::Device::Config_space::Access_size;
+	AS const as = access_size(len);
+
+	*val = Platform::Device::Config_space(*_pdev).read((unsigned char)reg, as);
+	return true;
+}
+
+
+bool Lx_kit::Device::write_config(unsigned reg, unsigned len, unsigned val)
+{
+	if (!_pdev.constructed())
+		return false;
+
+	using AS = Platform::Device::Config_space::Access_size;
+	AS const as = access_size(len);
+
+	Platform::Device::Config_space(*_pdev).write((unsigned char)reg, val, as);
+	return true;
 }
