@@ -1,7 +1,7 @@
 REQUIRES := x86
 
 TARGET  := x86_usb_host_drv
-LIBS    := base x86_64_lx_emul
+LIBS    := base x86_lx_emul
 INC_DIR := $(PRG_DIR)
 SRC_CC  += main.cc
 SRC_CC  += misc.cc
@@ -12,7 +12,6 @@ SRC_C   += usb.c
 SRC_C   += $(notdir $(wildcard $(PRG_DIR)/generated_dummies.c))
 SRC_C   += lx_emul/spec/x86/common_dummies.c
 SRC_C   += lx_emul/spec/x86/pci.c
-#SRC_C   += lx_emul/shadow/drivers/pci/pci-driver.c
 
 vpath lx_emul/spec/x86/common_dummies.c $(REP_DIR)/src/lib
 
