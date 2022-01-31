@@ -413,4 +413,4 @@ bool is_vmalloc_addr(const void * x)
 	return false;
 }
 
-
+unsigned long init_stack[THREAD_SIZE / sizeof(unsigned long)];

@@ -61,7 +61,6 @@ kernel/irq/chip.c
 kernel/irq/devres.c
 kernel/irq/handle.c
 kernel/irq/irqdesc.c
-kernel/irq/irqdomain.c
 kernel/irq/manage.c
 kernel/irq/resend.c
 kernel/kthread.c
@@ -81,7 +80,6 @@ kernel/time/clocksource.c
 kernel/time/hrtimer.c
 kernel/time/jiffies.c
 kernel/time/ntp.c
-kernel/time/tick-broadcast.c
 kernel/time/tick-common.c
 kernel/time/time.c
 kernel/time/timeconv.c
@@ -97,13 +95,14 @@ lib/debug_locks.c
 lib/find_bit.c
 lib/hexdump.c
 lib/idr.c
+lib/iomap.c
 lib/irq_regs.c
 lib/kasprintf.c
 lib/klist.c
 lib/kobject.c
 lib/kstrtox.c
 lib/list_sort.c
-lib/iomap.c
+lib/math/div64.c
 lib/pci_iomap.c
 lib/radix-tree.c
 lib/rbtree.c

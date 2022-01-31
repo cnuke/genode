@@ -14,6 +14,7 @@
 #include <lx_emul.h>
 #include <linux/slab.h>
 
+#include <lx_emul/alloc.h>
 
 #include <asm-generic/delay.h>
 
