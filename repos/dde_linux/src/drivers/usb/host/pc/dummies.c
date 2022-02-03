@@ -413,4 +413,47 @@ bool is_vmalloc_addr(const void * x)
 	return false;
 }
 
+
 unsigned long init_stack[THREAD_SIZE / sizeof(unsigned long)];
+
+
+extern int pci_dev_specific_acs_enabled(struct pci_dev * dev,u16 acs_flags);
+int pci_dev_specific_acs_enabled(struct pci_dev * dev,u16 acs_flags)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+extern int pci_dev_specific_disable_acs_redir(struct pci_dev * dev);
+int pci_dev_specific_disable_acs_redir(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+extern int pci_dev_specific_enable_acs(struct pci_dev * dev);
+int pci_dev_specific_enable_acs(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+extern int pci_dev_specific_reset(struct pci_dev * dev,int probe);
+int pci_dev_specific_reset(struct pci_dev * dev,int probe)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/pci.h>
+
+void pci_fixup_device(enum pci_fixup_pass pass,struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+

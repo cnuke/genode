@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2022-01-17
+ * \date   2022-02-03
  */
 
 #include <lx_emul.h>
@@ -272,22 +272,6 @@ long __sched io_schedule_timeout(long timeout)
 }
 
 
-#include <asm-generic/logic_io.h>
-
-void __iomem * ioremap(resource_size_t phys_addr,unsigned long size)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <asm-generic/logic_io.h>
-
-void iounmap(volatile void __iomem * addr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/irq_work.h>
 
 void irq_work_tick(void)
@@ -419,6 +403,13 @@ unsigned long pci_cardbus_resource_alignment(struct resource * res)
 #include <linux/pci.h>
 
 unsigned int pci_flags;
+
+
+extern int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout);
+int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/pci.h>
@@ -684,3 +675,4 @@ void wake_q_add_safe(struct wake_q_head * head,struct task_struct * task)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+

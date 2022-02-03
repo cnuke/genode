@@ -17,7 +17,6 @@ drivers/pci/pci.c
 drivers/pci/pci-driver.c
 drivers/pci/pci-sysfs.c
 drivers/pci/probe.c
-drivers/pci/quirks.c
 drivers/pci/rom.c
 drivers/pci/search.c
 drivers/pci/setup-res.c

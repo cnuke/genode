@@ -15,12 +15,20 @@
 #include <linux/slab.h>
 
 #include <lx_emul/alloc.h>
+#include <lx_emul/io_mem.h>
+
 
 #include <asm-generic/delay.h>
 
 void __const_udelay(unsigned long xloops)
 {
 	lx_emul_time_udelay(xloops / 0x10C7UL);
+}
+
+
+void __udelay(unsigned long usecs)
+{
+	lx_emul_time_udelay(usecs);
 }
 
 
@@ -178,6 +186,22 @@ void call_rcu(struct rcu_head * head,rcu_callback_t func)
 {
 	lx_emul_trace(__func__);
 	func(head);
+}
+
+
+#include <asm-generic/logic_io.h>
+
+void __iomem * ioremap(resource_size_t phys_addr, unsigned long size)
+{
+	return lx_emul_io_mem_map(phys_addr, size);
+}
+
+
+#include <asm-generic/logic_io.h>
+
+void iounmap(volatile void __iomem * addr)
+{
+	(void)addr;
 }
 
 
