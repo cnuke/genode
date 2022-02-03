@@ -88,10 +88,17 @@ struct pci_ops pci_root_ops = {
 };
 
 
+extern void __pci_fixup_quirk_usb_early_handoff(struct pci_dev*);
+
+static struct resource _dummy_parent;
+
+
 void pcibios_scan_root(int busnum)
 {
 	struct pci_bus *bus;
 	struct pci_sysdata *sd;
+	struct pci_dev *dev;
+
 	LIST_HEAD(resources);
 
 	sd = kzalloc(sizeof(*sd), GFP_KERNEL);
@@ -110,6 +117,24 @@ void pcibios_scan_root(int busnum)
 		return;
 	}
 	pci_bus_add_devices(bus);
+
+	/* handle early quirks */
+	list_for_each_entry(dev, &bus->devices, bus_list) {
+
+		/*
+		 * As pci_enable_resources() is only going to check if
+		 * the parent of the resource is set register the dummy.
+		 */
+		struct resource *r;
+		int i;
+		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+
+			r = &dev->resource[i];
+			r->parent = &_dummy_parent;
+		}
+
+		__pci_fixup_quirk_usb_early_handoff(dev);
+	}
 }
 
 
@@ -118,24 +143,10 @@ void pcibios_scan_root(int busnum)
 
 extern struct irq_chip dde_irqchip_data_chip;
 
-static struct resource _dummy_parent;
-
 
 void pci_assign_irq(struct pci_dev * dev)
 {
 	struct irq_data *irq_data;
-
-	/*
-	 * As pci_enable_resources() is only going to check if
-	 * the parent of the resource is set register the dummy.
-	 */
-	struct resource *r;
-	int i;
-	for (i = 0; i < PCI_NUM_RESOURCES; i++) {
-
-		r = &dev->resource[i];
-		r->parent = &_dummy_parent;
-	}
 
 	/*
 	 * Be lazy and treat irq as hwirq as this is used by the
