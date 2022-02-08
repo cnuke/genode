@@ -49,12 +49,31 @@ extern "C" void genode_usb_free_peer_buffer(struct genode_attached_dataspace * p
 }
 
 
+static bool _bios_handoff;
+
+
+extern "C" int inhibit_pci_fixup(char const *name)
+{
+	if (_bios_handoff)
+		return 0;
+
+	char const *handoff = "__pci_fixup_final_quirk_usb_early_handoff";
+
+	size_t length = Genode::min(Genode::strlen(name),
+	                            Genode::strlen(handoff));
+
+	return Genode::strcmp(handoff, name, length) == 0;
+}
+
+
 struct Main : private Entrypoint::Io_progress_handler
 {
 	Env                  & env;
 	Signal_handler<Main>   signal_handler { env.ep(), *this,
 	                                        &Main::handle_signal };
 	Sliced_heap            sliced_heap    { env.ram(), env.rm()  };
+
+	Attached_rom_dataspace config_rom { env, "config" };
 
 	/**
 	 * Entrypoint::Io_progress_handler
@@ -72,6 +91,8 @@ struct Main : private Entrypoint::Io_progress_handler
 
 	Main(Env & env) : env(env)
 	{
+		_bios_handoff = config_rom.xml().attribute_value("bios_handoff", true);
+
 		Lx_kit::initialize(env);
 
 		genode_usb_init(genode_env_ptr(env),
