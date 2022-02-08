@@ -18,8 +18,17 @@
 #include <lx_emul/pci_fixups.h>
 
 
+extern "C" __attribute__((weak)) int inhibit_pci_fixup(char const *)
+{
+	return 0;
+}
+
+
 extern "C" void lx_emul_register_pci_fixup(void (*fn)(struct pci_dev*), const char * name)
 {
+	if (inhibit_pci_fixup(name))
+		return;
+
 	for (unsigned i = 0; i < (sizeof(lx_emul_pci_final_fixups) / sizeof(char*));
 	     i++) {
 		if (Genode::strcmp(name, lx_emul_pci_final_fixups[i]) == 0) {
