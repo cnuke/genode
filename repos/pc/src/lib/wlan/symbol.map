@@ -1,0 +1,26 @@
+{
+	global:
+
+		/* needed by vfs_wlan */
+		*Lx_kit*initialize*;
+
+		/* initialize function */
+		_*wifi_init*;
+		/* Wifi::Socket_call interface */
+		*Socket_call*;
+		/* Wifi::Socket_call instance */
+		socket_call;
+		/* rfkill interface */
+		_*wifi_*_rfkill*;
+		_*wifi_kick_*;
+
+		lx_sock_*;
+		lx_get_mac_addr;
+
+		/* used by libnl's time() */
+		jiffies;
+
+	local:
+
+		*;
+};
