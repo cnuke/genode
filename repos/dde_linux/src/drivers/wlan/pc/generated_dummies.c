@@ -1,0 +1,1655 @@
+/*
+ * \brief  Dummy definitions of Linux Kernel functions
+ * \author Automatically generated file - do no edit
+ * \date   2022-02-10
+ */
+
+#include <lx_emul.h>
+
+
+#include <linux/proc_fs.h>
+
+void * PDE_DATA(const struct inode * inode)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ratelimit_types.h>
+
+int ___ratelimit(struct ratelimit_state * rs,const char * func)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+struct page * __alloc_pages(gfp_t gfp,unsigned int order,int preferred_nid,nodemask_t * nodemask)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/clk-provider.h>
+
+const char * __clk_get_name(const struct clk * clk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+void __free_pages(struct page * page,unsigned int order)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+unsigned long __get_free_pages(gfp_t gfp_mask,unsigned int order)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/cred.h>
+
+void __put_cred(struct cred * cred)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/mm.h>
+
+void __put_page(struct page * page)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched/task.h>
+
+void __put_task_struct(struct task_struct * tsk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/pkt_sched.h>
+
+void __qdisc_run(struct Qdisc * q)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/interrupt.h>
+
+void __raise_softirq_irqoff(unsigned int nr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/scm.h>
+
+void __scm_destroy(struct scm_cookie * scm)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/scm.h>
+
+int __scm_send(struct socket * sock,struct msghdr * msg,struct scm_cookie * p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/skbuff.h>
+
+void __skb_get_hash(struct sk_buff * skb)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sock_diag.h>
+
+u64 __sock_gen_cookie(struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/srcu.h>
+
+void __srcu_read_unlock(struct srcu_struct * ssp,int idx)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_namespace * ns)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/vmalloc.h>
+
+void * __vmalloc_node(unsigned long size,unsigned long align,gfp_t gfp_mask,int node,const void * caller)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uio.h>
+
+size_t _copy_from_iter(void * addr,size_t bytes,struct iov_iter * i)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uaccess.h>
+
+unsigned long _copy_from_user(void * to,const void __user * from,unsigned long n)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uio.h>
+
+size_t _copy_to_iter(const void * addr,size_t bytes,struct iov_iter * i)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uaccess.h>
+
+unsigned long _copy_to_user(void __user * to,const void * from,unsigned long n)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void ack_bad_irq(unsigned int irq);
+void ack_bad_irq(unsigned int irq)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kobject.h>
+
+int add_uevent_var(struct kobj_uevent_env * env,const char * format,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/aes.h>
+
+int aes_expandkey(struct crypto_aes_ctx * ctx,const u8 * in_key,unsigned int key_len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/msi.h>
+
+struct msi_desc * alloc_msi_entry(struct device * dev,int nvec,const struct irq_affinity_desc * affinity)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/arc4.h>
+
+void arc4_crypt(struct arc4_ctx * ctx,u8 * out,const u8 * in,unsigned int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/arc4.h>
+
+int arc4_setkey(struct arc4_ctx * ctx,const u8 * in_key,unsigned int key_len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/async.h>
+
+async_cookie_t async_schedule_node(async_func_t func,void * data,int node)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/async.h>
+
+void async_synchronize_full(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+void bpf_warn_invalid_xdp_action(u32 act)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/bsearch.h>
+
+void * bsearch(const void * key,const void * base,size_t num,size_t size,cmp_func_t cmp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kernel.h>
+
+void bust_spinlocks(int yes)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/console.h>
+
+void console_flush_on_panic(enum con_flush_mode mode)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/printk.h>
+
+int console_printk[] = {};
+
+
+#include <linux/console.h>
+
+void console_unblank(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int copy_bpf_fprog_from_user(struct sock_fprog * dst,sockptr_t src,int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+void dev_activate(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+void dev_deactivate(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+void dev_deactivate_many(struct list_head * head)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+void dev_init_scheduler(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netdevice.h>
+
+int __init dev_proc_init(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+int dev_qdisc_change_tx_queue_len(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sch_generic.h>
+
+void dev_shutdown(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/dma-mapping.h>
+
+void dma_sync_single_for_cpu(struct device * dev,dma_addr_t addr,size_t size,enum dma_data_direction dir)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/dma-mapping.h>
+
+void dma_sync_single_for_device(struct device * dev,dma_addr_t addr,size_t size,enum dma_data_direction dir)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/dmapool.h>
+
+struct dma_pool * dmam_pool_create(const char * name,struct device * dev,size_t size,size_t align,size_t allocation)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/interrupt.h>
+
+asmlinkage __visible void do_softirq(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/dynamic_queue_limits.h>
+
+void dql_init(struct dql * dql,unsigned int hold_time)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/dst.h>
+
+void dst_release(struct dst_entry * dst)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/printk.h>
+
+asmlinkage __visible void dump_stack(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/reboot.h>
+
+void emergency_restart(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/etherdevice.h>
+
+const struct header_ops eth_header_ops;
+
+
+#include <linux/etherdevice.h>
+
+int eth_mac_addr(struct net_device * dev,void * p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/etherdevice.h>
+
+__be16 eth_type_trans(struct sk_buff * skb,struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netdevice.h>
+
+void ether_setup(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool.h>
+
+int ethtool_check_ops(const struct ethtool_ops * ops)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool.h>
+
+int ethtool_get_phc_vclocks(struct net_device * dev,int ** vclock_index)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool.h>
+
+u32 ethtool_op_get_link(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool.h>
+
+int ethtool_op_get_ts_info(struct net_device * dev,struct ethtool_ts_info * info)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/capability.h>
+
+bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+struct task_struct * find_task_by_vpid(pid_t vnr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/firmware.h>
+
+int firmware_request_nowarn(const struct firmware ** firmware,const char * name,struct device * device)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/msi.h>
+
+void free_msi_entry(struct msi_desc * entry)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+void free_pages(unsigned long addr,unsigned int order)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched/user.h>
+
+void free_uid(struct user_struct * up)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/stringhash.h>
+
+unsigned int full_name_hash(const void * salt,const char * name,unsigned int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/property.h>
+
+struct fwnode_handle * fwnode_create_software_node(const struct property_entry * properties,const struct fwnode_handle * parent)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/property.h>
+
+void fwnode_remove_software_node(struct fwnode_handle * fwnode)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gcd.h>
+
+unsigned long gcd(unsigned long a,unsigned long b)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kernel.h>
+
+int get_option(char ** str,int * pint)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kernel.h>
+
+char * get_options(const char * str,int nints,int * ints)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/random.h>
+
+u32 get_random_u32(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+unsigned long get_zeroed_page(gfp_t gfp_mask)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+bool gfp_pfmemalloc_allowed(gfp_t gfp_mask)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uuid.h>
+
+const u8 guid_index[16] = {};
+
+
+#include <linux/pseudo_fs.h>
+
+struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magic)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/init.h>
+
+bool initcall_debug;
+
+
+#include <linux/sched.h>
+
+void io_schedule_finish(int token)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+int io_schedule_prepare(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+long __sched io_schedule_timeout(long timeout)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uio.h>
+
+void iov_iter_revert(struct iov_iter * i,size_t unroll)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/irq_work.h>
+
+void irq_work_tick(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/property.h>
+
+bool is_software_node(const struct fwnode_handle * fwnode)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kobject.h>
+
+struct kobject *kernel_kobj;
+
+
+#include <linux/moduleparam.h>
+
+void kernel_param_lock(struct module * mod)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/moduleparam.h>
+
+void kernel_param_unlock(struct module * mod)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/net.h>
+
+int kernel_sendmsg(struct socket * sock,struct msghdr * msg,struct kvec * vec,size_t num,size_t size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/key.h>
+
+key_ref_t key_create_or_update(key_ref_t keyring_ref,const char * type,const char * description,const void * payload,size_t plen,key_perm_t perm,unsigned long flags)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/key.h>
+
+void key_put(struct key * key)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/key.h>
+
+struct key * keyring_alloc(const char * description,kuid_t uid,kgid_t gid,const struct cred * cred,key_perm_t perm,unsigned long flags,struct key_restriction * restrict_link,struct key * dest)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+void kfree_sensitive(const void * p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/fs.h>
+
+void kill_anon_super(struct super_block * sb)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+int kmem_cache_alloc_bulk(struct kmem_cache * s,gfp_t flags,size_t size,void ** p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+struct kmem_cache * kmem_cache_create_usercopy(const char * name,unsigned int size,unsigned int align,slab_flags_t flags,unsigned int useroffset,unsigned int usersize,void (* ctor)(void *))
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+void kmem_cache_destroy(struct kmem_cache * s)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/slab.h>
+
+void kmem_cache_free_bulk(struct kmem_cache * s,size_t size,void ** p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kmsg_dump.h>
+
+void kmsg_dump(enum kmsg_dump_reason reason)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kobject.h>
+
+int kobject_synth_uevent(struct kobject * kobj,const char * buf,size_t count)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kobject.h>
+
+int kobject_uevent_env(struct kobject * kobj,enum kobject_action action,char * envp_ext[])
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <asm-generic/logic_io.h>
+
+void memcpy_fromio(void * to,const volatile void __iomem * from,size_t n)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/kernel.h>
+
+unsigned long long memparse(const char * ptr,char ** retptr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/msi.h>
+
+int msi_domain_alloc_irqs(struct irq_domain * domain,struct device * dev,int nvec)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/msi.h>
+
+void msi_domain_free_irqs(struct irq_domain * domain,struct device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/neighbour.h>
+
+const struct nla_policy nda_policy[] = {};
+
+
+#include <linux/netdevice.h>
+
+const struct kobj_ns_type_operations net_ns_type_operations;
+
+
+#include <linux/net.h>
+
+int net_ratelimit(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int __init netdev_kobject_init(void);
+int __init netdev_kobject_init(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int netdev_register_kobject(struct net_device * ndev);
+int netdev_register_kobject(struct net_device * ndev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netdevice.h>
+
+void netdev_rss_key_fill(void * buffer,size_t len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void netdev_unregister_kobject(struct net_device * ndev);
+void netdev_unregister_kobject(struct net_device * ndev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netdevice.h>
+
+void netif_carrier_off(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netdevice.h>
+
+void netif_carrier_on(struct net_device * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/irq.h>
+
+struct irq_chip no_irq_chip;
+
+
+#include <linux/gfp.h>
+
+void * page_frag_alloc_align(struct page_frag_cache * nc,unsigned int fragsz,gfp_t gfp_mask,unsigned int align_mask)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gfp.h>
+
+void page_frag_free(void * addr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/reboot.h>
+
+enum reboot_mode panic_reboot_mode;
+
+
+#include <linux/pci.h>
+
+void pci_assign_unassigned_bridge_resources(struct pci_dev * bridge)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_assign_unassigned_bus_resources(struct pci_bus * bus)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern unsigned long pci_cardbus_resource_alignment(struct resource * res);
+unsigned long pci_cardbus_resource_alignment(struct resource * res)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int pci_disable_link_state(struct pci_dev * pdev,int state)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+unsigned int pci_flags;
+
+
+extern int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout);
+int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int pci_mmap_resource_range(struct pci_dev * pdev,int bar,struct vm_area_struct * vma,enum pci_mmap_state mmap_state,int write_combine)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void __init pci_realloc_get_opt(char * str);
+void __init pci_realloc_get_opt(char * str)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_restore_vc_state(struct pci_dev * dev);
+void pci_restore_vc_state(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int pci_save_vc_state(struct pci_dev * dev);
+int pci_save_vc_state(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_stop_and_remove_bus_device(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void pci_stop_and_remove_bus_device_locked(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pci_vpd_release(struct pci_dev * dev);
+void pci_vpd_release(struct pci_dev * dev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern unsigned int pcibios_assign_all_busses(void);
+unsigned int pcibios_assign_all_busses(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_init_link_state(struct pci_dev * pdev);
+void pcie_aspm_init_link_state(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_pm_state_change(struct pci_dev * pdev);
+void pcie_aspm_pm_state_change(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void pcie_aspm_powersave_config_link(struct pci_dev * pdev);
+void pcie_aspm_powersave_config_link(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int pcim_iomap_regions_request_all(struct pci_dev * pdev,int mask,const char * name)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+void __iomem * const * pcim_iomap_table(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pid.h>
+
+pid_t pid_vnr(struct pid * pid)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+void pkcs7_free_message(struct pkcs7_message * pkcs7)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+int pkcs7_get_content_data(const struct pkcs7_message * pkcs7,const void ** _data,size_t * _data_len,size_t * _headerlen)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+struct pkcs7_message * pkcs7_parse_message(const void * data,size_t datalen)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+int pkcs7_supply_detached_data(struct pkcs7_message * pkcs7,const void * data,size_t datalen)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+int pkcs7_validate_trust(struct pkcs7_message * pkcs7,struct key * trust_keyring)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/pkcs7.h>
+
+int pkcs7_verify(struct pkcs7_message * pkcs7,enum key_being_used_for usage)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/prandom.h>
+
+void prandom_bytes(void * buf,size_t bytes)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/prandom.h>
+
+u32 prandom_u32(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/printk.h>
+
+int printk_deferred(const char * fmt,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/printk.h>
+
+void printk_safe_flush_on_panic(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/proc_ns.h>
+
+int proc_alloc_inum(unsigned int * inum)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/proc_fs.h>
+
+struct proc_dir_entry * proc_create_net_data(const char * name,umode_t mode,struct proc_dir_entry * parent,const struct seq_operations * ops,unsigned int state_size,void * data)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/proc_ns.h>
+
+void proc_free_inum(unsigned int inum)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/socket.h>
+
+int put_cmsg(struct msghdr * msg,int level,int type,int len,void * data)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pid.h>
+
+void put_pid(struct pid * pid)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int raw_pci_read(unsigned int domain,unsigned int bus,unsigned int devfn,int reg,int len,u32 * val)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/reboot.h>
+
+enum reboot_mode reboot_mode;
+
+
+#include <linux/refcount.h>
+
+bool refcount_dec_not_one(refcount_t * r)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/refcount.h>
+
+void refcount_warn_saturate(refcount_t * r,enum refcount_saturation_type t)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/firmware.h>
+
+void release_firmware(const struct firmware * fw)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/proc_fs.h>
+
+void remove_proc_entry(const char * name,struct proc_dir_entry * parent)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/firmware.h>
+
+int request_firmware(const struct firmware ** firmware_p,const char * name,struct device * device)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/firmware.h>
+
+int request_firmware_nowait(struct module * module,bool uevent,const char * name,struct device * device,gfp_t gfp,void * context,void (* cont)(const struct firmware * fw,void * context))
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sock_reuseport.h>
+
+int reuseport_detach_prog(struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/sock_reuseport.h>
+
+void reuseport_detach_sock(struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/pkt_sched.h>
+
+bool sch_direct_xmit(struct sk_buff * skb,struct Qdisc * q,struct net_device * dev,struct netdev_queue * txq,spinlock_t * root_lock,bool validate)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+void sched_set_fifo(struct task_struct * p)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/scm.h>
+
+void scm_detach_fds(struct msghdr * msg,struct scm_cookie * scm)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+struct list_head * seq_list_next(void * v,struct list_head * head,loff_t * ppos)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+struct list_head * seq_list_start(struct list_head * head,loff_t pos)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+struct list_head * seq_list_start_head(struct list_head * head,loff_t pos)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+void seq_printf(struct seq_file * m,const char * f,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+void seq_putc(struct seq_file * m,char c)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+void seq_puts(struct seq_file * m,const char * s)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/sha2.h>
+
+void sha224_final(struct sha256_state * sctx,u8 * out)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/sha2.h>
+
+void sha256_final(struct sha256_state * sctx,u8 * out)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <crypto/sha2.h>
+
+void sha256_update(struct sha256_state * sctx,const u8 * data,unsigned int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/mm.h>
+
+void show_mem(unsigned int filter,nodemask_t * nodemask)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched/debug.h>
+
+void show_state_filter(unsigned int state_filter)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_attach_bpf(u32 ufd,struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_attach_filter(struct sock_fprog * fprog,struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_detach_filter(struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_filter_trim_cap(struct sock * sk,struct sk_buff * skb,unsigned int cap)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+void sk_filter_uncharge(struct sock * sk,struct sk_filter * fp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_get_filter(struct sock * sk,struct sock_filter __user * ubuf,unsigned int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_reuseport_attach_bpf(u32 ufd,struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_reuseport_attach_filter(struct sock_fprog * fprog,struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/smp.h>
+
+int smp_call_function_single(int cpu,void (* func)(void * info),void * info,int wait)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/net.h>
+
+int sock_create_lite(int family,int type,int protocol,struct socket ** res)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sock_diag.h>
+
+void sock_diag_broadcast_destroy(struct sock * sk)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/net.h>
+
+int sock_register(const struct net_proto_family * ops)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/net.h>
+
+void sock_release(struct socket * sock)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/net.h>
+
+int sock_wake_async(struct socket_wq * wq,int how,int band)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/srcutiny.h>
+
+void srcu_drive_gp(struct work_struct * wp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/jump_label.h>
+
+bool static_key_initialized;
+
+
+#include <linux/string_helpers.h>
+
+int string_escape_mem(const char * src,size_t isz,char * dst,size_t osz,unsigned int flags,const char * only)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/printk.h>
+
+int suppress_printk;
+
+
+#include <linux/rcupdate.h>
+
+void synchronize_rcu(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/srcutiny.h>
+
+void synchronize_srcu(struct srcu_struct * ssp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+void sysfs_delete_link(struct kobject * kobj,struct kobject * targ,const char * name)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+int sysfs_emit(char * buf,const char * fmt,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+int sysfs_emit_at(char * buf,int at,const char * fmt,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+bool sysfs_remove_file_self(struct kobject * kobj,const struct attribute * attr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+int sysfs_rename_dir_ns(struct kobject * kobj,const char * new_name,const void * new_ns)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sysfs.h>
+
+int sysfs_rename_link_ns(struct kobject * kobj,struct kobject * targ,const char * old,const char * new,const void * new_ns)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/task_work.h>
+
+int task_work_add(struct task_struct * task,struct callback_head * work,enum task_work_notify_mode notify)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/task_work.h>
+
+struct callback_head * task_work_cancel(struct task_struct * task,task_work_func_t func)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/interrupt.h>
+
+void tasklet_kill(struct tasklet_struct * t)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void unregister_handler_proc(unsigned int irq,struct irqaction * action);
+void unregister_handler_proc(unsigned int irq,struct irqaction * action)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uuid.h>
+
+const u8 uuid_index[16] = {};
+
+
+#include <linux/vmalloc.h>
+
+void vfree(const void * addr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/vmalloc.h>
+
+void * vmalloc(unsigned long size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/vmalloc.h>
+
+void * vzalloc(unsigned long size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched/wake_q.h>
+
+void wake_q_add_safe(struct wake_q_head * head,struct task_struct * task)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int xdp_do_generic_redirect(struct net_device * dev,struct sk_buff * skb,struct xdp_buff * xdp,struct bpf_prog * xdp_prog)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sched.h>
+
+void __sched yield(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
