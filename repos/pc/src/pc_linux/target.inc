@@ -14,10 +14,6 @@ LX_ENABLE += SERIAL_8250 SERIAL_8250_CONSOLE
 # PCI support
 LX_ENABLE += PCI
 
-# enable MSI support for now as otherwise the iwlwifi device
-# seems not to work properly
-LX_ENABLE += PCI_MSI
-
 # general network and WLAN support
 LX_ENABLE += NET NETDEVICES
 LX_ENABLE += WLAN CFG80211 MAC80211
