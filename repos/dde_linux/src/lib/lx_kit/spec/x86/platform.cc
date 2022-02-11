@@ -57,10 +57,25 @@ static Genode::String<16> create_device_node(Genode::Xml_generator &xml,
 	};
 	device.bus_address(&bdf[0].value, &bdf[1].value, &bdf[2].value);
 
+	using namespace Genode;
+
+	/* for now we only support devices on bus 0 */
+	if (bdf[0].value != 0 && bdf[1].value == 0) {
+		warning("override physical BDF ",
+		        Hex(bdf[0].value, Hex::OMIT_PREFIX), ":",
+		        Hex(bdf[1].value, Hex::OMIT_PREFIX), ".",
+		        Hex(bdf[2].value, Hex::OMIT_PREFIX), " -> ",
+		        Hex(bdf[1].value, Hex::OMIT_PREFIX), ":",
+		        Hex(bdf[0].value, Hex::OMIT_PREFIX), ".",
+		        Hex(bdf[2].value, Hex::OMIT_PREFIX));
+
+		unsigned char const tmp = bdf[0].value;
+		bdf[0].value = bdf[1].value;
+		bdf[1].value = tmp;
+	}
+
 	/* start arbitrarily and count up */
 	static unsigned char irq = 8;
-
-	using namespace Genode;
 
 	Str name = to_string("pci-",
 	                     Hex(bdf[0].value, Hex::OMIT_PREFIX), ":",
