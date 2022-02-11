@@ -81,15 +81,6 @@ int sysfs_create_bin_file(struct kobject * kobj,const struct bin_attribute * att
 
 #include <linux/sysfs.h>
 
-int sysfs_create_dir_ns(struct kobject * kobj,const void * ns)
-{
-	lx_emul_trace(__func__);
-	return 0;
-}
-
-
-#include <linux/sysfs.h>
-
 int sysfs_create_file_ns(struct kobject * kobj,const struct attribute * attr,const void * ns)
 {
 	lx_emul_trace(__func__);
@@ -487,9 +478,6 @@ void bpf_prog_change_xdp(struct bpf_prog *prev_prog, struct bpf_prog *prog)
 DEFINE_STATIC_KEY_FALSE(bpf_stats_enabled_key);
 
 
-unsigned int sysctl_net_busy_read = 0;
-
-
 __wsum csum_partial(const void * buff,int len,__wsum sum)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -497,3 +485,121 @@ __wsum csum_partial(const void * buff,int len,__wsum sum)
 
 
 struct static_key_false init_on_alloc;
+
+
+#include <linux/proc_ns.h>
+
+int proc_alloc_inum(unsigned int * inum)
+{
+	*inum = 1; /* according to linux/proc_ns.h without CONFIG_PROC_FS */
+	return 0;
+}
+
+
+#include <linux/random.h>
+
+u32 get_random_u32(void)
+{
+	printk("%s: return 4\n", __func__);
+	return 4;
+}
+
+
+#include <linux/prandom.h>
+
+void prandom_bytes(void * buf,size_t bytes)
+{
+	lx_emul_trace(__func__);
+	printk("%s: do nothing\n", __func__);
+}
+
+
+#include <linux/prandom.h>
+
+u32 prandom_u32(void)
+{
+	printk("%s: return 4\n", __func__);
+	return 4;
+}
+
+
+#include <net/net_namespace.h>
+
+__init int net_sysctl_init(void)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/proc_fs.h>
+
+struct proc_dir_entry * proc_create_net_data(const char * name,umode_t mode,struct proc_dir_entry * parent,const struct seq_operations * ops,unsigned int state_size,void * data)
+{
+	static struct proc_dir_entry _proc_dir_entry;
+	lx_emul_trace(__func__);
+	return &_proc_dir_entry;
+}
+
+
+#include <linux/fs.h>
+
+struct inode * new_inode_pseudo(struct super_block * sb)
+{
+	struct inode *inode;
+
+	inode = kzalloc(sizeof (struct inode), 0);
+	if (!inode)
+		return (struct inode*)ERR_PTR(-ENOMEM);
+
+	return inode;
+}
+
+
+#include <linux/fs.h>
+
+unsigned int get_next_ino(void)
+{
+	static unsigned int count = 0;
+	return ++count;
+}
+
+
+#include <linux/netdevice.h>
+
+int __init dev_proc_init(void)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/stringhash.h>
+
+unsigned int full_name_hash(const void * salt,const char * name,unsigned int len)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/key.h>
+
+static struct key _key;
+
+struct key * keyring_alloc(const char * description,kuid_t uid,kgid_t gid,const struct cred * cred,key_perm_t perm,unsigned long flags,struct key_restriction * restrict_link,struct key * dest)
+{
+	lx_emul_trace(__func__);
+	return &_key;
+}
+
+
+#include <linux/kobject.h>
+
+int kobject_uevent_env(struct kobject * kobj,enum kobject_action action,char * envp_ext[])
+{
+	printk("%s:%d\n", __func__, __LINE__);
+	lx_backtrace();
+	lx_emul_trace(__func__);
+	return 0;
+}

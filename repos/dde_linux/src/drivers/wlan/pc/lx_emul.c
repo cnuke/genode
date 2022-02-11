@@ -199,3 +199,67 @@ void iounmap(volatile void __iomem * addr)
 {
 	(void)addr;
 }
+
+
+#include <linux/slab.h>
+
+struct kmem_cache * kmem_cache_create_usercopy(const char * name,
+                                               unsigned int size,
+                                               unsigned int align,
+                                               slab_flags_t flags,
+                                               unsigned int useroffset,
+                                               unsigned int usersize,
+                                               void (* ctor)(void *))
+{
+    return kmem_cache_create(name, size, align, flags, ctor);
+}
+
+
+#include <linux/fs.h>
+
+int register_filesystem(struct file_system_type * fs)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/mount.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
+
+struct vfsmount * kern_mount(struct file_system_type * type)
+{
+	struct vfsmount *m;
+
+	m = kzalloc(sizeof (struct vfsmount), 0);
+	if (!m) {
+		return (struct vfsmount*)ERR_PTR(-ENOMEM);
+	}
+
+	return m;
+}
+
+
+#include <linux/sysfs.h>
+
+int sysfs_create_dir_ns(struct kobject * kobj,const void * ns)
+{
+    lx_emul_trace(__func__);
+    kobj->sd = kzalloc(sizeof(*kobj->sd), GFP_KERNEL);
+    return 0;
+}
+
+
+#include <linux/firmware.h>
+
+int request_firmware_nowait(struct module * module,
+                            bool uevent, const char * name,
+                            struct device * device, gfp_t gfp,
+                            void * context,
+                            void (* cont)(const struct firmware * fw,
+                                          void * context))
+{
+	printk("%s: name: '%s'\n", __func__, name);
+	return 0;
+}
