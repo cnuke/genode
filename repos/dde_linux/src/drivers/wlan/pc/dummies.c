@@ -603,3 +603,11 @@ int kobject_uevent_env(struct kobject * kobj,enum kobject_action action,char * e
 	lx_emul_trace(__func__);
 	return 0;
 }
+
+
+#include <linux/sched.h>
+
+void sched_set_fifo(struct task_struct * p)
+{
+	lx_emul_trace(__func__);
+}

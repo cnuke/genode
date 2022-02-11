@@ -1081,22 +1081,6 @@ void pcie_aspm_powersave_config_link(struct pci_dev * pdev)
 }
 
 
-#include <linux/pci.h>
-
-int pcim_iomap_regions_request_all(struct pci_dev * pdev,int mask,const char * name)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-void __iomem * const * pcim_iomap_table(struct pci_dev * pdev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/pid.h>
 
 pid_t pid_vnr(struct pid * pid)
@@ -1238,14 +1222,6 @@ void refcount_warn_saturate(refcount_t * r,enum refcount_saturation_type t)
 }
 
 
-#include <linux/firmware.h>
-
-void release_firmware(const struct firmware * fw)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/proc_fs.h>
 
 void remove_proc_entry(const char * name,struct proc_dir_entry * parent)
@@ -1273,14 +1249,6 @@ int reuseport_detach_prog(struct sock * sk)
 #include <net/sock_reuseport.h>
 
 void reuseport_detach_sock(struct sock * sk)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/sched.h>
-
-void sched_set_fifo(struct task_struct * p)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1594,14 +1562,6 @@ int sysfs_rename_link_ns(struct kobject * kobj,struct kobject * targ,const char 
 
 #include <linux/task_work.h>
 
-int task_work_add(struct task_struct * task,struct callback_head * work,enum task_work_notify_mode notify)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/task_work.h>
-
 struct callback_head * task_work_cancel(struct task_struct * task,task_work_func_t func)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -1634,30 +1594,6 @@ void unregister_handler_proc(unsigned int irq,struct irqaction * action)
 #include <linux/uuid.h>
 
 const u8 uuid_index[16] = {};
-
-
-#include <linux/vmalloc.h>
-
-void vfree(const void * addr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/vmalloc.h>
-
-void * vmalloc(unsigned long size)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/vmalloc.h>
-
-void * vzalloc(unsigned long size)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/sched/wake_q.h>

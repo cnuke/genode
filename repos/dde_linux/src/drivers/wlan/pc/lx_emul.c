@@ -253,6 +253,9 @@ int sysfs_create_dir_ns(struct kobject * kobj,const void * ns)
 
 #include <linux/firmware.h>
 
+extern int lx_emul_request_firmware_nowait(const char *name, void *dest, size_t *result);
+extern void lx_emul_release_firmware(void const *data, size_t size);
+
 int request_firmware_nowait(struct module * module,
                             bool uevent, const char * name,
                             struct device * device, gfp_t gfp,
@@ -260,6 +263,95 @@ int request_firmware_nowait(struct module * module,
                             void (* cont)(const struct firmware * fw,
                                           void * context))
 {
+	struct firmware *fw = kzalloc(sizeof (struct firmware), GFP_KERNEL);
+
 	printk("%s: name: '%s'\n", __func__, name);
+
+	if (lx_emul_request_firmware_nowait(name, &fw->data, &fw->size)) {
+		kfree(fw);
+		return -1;
+	}
+
+	cont(fw, context);
 	return 0;
+}
+
+
+#include <linux/firmware.h>
+
+void release_firmware(const struct firmware * fw)
+{
+	lx_emul_release_firmware(fw->data, fw->size);
+	kfree(fw);
+}
+
+
+#include <linux/pci.h>
+
+int pcim_iomap_regions_request_all(struct pci_dev * pdev,int mask,const char * name)
+{
+	return 0;
+}
+
+
+#include <linux/pci.h>
+
+static unsigned long *_pci_iomap_table;
+
+void __iomem * const * pcim_iomap_table(struct pci_dev * pdev)
+{
+	unsigned i;
+
+	if (!_pci_iomap_table)
+		_pci_iomap_table = kzalloc(sizeof (unsigned long*) * 6, GFP_KERNEL);
+
+	if (!_pci_iomap_table)
+		return NULL;
+
+	for (i = 0; i < 6; i++) {
+		struct resource *r = &pdev->resource[i];
+		unsigned long phys_addr = r->start;
+		unsigned long size      = r->end - r->start;
+
+		if (!phys_addr || !size)
+			continue;
+
+		_pci_iomap_table[i] =
+			(unsigned long)lx_emul_io_mem_map(phys_addr, size);
+	}
+
+	return (void const *)_pci_iomap_table;
+}
+
+
+#include <linux/task_work.h>
+
+int task_work_add(struct task_struct * task,struct callback_head * work,enum task_work_notify_mode notify)
+{
+	printk("%s: task: %p work: %p notify: %u\n", __func__, task, work, notify);
+	return -1;
+}
+
+
+#include <linux/vmalloc.h>
+
+void vfree(const void * addr)
+{
+	kfree(addr);
+}
+
+
+#include <linux/vmalloc.h>
+
+void * vmalloc(unsigned long size)
+{
+	return kmalloc(size, GFP_KERNEL);
+}
+
+
+#include <linux/vmalloc.h>
+
+void * vzalloc(unsigned long size)
+{
+	return kzalloc(size, GFP_KERNEL);
 }
