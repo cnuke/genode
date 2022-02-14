@@ -9,6 +9,7 @@ SRC_CC  += main.cc
 SRC_CC  += misc.cc
 SRC_CC  += time.cc
 SRC_CC  += firmware.cc
+
 SRC_C   += dummies.c
 SRC_C   += lx_emul.c
 SRC_C   += $(notdir $(wildcard $(REL_PRG_DIR)/generated_dummies.c))

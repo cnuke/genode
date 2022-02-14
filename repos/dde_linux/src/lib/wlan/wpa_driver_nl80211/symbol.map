@@ -1,0 +1,21 @@
+/*
+ *
+ */
+{
+	global:
+
+		/* array containing all drivers, from drivers.c */
+		wpa_drivers;
+
+		/* ethernet frame handlin, from l2_packet_linux.c */
+		l2_packet_*;
+
+		poll;
+
+		/* needed by wpa_supplicant lib for wifi_drv */
+		nl_set_wpa_ctrl_fd;
+
+	local:
+
+		*;
+};
