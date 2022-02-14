@@ -19,6 +19,8 @@ SRC_C   += lx_emul/spec/x86/pci.c
 CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/intel/iwlwifi
 CC_C_OPT += -I$(LX_SRC_DIR)/include/linux
 
+CC_C_OPT += -Wno-address-of-packed-member
+
 vpath %.c $(REL_PRG_DIR)
 vpath %.cc $(REL_PRG_DIR)
 vpath lx_emul/spec/x86/common_dummies.c $(REP_DIR)/src/lib
