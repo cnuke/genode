@@ -58,6 +58,7 @@ SRC_C   += lx_emul/shadow/mm/memblock.c
 SRC_C   += lx_emul/shadow/mm/percpu.c
 SRC_C   += lx_emul/shadow/mm/slab_common.c
 SRC_C   += lx_emul/shadow/mm/slub.c
+SRC_C   += lx_emul/shadow/mm/page_alloc.c
 SRC_C   += lx_emul/virt_to_page.c
 
 SRC_CC  += lx_kit/console.cc
