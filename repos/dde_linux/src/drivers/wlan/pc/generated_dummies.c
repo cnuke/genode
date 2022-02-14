@@ -23,14 +23,6 @@ int ___ratelimit(struct ratelimit_state * rs,const char * func)
 }
 
 
-#include <linux/gfp.h>
-
-struct page * __alloc_pages(gfp_t gfp,unsigned int order,int preferred_nid,nodemask_t * nodemask)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/clk-provider.h>
 
 const char * __clk_get_name(const struct clk * clk)
@@ -50,14 +42,6 @@ int __ethtool_get_link_ksettings(struct net_device * dev,struct ethtool_link_kse
 #include <linux/file.h>
 
 unsigned long __fdget(unsigned int fd)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/gfp.h>
-
-void __free_pages(struct page * page,unsigned int order)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -114,14 +98,6 @@ void __put_page(struct page * page)
 #include <linux/sched/task.h>
 
 void __put_task_struct(struct task_struct * tsk)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/interrupt.h>
-
-void __raise_softirq_irqoff(unsigned int nr)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -294,14 +270,6 @@ void bpf_warn_invalid_xdp_action(u32 act)
 }
 
 
-#include <linux/bsearch.h>
-
-void * bsearch(const void * key,const void * base,size_t num,size_t size,cmp_func_t cmp)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/kernel.h>
 
 void bust_spinlocks(int yes)
@@ -419,35 +387,6 @@ void emergency_restart(void)
 }
 
 
-#include <linux/etherdevice.h>
-
-const struct header_ops eth_header_ops;
-
-
-#include <linux/etherdevice.h>
-
-int eth_mac_addr(struct net_device * dev,void * p)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/etherdevice.h>
-
-__be16 eth_type_trans(struct sk_buff * skb,struct net_device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/netdevice.h>
-
-void ether_setup(struct net_device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/ethtool.h>
 
 u32 ethtool_op_get_link(struct net_device * dev)
@@ -536,14 +475,6 @@ void free_msi_entry(struct msi_desc * entry)
 }
 
 
-#include <linux/gfp.h>
-
-void free_pages(unsigned long addr,unsigned int order)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/sched/user.h>
 
 void free_uid(struct user_struct * up)
@@ -619,14 +550,6 @@ char * get_options(const char * str,int nints,int * ints)
 #include <linux/file.h>
 
 int get_unused_fd_flags(unsigned flags)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/gfp.h>
-
-unsigned long get_zeroed_page(gfp_t gfp_mask)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -767,22 +690,6 @@ bool is_software_node(const struct fwnode_handle * fwnode)
 struct kobject *kernel_kobj;
 
 
-#include <linux/moduleparam.h>
-
-void kernel_param_lock(struct module * mod)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/moduleparam.h>
-
-void kernel_param_unlock(struct module * mod)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/key.h>
 
 key_ref_t key_create_or_update(key_ref_t keyring_ref,const char * type,const char * description,const void * payload,size_t plen,key_perm_t perm,unsigned long flags)
@@ -794,14 +701,6 @@ key_ref_t key_create_or_update(key_ref_t keyring_ref,const char * type,const cha
 #include <linux/key.h>
 
 void key_put(struct key * key)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/slab.h>
-
-void kfree_sensitive(const void * p)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1230,14 +1129,6 @@ void remove_proc_entry(const char * name,struct proc_dir_entry * parent)
 }
 
 
-#include <linux/firmware.h>
-
-int request_firmware(const struct firmware ** firmware_p,const char * name,struct device * device)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <net/sock_reuseport.h>
 
 int reuseport_detach_prog(struct sock * sk)
@@ -1515,14 +1406,6 @@ int sysfs_emit(char * buf,const char * fmt,...)
 #include <linux/sysfs.h>
 
 int sysfs_emit_at(char * buf,int at,const char * fmt,...)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/if_ether.h>
-
-ssize_t sysfs_format_mac(char * buf,const unsigned char * addr,int len)
 {
 	lx_emul_trace_and_stop(__func__);
 }

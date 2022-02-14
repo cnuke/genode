@@ -21,7 +21,8 @@
 
 
 Firmware_list fw_list[] = {
-	{ "regulatory.db", 4144, nullptr },
+	{ "regulatory.db",     4144, nullptr },
+	{ "regulatory.db.p7s", 1182, nullptr },
 
 	{ "iwlwifi-1000-5.ucode",     337520, nullptr },
 	{ "iwlwifi-3160-17.ucode",    918268, nullptr },

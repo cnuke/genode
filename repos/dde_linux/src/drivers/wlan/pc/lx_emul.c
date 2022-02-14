@@ -279,6 +279,34 @@ int request_firmware_nowait(struct module * module,
 
 #include <linux/firmware.h>
 
+// FIXME used to load 'regulatory.db.p7s' to verify the db - for the
+// moment this signature check is disabled in 'net/wireless/reg.c:810'
+// (always return true) because it pulls in pkcs7 code in that is
+// generated during kernel compilation and not yet available.
+int request_firmware(const struct firmware ** firmware_p,
+                     const char * name, struct device * device)
+{
+	struct firmware *fw;
+
+	if (!*firmware_p)
+		return -1;
+
+	printk("%s: name: '%s'\n", __func__, name);
+
+	fw = kzalloc(sizeof (struct firmware), GFP_KERNEL);
+
+	if (lx_emul_request_firmware_nowait(name, &fw->data, &fw->size)) {
+		kfree(fw);
+		return -1;
+	}
+
+	*firmware_p = fw;
+	return 0;
+}
+
+
+#include <linux/firmware.h>
+
 void release_firmware(const struct firmware * fw)
 {
 	lx_emul_release_firmware(fw->data, fw->size);
@@ -354,4 +382,44 @@ void * vmalloc(unsigned long size)
 void * vzalloc(unsigned long size)
 {
 	return kzalloc(size, GFP_KERNEL);
+}
+
+
+#include <linux/interrupt.h>
+
+void __raise_softirq_irqoff(unsigned int nr)
+{
+    raise_softirq(nr);
+}
+
+
+#include <linux/slab.h>
+
+void kfree_sensitive(const void *p)
+{
+	size_t ks;
+	void *mem = (void *)p;
+
+	ks = ksize(mem);
+	if (ks)
+		memset(mem, 0, ks);
+
+	kfree(mem);
+}
+
+
+#include <linux/gfp.h>
+
+void free_pages(unsigned long addr,unsigned int order)
+{
+	__free_pages(virt_to_page((void *)addr), order);
+}
+
+
+#include <linux/gfp.h>
+#include <linux/slab.h>
+
+unsigned long get_zeroed_page(gfp_t gfp_mask)
+{
+    return (unsigned long)kzalloc(PAGE_SIZE, gfp_mask | __GFP_ZERO);
 }

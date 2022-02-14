@@ -611,3 +611,19 @@ void sched_set_fifo(struct task_struct * p)
 {
 	lx_emul_trace(__func__);
 }
+
+
+#include <linux/moduleparam.h>
+
+void kernel_param_lock(struct module * mod)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/moduleparam.h>
+
+void kernel_param_unlock(struct module * mod)
+{
+	lx_emul_trace(__func__);
+}

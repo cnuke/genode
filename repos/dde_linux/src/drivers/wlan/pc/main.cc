@@ -1,20 +1,23 @@
 /*
- * \brief  i.MX8 USB-card driver Linux port
- * \author Stefan Kalkowski
- * \date   2021-06-29
+ * \brief  Wireless network driver Linux port
+ * \author Josef Soentgen
+ * \date   2022-02-10
  */
 
 /*
- * Copyright (C) 2021 Genode Labs GmbH
+ * Copyright (C) 2022 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.
  */
 
+/* Genode includes */
 #include <base/attached_rom_dataspace.h>
 #include <base/component.h>
 #include <base/env.h>
+#include <genode_c_api/uplink.h>
 
+/* DDE Linux includes */
 #include <lx_emul/init.h>
 #include <lx_emul/page_virt.h>
 #include <lx_kit/env.h>
@@ -31,29 +34,31 @@ using namespace Genode;
 
 struct Main : private Entrypoint::Io_progress_handler
 {
-	Env                  & env;
-	Signal_handler<Main>   signal_handler { env.ep(), *this,
-	                                        &Main::handle_signal };
-	Sliced_heap            sliced_heap    { env.ram(), env.rm()  };
-
-	Attached_rom_dataspace config_rom { env, "config" };
+	Env                    &_env;
+	Io_signal_handler<Main> _signal_handler { _env.ep(), *this,
+	                                          &Main::_handle_signal };
 
 	/**
 	 * Entrypoint::Io_progress_handler
 	 */
 	void handle_io_progress() override
 	{
+		genode_uplink_notify_peers();
 	}
 
-	void handle_signal()
+	void _handle_signal()
 	{
 		lx_user_handle_io();
 		Lx_kit::env().scheduler.schedule();
 	}
 
-	Main(Env & env) : env(env)
+	Main(Env &env) : _env { env }
 	{
 		Lx_kit::initialize(env);
+
+		genode_uplink_init(genode_env_ptr(_env),
+		                   genode_allocator_ptr(Lx_kit::env().heap),
+		                   genode_signal_handler_ptr(_signal_handler));
 
 		lx_emul_start_kernel(nullptr);
 
@@ -62,7 +67,7 @@ struct Main : private Entrypoint::Io_progress_handler
 };
 
 
-void Component::construct(Env & env)
+void Component::construct(Env &env)
 {
 	static Main main(env);
 }

@@ -189,7 +189,10 @@ drivers/net/wireless/intel/iwlwifi/pcie/trans.c
 drivers/net/wireless/intel/iwlwifi/pcie/tx-gen2.c
 drivers/net/wireless/intel/iwlwifi/pcie/tx.c
 drivers/net/wireless/intel/iwlwifi/queue/tx.c
+lib/asn1_decoder.c
+lib/bsearch.c
 lib/dynamic_queue_limits.c
+lib/hweight.c
 lib/nlattr.c
 lib/rhashtable.c
 net/core/datagram.c
@@ -202,6 +205,7 @@ net/core/rtnetlink.c
 net/core/skbuff.c
 net/core/sock.c
 net/core/xdp.c
+net/ethernet/eth.c
 net/ethtool/common.c
 net/socket.c
 net/sched/sch_generic.c
