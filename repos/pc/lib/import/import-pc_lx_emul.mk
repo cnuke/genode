@@ -8,10 +8,23 @@ ifeq ($(filter-out $(SPECS),x86_64),)
 SPEC_ARCH := x86_64
 endif
 
-INC_DIR += $(PRG_DIR)/../..
+#
+# 'USE_AS_LIB' is supposed to be set by the lib.mk file when building
+# the driver as a library where we have to adjust various paths.
+#
+ifeq ($(USE_AS_LIB),)
+TARGET_SRC_DIR     := $(PRG_DIR)/../..
+TARGET_SOURCE_LIST := $(PRG_DIR)/source.list
+else
+TARGET_SRC_DIR     := $(DRIVER_LIB_DIR)
+TARGET_SOURCE_LIST := $(DRIVER_LIB_DIR)/spec/$(SPEC_ARCH)/source.list
+endif
+
+
+INC_DIR += $(TARGET_SRC_DIR)
 
 SRC_C += dummies.c lx_emul.c
-SRC_C += $(notdir $(wildcard $(PRG_DIR)/../../generated_dummies.c))
+SRC_C += $(notdir $(wildcard $(TARGET_SRC_DIR)/generated_dummies.c))
 
 #
 # Create symbol alias for jiffies, sharing the value of jiffies_64
@@ -135,8 +148,8 @@ CC_C_OPT += -Wno-format
 # avoid link errors whenever the build config's CC_OLEVEL is set to -O0
 override CC_OLEVEL := -O2
 
-LX_SRC   = $(shell grep ".*\.c" $(PRG_DIR)/source.list)
-SRC_S   += $(shell grep ".*\.S" $(PRG_DIR)/source.list)
+LX_SRC   = $(shell grep ".*\.c" $(TARGET_SOURCE_LIST))
+SRC_S   += $(shell grep ".*\.S" $(TARGET_SOURCE_LIST))
 SRC_C   += $(LX_SRC)
 SRC_S   += $(LX_ASM:$(LX_SRC_DIR)/%=%)
 
@@ -144,7 +157,7 @@ vpath %.c $(LX_SRC_DIR)
 vpath %.S $(LX_SRC_DIR)
 vpath %.S $(LX_GEN_DIR)
 
-CUSTOM_TARGET_DEPS += $(PRG_DIR)/source.list
+CUSTOM_TARGET_DEPS += $(TARGET_SOURCE_LIST)
 
 # Define per-compilation-unit CC_OPT defines needed by MODULE* macros in Linux
 define CC_OPT_LX_RULES =
