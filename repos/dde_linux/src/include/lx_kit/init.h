@@ -20,7 +20,7 @@
 namespace Lx_kit {
 	using namespace Genode;
 
-	void initialize(Env & env);
+	void initialize(Env & env, bool inhibit_ctors = false);
 	class Initcalls;
 
 	class Pci_fixup_calls;

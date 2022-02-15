@@ -55,8 +55,10 @@ void Lx_kit::Pci_fixup_calls::execute(struct pci_dev *pci_dev)
 }
 
 
-void Lx_kit::initialize(Genode::Env & env)
+void Lx_kit::initialize(Genode::Env & env, bool inhibit_ctors)
 {
 	Lx_kit::env(&env);
-	env.exec_static_constructors();
+
+	if (!inhibit_ctors)
+		env.exec_static_constructors();
 }
