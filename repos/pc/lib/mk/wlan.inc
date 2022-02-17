@@ -14,9 +14,14 @@ SRC_CC  += wlan.cc
 SRC_CC  += misc.cc
 SRC_CC  += time.cc
 SRC_CC  += firmware.cc
+SRC_CC  += socket_call.cc
 
 SRC_C   += dummies.c
 SRC_C   += lx_emul.c
+
+CC_OPT_lx_socket_call += -DKBUILD_MODNAME='"lx_socket_call"'
+SRC_C   += lx_socket_call.c
+
 SRC_C   += $(notdir $(wildcard $(DRIVER_LIB_DIR)/generated_dummies.c))
 SRC_C   += pc/lx_emul/common_dummies.c
 SRC_C   += lx_emul/spec/x86/pci.c

@@ -32,18 +32,6 @@ using namespace Genode;
 static Wifi::Frontend *_wifi_frontend = nullptr;
 
 
-extern "C" void wpa_ctrl_set_fd()
-{
-	error(__func__, ": not implemented");
-}
-
-extern "C" int wpa_main(void)
-{
-	error(__func__, ": not implemented");
-	sleep_forever();
-}
-
-
 /**
  * Notify front end about command processing
  *
