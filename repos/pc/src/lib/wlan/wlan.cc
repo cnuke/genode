@@ -25,7 +25,6 @@
 #include <lx_user/io.h>
 
 
-extern "C" void lx_user_init(void) { }
 extern "C" void lx_user_handle_io(void) { }
 
 
@@ -78,14 +77,18 @@ struct Wlan
 };
 
 
+Genode::Blockade *wpa_blockade;
+
+
 void wifi_init(Genode::Env                       &env,
                Genode::Blockade                  &blockade,
                bool                               disable_11n,
                Genode::Signal_context_capability  rfkill)
 {
-	(void)blockade;
 	(void)disable_11n;
 	(void)rfkill;
 
 	static Wlan wlan(env);
+
+	wpa_blockade = &blockade;
 }
