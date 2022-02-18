@@ -88,7 +88,7 @@ create_boot_directory
 #
 
 append config {
-<config verbose="yes">
+<config verbose="yes" prio_levels="2">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="IRQ"/>
@@ -114,7 +114,7 @@ append config {
 	</start>
 
 	<start name="test-lwip_httpsrv">
-		<resource name="RAM" quantum="16M"/>
+		<resource name="RAM" quantum="128M"/>
 		<config>
 			<libc stdout="/dev/null" stderr="/dev/log" socket="/socket"/>
 			<vfs>
@@ -155,7 +155,7 @@ append config {
 				<inline description="connect">
 } [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
-				<sleep milliseconds="60000"/>
+				<sleep milliseconds="6000000"/>
 				<inline description="rfkill block">
 } [wifi_config 30 5 yes [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
@@ -168,18 +168,18 @@ append config {
 		</config>
 	</start>
 
-	<start name="nic_router" caps="200">
-		<resource name="RAM" quantum="10M"/>
+	<start name="nic_router" caps="150">
+		<resource name="RAM" quantum="8M"/>
 		<provides>
 			<service name="Nic"/>
 			<service name="Uplink"/>
 		</provides>
-		<config verbose_domain_state="yes">
+		<config verbose="no" verbose_domain_state="yes" dhcp_discover_timeout_sec="10" dhcp_request_timeout_sec="6">
 
 			<policy label_prefix="test-lwip_httpsrv" domain="downlink"/>
 			<policy label_prefix="wifi_drv"          domain="uplink"/>
 
-			<domain name="uplink">
+			<domain name="uplink" verbose_packets="no" verbose_packet_drop="no" icmp_echo_server="yes">
 
 				<nat domain="downlink" tcp-ports="16384"/>
 				<tcp-forward port="443" domain="downlink" to="10.0.3.2"/>
@@ -187,7 +187,7 @@ append config {
 
 			</domain>
 
-			<domain name="downlink" interface="10.0.3.1/24">
+			<domain name="downlink" verbose_packets="no" verbose_packet_drop="no" interface="10.0.3.1/24">
 
 				<dhcp-server ip_first="10.0.3.2" ip_last="10.0.3.2"/>
 
@@ -203,13 +203,12 @@ append config {
 		<config verbose="yes"/>
 	</start>
 
-	<start name="wifi_drv" caps="220">
+	<start name="wifi_drv" caps="250" priority="-1">
 		<binary name="pc_wlan_drv"/>
-		<resource name="RAM" quantum="28M"/>
+		<resource name="RAM" quantum="32M"/>
 		<config ld_verbose="yes">
 			<report mac_address="true"/>
-			<libc stdout="/dev/null" stderr="/dev/null" rtc="/dev/rtc"
-			      inhibit_static_constructors="yes"/>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev"> <log/> <null/> <rtc/>
 					<jitterentropy name="random"/>
@@ -227,7 +226,8 @@ append config {
 			<service name="ROM" label="wifi_config"> <child name="config_rom"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
-	</start>}
+	</start>
+}
 
 append_platform_drv_config
 
@@ -239,6 +239,7 @@ install_config $config
 
 set firmware_modules {
 	iwlwifi-7265D-29.ucode
+	iwlwifi-QuZ-a0-hr-b0-63.ucode
 	regulatory.db
 	regulatory.db.p7s
 }
