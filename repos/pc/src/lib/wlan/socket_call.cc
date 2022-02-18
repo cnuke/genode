@@ -1,4 +1,4 @@
-/*
+	/*
  * \brief  Linux socket call interface front end
  * \author Josef Soentgen
  * \date   2014-08-04
@@ -65,6 +65,11 @@ struct Wifi::Socket
 	Socket() { }
 
 	explicit Socket(void *s) : socket(s) { }
+
+	void print(Genode::Output &out) const
+	{
+		Genode::print(out, "this: ", this, " socket: ", socket, " non_block: ", non_block);
+	}
 };
 
 
@@ -218,6 +223,7 @@ class Lx::Socket
 		{
 			struct socket *sock = _call_socket();
 
+			Genode::error(__func__, ": handle: ", *_call.handle);
 			_call.err = lx_sock_sendmsg(sock, &_call.sendmsg.msg,
 			                            _call.sendmsg.flags,
 			                            _call.handle->non_block);
@@ -323,6 +329,7 @@ class Lx::Socket
 		void _do_non_block()
 		{
 			_call.handle->non_block = _call.non_block.value;
+			Genode::error(__func__, ": handle: ", *_call.handle);
 		}
 
 		void _handle()
@@ -638,7 +645,7 @@ int Socket_call::setsockopt(Socket *s,
 
 void Socket_call::non_block(Socket *s, bool value)
 {
-	Genode::error(__func__, ":", __LINE__);
+	Genode::error(__func__, ":", __LINE__, " value: ", value);
 
 	_call.opcode          = Call::NON_BLOCK;
 	_call.handle          = s;

@@ -143,41 +143,9 @@ void __srcu_read_unlock(struct srcu_struct * ssp,int idx)
 }
 
 
-#include <linux/sched.h>
-
-pid_t __task_pid_nr_ns(struct task_struct * task,enum pid_type type,struct pid_namespace * ns)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/vmalloc.h>
 
 void * __vmalloc_node(unsigned long size,unsigned long align,gfp_t gfp_mask,int node,const void * caller)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/uio.h>
-
-size_t _copy_from_iter(void * addr,size_t bytes,struct iov_iter * i)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/uaccess.h>
-
-unsigned long _copy_from_user(void * to,const void __user * from,unsigned long n)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/uio.h>
-
-size_t _copy_to_iter(const void * addr,size_t bytes,struct iov_iter * i)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -430,14 +398,6 @@ int fasync_helper(int fd,struct file * filp,int on,struct fasync_struct ** fapp)
 #include <linux/file.h>
 
 void fd_install(unsigned int fd,struct file * file)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/capability.h>
-
-bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1076,14 +1036,6 @@ int put_cmsg(struct msghdr * msg,int level,int type,int len,void * data)
 }
 
 
-#include <linux/pid.h>
-
-void put_pid(struct pid * pid)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/file.h>
 
 void put_unused_fd(unsigned int fd)
@@ -1276,14 +1228,6 @@ int sk_attach_filter(struct sock_fprog * fprog,struct sock * sk)
 #include <linux/filter.h>
 
 int sk_detach_filter(struct sock * sk)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/filter.h>
-
-int sk_filter_trim_cap(struct sock * sk,struct sk_buff * skb,unsigned int cap)
 {
 	lx_emul_trace_and_stop(__func__);
 }

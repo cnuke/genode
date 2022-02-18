@@ -423,3 +423,94 @@ unsigned long get_zeroed_page(gfp_t gfp_mask)
 {
     return (unsigned long)kzalloc(PAGE_SIZE, gfp_mask | __GFP_ZERO);
 }
+
+
+#include <linux/sched.h>
+
+pid_t __task_pid_nr_ns(struct task_struct * task,
+                       enum pid_type type,
+                       struct pid_namespace * ns)
+{
+	(void)type;
+	(void)ns;
+
+	return lx_emul_task_pid(task);
+}
+
+
+#include <linux/uaccess.h>
+
+unsigned long _copy_from_user(void * to, const void __user * from,
+                              unsigned long n)
+{
+	memcpy(to, from, n);
+	return 0;
+}
+
+
+#include <linux/uio.h>
+
+size_t _copy_from_iter(void * addr, size_t bytes, struct iov_iter * i)
+{
+	char               *kdata;
+	struct iovec const *iov;
+	size_t              len;
+
+	if (bytes > i->count)
+		bytes = i->count;
+
+	if (bytes == 0)
+		return 0;
+
+	kdata = (char*)(addr);
+	iov   = i->iov;
+
+	len = bytes;
+	while (len > 0) {
+		if (iov->iov_len) {
+			size_t copy_len = (size_t)len < iov->iov_len ? len
+			                                             : iov->iov_len;
+			memcpy(kdata, iov->iov_base, copy_len);
+
+			len -= copy_len;
+			kdata += copy_len;
+		}
+		iov++;
+	}
+
+	return bytes;
+}
+
+
+#include <linux/uio.h>
+
+size_t _copy_to_iter(const void * addr, size_t bytes, struct iov_iter * i)
+{
+	char               *kdata;
+	struct iovec const *iov;
+	size_t              len;
+
+	if (bytes > i->count)
+		bytes = i->count;
+
+	if (bytes == 0)
+		return 0;
+
+	kdata = (char*)(addr);
+	iov   = i->iov;
+
+	len = bytes;
+	while (len > 0) {
+		if (iov->iov_len) {
+			size_t copy_len = (size_t)len < iov->iov_len ? len
+			                                             : iov->iov_len;
+			memcpy(iov->iov_base, kdata, copy_len);
+
+			len -= copy_len;
+			kdata += copy_len;
+		}
+		iov++;
+	}
+
+	return bytes;
+}
