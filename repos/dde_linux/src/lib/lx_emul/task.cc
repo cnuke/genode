@@ -22,6 +22,23 @@ extern "C" struct task_struct * lx_emul_task_get_current(void)
 }
 
 
+extern "C" char const * lx_emul_task_get_name(struct task_struct * t)
+{
+	static char name_buffer[64];
+
+	char const * ret = nullptr;
+
+	Lx_kit::env().scheduler.for_each_task([&] (Lx_kit::Task & task) {
+		if (t == task.lx_task()) {
+			Genode::copy_cstring(name_buffer, task.name().string(), sizeof (name_buffer));
+			ret = name_buffer;
+		}
+	});
+
+	return ret;
+}
+
+
 extern "C"
 void lx_emul_task_create(struct task_struct * task,
                          const char         * name,
