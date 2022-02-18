@@ -40,7 +40,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 
 	task = kmalloc(sizeof(struct task_struct), GFP_KERNEL);
 	if (!task)
-		return -1;
+		goto err_task;
 
 	*task = (struct task_struct) {
 	.__state         = 0,
@@ -76,6 +76,10 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 
 	lx_emul_task_create(task, "kthread", task->pid, fn, arg);
 	return task->pid;
+
+err_task:
+	kfree(cred);
+	return -1;
 }
 
 #pragma GCC diagnostic pop
