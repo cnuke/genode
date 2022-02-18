@@ -61,7 +61,7 @@ struct page * __alloc_pages(gfp_t gfp, unsigned int order, int preferred_nid,
 	void const  *ptr  = lx_emul_mem_alloc_aligned(PAGE_SIZE*nr_pages, PAGE_SIZE);
 	struct page *page = lx_emul_virt_to_pages(ptr, nr_pages);
 
-	printk("%s: nr_pages=%u order=%u -> %p\n", __func__, nr_pages, order, page);
+	// printk("%s: nr_pages=%u order=%u -> %p\n", __func__, nr_pages, order, page);
 
 	return page;
 }
