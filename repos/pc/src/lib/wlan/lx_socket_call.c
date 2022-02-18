@@ -44,7 +44,13 @@ void lx_user_init(void)
 int lx_sock_create_kern(int domain, int type, int protocol,
                         struct socket **res)
 {
-	return sock_create_kern(&lx_socket_call_net, domain, type, protocol, res);
+	int const err = sock_create_kern(&lx_socket_call_net, domain, type,
+	                                 protocol, res);
+	if (err)
+		return err;
+
+	init_waitqueue_head(&(*res)->wq.wait);
+	return 0;
 }
 
 
@@ -86,10 +92,12 @@ int lx_sock_recvmsg(struct socket *sock, struct lx_msghdr *lx_msg,
 	if (!iov)
 		goto err_iov;
 
+	iovlen = 0;
 	for (i = 0; i < iov_count; i++) {
 		iov[i].iov_base = lx_msg->msg_iov[i].iov_base;
 		iov[i].iov_len  = lx_msg->msg_iov[i].iov_len;
 
+		printk("%s:%d msg_iov[%u].iov_len: %lu\n", __func__, __LINE__, i, lx_msg->msg_iov[i].iov_len);
 		iovlen += lx_msg->msg_iov[i].iov_len;
 	}
 
@@ -133,9 +141,12 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 	if (!iov)
 		goto err_iov;
 
+	iovlen = 0;
 	for (i = 0; i < iov_count; i++) {
 		iov[i].iov_base = lx_msg->msg_iov[i].iov_base;
 		iov[i].iov_len  = lx_msg->msg_iov[i].iov_len;
+
+		printk("%s:%d msg_iov[%u].iov_len: %lu\n", __func__, __LINE__, i, lx_msg->msg_iov[i].iov_len);
 
 		iovlen += lx_msg->msg_iov[i].iov_len;
 	}
@@ -150,7 +161,9 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 	if (dontwait)
 		msg->msg_flags |= MSG_DONTWAIT;
 
+	printk("%s:%d dontwait: %d\n", __func__, __LINE__, dontwait);
 	err = sock->ops->sendmsg(sock, msg, iovlen);
+	printk("%s:%d err: %d\n", __func__, __LINE__, err);
 
 	kfree(iov);
 err_iov:

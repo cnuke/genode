@@ -500,8 +500,9 @@ int proc_alloc_inum(unsigned int * inum)
 
 u32 get_random_u32(void)
 {
-	printk("%s: return 4\n", __func__);
-	return 4;
+	static unsigned counter = 42;
+	printk("%s: return %u\n", __func__, counter);
+	return counter++;
 }
 
 
@@ -630,3 +631,29 @@ void kernel_param_unlock(struct module * mod)
 
 
 unsigned long lpj_fine = 0;
+
+
+#include <linux/pid.h>
+
+void put_pid(struct pid * pid)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/filter.h>
+
+int sk_filter_trim_cap(struct sock * sk,struct sk_buff * skb,unsigned int cap)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+#include <linux/capability.h>
+
+bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap)
+{
+	lx_emul_trace(__func__);
+	return true;
+}
