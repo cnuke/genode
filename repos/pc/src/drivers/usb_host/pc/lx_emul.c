@@ -16,6 +16,7 @@
 
 #include <lx_emul/alloc.h>
 #include <lx_emul/io_mem.h>
+#include <lx_emul/io_port.h>
 
 
 #include <asm-generic/delay.h>
@@ -202,4 +203,42 @@ void __iomem * ioremap(resource_size_t phys_addr, unsigned long size)
 void iounmap(volatile void __iomem * addr)
 {
 	(void)addr;
+}
+
+
+#include <asm/io.h>
+
+u8  _inb(unsigned long addr)
+{
+	return lx_emul_io_port_inb(addr);
+}
+
+
+u16 _inw(unsigned long addr)
+{
+	return lx_emul_io_port_inw(addr);
+}
+
+
+u32 _inl(unsigned long addr)
+{
+	return lx_emul_io_port_inl(addr);
+}
+
+
+void _outb(u8 value, unsigned long addr)
+{
+	lx_emul_io_port_outb(addr, value);
+}
+
+
+void _outw(u16 value, unsigned long addr)
+{
+	lx_emul_io_port_outw(addr, value);
+}
+
+
+void _outl(u32 value, unsigned long addr)
+{
+	lx_emul_io_port_outl(addr, value);
 }
