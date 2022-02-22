@@ -59,6 +59,22 @@ class Lx_kit::Device : List<Device>::Element
 			: idx{idx}, addr(addr), size(size) {}
 		};
 
+		struct Io_port : List<Io_port>::Element
+		{
+			using Index = Platform::Device::Io_port::Index;
+
+			Index  idx;
+			addr_t addr;
+			size_t size;
+
+			Constructible<Platform::Device::Io_port> io_port {};
+
+			bool match(addr_t addr);
+
+			Io_port(unsigned idx, addr_t addr, size_t size)
+			: idx{idx}, addr(addr), size(size) {}
+		};
+
 		struct Irq : List<Irq>::Element
 		{
 			using Index = Platform::Device::Irq::Index;
@@ -92,14 +108,19 @@ class Lx_kit::Device : List<Device>::Element
 		Platform::Connection          & _platform;
 		Name                      const _name;
 		Type                      const _type;
-		List<Io_mem>                    _io_mems {};
-		List<Irq>                       _irqs    {};
-		List<Clock>                     _clocks  {};
-		Constructible<Platform::Device> _pdev    {};
+		List<Io_mem>                    _io_mems  {};
+		List<Io_port>                   _io_ports {};
+		List<Irq>                       _irqs     {};
+		List<Clock>                     _clocks   {};
+		Constructible<Platform::Device> _pdev     {};
 
 		template <typename FN>
 		void _for_each_io_mem(FN const & fn) {
 			for (Io_mem * i = _io_mems.first(); i; i = i->next()) fn(*i); }
+
+		template <typename FN>
+		void _for_each_io_port(FN const & fn) {
+			for (Io_port * i = _io_ports.first(); i; i = i->next()) fn(*i); }
 
 		template <typename FN>
 		void _for_each_irq(FN const & fn) {
@@ -125,6 +146,15 @@ class Lx_kit::Device : List<Device>::Element
 
 		bool   read_config(unsigned reg, unsigned len, unsigned *val);
 		bool   write_config(unsigned reg, unsigned len, unsigned  val);
+
+		bool io_port(addr_t phys_addr);
+		unsigned char  io_port_inb(addr_t phys_addr);
+		unsigned short io_port_inw(addr_t phys_addr);
+		unsigned int   io_port_inl(addr_t phys_addr);
+
+		void io_port_outb(addr_t phys_addr, unsigned char  val);
+		void io_port_outw(addr_t phys_addr, unsigned short val);
+		void io_port_outl(addr_t phys_addr, unsigned int   val);
 };
 
 
