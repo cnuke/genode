@@ -229,6 +229,13 @@ static unsigned bar_size(Platform::Device const &dev,
 
 			val = node.attribute_value("size", 0u);
 		});
+
+		device.for_each_sub_node("io_port", [&] (Xml_node node) {
+			if (node.attribute_value("bar", 6u) != bar)
+				return;
+
+			val = node.attribute_value("size", 0u);
+		});
 	});
 
 	return val;
@@ -286,12 +293,14 @@ unsigned Platform::Device::Config_space::read(unsigned char address,
 	if (address == 0x34)
 		return 0u;
 
-	if (address > 0x3f)
-		return 0u;
+	// for better or worse UHCI needs access to higher registers
+	// if (address > 0x3f)
+	// 	return 0u;
 
 	Legacy_platform::Device::Access_size const as = convert(size);
 	Legacy_platform::Device_client device { _device._device_cap };
-	return device.config_read(address, as);
+	unsigned const v = device.config_read(address, as);
+	return v;
 }
 
 
@@ -307,7 +316,11 @@ void Platform::Device::Config_space::write(unsigned char address,
 		return;
 	}
 
-	if (address != 0x04)
+	if (address == 0x04)
+		return;
+
+	// disallow _all_ other writes for now
+	if (address < 0x3f)
 		return;
 
 	Legacy_platform::Device::Access_size const as = convert(size);
@@ -340,6 +353,53 @@ void *Platform::Device::Mmio::_local_addr()
 	}
 
 	return _attached_ds->local_addr<void*>();
+}
+
+
+Platform::Device::Io_port::Io_port(Device &device, Index index)
+:
+	_device { device },
+	_index  { index }
+{
+	Legacy_platform::Device_client client { _device._device_cap };
+
+	_io_port.construct(client.io_port((uint8_t)index.value));
+}
+
+
+unsigned char Platform::Device::Io_port::inb(addr_t phys_addr)
+{
+	return _io_port->inb(static_cast<unsigned short>(phys_addr));
+}
+
+
+unsigned short Platform::Device::Io_port::inw(addr_t phys_addr)
+{
+	return _io_port->inw(static_cast<unsigned short>(phys_addr));
+}
+
+
+unsigned int Platform::Device::Io_port::inl(addr_t phys_addr)
+{
+	return _io_port->inl(static_cast<unsigned short>(phys_addr));
+}
+
+
+void Platform::Device::Io_port::outb(addr_t phys_addr, unsigned char val)
+{
+	return _io_port->outb(static_cast<unsigned short>(phys_addr), val);
+}
+
+
+void Platform::Device::Io_port::outw(addr_t phys_addr, unsigned short val)
+{
+	return _io_port->outw(static_cast<unsigned short>(phys_addr), val);
+}
+
+
+void Platform::Device::Io_port::outl(addr_t phys_addr, unsigned int val)
+{
+	return _io_port->outl(static_cast<unsigned short>(phys_addr), val);
 }
 
 
