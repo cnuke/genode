@@ -44,8 +44,9 @@ void lx_user_init(void)
 int lx_sock_create_kern(int domain, int type, int protocol,
                         struct socket **res)
 {
-	int const err = sock_create_kern(&lx_socket_call_net, domain, type,
-	                                 protocol, res);
+	// int const err = sock_create_kern(&lx_socket_call_net, domain, type,
+	//                                  protocol, res);
+	int const err = __sock_create(&lx_socket_call_net, domain, type, protocol, res, 1);
 	if (err)
 		return err;
 
