@@ -10,7 +10,7 @@ extern "C" {
 unsigned int if_nametoindex(const char *ifname)
 {
 	/* we make sure the index is always 1 in the wifi driver */
-	return 1;
+	return 2;
 }
 
 
