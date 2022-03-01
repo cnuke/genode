@@ -4,7 +4,7 @@ DRIVER_LIB_DIR := $(REP_DIR)/src/lib/wlan
 
 USE_AS_LIB := yes
 
-SHARED_LIB := yes
+#SHARED_LIB := yes
 
 LD_OPT += --version-script=$(DRIVER_LIB_DIR)/symbol.map
 
