@@ -111,7 +111,7 @@ struct Page_fault_info
 		Genode::print(out, "pd='",     pd,      "' "
 		                   "thread='", thread,  "' "
 		                   "cpu=",     cpu,     " "
-		                   "ip=",      Hex(ip), " "
+		                   "ip ",      Hex(ip), " "
 		                   "address=", Hex(addr), " "
 		                   "stack pointer=", Hex(sp), " "
 		                   "qualifiers=", Hex(pf_type), " ",
