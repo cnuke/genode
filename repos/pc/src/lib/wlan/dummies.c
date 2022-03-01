@@ -657,3 +657,11 @@ bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap
 	lx_emul_trace(__func__);
 	return true;
 }
+
+
+#include <linux/rcupdate.h>
+
+void synchronize_rcu(void)
+{
+	lx_emul_trace(__func__);
+}

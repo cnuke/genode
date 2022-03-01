@@ -251,6 +251,7 @@ net/mac80211/wpa.c
 net/netlink/af_netlink.c
 net/netlink/genetlink.c
 net/netlink/policy.c
+net/packet/af_packet.c
 net/wireless/ap.c
 net/wireless/chan.c
 net/wireless/core.c

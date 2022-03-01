@@ -27,10 +27,31 @@ extern int run_lx_socket_call_task(void *p);
 
 // FIXME find out how to properly initialize a net namespace for us to use
 static struct net lx_socket_call_net;
+extern struct net init_net;
 
+static struct net_device *_wlan_device;
+
+void open_wlan_device(void)
+{
+	struct net_device *dev;
+	printk("%s:%d\n", __func__, __LINE__);
+
+	for_each_netdev(&init_net, dev) {
+
+		if (!dev_open(dev, 0) && !_wlan_device)
+			_wlan_device = dev;
+
+		if (!_wlan_device)
+			break;
+	}
+
+	printk("%s:%d _wlan_device: %p\n", __func__, __LINE__, _wlan_device);
+}
 
 void lx_user_init(void)
 {
+	// open_wlan_device();
+
 	int pid = kernel_thread(run_lx_socket_call_task,
 	                        lx_socket_call_task_args,
 	                        CLONE_FS | CLONE_FILES);
@@ -46,7 +67,7 @@ int lx_sock_create_kern(int domain, int type, int protocol,
 {
 	// int const err = sock_create_kern(&lx_socket_call_net, domain, type,
 	//                                  protocol, res);
-	int const err = __sock_create(&lx_socket_call_net, domain, type, protocol, res, 1);
+	int const err = __sock_create(&init_net, domain, type, protocol, res, 1);
 	if (err)
 		return err;
 
@@ -190,7 +211,28 @@ int lx_sock_setsockopt(struct socket *sock, int level, int optname,
 
 unsigned char const* lx_get_mac_addr()
 {
-	return NULL;
+	size_t i;
+
+	static char mac_addr_buffer[16];
+	memset(mac_addr_buffer, 0, sizeof (mac_addr_buffer));
+
+	struct sockaddr addr;
+	memset(addr.sa_data, 0, sizeof (addr.sa_data));
+
+	int res = dev_get_mac_address(&addr, &init_net, "wlan0");
+	if (res)
+		return NULL;
+
+	size_t const length =
+		sizeof (mac_addr_buffer) < sizeof (addr.sa_data)
+		                         ? sizeof (mac_addr_buffer)
+		                         : sizeof (addr.sa_data);
+	memcpy(mac_addr_buffer, addr.sa_data, length);
+	for (i = 0; i < sizeof (mac_addr_buffer); i++)
+		printk("%x:", mac_addr_buffer[i]);
+	printk("\n");
+
+	return mac_addr_buffer;
 }
 
 

@@ -1,7 +1,7 @@
 /*
  * \brief  Array defining order of Linux Kernel initcalls
  * \author Automatically generated file - do no edit
- * \date   2022-02-10
+ * \date   2022-02-28
  */
 
 #pragma once
@@ -119,6 +119,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_populate_rootfsrootfs",
 	"__initcall_pci_iommu_initrootfs",
 	"__initcall_rapl_pmu_init6",
+	"__initcall_packet_init6",
 	"__initcall_amd_uncore_init6",
 	"__initcall_amd_ibs_init6",
 	"__initcall_msr_init6",

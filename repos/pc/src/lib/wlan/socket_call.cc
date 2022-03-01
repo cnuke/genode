@@ -122,6 +122,7 @@ struct Call
 		struct
 		{
 			unsigned char *addr;
+			unsigned int   addr_len;
 		} get_mac_address;
 		struct
 		{
@@ -242,7 +243,15 @@ class Lx::Socket
 
 		void _do_get_mac_address()
 		{
-			_call.get_mac_address.addr = const_cast<unsigned char*>(lx_get_mac_addr());
+			unsigned const char *addr = lx_get_mac_addr();
+			if (!addr)
+				return;
+
+			Genode::size_t const copy = 6 > _call.get_mac_address.addr_len
+				                          ? _call.get_mac_address.addr_len
+				                          : 6;
+
+			Genode::memcpy(_call.get_mac_address.addr, addr, copy);
 		}
 
 		void _do_poll_all()
@@ -392,7 +401,7 @@ static Lx::Socket *_socket;
 
 
 extern Genode::Blockade *wpa_blockade;
-
+extern "C" void open_wlan_device(void);
 
 extern "C" int run_lx_socket_call_task(void *)
 {
@@ -400,6 +409,8 @@ extern "C" int run_lx_socket_call_task(void *)
 	_socket = &inst;
 
 	Genode::error(__func__, ": _socket: ", _socket);
+
+	open_wlan_device();
 	wpa_blockade->wakeup();
 
 	while (true) {
@@ -661,7 +672,8 @@ void Socket_call::get_mac_address(unsigned char *addr)
 
 	_call.opcode               = Call::GET_MAC_ADDRESS;
 	_call.handle               = 0;
-	_call.get_mac_address.addr = addr;
+	_call.get_mac_address.addr     = addr;
+	_call.get_mac_address.addr_len = 6; // XXX enforce and set from caller
 
 	_socket->submit_and_block();
 }

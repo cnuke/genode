@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2022-02-11
+ * \date   2022-02-28
  */
 
 #include <lx_emul.h>
@@ -121,7 +121,23 @@ int __scm_send(struct socket * sock,struct msghdr * msg,struct scm_cookie * p)
 
 #include <linux/skbuff.h>
 
+bool __skb_flow_dissect(const struct net * net,const struct sk_buff * skb,struct flow_dissector * flow_dissector,void * target_container,const void * data,__be16 proto,int nhoff,int hlen,unsigned int flags)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/skbuff.h>
+
 void __skb_get_hash(struct sk_buff * skb)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/skbuff.h>
+
+u32 __skb_get_hash_symmetric(const struct sk_buff * skb)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -232,6 +248,22 @@ void async_synchronize_full(void)
 
 #include <linux/filter.h>
 
+int bpf_prog_create_from_user(struct bpf_prog ** pfp,struct sock_fprog * fprog,bpf_aux_classic_check_t trans,bool save_orig)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
+void bpf_prog_destroy(struct bpf_prog * fp)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/filter.h>
+
 void bpf_warn_invalid_xdp_action(u32 act)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -270,6 +302,14 @@ void console_unblank(void)
 #include <linux/filter.h>
 
 int copy_bpf_fprog_from_user(struct sock_fprog * dst,sockptr_t src,int len)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/uio.h>
+
+size_t copy_page_from_iter(struct page * page,size_t offset,size_t bytes,struct iov_iter * i)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -326,14 +366,6 @@ asmlinkage __visible void do_softirq(void)
 #include <net/dst.h>
 
 void dst_release(struct dst_entry * dst)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/printk.h>
-
-asmlinkage __visible void dump_stack(void)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -417,6 +449,11 @@ int firmware_request_nowarn(const struct firmware ** firmware,const char * name,
 {
 	lx_emul_trace_and_stop(__func__);
 }
+
+
+#include <net/flow_dissector.h>
+
+struct flow_dissector flow_keys_basic_dissector;
 
 
 #include <linux/file.h>
@@ -643,6 +680,11 @@ bool is_software_node(const struct fwnode_handle * fwnode)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+
+
+#include <linux/jiffies.h>
+
+unsigned long volatile __cacheline_aligned_in_smp __jiffy_arch_data jiffies;
 
 
 #include <linux/kobject.h>
@@ -948,54 +990,6 @@ pid_t pid_vnr(struct pid * pid)
 }
 
 
-#include <crypto/pkcs7.h>
-
-void pkcs7_free_message(struct pkcs7_message * pkcs7)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <crypto/pkcs7.h>
-
-int pkcs7_get_content_data(const struct pkcs7_message * pkcs7,const void ** _data,size_t * _data_len,size_t * _headerlen)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <crypto/pkcs7.h>
-
-struct pkcs7_message * pkcs7_parse_message(const void * data,size_t datalen)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <crypto/pkcs7.h>
-
-int pkcs7_supply_detached_data(struct pkcs7_message * pkcs7,const void * data,size_t datalen)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <crypto/pkcs7.h>
-
-int pkcs7_validate_trust(struct pkcs7_message * pkcs7,struct key * trust_keyring)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <crypto/pkcs7.h>
-
-int pkcs7_verify(struct pkcs7_message * pkcs7,enum key_being_used_for usage)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/poll.h>
 
 int poll_select_set_timeout(struct timespec64 * to,time64_t sec,long nsec)
@@ -1031,6 +1025,22 @@ void proc_free_inum(unsigned int inum)
 #include <linux/socket.h>
 
 int put_cmsg(struct msghdr * msg,int level,int type,int len,void * data)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/socket.h>
+
+void put_cmsg_scm_timestamping(struct msghdr * msg,struct scm_timestamping_internal * tss_internal)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/socket.h>
+
+void put_cmsg_scm_timestamping64(struct msghdr * msg,struct scm_timestamping_internal * tss_internal)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1100,6 +1110,22 @@ void reuseport_detach_sock(struct sock * sk)
 #include <net/scm.h>
 
 void scm_detach_fds(struct msghdr * msg,struct scm_cookie * scm)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+struct hlist_node * seq_hlist_next_rcu(void * v,struct hlist_head * head,loff_t * ppos)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/seq_file.h>
+
+struct hlist_node * seq_hlist_start_head_rcu(struct hlist_head * head,loff_t pos)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1315,14 +1341,6 @@ int string_escape_mem(const char * src,size_t isz,char * dst,size_t osz,unsigned
 int suppress_printk;
 
 
-#include <linux/rcupdate.h>
-
-void synchronize_rcu(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/srcutiny.h>
 
 void synchronize_srcu(struct srcu_struct * ssp)
@@ -1421,6 +1439,22 @@ void unregister_handler_proc(unsigned int irq,struct irqaction * action)
 #include <linux/uuid.h>
 
 const u8 uuid_index[16] = {};
+
+
+#include <linux/mm.h>
+
+int vm_insert_page(struct vm_area_struct * vma,unsigned long addr,struct page * page)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/mm.h>
+
+struct page * vmalloc_to_page(const void * vmalloc_addr)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/sched/wake_q.h>

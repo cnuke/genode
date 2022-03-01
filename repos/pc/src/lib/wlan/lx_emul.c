@@ -514,3 +514,11 @@ size_t _copy_to_iter(const void * addr, size_t bytes, struct iov_iter * i)
 
 	return bytes;
 }
+
+
+#include <linux/printk.h>
+
+asmlinkage __visible void dump_stack(void)
+{
+	lx_backtrace();
+}
