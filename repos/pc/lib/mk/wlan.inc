@@ -31,6 +31,8 @@ CC_C_OPT += -I$(LX_SRC_DIR)/include/linux
 
 CC_C_OPT += -Wno-address-of-packed-member
 
+CC_OPT += -DCONFIG_IWLWIFI_DEBUG
+
 vpath %.c $(DRIVER_LIB_DIR)
 vpath %.cc $(DRIVER_LIB_DIR)
 vpath pc/lx_emul/common_dummies.c $(REP_DIR)/src/lib
