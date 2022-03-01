@@ -202,8 +202,27 @@ void Lx_kit::Console::_out_string(const char *str)
 }
 
 
+static unsigned _depth()
+{
+	unsigned depth = 0;
+	Genode::addr_t * fp;
+
+	asm volatile ("movq %%rbp, %0" : "=r"(fp) : :);
+
+	while (fp && *(fp + 1)) {
+		fp = (Genode::addr_t*)*fp;
+		depth++;
+	}
+	return depth;
+}
+
+
 void Lx_kit::Console::vprintf(const char *format, va_list list)
 {
+	unsigned const d = _depth();
+	for (unsigned i = 0; i < d; i++)
+		_out_char(' ');
+
 	while (*format) {
 
 		/* eat and output plain characters */
