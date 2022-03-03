@@ -130,8 +130,11 @@ int lx_sock_recvmsg(struct socket *sock, struct lx_msghdr *lx_msg,
 	msg->msg_iter.count   = iovlen;
 
 	msg->msg_flags = flags;
-	if (dontwait)
+	if (dontwait) {
+		printk("%s: MSG_DONTWAIT sock->ops->recvmsg: %p\n", __func__, sock->ops->recvmsg);
 		msg->msg_flags |= MSG_DONTWAIT;
+		flags |= MSG_DONTWAIT;
+	}
 
 	err = sock->ops->recvmsg(sock, msg, iovlen, flags);
 

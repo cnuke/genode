@@ -46,12 +46,6 @@ void wifi_set_rfkill(bool blocked)
 }
 
 
-void wifi_kick_socketcall()
-{
-	error(__func__, ": not implemented");
-}
-
-
 struct Wlan
 {
 	Env                    &_env;

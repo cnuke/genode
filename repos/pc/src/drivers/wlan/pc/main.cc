@@ -113,8 +113,8 @@ struct Main
 
 	Main(Genode::Env &env) : env(env)
 	{
-		_frontend.construct(env);
-		_wifi_frontend = &*_frontend;
+		// _frontend.construct(env);
+		// _wifi_frontend = &*_frontend;
 
 		_wpa.construct(env, _wpa_startup_blockade);
 
@@ -122,14 +122,32 @@ struct Main
 		 * Forcefully disable 11n but for convenience the attribute is used the
 		 * other way araound.
 		 */
-		bool const disable_11n = !_frontend->use_11n();
+		bool const disable_11n = false;//!_frontend->use_11n();
 		wifi_init(env, _wpa_startup_blockade, disable_11n,
-		          _frontend->rfkill_sigh());
+		          Genode::Signal_context_capability());
+		          // _frontend->rfkill_sigh());
 	}
 };
 
 
+static Main *_main;
+
+extern "C" void poke_frontend(void)
+{
+	if (!_main)
+		return;
+
+	Libc::with_libc([&] () {
+		_main->_frontend.construct(_main->env);
+		_wifi_frontend = &*_main->_frontend;
+	});
+}
+
+
 void Libc::Component::construct(Libc::Env &env)
 {
-	Libc::with_libc([&] () { static Main server(env); });
+	Libc::with_libc([&] () {
+		static Main server(env);
+		_main = &server;
+	});
 }

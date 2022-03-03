@@ -364,7 +364,7 @@ struct Wifi::Frontend
 	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
 
 	bool _verbose       { false };
-	bool _verbose_state { false };
+	bool _verbose_state { true };
 	bool _use_11n       { true };
 
 	bool _deferred_config_update { false };
@@ -605,7 +605,7 @@ struct Wifi::Frontend
 		if (_verbose_state) {
 			using namespace Genode;
 			log("Transition: ", state_strings(current), " -> ",
-			    state_strings(next));
+			    state_strings(next), " from: ", __builtin_return_address(0));
 		}
 
 		current = next;
