@@ -235,9 +235,13 @@ class Lx::Socket
 {
 	private:
 
+		Socket(const Socket&) = delete;
+		Socket& operator=(const Socket&) = delete;
 
 		Genode::Signal_transmitter         _sender { };
 		Genode::Signal_handler<Lx::Socket> _dispatcher;
+
+		struct socket *_sock_poll_table[Wifi::MAX_POLL_SOCKETS] { };
 
 		struct socket *_call_socket()
 		{
@@ -390,33 +394,34 @@ class Lx::Socket
 					break;
 				}
 
-#if 0
 				/**
 				 * In case of a timeout add all sockets to an artificial wait list
 				 * so at least one is woken up an sk_data_ready() call.
 				 */
-				Lx::Task *task = Lx::scheduler().current();
-				struct socket_wq wq[num];
-				Lx::Task::List wait_list;
+				// Lx::Task *task = Lx::scheduler().current();
+				// struct socket_wq wq[num];
+				// Lx::Task::List wait_list;
 
-				task->wait_enqueue(&wait_list);
+				// task->wait_enqueue(&wait_list);
 				for (unsigned i = 0; i < num; i++) {
 					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
-					wq[i].wait.list = &wait_list;
-					sock->sk->sk_wq = &wq[i];
+					// wq[i].wait.list = &wait_list;
+					// sock->sk->sk_wq = &wq[i];
+					_sock_poll_table[i] = sock;
 				}
 
-				long t = msecs_to_jiffies(timeout);
-				timeout_triggered = !schedule_timeout(t);
+				timeout_triggered = !lx_sock_poll_wait(_sock_poll_table, num, timeout);
 
-				task->wait_dequeue(&wait_list);
-				for (unsigned i = 0; i < num; i++) {
-					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
-					sock->sk->sk_wq = 0;
-				}
+				// long t = msecs_to_jiffies(timeout);
+				// timeout_triggered = !schedule_timeout(t);
+
+				// task->wait_dequeue(&wait_list);
+				// for (unsigned i = 0; i < num; i++) {
+				// 	struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+				// 	sock->sk->sk_wq = 0;
+				// }
 
 				woken_up = true;
-#endif
 				Genode::error(__func__, ":", __LINE__);
 			} while (1);
 

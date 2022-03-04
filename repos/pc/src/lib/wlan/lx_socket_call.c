@@ -242,14 +242,20 @@ unsigned char const* lx_get_mac_addr()
 struct lx_poll_result lx_sock_poll(struct socket *sock)
 {
 	enum {
-		POLLIN_SET  = (POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR),
-		POLLOUT_SET = (POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR),
-		POLLEX_SET  = (POLLPRI)
+		POLLIN_SET  = (EPOLLRDHUP | EPOLLIN | EPOLLRDNORM),
+		POLLOUT_SET = (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND),
+		POLLEX_SET  = (EPOLLERR | EPOLLPRI)
 	};
+
+	// enum {
+	// 	POLLIN_SET  = (EPOLLRDNORM | EPOLLRDBAND | EPOLLIN | EPOLLHUP | EPOLLERR)
+	// 	POLLOUT_SET = (EPOLLWRBAND | EPOLLWRNORM | EPOLLOUT | EPOLLERR)
+	// 	POLLEX_SET =  (EPOLLPRI)
+	// };
 
 	int const mask = sock->ops->poll(0, sock, 0);
 
-	struct lx_poll_result result;
+	struct lx_poll_result result = { false, false, false };
 
 	if (mask & POLLIN_SET)
 		result.in = true;
@@ -257,6 +263,22 @@ struct lx_poll_result lx_sock_poll(struct socket *sock)
 		result.out = true;
 	if (mask & POLLEX_SET)
 		result.ex = true;
+	printk("%s:%d: sock: %p poll: %p mask: %x (in: %d (%x) out: %d (%x) ex: %d (%x)\n",
+	       __func__, __LINE__, sock, sock->ops->poll, mask,
+	       result.in, POLLIN_SET, result.out, POLLOUT_SET, result.ex, POLLEX_SET);
 
 	return result;
+}
+
+
+int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
+{
+	unsigned i;
+
+	for (i = 0; i < num; i++) {
+		struct socket *sock = socks[i];
+		printk("%s:%d sock: %p sk_wq: %p\n", __func__, __LINE__, sock, sock->sk->sk_wq);
+	}
+	lx_emul_task_schedule(true);
+	return 0;
 }

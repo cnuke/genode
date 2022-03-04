@@ -42,7 +42,7 @@ void wifi_set_rfkill(bool blocked)
 {
 	(void)blocked;
 
-	error(__func__, ": not implemented");
+	error(__func__, ": block: ", blocked, " not implemented");
 }
 
 

@@ -66,6 +66,8 @@ struct lx_poll_result
 
 struct lx_poll_result lx_sock_poll(struct socket *sock);
 
+int lx_sock_poll_wait(struct socket *sock[], unsigned num, int timeout);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
