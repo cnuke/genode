@@ -112,9 +112,13 @@ void Scheduler::schedule()
 				continue;
 
 			/* update current before running task */
+			unsigned long const ip = ((unsigned long*)(&t->_env))[7];
+
+			Genode::error(__func__, ": t: ", t->name(), " ip: ", Genode::Hex(ip));
 			_current = t;
 			t->run();
 			at_least_one = true;
+			Genode::error(__func__, ": t: ", t->name(), " done");
 
 			if (!t->runnable())
 				break;

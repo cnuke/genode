@@ -108,12 +108,18 @@ void Task::run()
 }
 
 
+#include <os/backtrace.h>
+
+
 void Task::schedule()
 {
 	/*
 	 * Save the execution environment. The task will resume from here on next
 	 * schedule.
 	 */
+	if (Genode::strcmp(name().string(), "kworker/u2:0") == 0)
+		Genode::backtrace();
+
 	if (_setjmp(_env))
 		return;
 

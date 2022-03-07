@@ -150,11 +150,11 @@ append config {
 				<inline description="disconnect">
 } [wifi_config 30 5 no {}] {
 				</inline>
-				<sleep milliseconds="15000"/>
+				<sleep milliseconds="15000000"/>
 				<inline description="connect">
 } [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
-				<sleep milliseconds="60000"/>
+				<sleep milliseconds="6000000"/>
 				<inline description="rfkill block">
 } [wifi_config 30 5 yes [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>

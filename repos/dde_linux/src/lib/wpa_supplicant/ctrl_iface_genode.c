@@ -96,6 +96,8 @@ static void send_reply(struct ctrl_iface_priv *priv, char const *txt, size_t len
 static void wpa_supplicant_ctrl_iface_receive(int fd, void *eloop_ctx,
                                               void *sock_ctx)
 {
+	printf("%s:%d\n", __func__, __LINE__);
+
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct ctrl_iface_priv *priv = sock_ctx;
 
@@ -106,13 +108,18 @@ static void wpa_supplicant_ctrl_iface_receive(int fd, void *eloop_ctx,
 	char *reply      = NULL;
 	size_t reply_len = 0;
 
-	if (msg[0] == 0 || recv_id == priv->last_recv_id) { return; }
+	if (msg[0] == 0 || recv_id == priv->last_recv_id) {
+		printf("%s:%d msg[0]: %u recv_id: %u (%p) priv->last_recv_id: %u\n", __func__, __LINE__, msg[0], recv_id, priv->recv_id, priv->last_recv_id);
+		return;
+	}
 
 	priv->last_recv_id = recv_id;
 
+	printf("%s:%d\n", __func__, __LINE__);
 	reply = wpa_supplicant_ctrl_iface_process(wpa_s, msg,
 	                                          &reply_len);
 
+	printf("%s:%d\n", __func__, __LINE__);
 	if (reply) {
 		wifi_block_for_processing();
 		send_reply(priv, reply, reply_len);

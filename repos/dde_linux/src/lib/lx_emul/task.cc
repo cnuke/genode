@@ -39,6 +39,22 @@ extern "C" char const * lx_emul_task_get_name(struct task_struct * t)
 }
 
 
+extern "C" char const * lx_emul_task_get_name2(struct task_struct const * t, char name_buffer[64])
+{
+	char const * ret = nullptr;
+
+	Lx_kit::env().scheduler.for_each_task([&] (Lx_kit::Task & task) {
+		if (t == task.lx_task()) {
+			Genode::copy_cstring(name_buffer, task.name().string(), 64);
+			ret = name_buffer;
+		}
+	});
+
+	return ret;
+}
+
+#include <os/backtrace.h>
+
 extern "C"
 void lx_emul_task_create(struct task_struct * task,
                          const char         * name,
@@ -51,6 +67,8 @@ void lx_emul_task_create(struct task_struct * task,
 	                                      (void*)task, pid, name,
 	                                      Lx_kit::env().scheduler,
 	                                      Lx_kit::Task::NORMAL);
+	Genode::error(__func__, ":", __LINE__, ": name: '", name, "'");
+	Genode::backtrace();
 }
 
 

@@ -42,6 +42,8 @@ class Lx_kit::Task : public Genode::List<Lx_kit::Task>::Element
 		Task(Task const &);
 		Task &operator = (Task const &);
 
+	public:
+
 		State         _state    { INIT };
 		int           _priority { 120  }; /* initial value of swapper task  */
 		Type          _type;

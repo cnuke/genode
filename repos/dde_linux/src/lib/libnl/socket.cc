@@ -68,6 +68,8 @@ struct Socket_fd
 };
 
 
+#include <os/backtrace.h>
+
 class Socket_registry
 {
 	private :
@@ -107,6 +109,9 @@ class Socket_registry
 			};
 
 			_for_each_socket_fd(lambda);
+
+			Genode::error(__func__, ": s: ", s, " sockfd: ", fd);
+			Genode::backtrace();
 
 			return fd;
 		}
@@ -217,6 +222,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 	/* FIXME convert to/from Sockaddr */
 	/* FIXME flags values */
 	Genode::error(__func__, ":", __LINE__, ": sockfd: ", sockfd);
+	Genode::backtrace();
 	int const err = socket_call.recvmsg(s, &w_msg, wflags);
 	Genode::error(__func__, ":", __LINE__, ": err: ", err);
 	if (err < 0) {
@@ -248,8 +254,8 @@ ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
 	if (flags & MSG_ERRQUEUE)
 		w_flags = Wifi::WIFI_F_MSG_ERRQUEUE;
 
-	// if (flags & MSG_DONTWAIT)
-	// 	wflags |= Wifi::WIFI_F_MSG_DONTWAIT;
+	if (flags & MSG_DONTWAIT)
+		w_flags = Wifi::WIFI_F_MSG_DONTWAIT;
 
 	Wifi::Msghdr w_msg;
 
@@ -513,7 +519,7 @@ extern "C" void poke_frontend(void);
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
-	Genode::error(__func__, ":", __LINE__, ": timeout: ", timeout, "ctrl fd: ", _ctrl_fd_set);
+	Genode::error(__func__, ":", __LINE__, ": timeout: ", timeout, " ctrl fd: ", _ctrl_fd_set);
 	static bool poked = false;
 	if (!poked) {
 		poke_frontend();
@@ -575,6 +581,9 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 			pfd->revents |= POLLOUT;
 		if (revents & Wifi::WIFI_POLLEX)
 			pfd->revents |= POLLPRI;
+
+		if (pfd->revents)
+			Genode::error(__func__, ":", __LINE__, ": -----> fd: ", pfd->fd, " revents: ", Genode::Hex(pfd->revents));
 	}
 
 	Genode::error(__func__, ":", __LINE__, ": nready: ", nready);

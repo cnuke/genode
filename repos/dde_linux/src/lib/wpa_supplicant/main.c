@@ -46,7 +46,7 @@ int wpa_main(void)
 	memset(&params, 0, sizeof(params));
 
 	// TODO use CTRL interface for setting debug level
-	params.wpa_debug_level = MSG_EXCESSIVE; //1 ? MSG_DEBUG : MSG_INFO;
+	params.wpa_debug_level = 1 ? MSG_DEBUG : MSG_INFO;
 	params.ctrl_interface = "GENODE";
 
 	global = wpa_supplicant_init(&params);
