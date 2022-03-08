@@ -25,8 +25,6 @@ void *lx_socket_call_task_args;
 extern int run_lx_socket_call_task(void *p);
 
 
-// FIXME find out how to properly initialize a net namespace for us to use
-static struct net lx_socket_call_net;
 extern struct net init_net;
 
 static struct net_device *_wlan_device;
@@ -56,9 +54,6 @@ void lx_user_init(void)
 	                        lx_socket_call_task_args,
 	                        CLONE_FS | CLONE_FILES);
 	lx_socket_call_task = find_task_by_pid_ns(pid, NULL);
-
-	lx_socket_call_net.core.prot_inuse = kzalloc(4096, GFP_KERNEL);
-	lx_socket_call_net.core.sock_inuse = kzalloc(sizeof (int), GFP_KERNEL);
 }
 
 
