@@ -243,13 +243,44 @@ class Lx::Socket
 
 		struct socket *_sock_poll_table[Wifi::MAX_POLL_SOCKETS] { };
 
+		struct socket *_sock[8] { };
+		unsigned long _sock_count { 1 };
+
 		struct socket *_call_socket()
 		{
-			struct socket *sock = static_cast<struct socket*>(_call.handle->socket);
+			unsigned long sock_id = (unsigned long)_call.handle->socket;
+			if (sock_id >= 8) {
+				Genode::error("sock_id: ", sock_id, " invalid");
+				return nullptr;
+			}
+
+			struct socket *sock = _sock[sock_id];
 			if (!sock)
 				Genode::error("BUG: sock is zero");
 
 			return sock;
+
+			// struct socket *sock = static_cast<struct socket*>(_call.handle->socket);
+			// if (!sock)
+			// 	Genode::error("BUG: sock is zero");
+
+			// return sock;
+		}
+
+		struct socket *_socket_from_id(void const *id)
+		{
+			unsigned long sock_id = (unsigned long)id;
+			if (sock_id >= 8) {
+				Genode::error("sock_id: ", sock_id, " invalid");
+				return nullptr;
+			}
+
+			struct socket *sock = _sock[sock_id];
+			if (!sock)
+				Genode::error("BUG: sock is zero");
+
+			return sock;
+
 		}
 
 		void _do_socket()
@@ -258,7 +289,9 @@ class Lx::Socket
 			int res = lx_sock_create_kern(_call.socket.domain, _call.socket.type,
 			                              _call.socket.protocol, &s);
 			if (!res) {
-				_call.socket.result = s;
+				_sock[_sock_count] = s;
+				_call.socket.result = (void*)_sock_count;
+				_sock_count++;
 				_call.err           = 0;
 				return;
 			}
@@ -361,7 +394,8 @@ class Lx::Socket
 				 * Poll each socket and check if there is something of interest.
 				 */
 				for (unsigned i = 0; i < num; i++) {
-					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+					// struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+					struct socket *sock = _socket_from_id(sockets[i].s->socket);
 
 					struct lx_poll_result result = lx_sock_poll(sock);
 
@@ -401,10 +435,11 @@ class Lx::Socket
 				// Lx::Task *task = Lx::scheduler().current();
 				// struct socket_wq wq[num];
 				// Lx::Task::List wait_list;
-
+      
 				// task->wait_enqueue(&wait_list);
 				for (unsigned i = 0; i < num; i++) {
-					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+					// struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+					struct socket *sock = _socket_from_id(sockets[i].s->socket);
 					// wq[i].wait.list = &wait_list;
 					// sock->sk->sk_wq = &wq[i];
 					_sock_poll_table[i] = sock;
