@@ -190,14 +190,6 @@ int add_uevent_var(struct kobj_uevent_env * env,const char * format,...)
 }
 
 
-#include <crypto/aes.h>
-
-int aes_expandkey(struct crypto_aes_ctx * ctx,const u8 * in_key,unsigned int key_len)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/file.h>
 
 struct file * alloc_file_pseudo(struct inode * inode,struct vfsmount * mnt,const char * name,int flags,const struct file_operations * fops)
@@ -1065,22 +1057,6 @@ int raw_pci_read(unsigned int domain,unsigned int bus,unsigned int devfn,int reg
 #include <linux/reboot.h>
 
 enum reboot_mode reboot_mode;
-
-
-#include <linux/refcount.h>
-
-bool refcount_dec_not_one(refcount_t * r)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/refcount.h>
-
-void refcount_warn_saturate(refcount_t * r,enum refcount_saturation_type t)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/proc_fs.h>
