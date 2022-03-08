@@ -111,7 +111,7 @@ class Socket_registry
 			_for_each_socket_fd(lambda);
 
 			Genode::error(__func__, ": s: ", s, " sockfd: ", fd);
-			Genode::backtrace();
+			// Genode::backtrace();
 
 			return fd;
 		}
@@ -222,7 +222,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 	/* FIXME convert to/from Sockaddr */
 	/* FIXME flags values */
 	Genode::error(__func__, ":", __LINE__, ": sockfd: ", sockfd);
-	Genode::backtrace();
+	// Genode::backtrace();
 	int const err = socket_call.recvmsg(s, &w_msg, wflags);
 	Genode::error(__func__, ":", __LINE__, ": err: ", err);
 	if (err < 0) {
@@ -528,6 +528,8 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 	Genode::error(__func__, ":", __LINE__, ": ctrl fd: ", _ctrl_fd_set);
 
 	Poll_socket_fd sockets[Wifi::MAX_POLL_SOCKETS];
+	Genode::memset(sockets, 0, sizeof (sockets));
+
 	unsigned num = 0;
 	int nready = 0;
 

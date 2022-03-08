@@ -53,7 +53,6 @@ extern "C" char const * lx_emul_task_get_name2(struct task_struct const * t, cha
 	return ret;
 }
 
-#include <os/backtrace.h>
 
 extern "C"
 void lx_emul_task_create(struct task_struct * task,
@@ -68,7 +67,6 @@ void lx_emul_task_create(struct task_struct * task,
 	                                      Lx_kit::env().scheduler,
 	                                      Lx_kit::Task::NORMAL);
 	Genode::error(__func__, ":", __LINE__, ": name: '", name, "'");
-	Genode::backtrace();
 }
 
 
