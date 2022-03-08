@@ -665,3 +665,20 @@ void synchronize_rcu(void)
 {
 	lx_emul_trace(__func__);
 }
+
+
+#include <linux/skbuff.h>
+
+void __skb_get_hash(struct sk_buff * skb)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/skbuff.h>
+
+bool __skb_flow_dissect(const struct net * net,const struct sk_buff * skb,struct flow_dissector * flow_dissector,void * target_container,const void * data,__be16 proto,int nhoff,int hlen,unsigned int flags)
+{
+	lx_emul_trace(__func__);
+	return false;
+}

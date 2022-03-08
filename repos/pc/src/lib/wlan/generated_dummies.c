@@ -87,14 +87,6 @@ void __put_cred(struct cred * cred)
 }
 
 
-#include <linux/mm.h>
-
-void __put_page(struct page * page)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/sched/task.h>
 
 void __put_task_struct(struct task_struct * tsk)
@@ -114,22 +106,6 @@ void __scm_destroy(struct scm_cookie * scm)
 #include <net/scm.h>
 
 int __scm_send(struct socket * sock,struct msghdr * msg,struct scm_cookie * p)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/skbuff.h>
-
-bool __skb_flow_dissect(const struct net * net,const struct sk_buff * skb,struct flow_dissector * flow_dissector,void * target_container,const void * data,__be16 proto,int nhoff,int hlen,unsigned int flags)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/skbuff.h>
-
-void __skb_get_hash(struct sk_buff * skb)
 {
 	lx_emul_trace_and_stop(__func__);
 }

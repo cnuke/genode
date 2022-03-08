@@ -527,3 +527,11 @@ asmlinkage __visible void dump_stack(void)
 {
 	lx_backtrace();
 }
+
+
+#include <linux/mm.h>
+
+void __put_page(struct page * page)
+{
+	__free_pages(page, 0);
+}
