@@ -180,7 +180,12 @@ void __tasklet_hi_schedule(struct tasklet_struct * t)
 
 void call_rcu(struct rcu_head * head,rcu_callback_t func)
 {
-	lx_emul_trace(__func__);
+	enum { KVFREE_RCU_OFFSET = 4096, };
+	if (func < (rcu_callback_t)KVFREE_RCU_OFFSET) {
+		kvfree((void*)head - (unsigned long)func);
+		return;
+	}
+
 	func(head);
 }
 
