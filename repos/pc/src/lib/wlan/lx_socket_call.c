@@ -74,21 +74,18 @@ int lx_sock_create_kern(int domain, int type, int protocol,
 
 int lx_sock_release(struct socket *sock)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	return sock->ops->release(sock);
 }
 
 
 int lx_sock_bind(struct socket *sock, void *sockaddr, int sockaddr_len)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	return sock->ops->bind(sock, sockaddr, sockaddr_len);
 }
 
 
 int lx_sock_getname(struct socket *sock, void *sockaddr, int peer)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	return sock->ops->getname(sock, sockaddr, peer);
 }
 
@@ -96,7 +93,6 @@ int lx_sock_getname(struct socket *sock, void *sockaddr, int peer)
 int lx_sock_recvmsg(struct socket *sock, struct lx_msghdr *lx_msg,
                     int flags, int dontwait)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	struct msghdr *msg;
 	struct iovec  *iov;
 	size_t         iovlen;
@@ -149,7 +145,6 @@ err_msg:
 int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
                     int flags, int dontwait)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	struct msghdr *msg;
 	struct iovec  *iov;
 	size_t         iovlen;
@@ -172,8 +167,6 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 		iov[i].iov_base = lx_msg->msg_iov[i].iov_base;
 		iov[i].iov_len  = lx_msg->msg_iov[i].iov_len;
 
-		printk("%s:%d msg_iov[%u].iov_len: %lu\n", __func__, __LINE__, i, lx_msg->msg_iov[i].iov_len);
-
 		iovlen += lx_msg->msg_iov[i].iov_len;
 	}
 
@@ -187,9 +180,7 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 	if (dontwait)
 		msg->msg_flags |= MSG_DONTWAIT;
 
-	printk("%s:%d dontwait: %d\n", __func__, __LINE__, dontwait);
 	err = sock->ops->sendmsg(sock, msg, iovlen);
-	printk("%s:%d err: %d\n", __func__, __LINE__, err);
 
 	kfree(iov);
 err_iov:
@@ -202,7 +193,6 @@ err_msg:
 int lx_sock_setsockopt(struct socket *sock, int level, int optname,
                        void const *optval, unsigned optlen)
 {
-	printk("%s:%d sock: %p\n", __func__, __LINE__, sock);
 	sockptr_t soptval = (sockptr_t) { .user = optval };
 
 	if (level == SOL_SOCKET)
@@ -233,9 +223,6 @@ unsigned char const* lx_get_mac_addr()
 		                         ? sizeof (mac_addr_buffer)
 		                         : sizeof (addr.sa_data);
 	memcpy(mac_addr_buffer, addr.sa_data, length);
-	// for (i = 0; i < sizeof (mac_addr_buffer); i++)
-	// 	printk("%x:", mac_addr_buffer[i]);
-	// printk("\n");
 
 	return mac_addr_buffer;
 }
@@ -257,20 +244,6 @@ struct lx_poll_result lx_sock_poll(struct socket *sock)
 
 	struct lx_poll_result result = { false, false, false };
 
-	if (!sock || !sock->ops) {
-		printk("%s:%d sock: %p sk: %p ops: %p invalid\n",
-		       __func__, __LINE__, sock, sock ? sock->sk : NULL, sock ? sock->ops : NULL);
-		return result;
-	}
-	printk("%s:%d sock: %p sk: %p ops: %p\n",
-	       __func__, __LINE__, sock, sock ? sock->sk : NULL, sock ? sock->ops : NULL);
-
-	if (sock->ops == (void*)0xcbf400000000000 || sock->ops == (void*)0x2ee000) {
-		printk("%s:%d sock: %p ops: %p BROKEN\n",
-		       __func__, __LINE__, sock, sock ? sock->ops : NULL);
-		return result;
-	}
-
 	int const mask = sock->ops->poll(0, sock, 0);
 
 	if (mask & POLLIN_SET)
@@ -279,9 +252,6 @@ struct lx_poll_result lx_sock_poll(struct socket *sock)
 		result.out = true;
 	if (mask & POLLEX_SET)
 		result.ex = true;
-	printk("%s:%d: sock: %p sk: %p poll: %p mask: %x (in: %d (%x) out: %d (%x) ex: %d (%x)\n",
-	       __func__, __LINE__, sock, sock->sk, sock->ops->poll, mask,
-	       result.in, POLLIN_SET, result.out, POLLOUT_SET, result.ex, POLLEX_SET);
 
 	return result;
 }
@@ -297,8 +267,6 @@ int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
 			printk("%s:%d ignore invalid sock[%u]\n", __func__, __LINE__, i);
 			continue;
 		}
-		// printk("%s:%d sock: %p sk: %p sk_wq: %p\n", __func__, __LINE__, sock, sock->sk, sock->sk->sk_wq);
-		printk("%s:%d sock: %p sk: %p\n", __func__, __LINE__, sock, sock->sk);
 	}
 	lx_emul_task_schedule(true);
 	return 0;
