@@ -210,9 +210,15 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 	w_msg.msg_iov[0].iov_len  = len;
 	w_msg.msg_count           = len;
 
+	Flags wflags = Wifi::WIFI_F_NONE;
+	if (flags & MSG_DONTWAIT)
+		wflags = Wifi::WIFI_F_MSG_DONTWAIT;
+
 	/* FIXME convert to/from Sockaddr */
 	/* FIXME flags values */
-	int const err = socket_call.recvmsg(s, &w_msg, Wifi::WIFI_F_NONE);
+	Genode::error(__func__, ":", __LINE__, ": sockfd: ", sockfd);
+	int const err = socket_call.recvmsg(s, &w_msg, wflags);
+	Genode::error(__func__, ":", __LINE__, ": err: ", err);
 	if (err < 0) {
 		errno = -err;
 		return -1;
@@ -242,6 +248,9 @@ ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
 	if (flags & MSG_ERRQUEUE)
 		w_flags = Wifi::WIFI_F_MSG_ERRQUEUE;
 
+	if (flags & MSG_DONTWAIT)
+		w_flags = Wifi::WIFI_F_MSG_DONTWAIT;
+
 	Wifi::Msghdr w_msg;
 
 	w_msg.msg_name    = msg->msg_name;
@@ -257,8 +266,9 @@ ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
 	w_msg.msg_control    = msg->msg_control;
 	w_msg.msg_controllen = msg->msg_controllen;
 
+	Genode::error(__func__, ":", __LINE__, ": sockfd: ", sockfd);
 	int const err = socket_call.recvmsg(s, &w_msg, w_flags);
-
+	Genode::error(__func__, ":", __LINE__, ": err: ", err);
 	if (err < 0) {
 		errno = -err;
 		return -1;
@@ -498,9 +508,22 @@ static bool special_fd(int fd)
 	return (fd > 40 && fd < 60);
 }
 
+
+extern "C" void poke_frontend(void);
+
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
+	Genode::error(__func__, ":", __LINE__, ": timeout: ", timeout, "ctrl fd: ", _ctrl_fd_set);
+	static bool poked = false;
+	if (!poked) {
+		poke_frontend();
+		poked = true;
+	}
+	Genode::error(__func__, ":", __LINE__, ": ctrl fd: ", _ctrl_fd_set);
+
 	Poll_socket_fd sockets[Wifi::MAX_POLL_SOCKETS];
+	Genode::memset(sockets, 0, sizeof (sockets));
+
 	unsigned num = 0;
 	int nready = 0;
 
@@ -556,6 +579,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 			pfd->revents |= POLLPRI;
 	}
 
+	Genode::error(__func__, ":", __LINE__, ": nready: ", nready);
 	return nready;
 }
 
