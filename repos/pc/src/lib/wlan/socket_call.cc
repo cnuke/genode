@@ -23,7 +23,7 @@
 
 /* local includes */
 #include "lx_socket_call.h"
-
+#include "libc_errno.h"
 
 /*
  * The values were taken from 'uapi/asm-generic/socket.h',
@@ -46,6 +46,85 @@ enum : int {
 	MSG_DONTWAIT = 0x40,
 	MSG_ERRQUEUE = 0x2000,
 };
+
+
+static int convert_errno_from_linux(int linux_errno)
+{
+	Genode::error("linux_errno: ", linux_errno);
+	if (linux_errno >= 0)
+		return linux_errno;
+
+	linux_errno *= -1;
+
+	switch (linux_errno) {
+	case 0:                return 0;
+	case E2BIG:            return -(int)Libc::Errno::BSD_E2BIG;
+	case EACCES:           return -(int)Libc::Errno::BSD_EACCES;
+	case EADDRINUSE:       return -(int)Libc::Errno::BSD_EADDRINUSE;
+	case EADDRNOTAVAIL:    return -(int)Libc::Errno::BSD_EADDRNOTAVAIL;
+	case EAFNOSUPPORT:     return -(int)Libc::Errno::BSD_EAFNOSUPPORT;
+	case EAGAIN:           return -(int)Libc::Errno::BSD_EAGAIN;
+	case EALREADY:         return -(int)Libc::Errno::BSD_EALREADY;
+	case EBADF:            return -(int)Libc::Errno::BSD_EBADF;
+	case EBADMSG:          return -(int)Libc::Errno::BSD_EBADMSG;
+	case EBUSY:            return -(int)Libc::Errno::BSD_EBUSY;
+	case ECANCELED:        return -(int)Libc::Errno::BSD_ECANCELED;
+	case ECONNABORTED:     return -(int)Libc::Errno::BSD_ECONNABORTED;
+	case ECONNREFUSED:     return -(int)Libc::Errno::BSD_ECONNREFUSED;
+	case ECONNRESET:       return -(int)Libc::Errno::BSD_ECONNRESET;
+	case EDEADLK:          return -(int)Libc::Errno::BSD_EDEADLK;
+	case EDESTADDRREQ:     return -(int)Libc::Errno::BSD_EDESTADDRREQ;
+	case EDOM:             return -(int)Libc::Errno::BSD_EDOM;
+	case EEXIST:           return -(int)Libc::Errno::BSD_EEXIST;
+	case EFAULT:           return -(int)Libc::Errno::BSD_EFAULT;
+	case EFBIG:            return -(int)Libc::Errno::BSD_EFBIG;
+	case EHOSTDOWN:        return -(int)Libc::Errno::BSD_EHOSTDOWN;
+	case EHOSTUNREACH:     return -(int)Libc::Errno::BSD_EHOSTUNREACH;
+	case EILSEQ:           return -(int)Libc::Errno::BSD_EILSEQ;
+	case EINPROGRESS:      return -(int)Libc::Errno::BSD_EINPROGRESS;
+	case EINTR:            return -(int)Libc::Errno::BSD_EINTR;
+	case EINVAL:           return -(int)Libc::Errno::BSD_EINVAL;
+	case EIO:              return -(int)Libc::Errno::BSD_EIO;
+	case EISCONN:          return -(int)Libc::Errno::BSD_EISCONN;
+	case EMSGSIZE:         return -(int)Libc::Errno::BSD_EMSGSIZE;
+	case ENAMETOOLONG:     return -(int)Libc::Errno::BSD_ENAMETOOLONG;
+	case ENETDOWN:         return -(int)Libc::Errno::BSD_ENETDOWN;
+	case ENETUNREACH:      return -(int)Libc::Errno::BSD_ENETUNREACH;
+	case ENFILE:           return -(int)Libc::Errno::BSD_ENFILE;
+	case ENOBUFS:          return -(int)Libc::Errno::BSD_ENOBUFS;
+	case ENODEV:           return -(int)Libc::Errno::BSD_ENODEV;
+	case ENOENT:           return -(int)Libc::Errno::BSD_ENOENT;
+	case ENOEXEC:          return -(int)Libc::Errno::BSD_ENOEXEC;
+	case ENOLINK:          
+						   Genode::error("ENOLINK (", (int) ENOLINK, ") -> ", (int)Libc::Errno::BSD_ENOLINK);
+						   return -(int)Libc::Errno::BSD_ENOLINK;
+	case ENOMEM:           return -(int)Libc::Errno::BSD_ENOMEM;
+	case ENOMSG:           return -(int)Libc::Errno::BSD_ENOMSG;
+	case ENOPROTOOPT:      return -(int)Libc::Errno::BSD_ENOPROTOOPT;
+	case ENOSPC:           return -(int)Libc::Errno::BSD_ENOSPC;
+	case ENOSYS:           return -(int)Libc::Errno::BSD_ENOSYS;
+	case ENOTCONN:         return -(int)Libc::Errno::BSD_ENOTCONN;
+	case ENOTSOCK:         return -(int)Libc::Errno::BSD_ENOTSOCK;
+	case ENOTTY:           return -(int)Libc::Errno::BSD_ENOTTY;
+	case ENXIO:            return -(int)Libc::Errno::BSD_ENXIO;
+	case EOPNOTSUPP:       return -(int)Libc::Errno::BSD_EOPNOTSUPP;
+	case EOVERFLOW:        return -(int)Libc::Errno::BSD_EOVERFLOW;
+	case EPERM:            return -(int)Libc::Errno::BSD_EPERM;
+	case EPFNOSUPPORT:     return -(int)Libc::Errno::BSD_EPFNOSUPPORT;
+	case EPIPE:            return -(int)Libc::Errno::BSD_EPIPE;
+	case EPROTO:           return -(int)Libc::Errno::BSD_EPROTO;
+	case EPROTONOSUPPORT:  return -(int)Libc::Errno::BSD_EPROTONOSUPPORT;
+	case ERANGE:           return -(int)Libc::Errno::BSD_ERANGE;
+	case ESOCKTNOSUPPORT:  return -(int)Libc::Errno::BSD_ESOCKTNOSUPPORT;
+	case ESPIPE:           return -(int)Libc::Errno::BSD_ESPIPE;
+	case ESRCH:            return -(int)Libc::Errno::BSD_ESRCH;
+	case ETIMEDOUT:        return -(int)Libc::Errno::BSD_ETIMEDOUT;
+	case EXDEV:            return -(int)Libc::Errno::BSD_EXDEV;
+	default:
+		Genode::error(__func__, ": unhandled errno ", linux_errno);
+		return linux_errno;
+	}
+}
 
 
 static_assert((unsigned)Wifi::Msghdr::MAX_IOV_LEN == (unsigned)MAX_IOV_LEN);
@@ -156,9 +235,13 @@ class Lx::Socket
 {
 	private:
 
+		Socket(const Socket&) = delete;
+		Socket& operator=(const Socket&) = delete;
 
 		Genode::Signal_transmitter         _sender { };
 		Genode::Signal_handler<Lx::Socket> _dispatcher;
+
+		struct socket *_sock_poll_table[Wifi::MAX_POLL_SOCKETS] { };
 
 		struct socket *_call_socket()
 		{
@@ -215,6 +298,7 @@ class Lx::Socket
 		{
 			struct socket *sock = _call_socket();
 
+			Genode::error(__func__, ": handle: ", *_call.handle);
 			_call.err = lx_sock_recvmsg(sock, &_call.recvmsg.msg,
 			                            _call.recvmsg.flags,
 			                            _call.handle->non_block);
@@ -256,6 +340,7 @@ class Lx::Socket
 
 		void _do_poll_all()
 		{
+			Genode::error(__func__, ":", __LINE__);
 			Wifi::Poll_socket_fd *sockets = _call.poll_all.sockets;
 			unsigned num                  = _call.poll_all.num;
 			int timeout                   = _call.poll_all.timeout;
@@ -267,8 +352,10 @@ class Lx::Socket
 				/**
 				 * Timeout was triggered, exit early.
 				 */
-				if (timeout_triggered)
+				if (timeout_triggered) {
+			Genode::error(__func__, ":", __LINE__);
 					break;
+				}
 
 				/**
 				 * Poll each socket and check if there is something of interest.
@@ -293,43 +380,49 @@ class Lx::Socket
 				/**
 				 * We were woken up but there is still nothing of interest.
 				 */
-				if (woken_up)
+				if (woken_up) {
+			Genode::error(__func__, ":", __LINE__);
 					break;
+				}
 
 				/**
 				 * Exit the loop if either a socket is ready or there is
 				 * no timeout given.
 				 */
-				if (nready || !timeout)
+				if (nready || !timeout) {
+			Genode::error(__func__, ":", __LINE__);
 					break;
+				}
 
-#if 0
 				/**
 				 * In case of a timeout add all sockets to an artificial wait list
 				 * so at least one is woken up an sk_data_ready() call.
 				 */
-				Lx::Task *task = Lx::scheduler().current();
-				struct socket_wq wq[num];
-				Lx::Task::List wait_list;
+				// Lx::Task *task = Lx::scheduler().current();
+				// struct socket_wq wq[num];
+				// Lx::Task::List wait_list;
 
-				task->wait_enqueue(&wait_list);
+				// task->wait_enqueue(&wait_list);
 				for (unsigned i = 0; i < num; i++) {
 					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
-					wq[i].wait.list = &wait_list;
-					sock->sk->sk_wq = &wq[i];
+					// wq[i].wait.list = &wait_list;
+					// sock->sk->sk_wq = &wq[i];
+					_sock_poll_table[i] = sock;
 				}
 
-				long t = msecs_to_jiffies(timeout);
-				timeout_triggered = !schedule_timeout(t);
+				timeout_triggered = !lx_sock_poll_wait(_sock_poll_table, num, timeout);
 
-				task->wait_dequeue(&wait_list);
-				for (unsigned i = 0; i < num; i++) {
-					struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
-					sock->sk->sk_wq = 0;
-				}
+				// long t = msecs_to_jiffies(timeout);
+				// timeout_triggered = !schedule_timeout(t);
+
+				// task->wait_dequeue(&wait_list);
+				// for (unsigned i = 0; i < num; i++) {
+				// 	struct socket *sock = static_cast<struct socket*>(sockets[i].s->socket);
+				// 	sock->sk->sk_wq = 0;
+				// }
 
 				woken_up = true;
-#endif
+				Genode::error(__func__, ":", __LINE__);
 			} while (1);
 
 			_call.err = nready;
@@ -422,7 +515,7 @@ extern "C" int run_lx_socket_call_task(void *)
 }
 
 
-void socket_kick()
+void wifi_kick_socketcall()
 {
 	/* ignore silently, the function might be called to before init */
 	if (!_socket) { return; }
@@ -430,7 +523,6 @@ void socket_kick()
 	lx_emul_task_unblock(lx_socket_call_task);
 	Lx_kit::env().scheduler.schedule();
 }
-
 
 
 /**************************
@@ -498,7 +590,7 @@ int Socket_call::bind(Socket *s, Wifi::Sockaddr const *addr, unsigned addrlen)
 
 	_socket->submit_and_block();
 
-	return _call.err;
+	return convert_errno_from_linux(_call.err);
 }
 
 
@@ -515,7 +607,7 @@ int Socket_call::getsockname(Socket *s, Wifi::Sockaddr *addr, unsigned *addrlen)
 
 	_socket->submit_and_block();
 
-	return _call.err;
+	return convert_errno_from_linux(_call.err);
 }
 
 
@@ -531,7 +623,7 @@ int Socket_call::poll_all(Poll_socket_fd *s, unsigned num, int timeout)
 
 	_socket->submit_and_block();
 
-	return _call.err;
+	return convert_errno_from_linux(_call.err);
 }
 
 
@@ -540,6 +632,10 @@ static inline int msg_flags(Wifi::Flags in)
 	int out = Wifi::WIFI_F_NONE;
 	if (in & Wifi::WIFI_F_MSG_ERRQUEUE)
 		out |= MSG_ERRQUEUE;
+	if (in & Wifi::WIFI_F_MSG_DONTWAIT) {
+		Genode::error(__func__, ":", __LINE__, " MSG_DONTWAIT");
+		out |= MSG_DONTWAIT;
+	}
 
 	return out;
 };
@@ -564,11 +660,13 @@ Wifi::ssize_t Socket_call::recvmsg(Socket *s, Wifi::Msghdr *msg, Wifi::Flags fla
 		_call.recvmsg.msg.msg_iov[i].iov_len  = msg->msg_iov[i].iov_len;
 	}
 
+	Genode::error(__func__, ":", __LINE__);
 	_socket->submit_and_block();
 
 	msg->msg_namelen = _call.recvmsg.msg.msg_namelen;
 
-	return _call.err;
+	Genode::error(__func__, ":", __LINE__);
+	return convert_errno_from_linux(_call.err);
 }
 
 
@@ -591,9 +689,11 @@ Wifi::ssize_t Socket_call::sendmsg(Socket *s, Wifi::Msghdr const *msg, Wifi::Fla
 		_call.sendmsg.msg.msg_iov[i].iov_len  = msg->msg_iov[i].iov_len;
 	}
 
+	Genode::error(__func__, ":", __LINE__);
 	_socket->submit_and_block();
 
-	return _call.err;
+	Genode::error(__func__, ":", __LINE__);
+	return convert_errno_from_linux(_call.err);
 }
 
 
@@ -650,7 +750,7 @@ int Socket_call::setsockopt(Socket *s,
 
 	_socket->submit_and_block();
 
-	return _call.err;
+	return convert_errno_from_linux(_call.err);
 }
 
 

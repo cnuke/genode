@@ -42,13 +42,7 @@ void wifi_set_rfkill(bool blocked)
 {
 	(void)blocked;
 
-	error(__func__, ": not implemented");
-}
-
-
-void wifi_kick_socketcall()
-{
-	error(__func__, ": not implemented");
+	error(__func__, ": block: ", blocked, " not implemented");
 }
 
 

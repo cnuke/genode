@@ -72,6 +72,7 @@ lib/iomap.c
 lib/pci_iomap.c
 lib/radix-tree.c
 lib/rbtree.c
+lib/refcount.c
 lib/scatterlist.c
 lib/siphash.c
 lib/sort.c
@@ -191,6 +192,7 @@ drivers/net/wireless/intel/iwlwifi/pcie/tx.c
 drivers/net/wireless/intel/iwlwifi/queue/tx.c
 lib/asn1_decoder.c
 lib/bsearch.c
+lib/crypto/aes.c
 lib/dynamic_queue_limits.c
 lib/hweight.c
 lib/nlattr.c

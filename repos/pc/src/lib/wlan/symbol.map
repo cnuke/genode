@@ -14,8 +14,10 @@
 		_*wifi_*_rfkill*;
 		_*wifi_kick_*;
 
+		lx_backtrace;
 		lx_sock_*;
 		lx_get_mac_addr;
+		poke_frontend;
 
 		/* used by libnl's time() */
 		jiffies;

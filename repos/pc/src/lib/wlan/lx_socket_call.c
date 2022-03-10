@@ -25,8 +25,6 @@ void *lx_socket_call_task_args;
 extern int run_lx_socket_call_task(void *p);
 
 
-// FIXME find out how to properly initialize a net namespace for us to use
-static struct net lx_socket_call_net;
 extern struct net init_net;
 
 static struct net_device *_wlan_device;
@@ -56,9 +54,6 @@ void lx_user_init(void)
 	                        lx_socket_call_task_args,
 	                        CLONE_FS | CLONE_FILES);
 	lx_socket_call_task = find_task_by_pid_ns(pid, NULL);
-
-	lx_socket_call_net.core.prot_inuse = kzalloc(4096, GFP_KERNEL);
-	lx_socket_call_net.core.sock_inuse = kzalloc(sizeof (int), GFP_KERNEL);
 }
 
 
@@ -130,8 +125,11 @@ int lx_sock_recvmsg(struct socket *sock, struct lx_msghdr *lx_msg,
 	msg->msg_iter.count   = iovlen;
 
 	msg->msg_flags = flags;
-	if (dontwait)
+	if (dontwait) {
+		printk("%s: MSG_DONTWAIT sock->ops->recvmsg: %p\n", __func__, sock->ops->recvmsg);
 		msg->msg_flags |= MSG_DONTWAIT;
+		flags |= MSG_DONTWAIT;
+	}
 
 	err = sock->ops->recvmsg(sock, msg, iovlen, flags);
 
@@ -168,8 +166,6 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 		iov[i].iov_base = lx_msg->msg_iov[i].iov_base;
 		iov[i].iov_len  = lx_msg->msg_iov[i].iov_len;
 
-		printk("%s:%d msg_iov[%u].iov_len: %lu\n", __func__, __LINE__, i, lx_msg->msg_iov[i].iov_len);
-
 		iovlen += lx_msg->msg_iov[i].iov_len;
 	}
 
@@ -183,9 +179,7 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 	if (dontwait)
 		msg->msg_flags |= MSG_DONTWAIT;
 
-	printk("%s:%d dontwait: %d\n", __func__, __LINE__, dontwait);
 	err = sock->ops->sendmsg(sock, msg, iovlen);
-	printk("%s:%d err: %d\n", __func__, __LINE__, err);
 
 	kfree(iov);
 err_iov:
@@ -228,9 +222,6 @@ unsigned char const* lx_get_mac_addr()
 		                         ? sizeof (mac_addr_buffer)
 		                         : sizeof (addr.sa_data);
 	memcpy(mac_addr_buffer, addr.sa_data, length);
-	for (i = 0; i < sizeof (mac_addr_buffer); i++)
-		printk("%x:", mac_addr_buffer[i]);
-	printk("\n");
 
 	return mac_addr_buffer;
 }
@@ -239,14 +230,20 @@ unsigned char const* lx_get_mac_addr()
 struct lx_poll_result lx_sock_poll(struct socket *sock)
 {
 	enum {
-		POLLIN_SET  = (POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR),
-		POLLOUT_SET = (POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR),
-		POLLEX_SET  = (POLLPRI)
+		POLLIN_SET  = (EPOLLRDHUP | EPOLLIN | EPOLLRDNORM),
+		POLLOUT_SET = (EPOLLOUT | EPOLLWRNORM | EPOLLWRBAND),
+		POLLEX_SET  = (EPOLLERR | EPOLLPRI)
 	};
+
+	// enum {
+	// 	POLLIN_SET  = (EPOLLRDNORM | EPOLLRDBAND | EPOLLIN | EPOLLHUP | EPOLLERR)
+	// 	POLLOUT_SET = (EPOLLWRBAND | EPOLLWRNORM | EPOLLOUT | EPOLLERR)
+	// 	POLLEX_SET =  (EPOLLPRI)
+	// };
 
 	int const mask = sock->ops->poll(0, sock, 0);
 
-	struct lx_poll_result result;
+	struct lx_poll_result result = { false, false, false };
 
 	if (mask & POLLIN_SET)
 		result.in = true;
@@ -256,4 +253,20 @@ struct lx_poll_result lx_sock_poll(struct socket *sock)
 		result.ex = true;
 
 	return result;
+}
+
+
+int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
+{
+	unsigned i;
+
+	for (i = 0; i < num; i++) {
+		struct socket *sock = socks[i];
+		if (!sock) {
+			printk("%s:%d ignore invalid sock[%u]\n", __func__, __LINE__, i);
+			continue;
+		}
+	}
+	lx_emul_task_schedule(true);
+	return 0;
 }
