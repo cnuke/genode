@@ -229,20 +229,70 @@ int register_filesystem(struct file_system_type * fs)
 }
 
 
+#include <linux/slab.h>
 #include <linux/mount.h>
 #include <linux/fs.h>
-#include <linux/slab.h>
+#include <linux/fs_context.h>
+#include <linux/pseudo_fs.h>
+
+struct pseudo_fs_context * init_pseudo(struct fs_context *fc,
+                                       unsigned long magic)
+{
+	struct pseudo_fs_context *pfs_ctx;
+
+	pfs_ctx = kzalloc(sizeof (struct pseudo_fs_context), GFP_KERNEL);
+	if (pfs_ctx) {
+		pfs_ctx->magic = magic;
+		fc->fs_private = pfs_ctx;
+	}
+	return pfs_ctx;
+}
+
 
 struct vfsmount * kern_mount(struct file_system_type * type)
 {
 	struct vfsmount *m;
 
+	/*
+	 * This sets everything up so that 'new_inode_pseudo()'
+	 * called from 'sock_alloc()' properly allocates the inode.
+	 */
+
 	m = kzalloc(sizeof (struct vfsmount), 0);
-	if (!m) {
-		return (struct vfsmount*)ERR_PTR(-ENOMEM);
+	if (m) {
+
+		struct fs_context fs_ctx;
+
+		if (type->init_fs_context) {
+			type->init_fs_context(&fs_ctx);
+
+			m->mnt_sb = kzalloc(sizeof (struct super_block), GFP_KERNEL);
+			m->mnt_sb->s_type = type;
+			m->mnt_sb->s_op =
+				((struct pseudo_fs_context*)fs_ctx.fs_private)->ops;
+		} else {
+			kfree(m);
+			m = (struct vfsmount*)ERR_PTR(-ENOMEM);
+		}
 	}
 
 	return m;
+}
+
+
+struct inode * new_inode_pseudo(struct super_block * sb)
+{
+    const struct super_operations *ops = sb->s_op;
+    struct inode *inode;
+
+    if (ops->alloc_inode) {
+        inode = ops->alloc_inode(sb);
+	}
+
+	if (!inode)
+		return (struct inode*)ERR_PTR(-ENOMEM);
+
+	return inode;
 }
 
 

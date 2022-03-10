@@ -565,14 +565,6 @@ int import_single_range(int rw,void __user * buf,size_t len,struct iovec * iov,s
 }
 
 
-#include <linux/pseudo_fs.h>
-
-struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magic)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/init.h>
 
 bool initcall_debug;

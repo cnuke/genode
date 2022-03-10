@@ -545,20 +545,6 @@ struct proc_dir_entry * proc_create_net_data(const char * name,umode_t mode,stru
 
 #include <linux/fs.h>
 
-struct inode * new_inode_pseudo(struct super_block * sb)
-{
-	struct inode *inode;
-
-	inode = kzalloc(sizeof (struct inode), 0);
-	if (!inode)
-		return (struct inode*)ERR_PTR(-ENOMEM);
-
-	return inode;
-}
-
-
-#include <linux/fs.h>
-
 unsigned int get_next_ino(void)
 {
 	static unsigned int count = 0;
@@ -599,8 +585,6 @@ struct key * keyring_alloc(const char * description,kuid_t uid,kgid_t gid,const 
 
 int kobject_uevent_env(struct kobject * kobj,enum kobject_action action,char * envp_ext[])
 {
-	printk("%s:%d\n", __func__, __LINE__);
-	lx_backtrace();
 	lx_emul_trace(__func__);
 	return 0;
 }
