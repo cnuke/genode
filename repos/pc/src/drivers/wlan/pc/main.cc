@@ -45,6 +45,7 @@ void wifi_block_for_processing(void)
 		return;
 	}
 
+	Genode::error(__func__, ":", __LINE__);
 	/*
 	 * Next time we block as long as the front end has not finished
 	 * handling our previous request
@@ -53,6 +54,7 @@ void wifi_block_for_processing(void)
 
 	/* XXX hack to trick poll() into returning faster */
 	wpa_ctrl_set_fd();
+	Genode::error(__func__, ":", __LINE__);
 }
 
 
@@ -63,6 +65,7 @@ void wifi_notify_cmd_result(void)
 		return;
 	}
 
+	Genode::error(__func__, ":", __LINE__);
 	Signal_transmitter(_wifi_frontend->result_sigh()).submit();
 }
 
@@ -84,17 +87,6 @@ void wifi_notify_event(void)
 }
 
 
-/**
- * Return shared-memory message buffer
- *
- * It is used by the wpa_supplicant CTRL interface.
- */
-void *wifi_get_buffer(void)
-{
-	return _wifi_frontend ? &_wifi_frontend->msg_buffer() : nullptr;
-}
-
-
 /* exported by wifi.lib.so */
 extern void wifi_init(Genode::Env&,
                       Genode::Blockade&,
@@ -113,8 +105,8 @@ struct Main
 
 	Main(Genode::Env &env) : env(env)
 	{
-		_frontend.construct(env);
-		_wifi_frontend = &*_frontend;
+		// _frontend.construct(env);
+		// _wifi_frontend = &*_frontend;
 
 		_wpa.construct(env, _wpa_startup_blockade);
 
@@ -122,14 +114,65 @@ struct Main
 		 * Forcefully disable 11n but for convenience the attribute is used the
 		 * other way araound.
 		 */
-		bool const disable_11n = !_frontend->use_11n();
+		bool const disable_11n = false;//!_frontend->use_11n();
 		wifi_init(env, _wpa_startup_blockade, disable_11n,
-		          _frontend->rfkill_sigh());
+		          Genode::Signal_context_capability());
+		          // _frontend->rfkill_sigh());
 	}
 };
+
+static Main *_main;
+
+
+/**
+ * Return shared-memory message buffer
+ *
+ * It is used by the wpa_supplicant CTRL interface.
+ */
+void *wifi_get_buffer(void)
+{
+	// void *ptr = _wifi_frontend ? &_wifi_frontend->msg_buffer() : nullptr;
+	// Genode::error(__func__, ":", __LINE__, ": ptr: ", ptr);
+
+	Genode::error(__func__, ":", __LINE__, ": _wifi_frontend: ", _wifi_frontend);
+	if (_wifi_frontend)
+		return &_wifi_frontend->msg_buffer();
+
+	Libc::with_libc([&] () {
+
+		if (_main->_frontend.constructed())
+			return;
+
+		_main->_frontend.construct(_main->env);
+		_wifi_frontend = &*_main->_frontend;
+	});
+
+	Genode::error(__func__, ":", __LINE__, ": _wifi_frontend: ", _wifi_frontend);
+	return &_wifi_frontend->msg_buffer();
+}
+
+
+extern "C" void poke_frontend(void)
+{
+	if (!_main)
+		return;
+
+	Libc::with_libc([&] () {
+
+		Genode::error("poke_frontend");
+		if (_main->_frontend.constructed())
+			return;
+
+		_main->_frontend.construct(_main->env);
+		_wifi_frontend = &*_main->_frontend;
+	});
+}
 
 
 void Libc::Component::construct(Libc::Env &env)
 {
-	Libc::with_libc([&] () { static Main server(env); });
+	Libc::with_libc([&] () {
+		static Main server(env);
+		_main = &server;
+	});
 }
