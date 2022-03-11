@@ -174,12 +174,12 @@ append config {
 			<service name="Nic"/>
 			<service name="Uplink"/>
 		</provides>
-		<config verbose_domain_state="yes">
+		<config verbose="yes" verbose_domain_state="yes">
 
 			<policy label_prefix="test-lwip_httpsrv" domain="downlink"/>
 			<policy label_prefix="wifi_drv"          domain="uplink"/>
 
-			<domain name="uplink">
+			<domain name="uplink" verbose_packets="yes">
 
 				<nat domain="downlink" tcp-ports="16384"/>
 				<tcp-forward port="443" domain="downlink" to="10.0.3.2"/>

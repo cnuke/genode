@@ -93,7 +93,6 @@ extern void wifi_init(Genode::Env&,
                       bool,
                       Genode::Signal_context_capability);
 
-
 struct Main
 {
 	Env  &env;
@@ -149,23 +148,6 @@ void *wifi_get_buffer(void)
 
 	Genode::error(__func__, ":", __LINE__, ": _wifi_frontend: ", _wifi_frontend);
 	return &_wifi_frontend->msg_buffer();
-}
-
-
-extern "C" void poke_frontend(void)
-{
-	if (!_main)
-		return;
-
-	Libc::with_libc([&] () {
-
-		Genode::error("poke_frontend");
-		if (_main->_frontend.constructed())
-			return;
-
-		_main->_frontend.construct(_main->env);
-		_wifi_frontend = &*_main->_frontend;
-	});
 }
 
 

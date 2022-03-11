@@ -18,6 +18,7 @@ SRC_CC  += socket_call.cc
 
 SRC_C   += dummies.c
 SRC_C   += lx_emul.c
+SRC_C   += uplink.c
 
 CC_OPT_lx_socket_call += -DKBUILD_MODNAME='"lx_socket_call"'
 SRC_C   += lx_socket_call.c

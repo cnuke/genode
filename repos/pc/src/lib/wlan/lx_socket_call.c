@@ -46,9 +46,12 @@ void open_wlan_device(void)
 	printk("%s:%d _wlan_device: %p\n", __func__, __LINE__, _wlan_device);
 }
 
+extern void uplink_init(void);
+
 void lx_user_init(void)
 {
 	// open_wlan_device();
+	// uplink_init();
 
 	int pid = kernel_thread(run_lx_socket_call_task,
 	                        lx_socket_call_task_args,
@@ -205,22 +208,22 @@ int lx_sock_setsockopt(struct socket *sock, int level, int optname,
 
 unsigned char const* lx_get_mac_addr()
 {
-	size_t i;
-
 	static char mac_addr_buffer[16];
-	memset(mac_addr_buffer, 0, sizeof (mac_addr_buffer));
 
 	struct sockaddr addr;
+	int err;
+	size_t length;
+
+	memset(mac_addr_buffer, 0, sizeof (mac_addr_buffer));
 	memset(addr.sa_data, 0, sizeof (addr.sa_data));
 
-	int res = dev_get_mac_address(&addr, &init_net, "wlan0");
-	if (res)
+	err = dev_get_mac_address(&addr, &init_net, "wlan0");
+	if (err)
 		return NULL;
 
-	size_t const length =
-		sizeof (mac_addr_buffer) < sizeof (addr.sa_data)
-		                         ? sizeof (mac_addr_buffer)
-		                         : sizeof (addr.sa_data);
+	length = sizeof (mac_addr_buffer) < sizeof (addr.sa_data)
+		                              ? sizeof (mac_addr_buffer)
+		                              : sizeof (addr.sa_data);
 	memcpy(mac_addr_buffer, addr.sa_data, length);
 
 	return mac_addr_buffer;
@@ -267,6 +270,13 @@ int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
 			continue;
 		}
 	}
-	lx_emul_task_schedule(true);
-	return 0;
+	// lx_emul_task_schedule(true);
+	// return 0;
+	__set_current_state(TASK_INTERRUPTIBLE);
+	timeout = 1000;
+	unsigned long const j  = msecs_to_jiffies(timeout);
+	signed   long const ex = schedule_timeout(j);
+	unsigned int  const to =  jiffies_to_msecs(ex);
+	printk("%s:%d: timeout: %d to: %u\n", __func__, __LINE__, timeout, to);
+	return (int)to+1;
 }

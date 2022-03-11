@@ -495,6 +495,8 @@ static Lx::Socket *_socket;
 
 extern Genode::Blockade *wpa_blockade;
 extern "C" void open_wlan_device(void);
+extern "C" void uplink_init(void);
+extern "C" void uplink_unblock(void);
 
 extern "C" int run_lx_socket_call_task(void *)
 {
@@ -503,7 +505,8 @@ extern "C" int run_lx_socket_call_task(void *)
 
 	Genode::error(__func__, ": _socket: ", _socket);
 
-	open_wlan_device();
+	uplink_init();
+	// open_wlan_device();
 	wpa_blockade->wakeup();
 
 	while (true) {

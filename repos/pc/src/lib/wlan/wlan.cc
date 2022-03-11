@@ -20,6 +20,7 @@
 /* DDE Linux includes */
 #include <lx_emul/init.h>
 #include <lx_emul/page_virt.h>
+#include <lx_emul/task.h>
 #include <lx_kit/env.h>
 #include <lx_kit/init.h>
 #include <lx_user/io.h>
@@ -45,6 +46,7 @@ void wifi_set_rfkill(bool blocked)
 	error(__func__, ": block: ", blocked, " not implemented");
 }
 
+extern "C" struct task_struct *uplink_task_struct_ptr;
 
 struct Wlan
 {
@@ -56,7 +58,12 @@ struct Wlan
 	{
 		genode_uplink_notify_peers();
 
-		lx_user_handle_io();
+		Genode::error(__func__, ":", __LINE__);
+		if (uplink_task_struct_ptr) {
+			Genode::error(__func__, ":", __LINE__);
+			lx_emul_task_unblock(uplink_task_struct_ptr);
+		}
+
 		Lx_kit::env().scheduler.schedule();
 	}
 
