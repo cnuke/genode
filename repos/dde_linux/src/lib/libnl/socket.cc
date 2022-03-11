@@ -509,17 +509,9 @@ static bool special_fd(int fd)
 }
 
 
-extern "C" void poke_frontend(void);
-
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
-	Genode::error(__func__, ":", __LINE__, ": timeout: ", timeout, "ctrl fd: ", _ctrl_fd_set);
-	static bool poked = false;
-	if (!poked) {
-		poke_frontend();
-		poked = true;
-	}
-	Genode::error(__func__, ":", __LINE__, ": ctrl fd: ", _ctrl_fd_set);
+	Genode::error(__func__, ":", __LINE__, ": timeout: ", timeout, " ctrl fd: ", _ctrl_fd_set);
 
 	Poll_socket_fd sockets[Wifi::MAX_POLL_SOCKETS];
 	Genode::memset(sockets, 0, sizeof (sockets));
