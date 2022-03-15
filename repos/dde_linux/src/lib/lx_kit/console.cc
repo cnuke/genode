@@ -225,9 +225,9 @@ static unsigned _depth()
 
 void Lx_kit::Console::vprintf(const char *format, va_list list)
 {
-	unsigned const d = _depth();
-	for (unsigned i = 0; i < d; i++)
-		_out_char(' ');
+	unsigned const d = _depth(); (void)d;
+	// for (unsigned i = 0; i < d; i++)
+	// 	_out_char(' ');
 
 	while (*format) {
 
