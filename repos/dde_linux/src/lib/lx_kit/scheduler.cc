@@ -91,6 +91,8 @@ Task & Scheduler::task(void * lx_task)
 
 void Scheduler::schedule()
 {
+	if (__builtin_return_address(0) != (void*)0xd825f)
+		Genode::error(__func__, ":", __LINE__, ": from: ", __builtin_return_address(0));
 	/*
 	 * Iterate over all tasks and run first runnable.
 	 *
@@ -126,4 +128,7 @@ void Scheduler::schedule()
 
 	/* clear current as no task is running */
 	_current = nullptr;
+
+	if (__builtin_return_address(0) != (void*)0xd825f)
+		Genode::error(__func__, ":", __LINE__, ": done from: ", __builtin_return_address(0));
 }

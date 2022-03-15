@@ -77,6 +77,8 @@ struct genode_uplink : private Noncopyable, private Interface
 		{
 			bool progress = false;
 
+			Genode::error(__func__, ":", __LINE__);
+
 			Uplink::Session::Tx::Source &tx_source = *_connection.tx();
 
 			/*
@@ -100,10 +102,12 @@ struct genode_uplink : private Noncopyable, private Interface
 			Packet_descriptor packet { };
 			size_t const max_bytes = Nic::Packet_allocator::OFFSET_PACKET_SIZE;
 
+			Genode::error(__func__, ":", __LINE__, " alloc");
 			try { packet = tx_source.alloc_packet(max_bytes); }
 			catch (Uplink::Session::Tx::Source::Packet_alloc_failed) {
 				return progress; /* packet-stream buffer is saturated */ }
 
+			Genode::error(__func__, ":", __LINE__, " fn");
 			char * const dst_ptr = tx_source.packet_content(packet);
 			size_t const payload_bytes = min(max_bytes, fn(dst_ptr, max_bytes));
 

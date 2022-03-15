@@ -1470,6 +1470,7 @@ void Interface::_handle_arp(Ethernet_frame &eth,
 void Interface::_handle_pkt()
 {
 	Packet_descriptor const pkt = _sink.get_packet();
+	Genode::error(__func__, ":", __LINE__, " size: ", pkt.size());
 	Size_guard size_guard(pkt.size());
 	try {
 		_handle_eth(_sink.packet_content(pkt), size_guard, pkt);
@@ -1482,6 +1483,7 @@ void Interface::_handle_pkt()
 
 void Interface::_ready_to_submit()
 {
+	Genode::error(__func__, ":", __LINE__);
 	unsigned long const max_pkts = _config().max_packets_per_signal();
 	if (max_pkts) {
 		for (unsigned long i = 0; _sink.packet_avail(); i++) {
@@ -1519,6 +1521,7 @@ void Interface::_continue_handle_eth(Domain            const &domain,
 
 void Interface::_ready_to_ack()
 {
+	Genode::error(__func__, ":", __LINE__);
 	while (_source.ack_avail()) {
 		_source.release_packet(_source.get_acked_packet()); }
 }
@@ -1576,6 +1579,7 @@ void Interface::_handle_eth(Ethernet_frame           &eth,
 			switch (dhcp.op()) {
 			case Dhcp_packet::REPLY:
 
+				Genode::error(__func__, ":", __LINE__);
 				if (dhcp.client_mac() != router_mac()) {
 					throw Drop_packet("Expecting DHCP targeting the router"); }
 

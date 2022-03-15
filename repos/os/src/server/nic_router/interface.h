@@ -363,9 +363,9 @@ class Net::Interface : private Interface_list::Element
 		 ***********************************/
 
 		void _ready_to_submit();
-		void _ack_avail() { }
+		void _ack_avail() { Genode::error(__func__, ":", __LINE__); }
 		void _ready_to_ack();
-		void _packet_avail() { }
+		void _packet_avail() { Genode::error(__func__, ":", __LINE__); }
 
 	public:
 

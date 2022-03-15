@@ -108,6 +108,7 @@ Microseconds Dhcp_client::_rerequest_timeout(unsigned lease_time_div_log2)
 
 void Dhcp_client::_handle_timeout(Duration)
 {
+	Genode::error(__func__, ":", __LINE__, ": state: ", (unsigned)_state);
 	switch (_state) {
 	case State::BOUND:  _rerequest(State::RENEW);      break;
 	case State::RENEW:  _rerequest(State::REBIND);     break;
@@ -123,9 +124,11 @@ void Dhcp_client::handle_dhcp_reply(Dhcp_packet &dhcp)
 		Message_type const msg_type =
 			dhcp.option<Dhcp_packet::Message_type_option>().value();
 
+				Genode::error(__func__, ":", __LINE__);
 		switch (_state) {
 		case State::SELECT:
 
+				Genode::error(__func__, ":", __LINE__);
 			if (msg_type != Message_type::OFFER) {
 				throw Drop_packet("DHCP client expects an offer");
 			}
@@ -137,17 +140,20 @@ void Dhcp_client::handle_dhcp_reply(Dhcp_packet &dhcp)
 
 		case State::REQUEST:
 			{
+				Genode::error(__func__, ":", __LINE__);
 				if (msg_type != Message_type::ACK) {
 					throw Drop_packet("DHCP client expects an acknowledgement");
 				}
 				_lease_time_sec = dhcp.option<Dhcp_packet::Ip_lease_time>().value();
 				_set_state(State::BOUND, _rerequest_timeout(1));
+				Genode::error(__func__, ":", __LINE__);
 				_domain().ip_config_from_dhcp_ack(dhcp);
 				break;
 			}
 		case State::RENEW:
 		case State::REBIND:
 
+				Genode::error(__func__, ":", __LINE__);
 			if (msg_type != Message_type::ACK) {
 				throw Drop_packet("DHCP client expects an acknowledgement");
 			}

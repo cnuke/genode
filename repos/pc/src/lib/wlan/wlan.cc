@@ -58,13 +58,13 @@ struct Wlan
 	{
 		genode_uplink_notify_peers();
 
-		Genode::error(__func__, ":", __LINE__);
 		if (uplink_task_struct_ptr) {
-			Genode::error(__func__, ":", __LINE__);
 			lx_emul_task_unblock(uplink_task_struct_ptr);
 		}
 
 		Lx_kit::env().scheduler.schedule();
+
+		genode_uplink_notify_peers();
 	}
 
 	Wlan(Env &env) : _env { env }
