@@ -88,7 +88,7 @@ create_boot_directory
 #
 
 append config {
-<config verbose="yes">
+<config verbose="yes" prio_levels="2">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="IRQ"/>
@@ -149,11 +149,11 @@ append config {
 		<config verbose="yes">
 			<rom name="wifi_config">
 				<inline description="disconnect">
-} [wifi_config 30 5 no {}] {
+} [wifi_config 0 5 no {}] {
 				</inline>
 				<sleep milliseconds="15000"/>
 				<inline description="connect">
-} [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
+} [wifi_config 0 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
 				<sleep milliseconds="6000000"/>
 				<inline description="rfkill block">
@@ -174,12 +174,12 @@ append config {
 			<service name="Nic"/>
 			<service name="Uplink"/>
 		</provides>
-		<config verbose="yes" verbose_domain_state="yes">
+		<config verbose="yes" verbose_domain_state="yes" dhcp_discover_timeout_sec="30" dhcp_request_timeout_sec="15">
 
 			<policy label_prefix="test-lwip_httpsrv" domain="downlink"/>
 			<policy label_prefix="wifi_drv"          domain="uplink"/>
 
-			<domain name="uplink" verbose_packets="yes">
+			<domain name="uplink" verbose_packets="yes" icmp_echo_server="yes">
 
 				<nat domain="downlink" tcp-ports="16384"/>
 				<tcp-forward port="443" domain="downlink" to="10.0.3.2"/>
@@ -203,7 +203,7 @@ append config {
 		<config verbose="yes"/>
 	</start>
 
-	<start name="wifi_drv" caps="220">
+	<start name="wifi_drv" caps="220" priority="-1">
 		<binary name="pc_wlan_drv"/>
 		<resource name="RAM" quantum="28M"/>
 		<config ld_verbose="yes">
