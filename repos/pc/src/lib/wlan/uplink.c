@@ -40,29 +40,48 @@ static unsigned long uplink_tx_packet_content(struct genode_uplink_tx_packet_con
                                               char *dst, unsigned long dst_len)
 {
 	struct sk_buff * const skb = ctx->skb;
+	unsigned long remain = skb->len;
+	unsigned long result = 0;
+	unsigned long linear = 0;
 
-	printk("%s:%d\n", __func__, __LINE__);
-	skb_push(skb, ETH_HLEN);
-
-	if (dst_len < skb->len) {
+	if (dst_len < remain) {
 		printk("uplink_tx_packet_content: packet exceeds uplink packet size\n");
 		memset(dst, 0, dst_len);
 		return 0;
 	}
 
-	skb_copy_from_linear_data(skb, dst, skb->len);
+	/*
+	 * We always get the ethernet header from the headroom. In case
+	 * the payload is stored in frags we have to copy them as well.
+	 */
 
-	/* clear unused part of the destination buffer */
-	memset(dst + skb->len, 0, dst_len - skb->len);
+	/* get ethernet header from head before calling skb_headlen */
+	skb_push(skb, ETH_HLEN);
 
-	return skb->len;
+	linear = min_t(int, skb_headlen(skb), remain);
+	skb_copy_from_linear_data(skb, dst, linear);
+
+	remain -= linear;
+	result += linear;
+
+	if (remain && skb_shinfo(skb)->nr_frags) {
+		unsigned int i;
+
+		for (i = skb_shinfo(skb)->nr_frags - 1; (int)i >= 0; i--) {
+			unsigned int size = skb_frag_size(&skb_shinfo(skb)->frags[i]);
+			void const * frag = skb_frag_address_safe(&skb_shinfo(skb)->frags[i]);
+
+			memcpy(dst + result, frag, size);
+			result += size;
+		}
+	}
+
+	return result;
 }
 
 
 static rx_handler_result_t handle_rx(struct sk_buff **pskb)
 {
-	printk("%s:%d\n", __func__, __LINE__);
-
 	struct sk_buff *skb = *pskb;
 	struct net_device *dev = skb->dev;
 	struct genode_uplink_tx_packet_context ctx = { .skb = skb };
@@ -74,6 +93,8 @@ static rx_handler_result_t handle_rx(struct sk_buff **pskb)
 	if (ntohs(skb->protocol) == ETH_P_PAE)
 		return RX_HANDLER_PASS;
 
+	printk("%s:%d: uplink: %p skb: %p: skb->len: %p\n", __func__, __LINE__, dev_genode_uplink(dev), skb, skb->len);
+	skb_dump("UPRX: ", skb, true);
 	{
 		bool uplink_available = !!dev_genode_uplink(dev);
 		bool progress = uplink_available &&
@@ -98,14 +119,11 @@ static void handle_create_uplink(struct net_device *dev)
 {
 	struct genode_uplink_args args;
 
-	printk("%s:%d\n", __func__, __LINE__);
 	if (dev_genode_uplink(dev))
 		return;
-	printk("%s:%d\n", __func__, __LINE__);
 
 	if (!netif_carrier_ok(dev))
 		return;
-	printk("%s:%d\n", __func__, __LINE__);
 
 	printk("create uplink for net device %s\n", &dev->name[0]);
 
@@ -147,7 +165,8 @@ static void handle_destroy_uplink(struct net_device *dev)
 static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_context *ctx,
                                                       char const *ptr, unsigned long len)
 {
-	struct sk_buff *skb = alloc_skb(len, GFP_KERNEL);
+	struct sk_buff *skb = alloc_skb(len + 128, GFP_KERNEL);
+	skb_reserve(skb, 128);
 
 	if (!skb) {
 		printk("alloc_skb failed\n");
@@ -158,6 +177,8 @@ static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_co
 	skb_put(skb, len);
 	skb->dev = ctx->dev;
 
+	printk("%s:%d: skb: %p: skb->len: %p\n", __func__, __LINE__, skb, skb->len);
+	skb_dump("UPTX: ", skb, true);
 	if (dev_queue_xmit(skb) < 0) {
 		printk("lx_user: failed to xmit packet\n");
 		return GENODE_UPLINK_RX_REJECTED;
@@ -172,14 +193,11 @@ static int user_task_function(void *arg)
 	for (;;) {
 
 		struct net_device *dev;
-		printk("%s:%d\n", __func__, __LINE__);
 
 		for_each_netdev(&init_net, dev) {
 
 			if (strcmp(&dev->name[0], "lo") == 0)
 				continue;
-
-			printk("%s: dev: '%s'\n", __func__, &dev->name[0]);
 
 			/* enable link sensing, repeated calls are handled by testing IFF_UP */
 			dev_open(dev, 0);
