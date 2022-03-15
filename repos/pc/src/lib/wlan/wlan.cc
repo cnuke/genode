@@ -34,7 +34,7 @@ using namespace Genode;
 
 bool wifi_get_rfkill(void)
 {
-	error(__func__, ": not implemented");
+	// error(__func__, ": not implemented");
 	return false;
 }
 

@@ -277,6 +277,6 @@ int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
 	unsigned long const j  = msecs_to_jiffies(timeout);
 	signed   long const ex = schedule_timeout(j);
 	unsigned int  const to =  jiffies_to_msecs(ex);
-	printk("%s:%d: timeout: %d to: %u\n", __func__, __LINE__, timeout, to);
+	// printk("%s:%d: timeout: %d to: %u\n", __func__, __LINE__, timeout, to);
 	return (int)to+1;
 }

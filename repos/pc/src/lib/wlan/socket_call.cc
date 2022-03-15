@@ -50,7 +50,6 @@ enum : int {
 
 static int convert_errno_from_linux(int linux_errno)
 {
-	Genode::error("linux_errno: ", linux_errno);
 	if (linux_errno >= 0)
 		return linux_errno;
 
@@ -340,7 +339,6 @@ class Lx::Socket
 
 		void _do_poll_all()
 		{
-			Genode::error(__func__, ":", __LINE__);
 			Wifi::Poll_socket_fd *sockets = _call.poll_all.sockets;
 			unsigned num                  = _call.poll_all.num;
 			int timeout                   = _call.poll_all.timeout;
@@ -353,7 +351,6 @@ class Lx::Socket
 				 * Timeout was triggered, exit early.
 				 */
 				if (timeout_triggered) {
-			Genode::error(__func__, ":", __LINE__);
 					break;
 				}
 
@@ -381,7 +378,6 @@ class Lx::Socket
 				 * We were woken up but there is still nothing of interest.
 				 */
 				if (woken_up) {
-			Genode::error(__func__, ":", __LINE__);
 					break;
 				}
 
@@ -390,7 +386,6 @@ class Lx::Socket
 				 * no timeout given.
 				 */
 				if (nready || !timeout) {
-			Genode::error(__func__, ":", __LINE__);
 					break;
 				}
 
@@ -422,7 +417,6 @@ class Lx::Socket
 				// }
 
 				woken_up = true;
-				Genode::error(__func__, ":", __LINE__);
 			} while (1);
 
 			_call.err = nready;
@@ -616,7 +610,7 @@ int Socket_call::getsockname(Socket *s, Wifi::Sockaddr *addr, unsigned *addrlen)
 
 int Socket_call::poll_all(Poll_socket_fd *s, unsigned num, int timeout)
 {
-	Genode::error(__func__, ":", __LINE__);
+	// Genode::error(__func__, ":", __LINE__);
 
 	_call.opcode = Call::POLL_ALL;
 	_call.handle = 0;
