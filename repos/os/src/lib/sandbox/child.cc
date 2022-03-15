@@ -493,7 +493,7 @@ void Sandbox::Child::init(Cpu_session &session, Cpu_session_capability cap)
 
 	session.ref_account(_env.cpu_session_cap());
 
-	_env.cpu().transfer_quota(cap, Cpu_session::quota_lim_upscale(effective.percent, 100));
+	_cpu_quota_transfer.transfer_cpu_quota(cap, effective);
 }
 
 
@@ -740,6 +740,7 @@ Sandbox::Child::Child(Env                      &env,
                       Ram_limit_accessor       &ram_limit_accessor,
                       Cap_limit_accessor       &cap_limit_accessor,
                       Cpu_limit_accessor       &cpu_limit_accessor,
+                      Cpu_quota_transfer       &cpu_quota_transfer,
                       Prio_levels               prio_levels,
                       Affinity::Space const    &affinity_space,
                       Registry<Parent_service> &parent_services,
@@ -755,6 +756,7 @@ Sandbox::Child::Child(Env                      &env,
 	_ram_limit_accessor(ram_limit_accessor),
 	_cap_limit_accessor(cap_limit_accessor),
 	_cpu_limit_accessor(cpu_limit_accessor),
+	_cpu_quota_transfer(cpu_quota_transfer),
 	_name_registry(name_registry),
 	_heartbeat_enabled(start_node.has_sub_node("heartbeat")),
 	_resources(_resources_from_start_node(start_node, prio_levels, affinity_space,

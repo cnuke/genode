@@ -66,6 +66,11 @@ class Sandbox::Child : Child_policy, Routed_service::Wakeup
 		typedef Resource_limit_accessor<Cap_quota> Cap_limit_accessor;
 		typedef Resource_limit_accessor<Cpu_quota> Cpu_limit_accessor;
 
+		struct Cpu_quota_transfer : Interface
+		{
+			virtual void transfer_cpu_quota(Cpu_session_capability, Cpu_quota) = 0;
+		};
+
 		enum class Sample_state_result { CHANGED, UNCHANGED };
 
 	private:
@@ -147,6 +152,7 @@ class Sandbox::Child : Child_policy, Routed_service::Wakeup
 		Ram_limit_accessor     &_ram_limit_accessor;
 		Cap_limit_accessor     &_cap_limit_accessor;
 		Cpu_limit_accessor     &_cpu_limit_accessor;
+		Cpu_quota_transfer     &_cpu_quota_transfer;
 
 		Name_registry &_name_registry;
 
@@ -548,6 +554,7 @@ class Sandbox::Child : Child_policy, Routed_service::Wakeup
 		      Ram_limit_accessor       &ram_limit_accessor,
 		      Cap_limit_accessor       &cap_limit_accessor,
 		      Cpu_limit_accessor       &cpu_limit_accessor,
+		      Cpu_quota_transfer       &cpu_quota_transfer,
 		      Prio_levels               prio_levels,
 		      Affinity::Space const    &affinity_space,
 		      Registry<Parent_service> &parent_services,

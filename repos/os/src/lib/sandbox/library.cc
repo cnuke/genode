@@ -28,6 +28,7 @@ struct Genode::Sandbox::Library : ::Sandbox::State_reporter::Producer,
                                   ::Sandbox::Child::Ram_limit_accessor,
                                   ::Sandbox::Child::Cap_limit_accessor,
                                   ::Sandbox::Child::Cpu_limit_accessor,
+                                  ::Sandbox::Child::Cpu_quota_transfer,
                                   ::Sandbox::Start_model::Factory,
                                   ::Sandbox::Parent_provides_model::Factory
 {
@@ -92,7 +93,8 @@ struct Genode::Sandbox::Library : ::Sandbox::State_reporter::Producer,
 
 	unsigned _child_cnt = 0;
 
-	Cpu_quota _avail_cpu { .percent = 100 };
+	Cpu_quota _avail_cpu       { .percent = 100 };
+	Cpu_quota _transferred_cpu { .percent =   0 };
 
 	Ram_quota _avail_ram() const
 	{
@@ -137,6 +139,21 @@ struct Genode::Sandbox::Library : ::Sandbox::State_reporter::Producer,
 	 * Child::Cpu_limit_accessor interface
 	 */
 	Cpu_quota resource_limit(Cpu_quota const &) const override { return _avail_cpu; }
+
+	/**
+	 * Child::Cpu_quota_transfer interface
+	 */
+	void transfer_cpu_quota(Cpu_session_capability cap, Cpu_quota quota) override
+	{
+		Cpu_quota const remaining { 100 - min(100u, _transferred_cpu.percent) };
+
+		size_t const fraction =
+			Cpu_session::quota_lim_upscale(quota.percent, remaining.percent);
+
+		_env.cpu().transfer_quota(cap, fraction);
+
+		_transferred_cpu.percent += quota.percent;
+	}
 
 	/**
 	 * State_reporter::Producer interface
@@ -266,10 +283,14 @@ void Genode::Sandbox::Library::_destroy_abandoned_children()
 		if (child.env_sessions_closed()) {
 			_children.remove(&child);
 
-			/* replenish available CPU quota */
-			_avail_cpu.percent += child.cpu_quota().percent;
+			Cpu_quota const child_cpu_quota = child.cpu_quota();
 
 			destroy(_heap, &child);
+
+			/* replenish available CPU quota */
+			_avail_cpu.percent       += child_cpu_quota.percent;
+			_transferred_cpu.percent -= min(_transferred_cpu.percent,
+			                                child_cpu_quota.percent);
 		}
 	});
 }
@@ -314,7 +335,7 @@ bool Genode::Sandbox::Library::ready_to_create_child(Start_model::Name    const 
 		Child &child = *new (_heap)
 			Child(_env, _heap, *_verbose,
 			      Child::Id { ++_child_cnt }, _state_reporter,
-			      start_node, *this, *this, _children, *this, *this, *this,
+			      start_node, *this, *this, _children, *this, *this, *this, *this,
 			      _prio_levels, _effective_affinity_space(),
 			      _parent_services, _child_services, _local_services);
 		_children.insert(&child);
