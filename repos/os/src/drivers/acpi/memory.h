@@ -85,7 +85,7 @@ class Acpi::Memory
 		};
 
 		static constexpr unsigned long
-			ACPI_REGION_SIZE_LOG2 = 30, /* 1 GiB range */
+			ACPI_REGION_SIZE_LOG2 = 32, /* TODO 4 GiB range */
 			ACPI_REGION_SIZE      = 1UL << ACPI_REGION_SIZE_LOG2;
 
 		Env       &_env;
@@ -126,6 +126,7 @@ class Acpi::Memory
 
 			/* requested region of I/O memory */
 			Io_mem::Region loop_region { req_base, req_size };
+warning("loop_region=", loop_region);
 
 			/* check that physical region fits into supported range */
 			if (!_io_region->contains(loop_region)) {
