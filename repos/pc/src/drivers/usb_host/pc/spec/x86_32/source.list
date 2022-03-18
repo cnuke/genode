@@ -94,6 +94,7 @@ lib/ctype.c
 lib/debug_locks.c
 lib/find_bit.c
 lib/hexdump.c
+lib/hweight.c
 lib/idr.c
 lib/iomap.c
 lib/irq_regs.c
