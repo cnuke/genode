@@ -478,7 +478,7 @@ void bpf_prog_change_xdp(struct bpf_prog *prev_prog, struct bpf_prog *prog)
 DEFINE_STATIC_KEY_FALSE(bpf_stats_enabled_key);
 
 
-__wsum csum_partial(const void * buff,int len,__wsum sum)
+asmlinkage __wsum csum_partial(const void * buff,int len,__wsum sum)
 {
 	lx_emul_trace_and_stop(__func__);
 }
