@@ -19,6 +19,7 @@
 #include <lx_emul/task.h>
 #include <linux/sched/task.h>
 #include <linux/cred.h>
+#include <linux/sched/signal.h>
 
 /*
  * We accept that we transfer the 4KiB task_struct object via stack in
@@ -33,10 +34,15 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 
 	struct cred * cred;
 	struct task_struct * task;
+	struct signal_struct *signal;
 
 	cred = kzalloc(sizeof (struct cred), GFP_KERNEL);
 	if (!cred)
 		return -1;
+
+	signal = kzalloc(sizeof(struct signal_struct), GFP_KERNEL);
+	if (!signal)
+		goto err_signal;
 
 	task = kmalloc(sizeof(struct task_struct), GFP_KERNEL);
 	if (!task)
@@ -68,6 +74,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 		.list   = LIST_HEAD_INIT(task->pending.list),
 		.signal = {{0}} },
 	.cred            = cred,
+	.signal          = signal,
 	};
 
 #ifndef CONFIG_X86
@@ -78,6 +85,8 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 	return task->pid;
 
 err_task:
+	kfree(signal);
+err_signal:
 	kfree(cred);
 	return -1;
 }
