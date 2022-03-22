@@ -203,9 +203,9 @@ append config {
 		<config verbose="yes"/>
 	</start>
 
-	<start name="wifi_drv" caps="220" priority="-1">
+	<start name="wifi_drv" caps="250" priority="-1">
 		<binary name="pc_wlan_drv"/>
-		<resource name="RAM" quantum="28M"/>
+		<resource name="RAM" quantum="32M"/>
 		<config ld_verbose="yes">
 			<report mac_address="true"/>
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
@@ -239,6 +239,7 @@ install_config $config
 
 set firmware_modules {
 	iwlwifi-7265D-29.ucode
+	iwlwifi-QuZ-a0-hr-b0-63.ucode
 	regulatory.db
 	regulatory.db.p7s
 }
