@@ -50,51 +50,46 @@ static void scan_resources(Legacy_platform::Device &device,
 static Str create_device_node(Xml_generator &xml,
                               Legacy_platform::Device &device)
 {
-	struct {
-		char const    *key;
-		unsigned char  value;
-	} bdf[3] = {
-		{ .key = "bus",  .value = 0u },
-		{ .key = "dev",  .value = 0u },
-		{ .key = "func", .value = 0u },
-	};
-	device.bus_address(&bdf[0].value, &bdf[1].value, &bdf[2].value);
-
 	using namespace Genode;
-
-	/* for now we only support devices on bus 0 */
-	if (bdf[0].value != 0 && bdf[1].value == 0) {
-		warning("override physical BDF ",
-		        Hex(bdf[0].value, Hex::OMIT_PREFIX), ":",
-		        Hex(bdf[1].value, Hex::OMIT_PREFIX), ".",
-		        Hex(bdf[2].value, Hex::OMIT_PREFIX), " -> ",
-		        Hex(bdf[1].value, Hex::OMIT_PREFIX), ":",
-		        Hex(bdf[0].value, Hex::OMIT_PREFIX), ".",
-		        Hex(bdf[2].value, Hex::OMIT_PREFIX));
-
-		unsigned char const tmp = bdf[0].value;
-		bdf[0].value = bdf[1].value;
-		bdf[1].value = tmp;
-	}
 
 	/* start arbitrarily and count up */
 	static unsigned char irq = 8;
 
+	/* start arbitrarily at the dev 1 for the first device */
+	static unsigned char bdf[3] = { 0, 1, 0 };
+
+	unsigned char pbdf[3];
+	device.bus_address(&pbdf[0], &pbdf[1], &pbdf[2]);
+
+	unsigned char vbdf[3] = { 0, 0, 0 };
+
+	/*
+	 * The host-bridge is only required by the Intel framebuffer
+	 * driver and has to be located at 00:00.0. For every other
+	 * type of device we simply count upwards.
+	 */
+	unsigned const class_code = device.class_code() >> 8;
+	if (class_code != 0x600 /* host-bridge */) {
+		vbdf[0] = bdf[0]; vbdf[1] = bdf[1]; vbdf[2] = bdf[2];
+		bdf[1]++;
+	}
+
+	warning("override physical BDF ",
+	        Hex(pbdf[0], Hex::OMIT_PREFIX), ":",
+	        Hex(pbdf[1], Hex::OMIT_PREFIX), ".",
+	        Hex(pbdf[2], Hex::OMIT_PREFIX), " -> ",
+	        Hex(vbdf[0], Hex::OMIT_PREFIX), ":",
+	        Hex(vbdf[1], Hex::OMIT_PREFIX), ".",
+	        Hex(vbdf[2], Hex::OMIT_PREFIX));
+
 	Str name = to_string("pci-",
-	                     Hex(bdf[0].value, Hex::OMIT_PREFIX), ":",
-	                     Hex(bdf[1].value, Hex::OMIT_PREFIX), ".",
-	                     Hex(bdf[2].value, Hex::OMIT_PREFIX));
+	                     Hex(vbdf[0], Hex::OMIT_PREFIX), ":",
+	                     Hex(vbdf[1], Hex::OMIT_PREFIX), ".",
+	                     Hex(vbdf[2], Hex::OMIT_PREFIX));
 
 	xml.node("device", [&] () {
 		xml.attribute("name", name);
 		xml.attribute("type", "pci");
-
-		for (auto i : bdf) {
-			xml.node("property", [&] () {
-				xml.attribute("name",  i.key);
-				xml.attribute("value", to_string(i.value));
-			});
-		}
 
 		xml.node("irq", [&] () {
 			xml.attribute("number", irq++);
