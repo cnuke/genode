@@ -58,6 +58,9 @@ static Str create_device_node(Xml_generator &xml,
 	/* start arbitrarily at the dev 1 for the first device */
 	static unsigned char bdf[3] = { 0, 1, 0 };
 
+	/* start arbitrarily at 1 GiB */
+	static unsigned long mmio_phys_addr = 0x40000000;
+
 	unsigned char pbdf[3];
 	device.bus_address(&pbdf[0], &pbdf[1], &pbdf[2]);
 
@@ -99,11 +102,17 @@ static Str create_device_node(Xml_generator &xml,
 
 		scan_resources(device, [&] (unsigned id, R const &r) {
 
-			xml.node(r.type() == R::MEMORY ? "io_mem" : "io_port", [&] () {
-				xml.attribute("phys_addr", to_string(Hex(r.base())));
+			bool const memory = r.type() == R::MEMORY;
+
+			xml.node(memory ? "io_mem" : "io_port", [&] () {
+				xml.attribute("phys_addr",
+				              to_string(Hex(memory ? mmio_phys_addr : r.base())));
 				xml.attribute("size",      to_string(Hex(r.size())));
 				xml.attribute("bar",       id);
 			});
+
+			if (memory)
+				mmio_phys_addr += align_addr(r.size(), 12);
 		});
 	});
 
@@ -252,6 +261,35 @@ static unsigned bar_size(Platform::Device const &dev,
 }
 
 
+static unsigned bar_address(Platform::Device const &dev,
+                            Xml_node const &devices, unsigned bar)
+{
+	if (bar > 6)
+		return 0;
+
+	using namespace Genode;
+
+	unsigned val = 0;
+	apply(dev, devices, [&] (Xml_node device) {
+		device.for_each_sub_node("io_mem", [&] (Xml_node node) {
+			if (node.attribute_value("bar", 6u) != bar)
+				return;
+
+			val = node.attribute_value("phys_addr", 0u);
+		});
+
+		device.for_each_sub_node("io_port", [&] (Xml_node node) {
+			if (node.attribute_value("bar", 6u) != bar)
+				return;
+
+			val = node.attribute_value("phys_addr", 0u);
+		});
+	});
+
+	return val;
+}
+
+
 static unsigned char irq_line(Platform::Device const &dev,
                               Xml_node const &devices)
 {
@@ -295,6 +333,8 @@ unsigned Platform::Device::Config_space::read(unsigned char address,
 			_device._bar_checked_for_size[bar] = 0;
 			return bar_size(_device, *_device._platform._devices_node, bar);
 		}
+
+		return bar_address(_device, *_device._platform._devices_node, bar);
 	}
 
 	if (address == 0x3c)
