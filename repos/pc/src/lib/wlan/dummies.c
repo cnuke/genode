@@ -690,3 +690,134 @@ int verify_pkcs7_signature(const void *data, size_t len,
 {
 	return true;
 }
+
+
+#include <linux/acpi.h>
+#include <acpi/acpi.h>
+#include <acpi/acpi_bus.h>
+#include <acpi/acpixf.h>
+
+int acpi_device_modalias(struct device *d, char * s, int i)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+int acpi_device_uevent_modalias(struct device *d, struct kobj_uevent_env *k)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+int acpi_dma_configure_id(struct device *dev,
+                    enum dev_dma_attr attr,
+                    const u32 *input_id)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+bool acpi_driver_match_device(struct device *dev, const struct device_driver *drv)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+union acpi_object *acpi_evaluate_dsm(acpi_handle handle, const guid_t *guid,
+            u64 rev, u64 func, union acpi_object *argv4)
+{
+	return NULL;
+}
+
+
+acpi_status acpi_evaluate_object(acpi_handle handle,
+             acpi_string pathname,
+             struct acpi_object_list *external_params,
+             struct acpi_buffer *return_buffer)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+enum dev_dma_attr acpi_get_dma_attr(struct acpi_device *adev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+acpi_status acpi_get_handle(acpi_handle parent,acpi_string pathname,acpi_handle * ret_handle)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+int acpi_platform_notify(struct device *dev, enum kobject_action action)
+{
+	return 0;
+}
+
+
+bool is_acpi_device_node(const struct fwnode_handle *fwnode)
+{
+	return false;
+}
+
+#include <linux/pci.h>
+
+const struct attribute_group pci_dev_acpi_attr_group;
+
+int pci_acpi_program_hp_params(struct pci_dev *dev)
+{
+	return -ENODEV;
+}
+
+
+struct irq_domain *pci_host_bridge_acpi_msi_domain(struct pci_bus *bus)
+{
+	return NULL;
+}
+
+
+bool pciehp_is_native(struct pci_dev *bridge)
+{
+	return true;
+}
+
+
+#include <linux/thermal.h>
+
+struct thermal_cooling_device *thermal_cooling_device_register(const char *s,
+	void *p, const struct thermal_cooling_device_ops *op)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+
+void thermal_cooling_device_unregister(struct thermal_cooling_device *tcd)
+{
+}
+
+
+int thermal_zone_device_enable(struct thermal_zone_device *tz)
+{
+	return -ENODEV;
+}
+
+
+struct thermal_zone_device *thermal_zone_device_register(const char *s, int i, int j,
+        void *p, struct thermal_zone_device_ops *ops,
+        struct thermal_zone_params *params, int x, int y)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+
+void thermal_zone_device_unregister(struct thermal_zone_device *tzd)
+{
+}
+
+
+void thermal_zone_device_update(struct thermal_zone_device *tzd,
+                enum thermal_notify_event e)
+{
+}

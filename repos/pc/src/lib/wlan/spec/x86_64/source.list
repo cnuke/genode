@@ -137,6 +137,7 @@ drivers/net/wireless/intel/iwlwifi/dvm/sta.c
 drivers/net/wireless/intel/iwlwifi/dvm/tt.c
 drivers/net/wireless/intel/iwlwifi/dvm/tx.c
 drivers/net/wireless/intel/iwlwifi/dvm/ucode.c
+drivers/net/wireless/intel/iwlwifi/fw/acpi.c
 drivers/net/wireless/intel/iwlwifi/fw/dbg.c
 drivers/net/wireless/intel/iwlwifi/fw/dump.c
 drivers/net/wireless/intel/iwlwifi/fw/img.c
