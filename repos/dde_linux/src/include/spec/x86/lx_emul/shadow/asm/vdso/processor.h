@@ -29,11 +29,15 @@ static __always_inline void rep_nop(void)
 	asm volatile("rep; nop" ::: "memory");
 }
 
+#ifndef jiffies_to_usecs
+extern unsigned int jiffies_to_usecs(const unsigned long j);
+#endif
+
 
 static __always_inline void cpu_relax(void)
 {
 	/* break busy loop of slchi() in drivers/i2c/algos/i2c-algo-bit.c */
-	u64 const us = jiffies_to_usecs(1);
+	u64 const us = jiffies_to_usecs(1ul);
 	usleep_range(us, us);
 }
 
