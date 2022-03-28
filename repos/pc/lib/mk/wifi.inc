@@ -1,6 +1,6 @@
 REQUIRES := x86
 
-TARGET_LIB_DIR := $(REP_DIR)/src/lib/wlan
+TARGET_LIB_DIR := $(REP_DIR)/src/lib/wifi
 
 SHARED_LIB := yes
 

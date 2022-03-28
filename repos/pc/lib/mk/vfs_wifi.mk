@@ -4,8 +4,8 @@ DDE_LINUX_DIR := $(subst /src/include/lx_kit,,$(call select_from_repositories,sr
 
 INC_DIR += $(DDE_LINUX_DIR)/src/include
 
-LIBS := wlan
+LIBS := wifi
 
-vpath %.cc $(REP_DIR)/src/lib/vfs/wlan
+vpath %.cc $(REP_DIR)/src/lib/vfs/wifi
 
 SHARED_LIB := yes
