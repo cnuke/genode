@@ -1,4 +1,4 @@
-<runtime ram="32M" caps="300" binary="wifi_drv">
+<runtime ram="32M" caps="300" binary="legacy_pc_wifi_drv">
 
 	<requires> <rom label="wifi_config"/> </requires>
 
@@ -14,7 +14,7 @@
 
 	<content>
 		<rom label="ld.lib.so"/>
-		<rom label="legacy_wifi_drv"/>
+		<rom label="legacy_pc_wifi_drv"/>
 		<rom label="libcrypto.lib.so"/>
 		<rom label="libc.lib.so"/>
 		<rom label="libm.lib.so"/>
