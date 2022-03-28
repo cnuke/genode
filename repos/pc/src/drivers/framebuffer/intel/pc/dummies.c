@@ -737,3 +737,29 @@ void iomap_free(resource_size_t base, unsigned long size)
 {
 	lx_emul_trace_and_stop(__func__);
 }
+
+
+#include <net/net_namespace.h>
+
+struct net init_net;
+
+
+#include <linux/skbuff.h>
+
+void kfree_skb(struct sk_buff * skb)
+{
+	if (!skb)
+		return;
+
+	lx_emul_trace(__func__);
+	printk("%s:%d: leaking skb: %p\n", __func__, __LINE__, skb);
+}
+
+
+#include <net/net_namespace.h>
+
+int register_pernet_subsys(struct pernet_operations * ops)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
