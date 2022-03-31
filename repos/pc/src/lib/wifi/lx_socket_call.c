@@ -29,30 +29,8 @@ extern struct net init_net;
 
 static struct net_device *_wlan_device;
 
-void open_wlan_device(void)
-{
-	struct net_device *dev;
-	printk("%s:%d\n", __func__, __LINE__);
-
-	for_each_netdev(&init_net, dev) {
-
-		if (!dev_open(dev, 0) && !_wlan_device)
-			_wlan_device = dev;
-
-		if (!_wlan_device)
-			break;
-	}
-
-	printk("%s:%d _wlan_device: %p\n", __func__, __LINE__, _wlan_device);
-}
-
-extern void uplink_init(void);
-
 void lx_user_init(void)
 {
-	// open_wlan_device();
-	// uplink_init();
-
 	int pid = kernel_thread(run_lx_socket_call_task,
 	                        lx_socket_call_task_args,
 	                        CLONE_FS | CLONE_FILES);
@@ -63,8 +41,6 @@ void lx_user_init(void)
 int lx_sock_create_kern(int domain, int type, int protocol,
                         struct socket **res)
 {
-	// int const err = sock_create_kern(&lx_socket_call_net, domain, type,
-	//                                  protocol, res);
 	int const err = __sock_create(&init_net, domain, type, protocol, res, 1);
 	if (err)
 		return err;
