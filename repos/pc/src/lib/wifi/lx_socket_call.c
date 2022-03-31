@@ -264,28 +264,42 @@ int lx_sock_poll_wait(struct socket *socks[], unsigned num, int timeout)
 	signed   long ex;
 	unsigned int  to;
 
+	enum { NUM_WQE = 8u, };
+	struct wait_queue_entry sock_wqe[NUM_WQE];
+
+	/* should not happen as the number of sockets is capped by libnl */
+	if ((unsigned)NUM_WQE < num)
+		printk("%s: more num: %d sockets than available"
+		       "wait queue entries: %d\n", __func__, num, (unsigned)NUM_WQE);
+
+	/*
+	 * Add the appropriate wait queue entries and sleep afterwards
+	 * for the requested timeout duration. Either a 'wake_up' call
+	 * or the timeout will get us going again.
+	 */
+
+	__set_current_state(TASK_INTERRUPTIBLE);
+
 	for (i = 0; i < num; i++) {
 		struct socket *sock = socks[i];
 		if (!sock)
 			continue;
+
+		init_waitqueue_entry(&sock_wqe[i], current);
+		add_wait_queue(&(sock->sk->sk_wq->wait), &sock_wqe[i]);
 	}
 
-	/*
-	 * For the moment we just sleep for a second and have
-	 * to set the state properly. Otherwise we will return
-	 * immediately from the scheduler.
-	 */
-
-	__set_current_state(TASK_INTERRUPTIBLE);
-	timeout = 1000;
 	j  = msecs_to_jiffies(timeout);
 	ex = schedule_timeout(j);
 	to = jiffies_to_msecs(ex);
 
-	/*
-	 * Make sure to return something not 0 so that the
-	 * Socket::Call poll loop polls all sockets after the
-	 * timeout has triggered.
-	 */
-	return (int)to+1;
+	for (i = 0; i < num; i++) {
+		struct socket *sock = socks[i];
+		if (!sock)
+			continue;
+
+		remove_wait_queue(&(sock->sk->sk_wq->wait), &sock_wqe[i]);
+	}
+
+	return (int)to;
 }
