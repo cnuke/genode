@@ -130,6 +130,34 @@ void dma_unmap_page_attrs(struct device * dev,
 }
 
 
+#include <linux/dma-mapping.h>
+
+void dma_sync_single_for_cpu(struct device *dev, dma_addr_t addr,
+                             size_t size, enum dma_data_direction dir)
+{
+	unsigned long const virt_addr = lx_emul_mem_virt_addr((void*)addr);
+
+	if (!virt_addr)
+		return;
+
+	lx_emul_mem_cache_invalidate((void *)virt_addr, size);
+}
+
+
+#include <linux/dma-mapping.h>
+
+void dma_sync_single_for_device(struct device *dev, dma_addr_t addr,
+                                size_t size, enum dma_data_direction dir)
+{
+	unsigned long const virt_addr = lx_emul_mem_virt_addr((void*)addr);
+
+	if (!virt_addr)
+		return;
+
+	lx_emul_mem_cache_clean_invalidate((void *)virt_addr, size);
+}
+
+
 #include <linux/slab.h>
 
 void * kmalloc_order(size_t size, gfp_t flags, unsigned int order)

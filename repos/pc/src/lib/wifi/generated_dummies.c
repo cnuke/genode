@@ -299,22 +299,6 @@ int dev_ioctl(struct net * net,unsigned int cmd,struct ifreq * ifr,bool * need_c
 }
 
 
-#include <linux/dma-mapping.h>
-
-void dma_sync_single_for_cpu(struct device * dev,dma_addr_t addr,size_t size,enum dma_data_direction dir)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/dma-mapping.h>
-
-void dma_sync_single_for_device(struct device * dev,dma_addr_t addr,size_t size,enum dma_data_direction dir)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/interrupt.h>
 
 asmlinkage __visible void do_softirq(void)
