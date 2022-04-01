@@ -728,3 +728,33 @@ u32 prandom_u32(void)
 	return lx_emul_get_random_u32();
 }
 
+
+#include <linux/gfp.h>
+
+void *page_frag_alloc_align(struct page_frag_cache *nc,
+                            unsigned int fragsz, gfp_t gfp_mask,
+                            unsigned int align_mask)
+{
+	(void)nc;
+	unsigned int const order = fragsz / PAGE_SIZE;
+	struct page *page = __alloc_pages(gfp_mask, order, 0, NULL);
+
+	/* see page_frag_free */
+	if (order > 1)
+		printk("%s: alloc might leak memory: fragsz: %u PAGE_SIZE: %u "
+		       "order: %u\n", __func__, fragsz, PAGE_SIZE, order);
+
+	if (!page)
+		return NULL;
+
+	return page->virtual;
+}
+
+
+#include <linux/gfp.h>
+
+void page_frag_free(void * addr)
+{
+	struct page *page = lx_emul_virt_to_pages(addr, 1ul);
+	__free_pages(page, 1ul);
+}

@@ -750,22 +750,6 @@ int open_related_ns(struct ns_common * ns,struct ns_common * (* get_ns)(struct n
 }
 
 
-#include <linux/gfp.h>
-
-void * page_frag_alloc_align(struct page_frag_cache * nc,unsigned int fragsz,gfp_t gfp_mask,unsigned int align_mask)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/gfp.h>
-
-void page_frag_free(void * addr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/reboot.h>
 
 enum reboot_mode panic_reboot_mode;
