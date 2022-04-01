@@ -796,14 +796,6 @@ unsigned long pci_cardbus_resource_alignment(struct resource * res)
 
 #include <linux/pci.h>
 
-int pci_disable_link_state(struct pci_dev * pdev,int state)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
 unsigned int pci_flags;
 
 

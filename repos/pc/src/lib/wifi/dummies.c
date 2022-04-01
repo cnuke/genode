@@ -429,6 +429,15 @@ void pci_fixup_device(enum pci_fixup_pass pass,struct pci_dev * dev)
 }
 
 
+#include <linux/pci.h>
+
+int pci_disable_link_state(struct pci_dev * pdev,int state)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
 const unsigned long module_cert_size = 0;
 const u8 system_certificate_list[] = { };
 const unsigned long system_certificate_list_size = sizeof (system_certificate_list);
