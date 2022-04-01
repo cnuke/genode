@@ -27,8 +27,6 @@ extern int run_lx_socket_call_task(void *p);
 
 extern struct net init_net;
 
-static struct net_device *_wlan_device;
-
 void lx_user_init(void)
 {
 	int pid = kernel_thread(run_lx_socket_call_task,
