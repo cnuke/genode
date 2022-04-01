@@ -71,7 +71,12 @@ namespace {
 			unsigned alloc()
 			{
 				Mutex::Guard guard(_mutex);
-				return (unsigned)Bit_allocator::alloc();
+				try {
+					return (unsigned)Bit_allocator::alloc();
+				} catch (...) {
+					Genode::error(__func__, ":", __LINE__, " alloc failed");
+					return ~0u;
+				}
 			}
 
 			void free(unsigned sel)
