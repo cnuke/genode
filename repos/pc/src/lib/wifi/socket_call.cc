@@ -467,12 +467,14 @@ static Lx::Socket *_socket;
 
 extern Genode::Blockade *wpa_blockade;
 extern "C" void uplink_init(void);
+extern "C" void rfkill_init(void);
 
 extern "C" int run_lx_socket_call_task(void *)
 {
 	static Lx::Socket inst(Lx_kit::env().env.ep());
 	_socket = &inst;
 
+	rfkill_init();
 	uplink_init();
 	wpa_blockade->wakeup();
 

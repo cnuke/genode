@@ -209,6 +209,7 @@ net/core/sock.c
 net/core/xdp.c
 net/ethernet/eth.c
 net/ethtool/common.c
+net/rfkill/core.c
 net/socket.c
 net/sched/sch_generic.c
 net/sched/sch_mq.c
