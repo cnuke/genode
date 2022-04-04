@@ -19,16 +19,24 @@
 
 
 #include <asm-generic/delay.h>
+#include <linux/delay.h>
 
 void __const_udelay(unsigned long xloops)
 {
-	lx_emul_time_udelay(xloops / 0x10C7UL);
+	unsigned long usecs = xloops / 0x10C7UL;
+	if (usecs < 100)
+		lx_emul_time_udelay(usecs);
+	else
+		usleep_range(usecs, usecs * 10);
 }
 
 
 void __udelay(unsigned long usecs)
 {
-	lx_emul_time_udelay(usecs);
+	if (usecs < 100)
+		lx_emul_time_udelay(usecs);
+	else
+		usleep_range(usecs, usecs * 10);
 }
 
 
