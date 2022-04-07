@@ -40,8 +40,8 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 		});
 
 		xml.node("libc", [&] () {
-			xml.attribute("stdout", "/dev/null");
-			xml.attribute("stderr", "/dev/null");
+			xml.attribute("stdout", "/dev/log");
+			xml.attribute("stderr", "/dev/log");
 			xml.attribute("rtc",    "/dev/rtc");
 		});
 	});
