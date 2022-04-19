@@ -103,6 +103,12 @@ static Str create_device_node(Xml_generator &xml,
 
 			bool const memory = r.type() == R::MEMORY;
 
+			if (memory)
+				xml.node("physical_io_mem", [&] () {
+					xml.attribute("phys_addr",
+					              to_string(Hex(r.bar())));
+				});
+
 			xml.node(memory ? "io_mem" : "io_port", [&] () {
 				xml.attribute("phys_addr",
 				              to_string(Hex(memory ? mmio_phys_addr : r.bar())));
@@ -134,6 +140,10 @@ Platform::Connection::Connection(Env &env)
 	_legacy_platform->upgrade_ram(32768);
 	_legacy_platform->upgrade_caps(8);
 
+	bool once = false;
+
+	bool skip_first = false;
+
 	Xml_generator xml { _devices_node_buffer,
 	                    sizeof (_devices_node_buffer),
 	                    "devices", [&] () {
@@ -143,18 +153,29 @@ Platform::Connection::Connection(Env &env)
 			Legacy_platform::Device_capability cap { };
 			for (auto &dev : _devices_list) {
 
+				if (once)
+					break;
+
 				cap = _legacy_platform->next_device(cap, 0x0u, 0x0u);
 				if (!cap.valid()) break;
+
+				if (skip_first) {
+					skip_first = false;
+					continue;
+				}
 
 				Legacy_platform::Device_client device { cap };
 				Str name = create_device_node(xml, device);
 				dev.construct(name, cap);
+
+				once = true;
 			}
 		});
 	} };
 
 	_devices_node.construct(_devices_node_buffer,
 	                        sizeof (_devices_node_buffer));
+	Genode::log(*_devices_node);
 }
 
 
