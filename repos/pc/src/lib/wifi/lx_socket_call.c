@@ -130,11 +130,15 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 	iov_count = lx_msg->msg_iovcount;
 
 	msg = kzalloc(sizeof (struct msghdr), GFP_KERNEL);
-	if (!msg)
+	if (!msg) {
+		printk("%s:%d:\n", __func__, __LINE__);
 		goto err_msg;
+	}
 	iov = kzalloc(sizeof (struct iovec) * iov_count, GFP_KERNEL);
-	if (!iov)
+	if (!iov) {
+		printk("%s:%d:\n", __func__, __LINE__);
 		goto err_iov;
+	}
 
 	iovlen = 0;
 	for (i = 0; i < iov_count; i++) {
@@ -155,6 +159,7 @@ int lx_sock_sendmsg(struct socket *sock, struct lx_msghdr* lx_msg,
 		msg->msg_flags |= MSG_DONTWAIT;
 
 	err = sock->ops->sendmsg(sock, msg, iovlen);
+	printk("%s:%d: err: %d\n", __func__, __LINE__, err);
 
 	kfree(iov);
 err_iov:

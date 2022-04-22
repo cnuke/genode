@@ -1375,6 +1375,8 @@ struct Wifi::Frontend
 		State state = connected ? State::CONNECTED : State::DISCONNECTED;
 		Accesspoint::Bssid const &bssid = _extract_bssid(msg, state);
 
+		Genode::error(__func__, ":", "msg: '", msg, "'");
+
 		/* simplistic heuristic to ignore re-authentication requests */
 		if (_connected_ap.bssid.valid() && auth_failed) {
 			if (_reauth_attempts < MAX_ATTEMPTS) {
@@ -1399,6 +1401,9 @@ struct Wifi::Frontend
 		_connected_event    = connected;
 		_disconnected_event = disconnected;
 		_disconnected_fail  = auth_failed;
+
+		Genode::error(__func__, ":", " connected: ", connected, " disconnected: ",
+		              disconnected, " auth_failed: ", auth_failed);
 
 		if (!_rfkilled) {
 
@@ -1449,9 +1454,13 @@ struct Wifi::Frontend
 
 		/* return early */
 		if (_last_event_id == event_id) {
+			Genode::error(__func__, ":", __LINE__, " return rearly (_last_event_id: ", _last_event_id, ")");
 			_notify_lock_unlock();
 			return;
 		}
+
+		Genode::error(__func__, ":", __LINE__, " _last_event_id: ", _last_event_id, " event_id: ", event_id);
+		_last_event_id = event_id;
 
 		if (results_available(msg)) {
 
@@ -1528,6 +1537,9 @@ struct Wifi::Frontend
 			return;
 		}
 
+		bool const valid = msg ? Genode::strlen(msg) < 128  : false;
+		Genode::error(__func__, ": ", __LINE__, " ", valid ? msg : " ");
+
 		_last_recv_id = recv_id;
 
 		switch (_state & 0xf) {
@@ -1550,7 +1562,7 @@ struct Wifi::Frontend
 		_notify_lock_unlock();
 
 		if (_verbose_state) {
-			Genode::log("State:",
+			Genode::log(__func__, " State:",
 			            " connected: ",  _connected_ap.bssid_valid(),
 			            " connecting: ", _connecting.length() > 1,
 			            " enabled: ",    _count_enabled(),

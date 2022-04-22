@@ -323,6 +323,7 @@ ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
 	int const err = socket_call.sendmsg(s, &w_msg, Wifi::WIFI_F_NONE);
 
 	if (err < 0) {
+		Genode::error(__func__, ":", __LINE__, ": err: ", err);
 		errno = -err;
 		return -1;
 	}
@@ -351,6 +352,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
 	/* FIXME flags values */
 	int const err = socket_call.sendmsg(s, &w_msg, Wifi::WIFI_F_NONE);
 	if (err < 0) {
+		Genode::error(__func__, ":", __LINE__, ": err: ", err);
 		errno = -err;
 		return -1;
 	}

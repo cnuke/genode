@@ -53,6 +53,8 @@ static int convert_errno_from_linux(int linux_errno)
 	if (linux_errno >= 0)
 		return linux_errno;
 
+	Genode::error(__func__, ":", __LINE__, ": linux_errno: ", linux_errno);
+
 	linux_errno *= -1;
 
 	switch (linux_errno) {
@@ -308,6 +310,7 @@ class Lx::Socket
 			_call.err = lx_sock_sendmsg(sock, &_call.sendmsg.msg,
 			                            _call.sendmsg.flags,
 			                            _call.handle->non_block);
+			Genode::error(__func__, ":", __LINE__, ": _call.err: ", _call.err);
 		}
 
 		void _do_setsockopt()
@@ -616,11 +619,13 @@ Wifi::ssize_t Socket_call::recvmsg(Socket *s, Wifi::Msghdr *msg, Wifi::Flags fla
 		_call.recvmsg.msg.msg_iov[i].iov_len  = msg->msg_iov[i].iov_len;
 	}
 
+	Genode::error(__func__, ":", __LINE__, ": submit_and_block");
 	_socket->submit_and_block();
 
 	msg->msg_namelen = _call.recvmsg.msg.msg_namelen;
-
-	return convert_errno_from_linux(_call.err);
+	int const conv =  convert_errno_from_linux(_call.err);
+	Genode::error(__func__, ":", __LINE__, ": _call.err: ", _call.err, " conv: ", conv);
+	return conv;
 }
 
 
@@ -641,9 +646,13 @@ Wifi::ssize_t Socket_call::sendmsg(Socket *s, Wifi::Msghdr const *msg, Wifi::Fla
 		_call.sendmsg.msg.msg_iov[i].iov_len  = msg->msg_iov[i].iov_len;
 	}
 
+	Genode::error(__func__, ":", __LINE__, ": submit_and_block");
 	_socket->submit_and_block();
+	Genode::error(__func__, ":", __LINE__, ": submit_and_block _call.err: ", _call.err);
 
-	return convert_errno_from_linux(_call.err);
+	int const conv =  convert_errno_from_linux(_call.err);
+	Genode::error(__func__, ":", __LINE__, ": _call.err: ", _call.err, " conv: ", conv);
+	return conv;
 }
 
 

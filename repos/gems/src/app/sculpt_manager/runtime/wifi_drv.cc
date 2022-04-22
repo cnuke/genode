@@ -25,6 +25,9 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 
 	xml.node("config", [&] () {
 
+		xml.attribute("verbose", true);
+		xml.attribute("verbose_state", true);
+
 		xml.node("vfs", [&] () {
 			gen_named_node(xml, "dir", "dev", [&] () {
 				xml.node("null", [&] () {});
@@ -40,8 +43,8 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 		});
 
 		xml.node("libc", [&] () {
-			xml.attribute("stdout", "/dev/null");
-			xml.attribute("stderr", "/dev/null");
+			xml.attribute("stdout", "/dev/log");
+			xml.attribute("stderr", "/dev/log");
 			xml.attribute("rtc",    "/dev/rtc");
 		});
 	});
