@@ -146,7 +146,7 @@ proc log_route { } {
 		if {$::env(LOG) == "core"} {
 			return {<service name="LOG"> <parent/> </service>} } }
 
-	return {<service name="LOG"> <child name="log"/> </service>}
+	return {<service name="LOG"> <parent/> </service>}
 }
 
 
