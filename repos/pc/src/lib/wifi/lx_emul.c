@@ -270,6 +270,8 @@ void kmem_cache_free_bulk(struct kmem_cache *s, size_t size, void **p)
 {
 	size_t i;
 
+	printk("%s:%d: size: %zu\n", __func__, __LINE__, size);
+
 	for (i = 0; i < size; i++) {
 		kmem_cache_free(s, p[i]);
 	}
