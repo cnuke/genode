@@ -181,6 +181,10 @@ struct Block::Connection : Genode::Connection<Session>, Session_client
 
 		block_count_t _init_max_block_count(size_t buf_size) const
 		{
+			Genode::error(__func__, ":", __LINE__, ": info: size: ",
+			              _info.block_size, " count: ", _info.block_count,
+			              " align_log2: ", _info.align_log2, " writeable: ", _info.writeable);
+
 			/*
 			 * Number of bytes that may be unusable at the beginning or
 			 * and of the buffer because of alignment constraints.
