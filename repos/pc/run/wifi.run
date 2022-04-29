@@ -27,8 +27,8 @@ proc wifi_psk { } {
 #   } [wifi_config 30 5 no [list "net1 WPA2 net1_psk no" "net2 WPA2 net2_psk yes"]] {
 #   </inline>}
 
-set wifi_verbose       false
-set wifi_verbose_state false
+set wifi_verbose       true
+set wifi_verbose_state true
 
 proc wifi_config { connected_scan_interval scan_interval rfkill networks } {
 	global wifi_verbose
