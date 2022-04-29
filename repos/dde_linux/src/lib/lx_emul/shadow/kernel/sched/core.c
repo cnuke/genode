@@ -95,6 +95,8 @@ static void __schedule(void)
 
 #include "../kernel/workqueue_internal.h"
 
+extern void lx_backtrace(void);
+
 asmlinkage __visible void __sched schedule(void)
 {
 	if (current->__state) {
@@ -108,6 +110,9 @@ asmlinkage __visible void __sched schedule(void)
 	}
 
 	__schedule();
+
+	if (!current)
+		lx_backtrace();
 
 	if (current->flags & PF_WQ_WORKER)
 		wq_worker_running(current);
