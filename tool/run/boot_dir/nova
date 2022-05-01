@@ -3,7 +3,7 @@ proc binary_name_core_a    { } { return "core-nova.a" }
 proc binary_name_timer     { } { return "nova_timer_drv" }
 
 proc kernel_files { } { return hypervisor }
-proc kernel_output { } { return "novga serial" }
+proc kernel_output { } { return "vga spinner serial" }
 
 proc run_boot_string { } {
 	return "\nHypervisor NOVA "
@@ -67,7 +67,7 @@ proc run_boot_dir {binaries} {
 	#
 	# Enable Intel HWP unconditionally
 	#
-	append options_bender " intel_hwp"
+	#append options_bender " intel_hwp"
 
 	if {[apply_microcode]} {
 		exec cp bin/micro.code [run_dir]/boot/
@@ -109,7 +109,7 @@ proc run_boot_dir {binaries} {
 				# exec cp /boot/grub/unicode.pf2 [run_dir]/boot/grub/unicode.pf2
 			}
 
-			append options_bender " serial_fallback"
+			append options_bender " vga serial_fallback"
 		}
 
 		#
