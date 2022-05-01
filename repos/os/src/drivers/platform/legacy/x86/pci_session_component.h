@@ -151,10 +151,10 @@ class Platform::Pci_buses
 	public:
 
 		Pci_buses(Allocator &heap,
-		          Attached_io_mem_dataspace &pciconf,
+		          Genode::Env &env,
 		          Device_bars_pool &devices_bars)
 		{
-			Config_access c(pciconf);
+			Config_access c(env);
 			scan_bus(c, heap, devices_bars);
 		}
 
@@ -208,7 +208,6 @@ class Platform::Session_component : public Rpc_object<Session>
 
 		Env                       &_env;
 		Attached_rom_dataspace    &_config;
-		Attached_io_mem_dataspace &_pciconf;
 		addr_t               const _pciconf_base;
 		Ram_quota_guard            _ram_guard;
 		Cap_quota_guard            _cap_guard;
@@ -477,7 +476,6 @@ class Platform::Session_component : public Rpc_object<Session>
 		 */
 		Session_component(Env                       &env,
 		                  Attached_rom_dataspace    &config,
-		                  Attached_io_mem_dataspace &pciconf,
 		                  addr_t                     pciconf_base,
 		                  Platform::Pci_buses       &buses,
 		                  Heap                      &global_heap,
@@ -489,7 +487,6 @@ class Platform::Session_component : public Rpc_object<Session>
 		:
 			_env(env),
 			_config(config),
-			_pciconf(pciconf),
 			_pciconf_base(pciconf_base),
 			_ram_guard(ram_quota_from_args(args)),
 			_cap_guard(cap_quota_from_args(args)),
@@ -693,7 +690,7 @@ class Platform::Session_component : public Rpc_object<Session>
 			/*
 			 * Create the interface to the PCI config space.
 			 */
-			Config_access config_access(_pciconf);
+			Config_access config_access(_env);
 
 			/* lookup device component for previous device */
 			auto lambda = [&] (Device_component *prev)
@@ -817,8 +814,8 @@ class Platform::Session_component : public Rpc_object<Session>
 						_device_pd.attach_dma_mem(rmrr_cap, r->start());
 				}
 
-				_device_pd.assign_pci(_pciconf.cap(), base_offset,
-				                      device->device_config().bdf().value());
+				// _device_pd.assign_pci(_pciconf.cap(), base_offset,
+				//                       device->device_config().bdf().value());
 
 			} catch (...) {
 				error("assignment to device pd or of RMRR region failed");
@@ -921,6 +918,7 @@ class Platform::Root : public Root_component<Session_component>
 		                       bool acpi_platform)
 		{
 			Xml_node xml_acpi(acpi_rom);
+			Genode::log("xml_acpi: '", xml_acpi, "'");
 			if (!xml_acpi.has_type("acpi"))
 				throw 1;
 
@@ -955,10 +953,11 @@ class Platform::Root : public Root_component<Session_component>
 				_pci_confspace.construct(env, base, memory_size);
 			});
 
-			if (!_pci_confspace.constructed())
-				throw 2;
+			// if (!_pci_confspace.constructed())
+			// 	throw 2;
 
-			Config_access config_access(*_pci_confspace);
+			// Config_access config_access(*_pci_confspace);
+			Config_access config_access(_env);
 
 			for (unsigned i = 0; i < xml_acpi.num_sub_nodes(); i++) {
 				Xml_node node = xml_acpi.sub_node(i);
@@ -1058,16 +1057,18 @@ class Platform::Root : public Root_component<Session_component>
 
 		void _construct_buses()
 		{
-			Dataspace_client ds_pci_mmio(_pci_confspace->cap());
+			// Dataspace_client ds_pci_mmio(_pci_confspace->cap());
 
 			uint64_t const phys_addr = _pci_confspace_base;
-			uint64_t const phys_size = ds_pci_mmio.size();
+			uint64_t const phys_size = 0;//ds_pci_mmio.size();
 			uint64_t       mmio_size = 0x10000000UL; /* max MMCONF memory */
 
 			/* try surviving wrong ACPI ECAM/MMCONF table information */
 			while (true) {
 				try {
-					_buses.construct(_heap, *_pci_confspace, _devices_bars);
+					Genode::error(__func__, ":", __LINE__);
+					_buses.construct(_heap, _env, _devices_bars);
+					Genode::error(__func__, ":", __LINE__);
 					/* construction and scan succeeded */
 					break;
 				} catch (Platform::Config_access::Invalid_mmio_access) {
@@ -1100,10 +1101,10 @@ class Platform::Root : public Root_component<Session_component>
 
 		Session_component *_create_session(const char *args) override
 		{
+			Genode::log(__func__, ": args: '", args, "'");
 			try {
 				return new (md_alloc())
 					Registered<Session_component>(_sessions, _env, _config,
-					                              *_pci_confspace,
 					                               _pci_confspace_base,
 					                              *_buses, _heap, _delayer,
 					                              _devices_bars, args, _iommu,
@@ -1139,8 +1140,8 @@ class Platform::Root : public Root_component<Session_component>
 		{
 			try {
 				_parse_report_rom(env, acpi_rom, acpi_platform);
-			} catch (...) {
-				error("ACPI report parsing error.");
+			} catch (int v) {
+				error("ACPI report parsing error: ", v);
 				throw;
 			}
 
@@ -1166,7 +1167,7 @@ class Platform::Root : public Root_component<Session_component>
 
 				_pci_reporter.construct(_env, "pci", "pci");
 
-				Config_access config_access(*_pci_confspace);
+				Config_access config_access(_env);
 				Device_config config;
 
 				_pci_reporter->generate([&] (Reporter::Xml_generator &xml) {

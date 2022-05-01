@@ -54,8 +54,10 @@ void Platform::Pci_buses::scan_bus(Config_access &config_access,
 			/* remember Device BARs required after power off and/or reset */
 			if (config.valid()) {
 				Device_config::Device_bars bars = config.save_bars();
-				if (!bars.all_invalid())
+				if (!bars.all_invalid()) {
+					Genode::log(bus, ":", dev, ".", fun, " valid");
 					new (heap) Registered<Device_config::Device_bars>(devices_bars, bars);
+				}
 			}
 
 			/*

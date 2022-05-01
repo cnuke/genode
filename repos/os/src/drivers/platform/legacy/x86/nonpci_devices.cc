@@ -38,13 +38,12 @@ class Platform::Nonpci::Ps2 : public Device_component
 	public:
 
 		Ps2(Env                       &env,
-		    Attached_io_mem_dataspace &pciconf,
 		    Session_component         &session,
 		    Allocator                 &heap_for_irq,
 		    Pci::Config::Delayer      &delayer,
 		    Device_bars_pool          &devices_bars)
 		:
-			Device_component(env, pciconf, session, IRQ_KEYBOARD,
+			Device_component(env, session, IRQ_KEYBOARD,
 			                 heap_for_irq, delayer, devices_bars),
 			_ep(env.ep().rpc_ep()),
 			_irq_mouse(IRQ_MOUSE, ~0UL, env, heap_for_irq),
@@ -105,13 +104,12 @@ class Platform::Nonpci::Pit : public Device_component
 	public:
 
 		Pit(Env                       &env,
-		    Attached_io_mem_dataspace &pciconf,
 		    Session_component         &session,
 		    Allocator                 &heap_for_irq,
 		    Pci::Config::Delayer      &delayer,
 		    Device_bars_pool          &devices_bars)
 		:
-			Device_component(env, pciconf, session, IRQ_PIT,
+			Device_component(env, session, IRQ_PIT,
 			                 heap_for_irq, delayer, devices_bars),
 			_ports(env, PIT_PORT, PORTS_WIDTH)
 		{ }
@@ -160,12 +158,12 @@ Platform::Device_capability Platform::Session_component::device(Device_name cons
 
 		switch(devices_i) {
 			case 0:
-				dev = new (_md_alloc) Nonpci::Ps2(_env, _pciconf, *this,
+				dev = new (_md_alloc) Nonpci::Ps2(_env, *this,
 				                                  _global_heap, _delayer,
 				                                  _devices_bars);
 				break;
 			case 1:
-				dev = new (_md_alloc) Nonpci::Pit(_env, _pciconf, *this,
+				dev = new (_md_alloc) Nonpci::Pit(_env, *this,
 				                                  _global_heap, _delayer,
 				                                  _devices_bars);
 				break;
