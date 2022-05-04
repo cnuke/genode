@@ -1,0 +1,292 @@
+assert_spec x86_64
+
+assert {![have_include power_on/qemu]}
+assert {![have_spec linux]}
+
+# select use of 'Audio_in/Audio_out' or 'Record/Play' sessions
+proc use_record_play_sessions { } { return 1 }
+
+# test audio in or audio out
+proc audio_out                { } { return 0 }
+
+proc build_targets { } {
+
+	set targets {
+		driver/audio/pc
+	}
+
+	if {[use_record_play_sessions]} {
+		lappend targets server/record_play_mixer test/audio_play lib/vfs
+	} else {
+		lappend targets test/audio_in test/audio_out
+	}
+}
+
+proc audio_driver_config_attr { } {
+
+	if {[use_record_play_sessions]} {
+		return {report_mixer="no" record_play="yes" }
+	} else {
+		return {report_mixer="yes" record_play="no" speaker_priority="external" mic_priority="external"}
+	}
+}
+
+build [build_targets]
+
+create_boot_directory
+
+proc record_play_start_nodes { } {
+
+	if {![use_record_play_sessions]} { return "" }
+
+	set config {
+		<start name="mixer" priority="-1">
+			<resource name="RAM" quantum="2M"/>
+			<resource name="CPU" quantum="20"/>
+			<binary name="record_play_mixer"/>
+			<provides> <service name="Record"/> <service name="Play"/> </provides>
+			<config jitter_ms="10">
+
+				<mix name="left">  <play label_suffix="left" /> </mix>
+				<mix name="right"> <play label_suffix="right"/> </mix>
+
+				<policy label_suffix="mic_left"   record="left"  volume="1.0"/>
+				<policy label_suffix="mic_right"  record="right" volume="1.0"/>
+				<policy label_suffix="left"   record="left"  volume="1.0"/>
+				<policy label_suffix="right"  record="right" volume="1.0"/>
+			</config>
+			<route>
+				<service name="Report"> <child name="mixer_report_rom"/> </service>
+				<service name="Timer">   <child name="timer"/> </service>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+	}
+
+	append_if [audio_out] config {
+		<start name="test-audio_play">
+			<resource name="RAM" quantum="8M"/>
+			<config sample_path="sample.f32">
+				<vfs> <rom name="sample.f32"/> </vfs>
+			</config>
+			<route>
+				<any-service><parent/><any-child/></any-service>
+			</route>
+		</start>
+	}
+
+	return $config
+}
+
+proc audio_in_out_start_nodes { } {
+
+	if {[use_record_play_sessions]} { return "" }
+
+	if {[audio_out]} {
+		return {
+		<start name="test-audio_out">
+			<resource name="RAM" quantum="4M"/>
+			<config>
+				<filename>sample.f32</filename>
+			</config>
+			<route>
+				<any-service><parent/><any-child/></any-service>
+			</route>
+		</start>}
+	} else {
+		return {
+		<start name="test-audio_in">
+			<resource name="RAM" quantum="8M"/>
+			<route>
+				<any-service><parent/><any-child/></any-service>
+			</route>
+		</start>}
+	}
+}
+
+import_from_depot \
+	[depot_user]/src/[base_src] \
+	[depot_user]/src/report_rom \
+	[depot_user]/src/init \
+	[depot_user]/src/acpi \
+	[depot_user]/src/pci_decode \
+	[depot_user]/src/platform \
+	[depot_user]/raw/sof_firmware
+
+append config {
+<config prio_levels="2">
+	<parent-provides>
+		<service name="LOG"/>
+		<service name="PD"/>
+		<service name="CPU"/>
+		<service name="ROM"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="IRQ"/>
+		<service name="RM"/>
+	</parent-provides>
+
+	<default caps="200"/>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="timer" priority="0">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="drivers_reports" caps="100">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides>
+			<service name="Report"/>
+			<service name="ROM"/>
+		</provides>
+		<config verbose="no">
+			<policy label="pci_decode -> system" report="acpi -> acpi"/>
+			<policy label="platform -> devices" report="pci_decode -> devices"/>
+		</config>
+	</start>
+
+	<start name="acpi" caps="350">
+		<resource name="RAM" quantum="6M"/>
+		<route>
+			<service name="Report"> <child name="drivers_reports"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="pci_decode" caps="350">
+		<resource name="RAM" quantum="1M"/>
+		<route>
+			<service name="ROM" label="system"> <child name="drivers_reports"/> </service>
+			<service name="Report"> <child name="drivers_reports"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="platform" caps="400" managing_system="yes">
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="Platform"/>
+		</provides>
+		<config>
+			<report devices="yes"/>
+			<policy label_prefix="pc_audio" info="yes">  <pci class="AUDIO"/> <pci class="HDAUDIO"/> </policy>
+		</config>
+		<route>
+			<service name="ROM" label="devices"> <child name="drivers_reports"/> </service>
+			<service name="Report"> <child name="drivers_reports"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="mixer_report_rom">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes">
+			<default-policy report="audio_drv -> mixer"/>
+		</config>
+	</start>
+
+	<start name="pc_audio" priority="-1">
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="Audio_out"/>
+			<service name="Audio_in"/>
+		</provides>
+		<config generate_xml="yes" } [audio_driver_config_attr] {>
+
+			<control name="Headphone Playback Volume"       id="0" channel="0" type="int"  value="87" min="0" max="87"/>
+			<control name="Headphone Playback Volume"       id="0" channel="1" type="int"  value="87" min="0" max="87"/>
+<!--
+			<control name="Headphone Playback Switch"       id="1" channel="0" type="bool" value="false"/>
+			<control name="Headphone Playback Switch"       id="1" channel="1" type="bool" value="false"/>
+-->
+			<control name="Speaker Playback Volume"         id="2" channel="0" type="int"  value="87" min="0" max="87"/>
+			<control name="Speaker Playback Volume"         id="2" channel="1" type="int"  value="87" min="0" max="87"/>
+<!--
+			<control name="Speaker Playback Switch"         id="3" channel="0" type="bool" value="true"/>
+			<control name="Speaker Playback Switch"         id="3" channel="1" type="bool" value="true"/>
+-->
+			<control name="Loopback Mixing"                 id="4" type="enum" selected="0"/>
+			<control name="Headset Mic Playback Volume"     id="5" channel="0" type="int"  value="0" min="0" max="31"/>
+			<control name="Headset Mic Playback Volume"     id="5" channel="1" type="int"  value="0" min="0" max="31"/>
+			<control name="Headset Mic Playback Switch"     id="6" channel="0" type="bool" value="false"/>
+			<control name="Headset Mic Playback Switch"     id="6" channel="1" type="bool" value="false"/>
+			<control name="Headphone Mic Playback Volume"   id="7" channel="0" type="int"  value="0" min="0" max="31"/>
+			<control name="Headphone Mic Playback Volume"   id="7" channel="1" type="int"  value="0" min="0" max="31"/>
+			<control name="Headphone Mic Playback Switch"   id="8" channel="0" type="bool" value="false"/>
+			<control name="Headphone Mic Playback Switch"   id="8" channel="1" type="bool" value="false"/>
+			<control name="Auto-Mute Mode"                  id="9"  type="enum" selected="0"/>
+			<control name="Input Source"                    id="10" type="enum" selected="0">
+				<value name="Headset Mic" id="0"/>
+				<value name="Headphone Mic" id="1"/>
+			</control>
+			<control name="Input Source"                    id="11" type="enum" selected="0">
+				<value name="Headset Mic" id="0"/>
+				<value name="Headphone Mic" id="1"/>
+			</control>
+			<control name="Capture Volume"                  id="12" channel="0" type="int"  value="63" min="0" max="63"/>
+			<control name="Capture Volume"                  id="12" channel="1" type="int"  value="63" min="0" max="63"/>
+<!--
+			<control name="Capture Switch"                  id="13" channel="0" type="bool" value="false"/>
+			<control name="Capture Switch"                  id="13" channel="1" type="bool" value="false"/>
+-->
+			<control name="Capture Volume"                  id="14" channel="0" type="int"  value="63" min="0" max="63"/>
+			<control name="Capture Volume"                  id="14" channel="1" type="int"  value="63" min="0" max="63"/>
+			<control name="Capture Switch"                  id="15" channel="0" type="bool" value="true"/>
+			<control name="Capture Switch"                  id="15" channel="1" type="bool" value="true"/>
+			<control name="Headset Mic Boost Volume"        id="16" channel="0" type="int"  value="0" min="0" max="3"/>
+			<control name="Headset Mic Boost Volume"        id="16" channel="1" type="int"  value="0" min="0" max="3"/>
+			<control name="Headphone Mic Boost Volume"      id="17" channel="0" type="int"  value="0" min="0" max="3"/>
+			<control name="Headphone Mic Boost Volume"      id="17" channel="1" type="int"  value="0" min="0" max="3"/>
+			<control name="Master Playback Volume"          id="18" channel="0" type="int"  value="87" min="0" max="87"/>
+			<control name="Master Playback Switch"          id="19" channel="0" type="bool" value="true"/>
+			<control name="Headset Mic Phantom Jack"        id="20" channel="0" type="bool" value="true"/>
+			<control name="Headphone Mic Jack"              id="21" channel="0" type="bool" value="false"/>
+			<control name="Speaker Phantom Jack"            id="22" channel="0" type="bool" value="true"/>
+			<control name="Dmic0 Capture Volume"            id="29" channel="0" type="int"  value="50" min="0" max="70"/>
+			<control name="Dmic0 Capture Volume"            id="29" channel="1" type="int"  value="50" min="0" max="70"/>
+			<control name="Dmic0 Capture Switch"            id="30" channel="0" type="bool" value="true"/>
+			<control name="Dmic0 Capture Switch"            id="30" channel="1" type="bool" value="true"/>
+			<control name="Dmic1 2nd Capture Volume"        id="32" channel="0" type="int"  value="70" min="0" max="70"/>
+			<control name="Dmic1 2nd Capture Volume"        id="32" channel="1" type="int"  value="70" min="0" max="70"/>
+		</config>
+		<route>
+			<service name="Report"> <child name="mixer_report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+} [record_play_start_nodes] {
+} [audio_in_out_start_nodes] {
+
+</config> }
+
+install_config $config
+
+set boot_modules [build_artifacts]
+
+#
+# Get sample file
+#
+
+if {![file exists bin/sample.f32] && [audio_out]} {
+	puts ""
+	puts "The sample file is missing. Please take a look at"
+	puts "repos/dde_bsd/README, create 'sample.f32' and put"
+	puts "the file into './bin' directory."
+	puts ""
+	exit 1
+}
+
+lappend_if [audio_out] boot_modules sample.f32
+
+build_boot_image $boot_modules
+
+run_genode_until forever
+
+# vi: set ft=tcl :
