@@ -19,12 +19,13 @@ SRC_C   += lx_user.c
 SRC_C   += gem.c
 SRC_C   += timeout.c
 SRC_C   += lx_emul/common_dummies.c
-SRC_C   += lx_emul/spec/x86/pci.c
 SRC_C   += lx_emul/shadow/mm/page_alloc.c
 SRC_C   += lx_emul/shadow/drivers/char/random.c
 
 vpath %.c $(REL_PRG_DIR)
 vpath %.cc $(REL_PRG_DIR)
+
+SRC_C   += lx_emul/pci.c
 
 vpath %.c  $(REP_DIR)/src/lib/pc
 vpath %.cc $(REP_DIR)/src/lib/pc

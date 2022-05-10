@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2022-05-06
+ * \date   2022-05-11
  */
 
 #include <lx_emul.h>
@@ -1533,14 +1533,6 @@ void mark_page_accessed(struct page * page)
 }
 
 
-#include <linux/kernel.h>
-
-unsigned long long memparse(const char * ptr,char ** retptr)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/io.h>
 
 void memunmap(void * addr)
@@ -1654,7 +1646,7 @@ enum reboot_mode panic_reboot_mode;
 
 #include <linux/pci.h>
 
-void pci_assign_unassigned_bridge_resources(struct pci_dev * bridge)
+int pci_dev_present(const struct pci_device_id * ids)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1662,14 +1654,7 @@ void pci_assign_unassigned_bridge_resources(struct pci_dev * bridge)
 
 #include <linux/pci.h>
 
-void pci_assign_unassigned_bus_resources(struct pci_bus * bus)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern unsigned long pci_cardbus_resource_alignment(struct resource * res);
-unsigned long pci_cardbus_resource_alignment(struct resource * res)
+void pci_disable_device(struct pci_dev * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1677,11 +1662,7 @@ unsigned long pci_cardbus_resource_alignment(struct resource * res)
 
 #include <linux/pci.h>
 
-unsigned int pci_flags;
-
-
-extern int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout);
-int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout)
+int pci_save_state(struct pci_dev * dev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1689,28 +1670,7 @@ int pci_idt_bus_quirk(struct pci_bus * bus,int devfn,u32 * l,int timeout)
 
 #include <linux/pci.h>
 
-int pci_mmap_resource_range(struct pci_dev * pdev,int bar,struct vm_area_struct * vma,enum pci_mmap_state mmap_state,int write_combine)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void __init pci_realloc_get_opt(char * str);
-void __init pci_realloc_get_opt(char * str)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pci_restore_vc_state(struct pci_dev * dev);
-void pci_restore_vc_state(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern int pci_save_vc_state(struct pci_dev * dev);
-int pci_save_vc_state(struct pci_dev * dev)
+int pci_set_power_state(struct pci_dev * dev,pci_power_t state)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1718,42 +1678,15 @@ int pci_save_vc_state(struct pci_dev * dev)
 
 #include <linux/pci.h>
 
-void pci_stop_and_remove_bus_device_locked(struct pci_dev * dev)
+void pci_unmap_rom(struct pci_dev * pdev,void __iomem * rom)
 {
 	lx_emul_trace_and_stop(__func__);
 }
 
 
-extern void pci_vpd_release(struct pci_dev * dev);
-void pci_vpd_release(struct pci_dev * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
+#include <linux/pci.h>
 
-
-extern unsigned int pcibios_assign_all_busses(void);
-unsigned int pcibios_assign_all_busses(void)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pcie_aspm_init_link_state(struct pci_dev * pdev);
-void pcie_aspm_init_link_state(struct pci_dev * pdev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pcie_aspm_pm_state_change(struct pci_dev * pdev);
-void pcie_aspm_pm_state_change(struct pci_dev * pdev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void pcie_aspm_powersave_config_link(struct pci_dev * pdev);
-void pcie_aspm_powersave_config_link(struct pci_dev * pdev)
+void pcibios_resource_to_bus(struct pci_bus * bus,struct pci_bus_region * region,struct resource * res)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1792,14 +1725,6 @@ void printk_safe_flush_on_panic(void)
 #include <linux/pid.h>
 
 void put_pid(struct pid * pid)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/pci.h>
-
-int raw_pci_read(unsigned int domain,unsigned int bus,unsigned int devfn,int reg,int len,u32 * val)
 {
 	lx_emul_trace_and_stop(__func__);
 }

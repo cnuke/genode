@@ -13,8 +13,8 @@ SRC_C   += dummies.c
 SRC_C   += lx_emul.c
 SRC_C   += $(notdir $(wildcard $(REL_PRG_DIR)/generated_dummies.c))
 SRC_C   += common_dummies.c
-SRC_C   += lx_emul/spec/x86/pci.c
 SRC_C   += lx_emul/usb.c
+SRC_C   += lx_emul/pci.c
 SRC_C   += lx_emul/shadow/drivers/char/random.c
 
 SRC_C   += lx_emul/shadow/lib/kobject_uevent.c
