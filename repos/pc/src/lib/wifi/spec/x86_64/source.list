@@ -1,4 +1,5 @@
 arch/x86/lib/delay.c
+arch/x86/lib/hweight.S
 arch/x86/pci/legacy.c
 certs/common.c
 crypto/acompress.c
@@ -173,7 +174,6 @@ lib/debug_locks.c
 lib/dynamic_queue_limits.c
 lib/find_bit.c
 lib/hexdump.c
-lib/hweight.c
 lib/idr.c
 lib/iomap.c
 lib/irq_regs.c
