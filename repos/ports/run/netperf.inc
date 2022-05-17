@@ -247,7 +247,7 @@ append  config { </wifi_config>
 		<binary name="pc_wifi_drv"/>
 		<resource name="RAM" quantum="32M"/>
 		<config>
-			<libc stdout="/dev/null" stderr="/dev/log" rtc="/dev/rtc"/>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev">
 					<log/> <null/> <wifi/>
