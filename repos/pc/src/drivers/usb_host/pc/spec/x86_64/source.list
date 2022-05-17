@@ -94,7 +94,6 @@ lib/klist.c
 lib/kobject.c
 lib/kstrtox.c
 lib/list_sort.c
-lib/pci_iomap.c
 lib/radix-tree.c
 lib/rbtree.c
 lib/scatterlist.c

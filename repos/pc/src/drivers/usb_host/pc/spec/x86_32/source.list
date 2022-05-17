@@ -93,7 +93,6 @@ lib/kobject.c
 lib/kstrtox.c
 lib/list_sort.c
 lib/math/div64.c
-lib/pci_iomap.c
 lib/radix-tree.c
 lib/rbtree.c
 lib/scatterlist.c
