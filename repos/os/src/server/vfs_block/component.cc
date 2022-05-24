@@ -18,6 +18,7 @@
 #include <base/heap.h>
 #include <block/request_stream.h>
 #include <os/session_policy.h>
+#include <os/reporter.h>
 #include <util/string.h>
 #include <vfs/simple_env.h>
 #include <vfs/file_system_factory.h>
@@ -355,6 +356,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 
 	Constructible<Attached_ram_dataspace>  _block_ds { };
 	Constructible<Vfs_block::File>         _block_file { };
+	Constructible<Genode::Reporter>        _block_reporter { };
 	Constructible<Block_session_component> _block_session { };
 
 	void _handle_requests()
@@ -366,6 +368,21 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 		_block_session->handle_request();
 	}
 
+	void _generate_report(Genode::Reporter &reporter,
+	                      Block::Session::Info const &info)
+	{
+		reporter.enabled(true);
+
+		using XG = Genode::Reporter::Xml_generator;
+
+		XG xml(reporter, [&] () {
+			xml.node("device", [&] () {
+				xml.attribute("label", "vfs_block");
+				xml.attribute("block_size",  info.block_size);
+				xml.attribute("block_count", info.block_count);
+			});
+		});
+	}
 
 	/*
 	 * Root interface
@@ -377,6 +394,8 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 		if (_block_session.constructed()) {
 			throw Service_denied();
 		}
+
+		Genode::error(__func__, ":", __LINE__, ": args: '", args.string(), "'");
 
 		size_t const tx_buf_size =
 			Arg_string::find_arg(args.string(),
@@ -407,6 +426,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 			_block_ds.construct(_env.ram(), _env.rm(), tx_buf_size);
 			_block_file.construct(_env.ep(), _heap, _vfs_env.root_dir(),
 			                      _request_handler, file_info);
+
 			_block_session.construct(_env.rm(), _env.ep(),
 			                         _block_ds->cap(),
 			                         _request_handler, *_block_file);
@@ -430,6 +450,17 @@ struct Main : Rpc_object<Typed_root<Block::Session>>
 
 	Main(Env &env) : _env(env)
 	{
+		_block_reporter.construct(_env, "block_devices");
+		Block::Session::Info const block_info =
+			Block::Session::Info {
+				.block_size  = 512,
+				.block_count = 2097152,
+				.align_log2  = 9,
+				.writeable   = true,
+			};
+
+		_generate_report(*_block_reporter, block_info);
+
 		_env.parent().announce(_env.ep().manage(*this));
 	}
 };

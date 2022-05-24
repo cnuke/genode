@@ -1,4 +1,4 @@
-<config>
+<config verbose="yes">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="PD"/>
@@ -7,7 +7,11 @@
 		<service name="Timer"/>
 		<service name="Capture"/>
 		<service name="Event"/>
+		<service name="Report"/>
 	</parent-provides>
+
+	<service name="Block">
+		<default-policy> <child name="vfs_block"/> </default-policy> </service>
 
 	<start name="fb_sdl" caps="100" ld="no">
 		<resource name="RAM" quantum="10M"/>
@@ -42,6 +46,38 @@
 			<service name="LOG">   <parent/> </service>
 			<service name="Timer"> <parent/> </service>
 			<service name="Event"> <parent/> </service>
+		</route>
+	</start>
+
+	<start name="lx_fs" caps="100" ld="no">
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="File_system"/>
+		</provides>
+		<config>
+			<default-policy root="/" writeable="yes"/>
+		</config>
+		<route>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="vfs_block" caps="100">
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="Block"/>
+		</provides>
+		<config>
+			<vfs>
+				<dir name="lx_fs"> <fs buffer_size="4M"/> </dir>
+			</vfs>
+
+			<default-policy file="/lx_fs/vfs_block.img" block_size="512" writeable="yes"/>
+		</config>
+		<route>
+			<service name="Report" label="block_devices"> <parent label="block_devices"/> </service>
+			<service name="File_system"> <child name="lx_fs"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
 

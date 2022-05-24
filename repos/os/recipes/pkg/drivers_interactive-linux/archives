@@ -1,3 +1,6 @@
 _/src/fb_sdl
 _/src/event_filter
+_/src/lx_fs
+_/src/vfs
+_/src/vfs_block
 _/raw/drivers_interactive-linux
