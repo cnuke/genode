@@ -8,7 +8,7 @@
 
 
 
-The Genode release 22.05 stay true to this year's
+The Genode release 22.05 stays true to this year's
 [https://genode.org/about/road-map - roadmap].
 According to the plan, we continue our tradition of revising the framework's
 documentation as part of the May release. Since last year, the Genode
@@ -27,7 +27,8 @@ stands out. We managed to bring Genode's lineup of PC drivers ported from the
 Linux kernel up to the kernel version 5.14.21 using Genode's unique DDE-Linux
 porting approach.
 As described by Section [New generation of DDE-Linux-based PC drivers], this
-work comprises complex drivers like the Intel Wifi stack and the latest
+work comprises complex drivers like the wireless LAN stack including Intels Wifi
+driver and the latest
 Intel display driver. At the framework's side, the modernization of Genode's
 platform driver for PC hardware is in full swing. Even though not yet used by
 default, the new driver has reached feature parity with the original PC-specific
@@ -504,7 +505,7 @@ To better cope with device information gathered at runtime, like the one
 provided by the PCI decoder, the platform driver no longer retrieves the device
 information from its configuration. Instead, it requests a devices ROM
 explicitly. The policy information about which devices are assigned to which
-client remains integral part of the platform driver's configuration.
+client remains an integral part of the platform driver's configuration.
 The devices ROM is requested via the label "devices" by default. If one needs
 to name the ROM differently, one can state the label in the configuration:
 
