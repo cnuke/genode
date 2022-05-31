@@ -77,7 +77,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 	.signal          = signal,
 	};
 
-	task->stack = kmalloc(sizeof(struct thread_info), THREADINFO_GFP);
+	task->stack = kmalloc(THREAD_SIZE, THREADINFO_GFP);
 
 #ifndef CONFIG_X86
 	task_thread_info(task)->preempt_count = 0;
