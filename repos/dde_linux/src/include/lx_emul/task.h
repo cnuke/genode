@@ -42,7 +42,7 @@ void lx_emul_task_schedule(int block);
 
 void lx_emul_task_name(struct task_struct * task, const char * name);
 
-void *lx_emul_task_stack(struct task_struct * task);
+void *lx_emul_task_stack(struct task_struct const * task);
 
 #ifdef __cplusplus
 }

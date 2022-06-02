@@ -89,11 +89,11 @@ extern "C" void lx_emul_task_name(struct task_struct * t, const char * name)
 }
 
 
-extern "C" void * lx_emul_task_stack(struct task_struct * t)
+extern "C" void * lx_emul_task_stack(struct task_struct const * t)
 {
 	void * ret = nullptr;
 
-	Lx_kit::env().scheduler.for_each_task([&] (Lx_kit::Task & task) {
+	Lx_kit::env().scheduler.for_each_task([&] (Lx_kit::Task const & task) {
 		if (t == task.lx_task())
 			ret = task.stack();
 	});
