@@ -795,6 +795,8 @@ static ssize_t do_recvfrom(File_descriptor *fd,
 
 	int data_fd = flags & MSG_PEEK ? context->peek_fd() : context->data_fd();
 
+	Genode::error(__func__, ":", __LINE__, ": len: ", len);
+
 	try {
 		if (lseek(data_fd, 0, SEEK_SET) != 0)
 			return Errno(EINVAL);

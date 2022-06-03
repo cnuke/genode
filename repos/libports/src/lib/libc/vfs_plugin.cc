@@ -841,6 +841,8 @@ ssize_t Libc::Vfs_plugin::write(File_descriptor *fd, const void *buf,
 	if (fd->flags & O_NONBLOCK) {
 		monitor().monitor([&] {
 			try {
+	Genode::error("wr ", __LINE__, ": fd: '", fd->fd_path, "'", " count: ", count);
+
 				out_result = handle->fs().write(handle, (char const *)buf, count, out_count);
 			} catch (Vfs::File_io_service::Insufficient_buffer) { }
 			return Fn::COMPLETE;
@@ -881,6 +883,7 @@ ssize_t Libc::Vfs_plugin::write(File_descriptor *fd, const void *buf,
 
 				/* number of bytes written in one iteration */
 				Vfs::file_size partial_out_count = 0;
+				Genode::error("wr ", __LINE__, ": fd: '", fd->fd_path, "'", " count: ", _count);
 
 				try {
 					char const * const src = (char const *)_buf + _offset;
@@ -891,6 +894,7 @@ ssize_t Libc::Vfs_plugin::write(File_descriptor *fd, const void *buf,
 				if (_out_result != Result::WRITE_OK) {
 					return Fn::COMPLETE;
 				}
+				Genode::error("wr ", __LINE__, ": fd: '", fd->fd_path, "'", " count: ", _count, " partial_out_count: ", partial_out_count);
 
 				/* increment byte count reported to caller */
 				_out_count += partial_out_count;
@@ -985,7 +989,9 @@ ssize_t Libc::Vfs_plugin::read(File_descriptor *fd, void *buf,
 	Result         out_result;
 
 	monitor().monitor([&] {
+		Genode::error("rd ", __LINE__, ": fd: '", fd->fd_path, "'", " count: ", count, " out: ", out_count);
 		out_result = handle->fs().complete_read(handle, (char *)buf, count, out_count);
+		Genode::error("rd ", __LINE__, ": fd: '", fd->fd_path, "'", " count: ", count, " out: ", out_count);
 		return out_result != Result::READ_QUEUED ? Fn::COMPLETE : Fn::INCOMPLETE;
 	});
 
