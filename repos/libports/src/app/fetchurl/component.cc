@@ -42,6 +42,9 @@ namespace Fetchurl {
 	typedef Genode::Path<256>   Path;
 }
 
+static size_t write_buffer_offset = 0;
+static char write_buffer[64u << 10];
+
 static size_t write_callback(char   *ptr,
                              size_t  size,
                              size_t  nmemb,
@@ -284,6 +287,10 @@ struct Fetchurl::Main
 		curl_easy_setopt(_curl, CURLOPT_USERAGENT, "fetchurl/" LIBCURL_VERSION);
 
 		CURLcode res = curl_easy_perform(_curl);
+		if (write_buffer_offset) {
+			(void)write(_fetch.fd, write_buffer, write_buffer_offset);
+			write_buffer_offset = 0;
+		}
 		close(_fetch.fd);
 		_fetch.fd = -1;
 
@@ -339,7 +346,26 @@ static size_t write_callback(char   *ptr,
                              void   *userdata)
 {
 	Fetchurl::Fetch &fetch = *((Fetchurl::Fetch *)userdata);
-	return write(fetch.fd, ptr, size*nmemb);
+	size_t const avail = sizeof(write_buffer) - write_buffer_offset;
+	size_t const total = size*nmemb;
+	size_t const copy = total > avail ? avail : total;
+	size_t const remain = total - copy;
+	if (avail) {
+		Genode::memcpy(write_buffer + write_buffer_offset, ptr, copy);
+		write_buffer_offset += copy;
+	}
+
+	if (sizeof(write_buffer) == write_buffer_offset) {
+		(void)write(fetch.fd, write_buffer, sizeof(write_buffer));
+		write_buffer_offset = 0;
+	}
+
+	if (remain) {
+		Genode::memcpy(write_buffer + write_buffer_offset, ptr + copy, remain);
+		write_buffer_offset += remain;
+	}
+
+	return total;
 }
 
 
