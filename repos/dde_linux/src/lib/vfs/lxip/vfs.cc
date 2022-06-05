@@ -513,7 +513,6 @@ class Vfs::Lxip_data_file final : public Vfs::Lxip_file
 			msghdr msg = create_msghdr(nullptr, 0, len, &iov);
 
 			Lxip::ssize_t ret = _sock.ops->recvmsg(&_sock, &msg, len, MSG_DONTWAIT);
-			Genode::warning(__func__, ":", __LINE__, ": len: ", len, " ret: ", ret);
 			if (ret == -EAGAIN) {
 				handle.io_enqueue(*_io_progress_waiters_ptr);
 				throw Would_block();
@@ -1680,7 +1679,6 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 			Vfs::Lxip_vfs_handle *handle =
 				static_cast<Vfs::Lxip_vfs_handle*>(vfs_handle);
 
-			Genode::warning(__func__, ":", __LINE__, ": count: ", count, " out_count: ", out_count);
 			return handle->read(dst, count, out_count);
 		}
 

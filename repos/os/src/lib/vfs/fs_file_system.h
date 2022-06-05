@@ -133,7 +133,6 @@ class Vfs::Fs_file_system : public File_system
 
 			bool _queue_read(file_size count, file_size const seek_offset)
 			{
-				Genode::log(__func__, ":", __LINE__, ": count: ", count);
 				if (queued_read_state != Handle_state::Queued_state::IDLE)
 					return false;
 
@@ -164,14 +163,12 @@ class Vfs::Fs_file_system : public File_system
 				/* pass packet to server side */
 				source.submit_packet(packet);
 
-				Genode::log(__func__, ":", __LINE__, ": count: ", count);
 				return true;
 			}
 
 			Read_result _complete_read(void *dst, file_size count,
 			                           file_size &out_count)
 			{
-				Genode::log(__func__, ":", __LINE__, ": count: ", count);
 				if (queued_read_state != Handle_state::Queued_state::ACK)
 					return READ_QUEUED;
 
@@ -196,7 +193,6 @@ class Vfs::Fs_file_system : public File_system
 
 				source.release_packet(packet);
 
-				Genode::log(__func__, ":", __LINE__, ": count: ", count, " out_count: ", out_count);
 				return result;
 			}
 
