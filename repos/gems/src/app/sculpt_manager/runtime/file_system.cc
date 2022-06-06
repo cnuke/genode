@@ -39,6 +39,8 @@ static void gen_vfs_lwext4(Xml_generator        &xml,
 			xml.node("lwext4", [&] () {
 				xml.attribute("block_device", "/dev/block");
 				xml.attribute("expand_via_io", "yes");
+				xml.attribute("reporting", "yes");
+					xml.attribute("report_cache", "yes");
 				xml.attribute("cache_write_back", "yes");
 				xml.attribute("writeable", "yes");
 				xml.attribute("external_cache_size", ex_cache_size);
