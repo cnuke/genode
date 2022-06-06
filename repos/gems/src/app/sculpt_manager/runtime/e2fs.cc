@@ -77,7 +77,7 @@ void Sculpt::gen_fsck_ext2_start_content(Xml_generator &xml,
                                          Storage_target const &target)
 {
 	auto gen_args = [&] (Xml_generator &xml) {
-		gen_arg(xml, "fsck.ext2");
+		gen_arg(xml, "fsck.ext4");
 		gen_arg(xml, "-yv");
 		gen_arg(xml, "/dev/block");
 	};
@@ -90,7 +90,7 @@ void Sculpt::gen_mkfs_ext2_start_content(Xml_generator &xml,
                                          Storage_target const &target)
 {
 	auto gen_args = [&] (Xml_generator &xml) {
-		gen_arg(xml, "mkfs.ext2");
+		gen_arg(xml, "mkfs.ext4");
 		gen_arg(xml, "-F");
 		gen_arg(xml, "/dev/block");
 	};
