@@ -1662,7 +1662,7 @@ void Sculpt::Main::_handle_runtime_state()
 						error("file-system creation failed");
 
 					partition.format_in_progress = false;
-					partition.file_system.type = File_system::EXT2;
+					partition.file_system.type = File_system::EXT4;
 
 					if (partition.whole_device())
 						device.rediscover();
