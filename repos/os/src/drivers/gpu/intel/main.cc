@@ -1516,7 +1516,7 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			{ }
 
 			/* worst case */
-			bool avail_caps() { return _cap_quota_guard.have_avail(Cap_quota { 4 }); }
+			bool avail_caps() { return _cap_quota_guard.have_avail(Cap_quota { 4 + 1 }); }
 
 			/* size + possible heap allocations */
 			bool avail_ram(size_t size = 0) {
@@ -1787,6 +1787,13 @@ class Gpu::Session_component : public Genode::Session_object<Gpu::Session>
 			_env.ep().manage(*buffer);
 
 			try {
+				// XXX this might consume 1 additional cap that is not accounted for:
+				// (line numbers belong to debug commit)
+				// [init -> drivers -> dynamic -> intel_gpu_drv] Error: alloc_buffer:1807: id: 193 size: 32768 cap_quota_guard: used=325, limit=329
+				// [init -> drivers -> dynamic -> intel_gpu_drv] Error: alloc_buffer:1816: id: 193 size: 32768 cap_quota_guard: used=326, limit=329
+				// [init -> drivers -> dynamic -> intel_gpu_drv] Error: alloc_buffer:1820: id: 193 size: 32768 caps before: 1326 after: 1322 diff: 4
+				// [init -> drivers -> dynamic -> intel_gpu_drv] Error: caps: 4 used=326, limit=329
+				// [init -> drivers -> dynamic -> intel_gpu_drv] Error: Uncaught exception of type 'Genode::Quota_guard<Genode::Cap_quota>::Limit_exceeded'
 				new (&_heap) Buffer_local(buffer->cap(), size, _buffer_space, id);
 			} catch (Id_space<Buffer_local>::Conflicting_id) {
 				_env.ep().dissolve(*buffer);
