@@ -9,6 +9,7 @@ set demo_config {
 	<vfs>
 		<dir name="dev">
 			<log/> <inline name="rtc">2000-01-01 00:00</inline>
+			<gpu/>
 		</dir>
 	</vfs>
 </config>}

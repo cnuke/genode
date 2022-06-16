@@ -25,14 +25,16 @@ lappend imports [depot_user]/src/report_rom
 import_from_depot $imports
 
 set build_components {
-	drivers/gpu/intel
-	lib/mesa/softpipe
+	lib/vfs/gpu
 	core init timer
 }
 
 lappend_if $use_iris    build_components lib/mesa/iris
+lappend_if $use_iris    build_components drivers/gpu/intel
 lappend_if $use_etnaviv build_components lib/mesa/etnaviv
 lappend_if $use_etnaviv build_components drivers/gpu/etnaviv
+lappend_if $use_lima build_components    lib/mesa/lima
+lappend_if $use_lima build_components    drivers/gpu/lima
 lappend build_components $demo_component
 
 build $build_components
@@ -103,6 +105,7 @@ set config {
 set backend_library mesa_gpu-softpipe.lib.so
 if {$use_iris}    { set backend_library mesa_gpu-iris.lib.so }
 if {$use_etnaviv} { set backend_library mesa_gpu-etnaviv.lib.so }
+if {$use_lima}    { set backend_library mesa_gpu-lima.lib.so }
 
 append config "
 	<start name=\"$demo_binary\" caps=\"$demo_caps\">
@@ -115,6 +118,13 @@ append config "
 			<service name=\"ROM\" label=\"mesa_gpu_drv.lib.so\">
 				<parent label=\"$backend_library\"/>
 			</service>"
+append_if $use_lima config {
+			<service name="ROM" label="mesa.lib.so">
+				<parent label="mesa-lima.lib.so"/>
+			</service>
+			<service name="ROM" label="libdrm.lib.so">
+				<parent label="libdrm-lima.lib.so"/>
+			</service>}
 append config {
 			<service name="Gui"> <child name="nitpicker"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
@@ -147,6 +157,19 @@ append_if $use_etnaviv config {
 		</route>
 	</start>}
 
+append_if $use_lima config {
+	<start name="gpu_drv" caps="500">
+		<binary name="lima_gpu_drv"/>
+		<resource name="RAM" quantum="64M"/>
+		<provides> <service name="Gpu"/> </provides>
+		<route>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="Platform"> <child name="drivers"/> </service>
+			<service name="ROM" label_last="dtb"> <parent label="lima-pine_a64lts.dtb"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>}
+
 append config {
 </config>}
 
@@ -154,10 +177,10 @@ install_config $config
 
 set boot_modules {
 	libc.lib.so vfs.lib.so libm.lib.so
-	egl.lib.so mesa.lib.so stdcxx.lib.so
+	egl.lib.so stdcxx.lib.so
 	expat.lib.so glapi.lib.so zlib.lib.so
-	core init ld.lib.so timer mesa_gpu-softpipe.lib.so
-	libdrm.lib.so vfs_gpu.lib.so
+	core init ld.lib.so timer
+	vfs_gpu.lib.so
 }
 
 append_if $use_iris boot_modules {
@@ -167,8 +190,13 @@ append_if $use_iris boot_modules {
 
 append_if $use_etnaviv boot_modules {
 	mesa_gpu-etnaviv.lib.so libdrm.lib.so
-
 	imx8q_gpu_drv
+}
+
+append_if $use_lima boot_modules {
+	mesa_gpu-lima.lib.so libdrm-lima.lib.so
+	mesa-lima.lib.so
+	lima_gpu_drv lima-pine_a64lts.dtb
 }
 
 append boot_modules $demo_modules
