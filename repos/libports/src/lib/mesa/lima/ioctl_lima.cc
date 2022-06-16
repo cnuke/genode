@@ -32,7 +32,7 @@ extern "C" {
 }
 
 
-enum { verbose_ioctl = false };
+enum { verbose_ioctl = true };
 
 
 /**
