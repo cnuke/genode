@@ -3,9 +3,10 @@ LIBS = libc libdrm
 include $(REP_DIR)/lib/mk/mesa-common.inc
 
 INC_DIR += $(MESA_SRC_DIR)/src/compiler/nir \
-           $(MESA_SRC_DIR)/src/etnaviv \
            $(MESA_SRC_DIR)/src/gallium/auxiliary \
            $(MESA_SRC_DIR)/src/gallium/drivers \
+           $(MESA_SRC_DIR)/src/gallium/drivers/lima \
+           $(MESA_SRC_DIR)/src/panfrost/shared \
            $(MESA_SRC_DIR)/src/util \
            $(MESA_GEN_DIR)/src/compiler/nir \
            $(MESA_PORT_DIR)/include/drm-uapi

@@ -18,7 +18,7 @@
 #include <base/heap.h>
 #include <base/log.h>
 #include <gpu_session/connection.h>
-#include <gpu/info_etnaviv.h>
+#include <gpu/info_lima.h>
 #include <util/string.h>
 
 extern "C" {
@@ -27,7 +27,7 @@ extern "C" {
 #include <unistd.h>
 
 #include <drm.h>
-#include <lima_drm.h>
+#include <drm-uapi/lima_drm.h>
 #include <libdrm_macros.h>
 }
 
@@ -109,7 +109,6 @@ const char *command_name(unsigned long request)
 	case DRM_LIMA_GEM_INFO:   return "DRM_LIMA_GEM_INFO";
 	case DRM_LIMA_GEM_SUBMIT: return "DRM_LIMA_GEM_SUBMIT";
 	case DRM_LIMA_GEM_WAIT:   return "DRM_LIMA_GEM_WAIT";
-	case DRM_LIMA_NUM_IOCTLS: return "DRM_LIMA_NUM_IOCTLS";
 	default:
 		return "<unknown driver>";
 	}
@@ -177,7 +176,7 @@ void Drm::serialize(drm_lima_gem_submit *submit, char *content)
 		char * const dst = content + offset;
 		Genode::memcpy(dst, reinterpret_cast<void const*>(submit->frame), submit->frame_size);
 		offset += submit->frame_size;
-		submit->stream = reinterpret_cast<__u64>(new_start);
+		submit->frame = reinterpret_cast<__u64>(new_start);
 	}
 
 	/* copy submit object last but into the front */
@@ -432,7 +431,7 @@ class Gpu::Call
 				Genode::uint64_t const pending_exec_buffer =
 					_gpu_session.exec_buffer(_exec_buffer->id(),
 					                         EXEC_BUFFER_SIZE).value;
-				arg.fence = pending_exec_buffer & 0xffffffffu;
+				(void)pending_exec_buffer;
 				return 0;
 			} catch (Gpu::Session::Invalid_state) { }
 
@@ -446,7 +445,7 @@ class Gpu::Call
 			return -1;
 		}
 
-		int _drm_lima_get_param(drm_lima_param &arg)
+		int _drm_lima_get_param(drm_lima_get_param &arg)
 		{
 			if (arg.param > Gpu::Info_lima::MAX_LIMA_PARAMS) {
 				errno = EINVAL;
@@ -457,15 +456,19 @@ class Gpu::Call
 			return 0;
 		}
 
-		int _drm_etnaviv_pm_query_dom(drm_etnaviv_pm_domain &)
+		int _drm_lima_ctx_create(drm_lima_ctx_create &arg)
 		{
-			warning(__func__, ": not implemented");
+			(void)arg;
+
+			errno = EINVAL;
 			return -1;
 		}
 
-		int _drm_etnaviv_pm_query_sig(drm_etnaviv_pm_signal &)
+		int _drm_lima_ctx_free(drm_lima_ctx_free &arg)
 		{
-			warning(__func__, ": not implemented");
+			(void)arg;
+
+			errno = EINVAL;
 			return -1;
 		}
 
@@ -483,7 +486,7 @@ class Gpu::Call
 				return _drm_lima_ctx_free(*reinterpret_cast<drm_lima_ctx_free*>(arg));
 			case DRM_LIMA_GEM_INFO:
 				return _drm_lima_gem_info(*reinterpret_cast<drm_lima_gem_info*>(arg));
-			case DRM_LIMA_GEM_create:
+			case DRM_LIMA_GEM_CREATE:
 				return _drm_lima_gem_create(*reinterpret_cast<drm_lima_gem_create*>(arg));
 			case DRM_LIMA_GEM_SUBMIT:
 				return _drm_lima_gem_submit(*reinterpret_cast<drm_lima_gem_submit*>(arg));
