@@ -55,8 +55,10 @@ SRC_C := \
         gallium/drivers/lima/lima_state.c \
         gallium/drivers/lima/lima_texture.c \
         gallium/drivers/lima/lima_util.c \
+        gallium/drivers/lima/lima_nir_algebraic.c \
         gallium/winsys/lima/drm/lima_drm_winsys.c \
         panfrost/shared/pan_minmax_cache.c \
         panfrost/shared/pan_tiling.c
 
 vpath %.c $(MESA_SRC_DIR)/src
+vpath %.c $(MESA_SRC_DIR)/../../../generated/src
