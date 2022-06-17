@@ -25,7 +25,6 @@ lappend imports [depot_user]/src/report_rom
 import_from_depot $imports
 
 set build_components {
-	lib/mesa/softpipe
 	lib/vfs/gpu
 	core init timer
 }
@@ -159,7 +158,7 @@ append_if $use_etnaviv config {
 	</start>}
 
 append_if $use_lima config {
-	<start name="gpu_drv" caps="200">
+	<start name="gpu_drv" caps="500">
 		<binary name="lima_gpu_drv"/>
 		<resource name="RAM" quantum="64M"/>
 		<provides> <service name="Gpu"/> </provides>
@@ -180,8 +179,8 @@ set boot_modules {
 	libc.lib.so vfs.lib.so libm.lib.so
 	egl.lib.so stdcxx.lib.so
 	expat.lib.so glapi.lib.so zlib.lib.so
-	core init ld.lib.so timer mesa_gpu-softpipe.lib.so
-	libdrm.lib.so vfs_gpu.lib.so
+	core init ld.lib.so timer
+	vfs_gpu.lib.so
 }
 
 append_if $use_iris boot_modules {
