@@ -90,14 +90,18 @@ const char *command_name(unsigned long request)
 
 	if (!device_ioctl(request)) {
 		switch (command_number(request)) {
-		case command_number(DRM_IOCTL_VERSION):            return "DRM_IOCTL_VERSION";
-		case command_number(DRM_IOCTL_GEM_CLOSE):          return "DRM_IOCTL_GEM_CLOSE";
-		case command_number(DRM_IOCTL_GEM_FLINK):          return "DRM_IOCTL_GEM_FLINK";
-		case command_number(DRM_IOCTL_GEM_OPEN):           return "DRM_IOCTL_GEM_OPEN";
-		case command_number(DRM_IOCTL_GET_CAP):            return "DRM_IOCTL_GET_CAP";
-		case command_number(DRM_IOCTL_PRIME_HANDLE_TO_FD): return "DRM_IOCTL_PRIME_HANDLE_TO_FD";
-		case command_number(DRM_IOCTL_PRIME_FD_TO_HANDLE): return "DRM_IOCTL_PRIME_FD_TO_HANDLE";
-		default:                                  return "<unknown drm>";
+		case command_number(DRM_IOCTL_GEM_CLOSE):            return "DRM_IOCTL_GEM_CLOSE";
+		case command_number(DRM_IOCTL_GEM_FLINK):            return "DRM_IOCTL_GEM_FLINK";
+		case command_number(DRM_IOCTL_GEM_OPEN):             return "DRM_IOCTL_GEM_OPEN";
+		case command_number(DRM_IOCTL_GET_CAP):              return "DRM_IOCTL_GET_CAP";
+		case command_number(DRM_IOCTL_GET_UNIQUE):           return "DRM_IOCTL_GET_UNIQUE";
+		case command_number(DRM_IOCTL_PRIME_FD_TO_HANDLE):   return "DRM_IOCTL_PRIME_FD_TO_HANDLE";
+		case command_number(DRM_IOCTL_PRIME_HANDLE_TO_FD):   return "DRM_IOCTL_PRIME_HANDLE_TO_FD";
+		case command_number(DRM_IOCTL_SYNCOBJ_CREATE):       return "DRM_IOCTL_SYNCOBJ_CREATE";
+		case command_number(DRM_IOCTL_SYNCOBJ_DESTROY):      return "DRM_IOCTL_SYNCOBJ_DESTROY";
+		case command_number(DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD): return "DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD";
+		case command_number(DRM_IOCTL_VERSION):              return "DRM_IOCTL_VERSION";
+		default:                                             return "<unknown drm>";
 		}
 	}
 
@@ -109,8 +113,7 @@ const char *command_name(unsigned long request)
 	case DRM_LIMA_GEM_INFO:   return "DRM_LIMA_GEM_INFO";
 	case DRM_LIMA_GEM_SUBMIT: return "DRM_LIMA_GEM_SUBMIT";
 	case DRM_LIMA_GEM_WAIT:   return "DRM_LIMA_GEM_WAIT";
-	default:
-		return "<unknown driver>";
+	default:                  return "<unknown driver>";
 	}
 }
 
@@ -458,18 +461,18 @@ class Gpu::Call
 
 		int _drm_lima_ctx_create(drm_lima_ctx_create &arg)
 		{
-			(void)arg;
+			unsigned const ctx_id = 0;
 
-			errno = EINVAL;
-			return -1;
+			Genode::warning(__func__, ": not properly implemented, return id ", ctx_id);
+			// XXX for now there is only one ctx
+			arg.id = ctx_id;
+			return 0;
 		}
 
 		int _drm_lima_ctx_free(drm_lima_ctx_free &arg)
 		{
-			(void)arg;
-
-			errno = EINVAL;
-			return -1;
+			Genode::warning(__func__, ": not properly implemented, id ", arg.id);
+			return 0;
 		}
 
 		int _device_ioctl(unsigned cmd, void *arg)
@@ -529,6 +532,13 @@ class Gpu::Call
 			return 0;
 		}
 
+		int _drm_syncobj_create(drm_syncobj_create &arg)
+		{
+			(void)arg;
+			warning(__func__, ": not properly implemented, returning success");
+			return 0;
+		}
+
 		int _generic_ioctl(unsigned cmd, void *arg)
 		{
 			if (!arg) {
@@ -541,6 +551,8 @@ class Gpu::Call
 				return _drm_gem_close(*reinterpret_cast<drm_gem_close*>(arg));
 			case command_number(DRM_IOCTL_VERSION):
 				return _drm_version(*reinterpret_cast<drm_version*>(arg));
+			case command_number(DRM_IOCTL_SYNCOBJ_CREATE):
+				return _drm_syncobj_create(*reinterpret_cast<drm_syncobj_create*>(arg));
 			default:
 				error("unhandled generic DRM ioctl: ", Genode::Hex(cmd));
 				break;
@@ -617,7 +629,7 @@ static void dump_ioctl(unsigned long request)
 	    (request & 0xe0000000u) == IOC_IN    ? " in"    :
 	    (request & 0xe0000000u) == IOC_INOUT ? " inout" : " void",
 	    " len=", IOCPARM_LEN(request),
-	    " cmd=", command_name(request), " (", Hex(command_number(request)), ")");
+	    " cmd=", command_name(request), " (", Hex(command_number(request)), "))");
 }
 
 
