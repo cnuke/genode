@@ -56,6 +56,9 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		void free_buffer(Gpu::Buffer_id id) override {
 			call<Rpc_free_buffer>(id); }
 
+		Gpu::Virtual_address buffer_va(Gpu::Buffer_id id) override {
+			return call<Rpc_buffer_va>(id); }
+
 		Gpu::Buffer_capability export_buffer(Buffer_id id) override {
 			return call<Rpc_export_buffer>(id); }
 
@@ -70,10 +73,10 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		void unmap_buffer(Buffer_id id) override {
 			call<Rpc_unmap_buffer>(id); }
 
-		bool map_buffer_ppgtt(Buffer_id id, Gpu::addr_t va) override {
+		bool map_buffer_ppgtt(Buffer_id id, Gpu::Virtual_address va) override {
 			return call<Rpc_map_buffer_ppgtt>(id, va); }
 
-		void unmap_buffer_ppgtt(Buffer_id id, Gpu::addr_t va) override {
+		void unmap_buffer_ppgtt(Buffer_id id, Gpu::Virtual_address va) override {
 			call<Rpc_unmap_buffer_ppgtt>(id, va); }
 
 		bool set_tiling(Buffer_id id, unsigned mode) override {
