@@ -19,8 +19,6 @@
 
 namespace Gpu {
 
-	using addr_t = Genode::uint64_t;
-
 	struct Buffer;
 	using Buffer_id = Genode::Id_space<Buffer>::Id;
 	using Buffer_capability = Genode::Capability<Buffer>;
@@ -50,6 +48,7 @@ namespace Gpu {
 	};
 
 	struct Sequence_number;
+	struct Virtual_address;
 	struct Session;
 }
 
@@ -59,6 +58,13 @@ namespace Gpu {
 struct Gpu::Sequence_number
 {
 	Genode::uint64_t value;
+};
+
+
+struct Gpu::Virtual_address
+{
+	Genode::uint64_t value;
+	bool valid;
 };
 
 
@@ -138,6 +144,13 @@ struct Gpu::Session : public Genode::Session
 	virtual void free_buffer(Buffer_id id) = 0;
 
 	/**
+	 * Get virtual address of buffer
+	 *
+	 * \param id    buffer id to be associated with the buffer
+	 */
+	virtual Virtual_address buffer_va(Buffer_id) = 0;
+
+	/**
 	 * Export buffer dataspace from GPU session
 	 *
 	 * \param id  buffer id of associated buffer
@@ -190,14 +203,14 @@ struct Gpu::Session : public Genode::Session
 	 * \throw Out_of_caps
 	 * \throw Out_of_ram
 	 */
-	virtual bool map_buffer_ppgtt(Buffer_id id, Gpu::addr_t va) = 0;
+	virtual bool map_buffer_ppgtt(Buffer_id id, Gpu::Virtual_address va) = 0;
 
 	/**
 	 * Unmap buffer
 	 *
 	 * \param id  buffer id
 	 */
-	virtual void unmap_buffer_ppgtt(Buffer_id id, Gpu::addr_t) = 0;
+	virtual void unmap_buffer_ppgtt(Buffer_id id, Gpu::Virtual_address) = 0;
 
 	/**
 	 * Set tiling for buffer
@@ -223,6 +236,7 @@ struct Gpu::Session : public Genode::Session
 	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram),
 	                 Gpu::Buffer_id, Genode::size_t);
 	GENODE_RPC(Rpc_free_buffer, void, free_buffer, Gpu::Buffer_id);
+	GENODE_RPC(Rpc_buffer_va, Gpu::Virtual_address, buffer_va, Gpu::Buffer_id);
 	GENODE_RPC(Rpc_export_buffer, Gpu::Buffer_capability, export_buffer, Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_import_buffer, void, import_buffer,
 	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram, Conflicting_id, Invalid_state),
@@ -234,15 +248,15 @@ struct Gpu::Session : public Genode::Session
 	           Gpu::Buffer_id);
 	GENODE_RPC_THROW(Rpc_map_buffer_ppgtt, bool, map_buffer_ppgtt,
 	                 GENODE_TYPE_LIST(Mapping_buffer_failed, Out_of_caps, Out_of_ram),
-	                 Gpu::Buffer_id, Gpu::addr_t);
+	                 Gpu::Buffer_id, Gpu::Virtual_address);
 	GENODE_RPC(Rpc_unmap_buffer_ppgtt, void, unmap_buffer_ppgtt,
-	           Gpu::Buffer_id, Gpu::addr_t);
+	           Gpu::Buffer_id, Gpu::Virtual_address);
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Gpu::Buffer_id, unsigned);
 
 	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_exec_buffer,
 	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
-	                     Rpc_free_buffer, Rpc_export_buffer, Rpc_import_buffer,
+	                     Rpc_free_buffer, Rpc_buffer_va, Rpc_export_buffer, Rpc_import_buffer,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
 	                     Rpc_set_tiling);
