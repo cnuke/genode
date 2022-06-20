@@ -25,6 +25,7 @@ extern "C" {
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include <drm.h>
 #include <drm-uapi/lima_drm.h>
@@ -325,9 +326,9 @@ class Gpu::Call
 		enum { EXEC_BUFFER_SIZE = 256u << 10 };
 		Constructible<Buffer> _exec_buffer { };
 
-		void _wait_for_completion(uint32_t fence)
+		void _wait_for_completion(uint32_t handle)
 		{
-			Sequence_number const seqno { .value = fence };
+			Sequence_number const seqno { .value = handle };
 			do {
 				if (_gpu_session.complete(seqno))
 					break;
@@ -366,12 +367,21 @@ class Gpu::Call
 
 		int _drm_lima_gem_info(drm_lima_gem_info &arg)
 		{
-			return _apply_handle(arg.handle,
-				[&] (Buffer &b) {
-					if (!b.mmap(_env))
-						return;
-					arg.offset = reinterpret_cast<::uint64_t>(b.mmap_addr());
-				}) ? 0 : -1;
+			int result = -1;
+			(void)_apply_handle(arg.handle, [&] (Buffer &b) {
+				if (!b.mmap(_env))
+					return;
+				arg.offset = reinterpret_cast<::uint64_t>(b.mmap_addr());
+
+				Gpu::Virtual_address const va = _gpu_session.buffer_va(b.id());
+				if (!va.valid)
+					return;
+				arg.va = (uint32_t)va.value;
+
+				result = 0;
+			});
+
+			return result;
 		}
 
 		template <typename FUNC>
@@ -441,11 +451,11 @@ class Gpu::Call
 			return -1;
 		}
 
-		int _drm_lima_gem_wait(drm_lima_gem_wait &)
+		int _drm_lima_gem_wait(drm_lima_gem_wait &arg)
 		{
-			warning(__func__, ": not implemented");
-			// XXX _wait_for_completion(arg.fence); ?
-			return -1;
+			warning(__func__, ": not properly implemented");
+			_wait_for_completion(arg.handle);
+			return 0;
 		}
 
 		int _drm_lima_get_param(drm_lima_get_param &arg)
@@ -461,11 +471,11 @@ class Gpu::Call
 
 		int _drm_lima_ctx_create(drm_lima_ctx_create &arg)
 		{
-			unsigned const ctx_id = 0;
+			static unsigned ctx_id = 0;
 
 			Genode::warning(__func__, ": not properly implemented, return id ", ctx_id);
 			// XXX for now there is only one ctx
-			arg.id = ctx_id;
+			arg.id = ctx_id++;
 			return 0;
 		}
 
@@ -539,6 +549,14 @@ class Gpu::Call
 			return 0;
 		}
 
+		int _sync_fd { 384 };
+
+		int _drm_syncobj_handle_to_fd(drm_syncobj_handle &arg)
+		{
+			arg.fd = _sync_fd;
+			return 0;
+		}
+
 		int _generic_ioctl(unsigned cmd, void *arg)
 		{
 			if (!arg) {
@@ -553,6 +571,8 @@ class Gpu::Call
 				return _drm_version(*reinterpret_cast<drm_version*>(arg));
 			case command_number(DRM_IOCTL_SYNCOBJ_CREATE):
 				return _drm_syncobj_create(*reinterpret_cast<drm_syncobj_create*>(arg));
+			case command_number(DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD):
+				return _drm_syncobj_handle_to_fd(*reinterpret_cast<drm_syncobj_handle*>(arg));
 			default:
 				error("unhandled generic DRM ioctl: ", Genode::Hex(cmd));
 				break;
@@ -677,5 +697,14 @@ int drm_munmap(void *addr, size_t length)
 	(void)length;
 
 	_drm->munmap(addr);
+	return 0;
+}
+
+
+extern "C" int drm_poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+	using namespace Genode;
+
+	error(__func__, ":", __LINE__, ": fds[0]: ", fds[0].fd, " nfds: ", nfds, " timeout: ", timeout, " [ms]");
 	return 0;
 }
