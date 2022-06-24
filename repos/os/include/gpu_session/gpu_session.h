@@ -49,6 +49,7 @@ namespace Gpu {
 
 	struct Sequence_number;
 	struct Virtual_address;
+	struct Ctx_id;
 	struct Session;
 }
 
@@ -64,6 +65,13 @@ struct Gpu::Sequence_number
 struct Gpu::Virtual_address
 {
 	Genode::uint64_t value;
+	bool valid;
+};
+
+
+struct Gpu::Ctx_id
+{
+	Genode::uint32_t value;
 	bool valid;
 };
 
@@ -93,6 +101,24 @@ struct Gpu::Session : public Genode::Session
 	 * Get GPU information dataspace
 	 */
 	virtual Genode::Dataspace_capability info_dataspace() const = 0;
+
+	/**
+	 * Allocate context
+	 *
+	 * \throw Out_of_ram
+	 * \throw Out_of_caps
+	 *
+	 * \return valid id if ctx could be created, otherwise a
+	 *         invalid ctx is returned
+	 */
+	virtual Gpu::Ctx_id create_ctx() = 0;
+
+	/**
+	 * Free context
+	 *
+	 * \param ctx_id  context id
+	 */
+	virtual void free_ctx(Gpu::Ctx_id) = 0;
 
 	/**
 	 * Execute commands from given buffer
@@ -225,6 +251,9 @@ struct Gpu::Session : public Genode::Session
 	 *******************/
 
 	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
+	GENODE_RPC_THROW(Rpc_create_ctx, Gpu::Ctx_id, create_ctx,
+	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram));
+	GENODE_RPC(Rpc_free_ctx, void, free_ctx, Gpu::Ctx_id);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Sequence_number, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
@@ -254,7 +283,7 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Gpu::Buffer_id, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_exec_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_create_ctx, Rpc_free_ctx, Rpc_exec_buffer,
 	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_buffer_va, Rpc_export_buffer, Rpc_import_buffer,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,
