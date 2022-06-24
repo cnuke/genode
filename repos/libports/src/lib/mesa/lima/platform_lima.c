@@ -40,7 +40,6 @@ dri2_genode_lima_put_image(__DRIdrawable * draw, int op,
                              int x, int y, int w, int h,
                              char *data, void *loaderPrivate)
 {
-	printf("%s:%d\n", __func__, __LINE__);
 	struct dri2_egl_surface *dri2_surf  = loaderPrivate;
 	struct dri2_egl_display *dri2_dpy   = dri2_egl_display(dri2_surf->base.Resource.Display);
 	struct Genode_egl_window  *window   = dri2_surf->g_win;
@@ -72,8 +71,6 @@ dri2_genode_lima_put_image(__DRIdrawable * draw, int op,
 static EGLBoolean
 dri2_genode_lima_swap_buffers(_EGLDisplay *disp, _EGLSurface *draw)
 {
-	printf("%s:%d\n", __func__, __LINE__);
-
 	struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
 	struct dri2_egl_display *dri2_dpy = dri2_egl_display(dri2_surf->base.Resource.Display);
 

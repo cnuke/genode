@@ -33,7 +33,7 @@ extern "C" {
 }
 
 
-enum { verbose_ioctl = true };
+enum { verbose_ioctl = false };
 
 
 /**
@@ -71,23 +71,6 @@ const char *command_name(unsigned long request)
 {
 	if (IOCGROUP(request) != DRM_IOCTL_BASE)
 		return "<non-DRM>";
-
-// 	DRM_IOCTL_GEM_CLOSE,
-// 	DRM_IOCTL_GET_CAP,
-// 	DRM_IOCTL_GET_UNIQUE,
-// 	DRM_IOCTL_LIMA_CTX_CREATE,
-// 	DRM_IOCTL_LIMA_CTX_FREE
-// 	DRM_IOCTL_LIMA_GEM_CREATE
-// 	DRM_IOCTL_LIMA_GEM_INFO
-// 	DRM_IOCTL_LIMA_GEM_SUBMIT,
-// 	DRM_IOCTL_LIMA_GEM_WAIT,
-// 	DRM_IOCTL_LIMA_GET_PARAM
-// 	DRM_IOCTL_PRIME_FD_TO_HANDLE,
-// 	DRM_IOCTL_PRIME_HANDLE_TO_FD,
-// 	DRM_IOCTL_SYNCOBJ_CREATE,
-// 	DRM_IOCTL_SYNCOBJ_DESTROY,
-// 	DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD,
-// 	DRM_IOCTL_VERSION,
 
 	if (!device_ioctl(request)) {
 		switch (command_number(request)) {
@@ -333,9 +316,25 @@ class Gpu::Call
 				if (_gpu_session.complete(seqno))
 					break;
 
+				error(__func__, ":", __LINE__, ": wait_and_dispatch_one_io_signal seqno: ", handle);
 				_env.ep().wait_and_dispatch_one_io_signal();
 			} while (true);
 		}
+
+		void _wait_for_mapping(uint32_t handle, unsigned op)
+		{
+			(void)op;
+
+			Sequence_number const seqno { .value = handle };
+			do {
+				if (_gpu_session.complete(seqno))
+					break;
+
+				error(__func__, ":", __LINE__, ": wait_and_dispatch_one_io_signal handle: ", handle, " op: ", op);
+				_env.ep().wait_and_dispatch_one_io_signal();
+			} while (true);
+		}
+
 
 		template <typename FN>
 		bool _apply_handle(uint32_t handle, FN const &fn)
@@ -453,8 +452,11 @@ class Gpu::Call
 
 		int _drm_lima_gem_wait(drm_lima_gem_wait &arg)
 		{
-			warning(__func__, ": not properly implemented");
-			_wait_for_completion(arg.handle);
+			/*
+ 			 * For the moment we do not handle timeouts
+			 */
+			(void)arg.timeout_ns;
+			_wait_for_mapping(arg.handle, arg.op);
 			return 0;
 		}
 
@@ -471,17 +473,25 @@ class Gpu::Call
 
 		int _drm_lima_ctx_create(drm_lima_ctx_create &arg)
 		{
-			static unsigned ctx_id = 0;
+			try {
+				Gpu::Ctx_id const ctx_id = _gpu_session.create_ctx();
+				if (!ctx_id.valid) {
+					error("could not create ctx");
+					return -1;
+				}
 
-			Genode::warning(__func__, ": not properly implemented, return id ", ctx_id);
-			// XXX for now there is only one ctx
-			arg.id = ctx_id++;
-			return 0;
+				arg.id = ctx_id.value;
+				return 0;
+			} catch (... /* intentional catch-all ... */) {
+				/* ... as the lima GPU driver will not throw */
+			}
+			return -1;
 		}
 
 		int _drm_lima_ctx_free(drm_lima_ctx_free &arg)
 		{
-			Genode::warning(__func__, ": not properly implemented, id ", arg.id);
+			_gpu_session.free_ctx(Gpu::Ctx_id { .value = arg.id,
+			                                    .valid = true });
 			return 0;
 		}
 
@@ -704,7 +714,13 @@ int drm_munmap(void *addr, size_t length)
 extern "C" int drm_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
 	using namespace Genode;
+	(void)fds;
+	(void)nfds;
+	(void)timeout;
 
-	error(__func__, ":", __LINE__, ": fds[0]: ", fds[0].fd, " nfds: ", nfds, " timeout: ", timeout, " [ms]");
+	// FIXME syncobj support needed desperately
+	usleep(5000);
+
+	// error(__func__, ":", __LINE__, ": fds[0]: ", fds[0].fd, " nfds: ", nfds, " timeout: ", timeout, " [ms]");
 	return 0;
 }
