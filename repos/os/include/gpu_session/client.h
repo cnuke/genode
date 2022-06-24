@@ -40,6 +40,12 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		Genode::Dataspace_capability info_dataspace() const override {
 			return call<Rpc_info_dataspace>(); }
 
+		Gpu::Ctx_id create_ctx() override {
+			return call<Rpc_create_ctx>(); }
+
+		void free_ctx(Gpu::Ctx_id id) override {
+			call<Rpc_free_ctx>(id); }
+
 		Gpu::Sequence_number exec_buffer(Buffer_id id,
 		                                 Genode::size_t size) override {
 			return call<Rpc_exec_buffer>(id, size); }
