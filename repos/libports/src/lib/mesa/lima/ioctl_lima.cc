@@ -554,16 +554,31 @@ class Gpu::Call
 
 		int _drm_syncobj_create(drm_syncobj_create &arg)
 		{
-			(void)arg;
-			warning(__func__, ": not properly implemented, returning success");
+			try {
+				Gpu::Syncobj_id const id = _gpu_session.create_syncobj();
+				if (!id.valid) {
+					error("could not create sync object");
+					return -1;
+				}
+
+				arg.handle = id.value;
+				return 0;
+			} catch (... /* intentional catch-all ... */) {
+				/* ... as the lima GPU driver will not throw */
+			}
+			return -1;
+		}
+
+		int _drm_syncobj_destroy(drm_syncobj_destroy &arg)
+		{
+			_gpu_session.destroy_syncobj(Gpu::Syncobj_id { .value = arg.handle,
+			                                                .valid = true });
 			return 0;
 		}
 
-		int _sync_fd { 384 };
-
 		int _drm_syncobj_handle_to_fd(drm_syncobj_handle &arg)
 		{
-			arg.fd = _sync_fd;
+			arg.fd = arg.handle + SYNC_FD;
 			return 0;
 		}
 
@@ -581,6 +596,8 @@ class Gpu::Call
 				return _drm_version(*reinterpret_cast<drm_version*>(arg));
 			case command_number(DRM_IOCTL_SYNCOBJ_CREATE):
 				return _drm_syncobj_create(*reinterpret_cast<drm_syncobj_create*>(arg));
+			case command_number(DRM_IOCTL_SYNCOBJ_DESTROY):
+				return _drm_syncobj_destroy(*reinterpret_cast<drm_syncobj_destroy*>(arg));
 			case command_number(DRM_IOCTL_SYNCOBJ_HANDLE_TO_FD):
 				return _drm_syncobj_handle_to_fd(*reinterpret_cast<drm_syncobj_handle*>(arg));
 			default:
@@ -592,6 +609,8 @@ class Gpu::Call
 		}
 
 	public:
+
+		static constexpr int const SYNC_FD { 384 };
 
 		Call(Env &env)
 		:
@@ -634,6 +653,18 @@ class Gpu::Call
 			 * (always) followed by the CLOSE I/O control.
 			 */
 			(void)addr;
+		}
+
+		void wait_for_syncobj(unsigned int handle)
+		{
+			error(__func__, ":", __LINE__, ": syncobj: ", handle);
+			do {
+				if (_gpu_session.set_tiling(_exec_buffer->id(), handle))
+					break;
+
+				error(__func__, ":", __LINE__, ": wait_and_dispatch_one_io_signal syncobj: ", handle);
+				_env.ep().wait_and_dispatch_one_io_signal();
+			} while (true);
 		}
 };
 
@@ -717,10 +748,13 @@ extern "C" int drm_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 	(void)fds;
 	(void)nfds;
 	(void)timeout;
+	// log(__func__, ":", __LINE__, ": fds[0]: ", fds[0].fd, " nfds: ", nfds, " timeout: ", timeout, " [ms]");
 
 	// FIXME syncobj support needed desperately
-	usleep(5000);
+	// usleep(16667);
+	// return 0;
 
-	// error(__func__, ":", __LINE__, ": fds[0]: ", fds[0].fd, " nfds: ", nfds, " timeout: ", timeout, " [ms]");
+	int const handle = fds[0].fd - Gpu::Call::SYNC_FD;
+	_drm->wait_for_syncobj((unsigned)handle);
 	return 0;
 }
