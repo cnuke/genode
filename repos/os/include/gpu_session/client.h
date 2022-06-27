@@ -46,6 +46,12 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 		void free_ctx(Gpu::Ctx_id id) override {
 			call<Rpc_free_ctx>(id); }
 
+		Gpu::Syncobj_id create_syncobj() override {
+			return call<Rpc_create_syncobj>(); }
+
+		void destroy_syncobj(Gpu::Syncobj_id id) override {
+			call<Rpc_destroy_syncobj>(id); }
+
 		Gpu::Sequence_number exec_buffer(Buffer_id id,
 		                                 Genode::size_t size) override {
 			return call<Rpc_exec_buffer>(id, size); }
