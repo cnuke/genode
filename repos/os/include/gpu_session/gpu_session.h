@@ -50,6 +50,7 @@ namespace Gpu {
 	};
 
 	struct Sequence_number;
+	struct Syncobj_id;
 	struct Session;
 }
 
@@ -61,6 +62,11 @@ struct Gpu::Sequence_number
 	Genode::uint64_t value;
 };
 
+struct Gpu::Syncobj_id
+{
+	Genode::uint32_t value;
+	bool valid;
+};
 
 /*
  * Gpu session interface
@@ -87,6 +93,24 @@ struct Gpu::Session : public Genode::Session
 	 * Get GPU information dataspace
 	 */
 	virtual Genode::Dataspace_capability info_dataspace() const = 0;
+
+	/**
+	 * Allocate sync object
+	 *
+	 * \throw Out_of_ram
+	 * \throw Out_of_caps
+	 *
+	 * \return valid id if sync object could be created, otherwise a
+	 *         invalid object is returned
+	 */
+	virtual Gpu::Syncobj_id create_syncobj() = 0;
+
+	/**
+	 * Desotry sync object
+	 *
+	 * \param sync_id  sync object id
+	 */
+	virtual void destroy_syncobj(Gpu::Syncobj_id) = 0;
 
 	/**
 	 * Execute commands from given buffer
@@ -219,6 +243,9 @@ struct Gpu::Session : public Genode::Session
 	 *******************/
 
 	GENODE_RPC(Rpc_info_dataspace, Genode::Dataspace_capability, info_dataspace);
+	GENODE_RPC_THROW(Rpc_create_syncobj, Gpu::Syncobj_id, create_syncobj,
+	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram));
+	GENODE_RPC(Rpc_destroy_syncobj, void, destroy_syncobj, Gpu::Syncobj_id);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Sequence_number, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
@@ -250,6 +277,8 @@ struct Gpu::Session : public Genode::Session
 
 	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_exec_buffer,
 	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
+	                     Rpc_create_syncobj, Rpc_destroy_syncobj,
+	                     Rpc_exec_buffer, Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_export_buffer, Rpc_import_buffer,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt, Rpc_query_buffer_ppgtt,
