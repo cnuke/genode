@@ -50,6 +50,7 @@ namespace Gpu {
 	struct Sequence_number;
 	struct Virtual_address;
 	struct Ctx_id;
+	struct Syncobj_id;
 	struct Session;
 }
 
@@ -70,6 +71,13 @@ struct Gpu::Virtual_address
 
 
 struct Gpu::Ctx_id
+{
+	Genode::uint32_t value;
+	bool valid;
+};
+
+
+struct Gpu::Syncobj_id
 {
 	Genode::uint32_t value;
 	bool valid;
@@ -119,6 +127,24 @@ struct Gpu::Session : public Genode::Session
 	 * \param ctx_id  context id
 	 */
 	virtual void free_ctx(Gpu::Ctx_id) = 0;
+
+	/**
+	 * Allocate sync object
+	 *
+	 * \throw Out_of_ram
+	 * \throw Out_of_caps
+	 *
+	 * \return valid id if sync object could be created, otherwise a
+	 *         invalid object is returned
+	 */
+	virtual Gpu::Syncobj_id create_syncobj() = 0;
+
+	/**
+	 * Desotry sync object
+	 *
+	 * \param sync_id  sync object id
+	 */
+	virtual void destroy_syncobj(Gpu::Syncobj_id) = 0;
 
 	/**
 	 * Execute commands from given buffer
@@ -254,6 +280,9 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC_THROW(Rpc_create_ctx, Gpu::Ctx_id, create_ctx,
 	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram));
 	GENODE_RPC(Rpc_free_ctx, void, free_ctx, Gpu::Ctx_id);
+	GENODE_RPC_THROW(Rpc_create_syncobj, Gpu::Syncobj_id, create_syncobj,
+	                 GENODE_TYPE_LIST(Out_of_caps, Out_of_ram));
+	GENODE_RPC(Rpc_destroy_syncobj, void, destroy_syncobj, Gpu::Syncobj_id);
 	GENODE_RPC_THROW(Rpc_exec_buffer, Gpu::Sequence_number, exec_buffer,
 	                 GENODE_TYPE_LIST(Invalid_state),
 	                 Gpu::Buffer_id, Genode::size_t);
@@ -283,8 +312,9 @@ struct Gpu::Session : public Genode::Session
 	GENODE_RPC(Rpc_set_tiling, bool, set_tiling,
 	           Gpu::Buffer_id, unsigned);
 
-	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_create_ctx, Rpc_free_ctx, Rpc_exec_buffer,
-	                     Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
+	GENODE_RPC_INTERFACE(Rpc_info_dataspace, Rpc_create_ctx, Rpc_free_ctx,
+	                     Rpc_create_syncobj, Rpc_destroy_syncobj,
+	                     Rpc_exec_buffer, Rpc_complete, Rpc_completion_sigh, Rpc_alloc_buffer,
 	                     Rpc_free_buffer, Rpc_buffer_va, Rpc_export_buffer, Rpc_import_buffer,
 	                     Rpc_map_buffer, Rpc_unmap_buffer,
 	                     Rpc_map_buffer_ppgtt, Rpc_unmap_buffer_ppgtt,
