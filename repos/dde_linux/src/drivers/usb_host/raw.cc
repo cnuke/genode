@@ -1227,6 +1227,7 @@ class Usb::Root : public Genode::Root_component<Session_component>
 			using Genode::size_t;
 
 			Session_label const label = label_from_args(args);
+Genode::log("---- CREATE 1 ", label);
 			try {
 				Xml_node config_node = Lx_kit::env().config_rom().xml();
 				Genode::Session_policy policy(label, config_node);
@@ -1258,6 +1259,7 @@ class Usb::Root : public Genode::Root_component<Session_component>
 					                  class_, _cleaner);
 				::Session::list()->insert(session);
 				return session;
+Genode::log("----- CREATE 2 ");
 			}
 			catch (Genode::Session_policy::No_policy_defined) {
 				error("Invalid session request, no matching policy for '",

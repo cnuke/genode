@@ -102,7 +102,10 @@ class Libusb_file_system : public Vfs::Single_file_system
 		:
 			Single_file_system(Vfs::Node_type::CONTINUOUS_FILE, name(),
 			                   Vfs::Node_rwx::ro(), config),
-			_env(env) { }
+			_env(env) {
+
+			Genode::log("--------- ",__func__);
+		}
 
 		~Libusb_file_system() { }
 
@@ -120,8 +123,10 @@ class Libusb_file_system : public Vfs::Single_file_system
 			if (!_single_file(path))
 				return OPEN_ERR_UNACCESSIBLE;
 
+			Genode::log("--------- OPEN 1");
 			*out_handle = new (alloc)
 				Libusb_vfs_handle(*this, *this, alloc, _env.env());
+			Genode::log("--------- OPEN 2");
 			return OPEN_OK;
 		}
 

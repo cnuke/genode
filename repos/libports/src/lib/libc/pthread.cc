@@ -22,6 +22,7 @@
 #include <base/internal/unmanaged_singleton.h>
 
 /* libc includes */
+#include <os/backtrace.h>
 #include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -982,6 +983,12 @@ extern "C" {
 	{
 		if (!mutex)
 			return EINVAL;
+
+if (((unsigned long)mutex) < 0x1000) {
+	Genode::log("-------------------");
+	Genode::backtrace();
+	Genode::log("-------------------");
+}
 
 		if (*mutex == PTHREAD_MUTEX_INITIALIZER)
 			pthread_mutex_init(mutex, nullptr);
