@@ -34,7 +34,6 @@ set build_components {
 	drivers/usb_host
 	test/ptsleep
 	app/sequence
-	lib/opensc_pkcs11
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -45,14 +44,15 @@ build $build_components
 create_boot_directory
 
 import_from_depot [depot_user]/src/pkcs11_tool/2022-06-21 \
+                  [depot_user]/src/openssl \
+                  [depot_user]/src/stdcxx \
+                  [depot_user]/src/opensc_pkcs11 \
                   [depot_user]/src/posix \
                   [depot_user]/src/libc \
                   [depot_user]/src/vfs \
                   [depot_user]/src/pcsc-lite \
                   [depot_user]/src/libusb \
                   [depot_user]/src/vfs_libusb
-
-
 
 #
 # Generate config
@@ -150,10 +150,6 @@ set boot_modules {
 	core ld.lib.so init timer
 	sequence
 	ptsleep
-	opensc_pkcs11.lib.so
-	libssl.lib.so
-	libcrypto.lib.so
-	stdcxx.lib.so
 }
 
 
