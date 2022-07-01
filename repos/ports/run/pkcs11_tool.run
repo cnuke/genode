@@ -1,8 +1,5 @@
-assert_spec x86
-set usb_raw_device ""
-
 #
-# Check if USB_RAW_DEVICE is set for Qemu
+# Check that host device parameters are set for Qemu
 #
 if {[have_include power_on/qemu]} {
 
@@ -23,20 +20,22 @@ if {[have_include power_on/qemu]} {
 #
 # Ensure that we have permission to access the usb device
 #
-exec sudo chmod a+rw /dev/bus/usb/$usb_bus_addr/$usb_dev_addr
+#exec sudo chmod a+rw /dev/bus/usb/$usb_bus_addr/$usb_dev_addr
 
 
 #
 # Build
 #
 set build_components {
-	core init timer
+	core
+	init
+	timer
 	drivers/usb_host
-	test/ptsleep
-	app/sequence
+	server/report_rom
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
+
 append_platform_drv_build_components
 
 build $build_components
@@ -59,7 +58,7 @@ import_from_depot [depot_user]/src/pkcs11_tool/2022-06-21 \
 #
 
 append config {
-<config>
+<config verbose="yes">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="IRQ"/>
@@ -84,59 +83,57 @@ append config {
 		<provides><service name="Timer"/></provides>
 	</start>
 
+	<start name="report_rom">
+		<resource name="RAM" quantum="2M"/>
+		<provides>
+			<service name="Report"/>
+			<service name="ROM"/>
+		</provides>
+		<config verbose="yes"/>
+	</start>
+
 	<start name="usb_drv" caps="120">
 		<binary name="} [usb_host_drv_binary] {"/>
 		<resource name="RAM" quantum="32M"/>
 		<provides><service name="Usb"/></provides>
 		<config>
-			<policy label="sequence -> pkcs11_tool -> usb_device" vendor_id="0x4e6" product_id="0x5816"/> <!-- SmartCard-HSM 4K USB-Token -->
+			<report devices="yes" />
+			<policy label="pkcs11-tool -> usb_device" vendor_id="0x4e6" product_id="0x5816"/> <!-- SmartCard-HSM 4K USB-Token -->
 		</config>
+		<route>
+			<service name="Report"><child name="report_rom"/></service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
 	</start>
 
-	<start name="sequence" caps="1000">
-		<resource name="RAM" quantum="20M"/>
+	<start name="pkcs11-tool" caps="500">
+		<resource name="RAM" quantum="10M"/>
+
+		<config ld_verbose="yes">
+
+			<libc stdout="/dev/log" stderr="/dev/log"/>
+
+			<vfs>
+				<dir name="dev">
+					<log/>
+					<libusb/>
+				</dir>
+			</vfs>
+
+			<arg value="pkcs11-tool" />
+			<arg value="--module" />
+			<arg value="opensc_pkcs11.lib.so" />
+			<arg value="--show-info" />
+			<arg value="-v" />
+
+			<env key="LIBUSB_DEBUG" value="1"/>
+
+		</config>
 		<route>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
-		<config>
-
-			<start name="ptsleep" caps="100">
-				<resource name="RAM" quantum="1M"/>
-				<route>
-					<any-service> <parent/> <any-child/> </any-service>
-				</route>
-			</start>
-
-			<start name="pkcs11-tool" caps="500">
-				<resource name="RAM" quantum="10M"/>
-
-				<config ld_verbose="yes">
-
-					<libc stdout="/dev/log" stderr="/dev/log"/>
-
-					<vfs>
-						<dir name="dev">
-							<log/>
-							<libusb/>
-						</dir>
-					</vfs>
-
-					<arg value="pkcs11-tool" />
-					<arg value="--module" />
-					<arg value="opensc_pkcs11.lib.so" />
-					<arg value="--show-info" />
-					<arg value="-v" />
-
-					<env key="LIBUSB_DEBUG" value="1"/>
-
-				</config>
-				<route>
-					<any-service> <parent/> <any-child/> </any-service>
-				</route>
-			</start>
-
-		</config>
 	</start>
+
 </config>}
 
 install_config $config
@@ -147,9 +144,11 @@ install_config $config
 
 # generic modules
 set boot_modules {
-	core ld.lib.so init timer
-	sequence
-	ptsleep
+	core
+	ld.lib.so
+	init
+	timer
+	report_rom
 }
 
 
@@ -159,6 +158,6 @@ append_platform_drv_boot_modules
 
 build_boot_image $boot_modules
 
-append qemu_args " -nographic -usb -device usb-host,hostbus=$usb_bus_addr,hostaddr=$usb_dev_addr -nographic"
+append qemu_args " -nographic -device nec-usb-xhci,id=xhci -device usb-host,hostbus=$usb_bus_addr,hostaddr=$usb_dev_addr,bus=xhci.0 -nographic"
 
 run_genode_until forever
