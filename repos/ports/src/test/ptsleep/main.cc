@@ -22,7 +22,7 @@ void Component::construct(Genode::Env &env)
 	using namespace Genode;
 
 	Timer::Connection timer(env);
-	timer.msleep(4000);
+	timer.msleep(3000);
 	log("Test done.");
 	env.parent().exit(0);
 }
