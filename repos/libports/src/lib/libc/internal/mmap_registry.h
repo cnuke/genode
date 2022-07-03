@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2012-2019 Genode Labs GmbH
+ * Copyright (C) 2012-2022 Genode Labs GmbH
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -42,20 +42,35 @@ class Libc::Mmap_registry
 {
 	public:
 
-		struct Entry : List<Entry>::Element
+		struct Entry : Avl_node<Entry>
 		{
 			void   * const start;
 			Plugin * const plugin;
 
 			Entry(void *start, Plugin *plugin)
 			: start(start), plugin(plugin) { }
+
+			bool higher(Entry *other)
+			{
+				return (other->start > start);
+			}
+
+			Entry *find_by_start(void * const start)
+			{
+				if (start == this->start)
+					return this;
+
+				bool side = start > this->start;
+				Entry *e = Avl_node<Entry>::child(side);
+				return e ? e->find_by_start(start) : 0;
+			}
 		};
 
 	private:
 
 		Libc::Allocator _md_alloc;
 
-		List<Mmap_registry::Entry> _list;
+		Avl_tree<Mmap_registry::Entry> _tree;
 
 		Mutex mutable _mutex;
 
@@ -65,21 +80,17 @@ class Libc::Mmap_registry
 		template <typename ENTRY>
 		static ENTRY *_lookup_by_addr_unsynchronized(ENTRY *curr, void * const start)
 		{
-			for (; curr; curr = curr->next())
-				if (curr->start == start)
-					return curr;
-
-			return 0;
+			return curr ? curr->find_by_start(start) : 0;
 		}
 
 		Entry const *_lookup_by_addr_unsynchronized(void * const start) const
 		{
-			return _lookup_by_addr_unsynchronized(_list.first(), start);
+			return _lookup_by_addr_unsynchronized(_tree.first(), start);
 		}
 
 		Entry *_lookup_by_addr_unsynchronized(void * const start)
 		{
-			return _lookup_by_addr_unsynchronized(_list.first(), start);
+			return _lookup_by_addr_unsynchronized(_tree.first(), start);
 		}
 
 	public:
@@ -94,7 +105,7 @@ class Libc::Mmap_registry
 				return;
 			}
 
-			_list.insert(new (&_md_alloc) Entry(start, plugin));
+			_tree.insert(new (&_md_alloc) Entry(start, plugin));
 		}
 
 		Plugin *lookup_plugin_by_addr(void *start) const
@@ -124,7 +135,7 @@ class Libc::Mmap_registry
 				return;
 			}
 
-			_list.remove(e);
+			_tree.remove(e);
 			destroy(&_md_alloc, e);
 		}
 };
