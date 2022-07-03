@@ -26,6 +26,7 @@
 #include <internal/types.h>
 #include <internal/malloc_ram_allocator.h>
 #include <internal/cloned_malloc_heap_range.h>
+#include <internal/cloned_mem_alloc_range.h>
 #include <internal/timer.h>
 #include <internal/pthread_pool.h>
 #include <internal/init.h>
@@ -145,6 +146,9 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 		Constructible<Heap> _malloc_heap { };
 
 		Registry<Registered<Cloned_malloc_heap_range> > _cloned_heap_ranges { };
+
+		Registry<Registered<Cloned_mem_alloc_range> > _cloned_mem_alloc_ranges { };
+		Registry<Registered<Cloned_mem_alloc_range> > _cloned_mem_alloc_exec_ranges { };
 
 		/**
 		 * Reset_malloc_heap interface used by execve

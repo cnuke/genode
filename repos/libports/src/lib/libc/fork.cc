@@ -33,6 +33,7 @@
 /* libc-internal includes */
 #include <internal/init.h>
 #include <internal/clone_session.h>
+#include <internal/mem_alloc.h>
 #include <internal/monitor.h>
 #include <internal/signal.h>
 
@@ -65,6 +66,8 @@ static Allocator                *_alloc_ptr;
 static Monitor                  *_monitor_ptr;
 static Libc::Signal             *_signal_ptr;
 static Heap                     *_malloc_heap_ptr;
+static Mem_alloc_impl           *_mem_alloc_ptr;
+static Mem_alloc_impl           *_mem_alloc_exec_ptr;
 static void                     *_user_stack_base_ptr;
 static size_t                    _user_stack_size;
 static int                       _pid;
@@ -175,6 +178,14 @@ void Libc::Child_config::_generate(Xml_generator &xml, Xml_node config)
 
 		_malloc_heap_ptr->for_each_region([&] (void *start, size_t size) {
 			xml.node("heap", [&] () {
+				gen_range_attr(start, size); }); });
+
+		_mem_alloc_ptr->for_each_region([&] (void *start, size_t size) {
+			xml.node("mem_alloc", [&] () {
+				gen_range_attr(start, size); }); });
+
+		_mem_alloc_exec_ptr->for_each_region([&] (void *start, size_t size) {
+			xml.node("mem_alloc_exec", [&] () {
 				gen_range_attr(start, size); }); });
 	});
 
@@ -739,7 +750,10 @@ extern "C" pid_t wait4(pid_t, int *, int, rusage *) __attribute__((weak, alias("
 
 
 void Libc::init_fork(Env &env, Config_accessor const &config_accessor,
-                     Allocator &alloc, Heap &malloc_heap, pid_t pid,
+                     Allocator &alloc, Heap &malloc_heap,
+                     Mem_alloc_impl &mem_alloc,
+                     Mem_alloc_impl &mem_alloc_exec,
+                     pid_t pid,
                      Monitor &monitor, Signal &signal,
                      Binary_name const &binary_name)
 {
@@ -748,6 +762,8 @@ void Libc::init_fork(Env &env, Config_accessor const &config_accessor,
 	_monitor_ptr                  = &monitor;
 	_signal_ptr                   = &signal;
 	_malloc_heap_ptr              = &malloc_heap;
+	_mem_alloc_ptr                = &mem_alloc;
+	_mem_alloc_exec_ptr           = &mem_alloc_exec;
 	_config_accessor_ptr          = &config_accessor;
 	_pid                          =  pid;
 	_binary_name_ptr              = &binary_name;
