@@ -18,12 +18,17 @@
 #include <base/rpc_server.h>
 #include <base/connection.h>
 #include <base/attached_dataspace.h>
+#include <dataspace/capability.h>
+#include <session/session.h>
 #include <util/misc_math.h>
 
 /* libc includes */
 #include <string.h>
 
 namespace Libc {
+
+	using namespace Genode;
+
 	struct Clone_session;
 	struct Clone_connection;
 }
