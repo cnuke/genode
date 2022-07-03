@@ -36,6 +36,7 @@ $(MIRROR_FROM_PORT_DIR):
 
 MIRROR_FROM_LIBPORTS := lib/mk/libc-mem.mk \
                         lib/mk/libc-common.inc \
+                        src/lib/libc/internal/clone_session.h \
                         src/lib/libc/internal/init.h \
                         src/lib/libc/internal/mem_alloc.h \
                         src/lib/libc/internal/monitor.h \
