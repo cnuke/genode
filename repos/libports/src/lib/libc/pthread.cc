@@ -126,6 +126,19 @@ void Libc::Pthread::init_tls_support()
 }
 
 
+void Libc::Pthread::clone_main_pthread(Clone_connection &clone_connection,
+		                               void *stack_address)
+{
+	addr_t stack_virtual_base = (addr_t)stack_address &
+			                    _stack_virtual_base_mask;
+	Pthread **main_pthread = (Pthread**)(stack_virtual_base +
+	                                     _tls_pointer_offset);
+	clone_connection.object_content(*main_pthread);
+	if (*main_pthread)
+		clone_connection.object_content(**main_pthread);
+}
+
+
 Pthread *Libc::Pthread::myself()
 {
 	int stack_variable;
