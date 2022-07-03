@@ -1,0 +1,446 @@
+je_a0dalloc T
+je_a0malloc T
+je_arena_alloc_junk_small T
+je_arena_basic_stats_merge T
+je_arena_bin_choose_lock T
+je_arena_boot T
+je_arena_choose_hard T
+je_arena_choose_huge T
+je_arena_cleanup T
+je_arena_dalloc_bin_junked_locked T
+je_arena_dalloc_junk_small D 8
+je_arena_dalloc_promoted T
+je_arena_dalloc_small T
+je_arena_decay T
+je_arena_destroy T
+je_arena_dirty_decay_ms_default_get T
+je_arena_dirty_decay_ms_default_set T
+je_arena_dirty_decay_ms_get T
+je_arena_dirty_decay_ms_set T
+je_arena_dss_prec_get T
+je_arena_dss_prec_set T
+je_arena_extent_alloc_large T
+je_arena_extent_dalloc_large_prep T
+je_arena_extent_ralloc_large_expand T
+je_arena_extent_ralloc_large_shrink T
+je_arena_extent_sn_next T
+je_arena_extents_dirty_dalloc T
+je_arena_init T
+je_arena_init_huge T
+je_arena_is_huge T
+je_arena_malloc_hard T
+je_arena_migrate T
+je_arena_mutex_names D 72
+je_arena_muzzy_decay_ms_default_get T
+je_arena_muzzy_decay_ms_default_set T
+je_arena_muzzy_decay_ms_get T
+je_arena_muzzy_decay_ms_set T
+je_arena_new T
+je_arena_nthreads_dec T
+je_arena_nthreads_get T
+je_arena_nthreads_inc T
+je_arena_palloc T
+je_arena_postfork_child T
+je_arena_postfork_parent T
+je_arena_prefork0 T
+je_arena_prefork1 T
+je_arena_prefork2 T
+je_arena_prefork3 T
+je_arena_prefork4 T
+je_arena_prefork5 T
+je_arena_prefork6 T
+je_arena_prefork7 T
+je_arena_prof_promote T
+je_arena_ralloc T
+je_arena_ralloc_no_move T
+je_arena_reset T
+je_arena_retain_grow_limit_get_set T
+je_arena_set T
+je_arena_stats_merge T
+je_arena_tcache_fill_small T
+je_arena_tdata_get_hard T
+je_arenas B 32760
+je_arenas_lock B 80
+je_arenas_tdata_cleanup T
+je_b0get T
+je_background_thread_boot0 T
+je_background_thread_boot1 T
+je_background_thread_create T
+je_background_thread_ctl_init T
+je_background_thread_enabled_state B 1
+je_background_thread_info B 8
+je_background_thread_interval_check T
+je_background_thread_lock B 80
+je_background_thread_postfork_child T
+je_background_thread_postfork_parent T
+je_background_thread_prefork0 T
+je_background_thread_prefork1 T
+je_background_thread_stats_read T
+je_background_threads_disable T
+je_background_threads_enable T
+je_base_alloc T
+je_base_alloc_extent T
+je_base_boot T
+je_base_delete T
+je_base_extent_hooks_get T
+je_base_extent_hooks_set T
+je_base_new T
+je_base_postfork_child T
+je_base_postfork_parent T
+je_base_prefork T
+je_base_stats_get T
+je_bin_boot T
+je_bin_infos B 1440
+je_bin_init T
+je_bin_postfork_child T
+je_bin_postfork_parent T
+je_bin_prefork T
+je_bin_shard_sizes_boot T
+je_bin_update_shard_size T
+je_bitmap_info_init T
+je_bitmap_init T
+je_bitmap_size T
+je_bootstrap_calloc T
+je_bootstrap_free T
+je_bootstrap_malloc T
+je_bt2gctx_mtx B 80
+je_bt_init T
+je_buferror T
+je_ckh_count T
+je_ckh_delete T
+je_ckh_insert T
+je_ckh_iter T
+je_ckh_new T
+je_ckh_pointer_hash T
+je_ckh_pointer_keycomp T
+je_ckh_remove T
+je_ckh_search T
+je_ckh_string_hash T
+je_ckh_string_keycomp T
+je_ctl_boot T
+je_ctl_bymib T
+je_ctl_byname T
+je_ctl_nametomib T
+je_ctl_postfork_child T
+je_ctl_postfork_parent T
+je_ctl_prefork T
+je_div_init T
+je_dss_prec_names D 32
+je_extent_alloc T
+je_extent_alloc_dss T
+je_extent_alloc_mmap T
+je_extent_alloc_wrapper T
+je_extent_avail_any T
+je_extent_avail_empty T
+je_extent_avail_first T
+je_extent_avail_insert T
+je_extent_avail_new T
+je_extent_avail_remove T
+je_extent_avail_remove_any T
+je_extent_avail_remove_first T
+je_extent_boot T
+je_extent_commit_wrapper T
+je_extent_dalloc T
+je_extent_dalloc_gap T
+je_extent_dalloc_mmap T
+je_extent_dalloc_wrapper T
+je_extent_decommit_wrapper T
+je_extent_destroy_wrapper T
+je_extent_dss_boot T
+je_extent_dss_mergeable T
+je_extent_dss_prec_get T
+je_extent_dss_prec_set T
+je_extent_heap_any T
+je_extent_heap_empty T
+je_extent_heap_first T
+je_extent_heap_insert T
+je_extent_heap_new T
+je_extent_heap_remove T
+je_extent_heap_remove_any T
+je_extent_heap_remove_first T
+je_extent_hooks_default D 72
+je_extent_hooks_get T
+je_extent_hooks_set T
+je_extent_in_dss T
+je_extent_merge_wrapper T
+je_extent_mutex_pool B 20480
+je_extent_purge_forced_wrapper T
+je_extent_purge_lazy_wrapper T
+je_extent_split_wrapper T
+je_extent_util_stats_get T
+je_extent_util_stats_verbose_get T
+je_extents_alloc T
+je_extents_dalloc T
+je_extents_evict T
+je_extents_init T
+je_extents_nbytes_get T
+je_extents_nextents_get T
+je_extents_npages_get T
+je_extents_postfork_child T
+je_extents_postfork_parent T
+je_extents_prefork T
+je_extents_rtree B 2097232
+je_extents_state_get T
+je_free_default T
+je_global_mutex_names D 24
+je_h_steps R 1600
+je_hook_boot T
+je_hook_install T
+je_hook_invoke_alloc T
+je_hook_invoke_dalloc T
+je_hook_invoke_expand T
+je_hook_remove T
+je_iarena_cleanup T
+je_init_system_thp_mode B 4
+je_je_sdallocx_noflags T
+je_jemalloc_postfork_child T
+je_jemalloc_postfork_parent T
+je_jemalloc_prefork T
+je_large_dalloc T
+je_large_dalloc_finish T
+je_large_dalloc_junk D 8
+je_large_dalloc_maybe_junk D 8
+je_large_dalloc_prep_junked_locked T
+je_large_malloc T
+je_large_palloc T
+je_large_prof_alloc_time_get T
+je_large_prof_alloc_time_set T
+je_large_prof_tctx_get T
+je_large_prof_tctx_reset T
+je_large_prof_tctx_set T
+je_large_ralloc T
+je_large_ralloc_no_move T
+je_large_salloc T
+je_lg_prof_sample B 8
+je_log_init_done B 1
+je_log_var_names B 1
+je_log_var_update_state T
+je_malloc_cprintf T
+je_malloc_default T
+je_malloc_initialized T
+je_malloc_mutex_boot T
+je_malloc_mutex_init T
+je_malloc_mutex_lock_slow T
+je_malloc_mutex_postfork_child T
+je_malloc_mutex_postfork_parent T
+je_malloc_mutex_prefork T
+je_malloc_mutex_prof_data_reset T
+je_malloc_printf T
+je_malloc_slow D 1
+je_malloc_snprintf T
+je_malloc_strtoumax T
+je_malloc_tsd_boot0 T
+je_malloc_tsd_boot1 T
+je_malloc_tsd_cleanup_register T
+je_malloc_tsd_dalloc T
+je_malloc_tsd_malloc T
+je_malloc_vcprintf T
+je_malloc_vsnprintf T
+je_malloc_write T
+je_manual_arena_base B 4
+je_max_background_threads B 8
+je_metadata_thp_mode_names D 24
+je_mutex_pool_init T
+je_n_background_threads B 8
+je_narenas_auto B 4
+je_narenas_total_get T
+je_ncpus B 4
+je_nhbins B 4
+je_nstime_add T
+je_nstime_compare T
+je_nstime_copy T
+je_nstime_divide T
+je_nstime_iadd T
+je_nstime_idivide T
+je_nstime_imultiply T
+je_nstime_init T
+je_nstime_init2 T
+je_nstime_isubtract T
+je_nstime_monotonic D 8
+je_nstime_msec T
+je_nstime_ns T
+je_nstime_nsec T
+je_nstime_sec T
+je_nstime_subtract T
+je_nstime_update D 8
+je_opt_abort B 1
+je_opt_abort_conf B 1
+je_opt_background_thread B 1
+je_opt_confirm_conf B 1
+je_opt_dirty_decay_ms D 8
+je_opt_dss D 8
+je_opt_junk D 8
+je_opt_junk_alloc B 1
+je_opt_junk_free B 1
+je_opt_lg_extent_max_active_fit D 8
+je_opt_lg_prof_interval D 8
+je_opt_lg_prof_sample D 8
+je_opt_lg_tcache_max D 8
+je_opt_max_background_threads D 8
+je_opt_metadata_thp B 4
+je_opt_muzzy_decay_ms B 8
+je_opt_narenas B 4
+je_opt_oversize_threshold D 8
+je_opt_percpu_arena D 4
+je_opt_prof B 1
+je_opt_prof_accum B 1
+je_opt_prof_active D 1
+je_opt_prof_final B 1
+je_opt_prof_gdump B 1
+je_opt_prof_leak B 1
+je_opt_prof_log B 1
+je_opt_prof_prefix B 1
+je_opt_prof_thread_active_init D 1
+je_opt_retain D 1
+je_opt_stats_print B 1
+je_opt_stats_print_opts B 10
+je_opt_tcache D 1
+je_opt_thp B 4
+je_opt_utrace B 1
+je_opt_xmalloc B 1
+je_opt_zero B 1
+je_oversize_threshold D 8
+je_pages_boot T
+je_pages_commit T
+je_pages_decommit T
+je_pages_dodump T
+je_pages_dontdump T
+je_pages_huge T
+je_pages_map T
+je_pages_nohuge T
+je_pages_purge_forced T
+je_pages_purge_lazy T
+je_pages_set_thp_state T
+je_pages_unmap T
+je_percpu_arena_mode_names D 40
+je_prof_accum_init T
+je_prof_active B 1
+je_prof_active_get T
+je_prof_active_set T
+je_prof_alloc_rollback T
+je_prof_backtrace T
+je_prof_boot0 T
+je_prof_boot1 T
+je_prof_boot2 T
+je_prof_dump_header D 8
+je_prof_dump_open D 8
+je_prof_free_sampled_object T
+je_prof_gdump T
+je_prof_gdump_get T
+je_prof_gdump_set T
+je_prof_gdump_val B 1
+je_prof_idump T
+je_prof_interval B 8
+je_prof_log_start T
+je_prof_log_stop T
+je_prof_logging_state B 4
+je_prof_lookup T
+je_prof_malloc_sample_object T
+je_prof_mdump T
+je_prof_postfork_child T
+je_prof_postfork_parent T
+je_prof_prefork0 T
+je_prof_prefork1 T
+je_prof_reset T
+je_prof_sample_threshold_update T
+je_prof_tdata_cleanup T
+je_prof_tdata_init T
+je_prof_tdata_reinit T
+je_prof_thread_active_get T
+je_prof_thread_active_init_get T
+je_prof_thread_active_init_set T
+je_prof_thread_active_set T
+je_prof_thread_name_get T
+je_prof_thread_name_set T
+je_rtree_ctx_data_init T
+je_rtree_leaf_alloc D 8
+je_rtree_leaf_dalloc D 8
+je_rtree_leaf_elm_lookup_hard T
+je_rtree_new T
+je_rtree_node_alloc D 8
+je_rtree_node_dalloc D 8
+je_safety_check_fail T
+je_safety_check_set_abort T
+je_sc_boot T
+je_sc_data_global B 6576
+je_sc_data_init T
+je_sc_data_update_slab_size T
+je_sdallocx_default T
+je_stats_print T
+je_sz_boot T
+je_sz_index2size_tab B 1856
+je_sz_pind2sz_tab B 1600
+je_sz_size2index_tab B 513
+je_tcache_alloc_small_hard T
+je_tcache_arena_associate T
+je_tcache_arena_reassociate T
+je_tcache_bin_flush_large T
+je_tcache_bin_flush_small T
+je_tcache_bin_info B 8
+je_tcache_boot T
+je_tcache_cleanup T
+je_tcache_create_explicit T
+je_tcache_event_hard T
+je_tcache_flush T
+je_tcache_maxclass B 8
+je_tcache_postfork_child T
+je_tcache_postfork_parent T
+je_tcache_prefork T
+je_tcache_salloc T
+je_tcache_stats_merge T
+je_tcaches B 8
+je_tcaches_create T
+je_tcaches_destroy T
+je_tcaches_flush T
+je_test_hooks_arena_new_hook B 8
+je_test_hooks_libc_hook B 8
+je_thp_mode_names D 32
+je_tsd_boot_wrapper D 6224
+je_tsd_booted B 1
+je_tsd_cleanup T
+je_tsd_fetch_slow T
+je_tsd_global_slow T
+je_tsd_global_slow_dec T
+je_tsd_global_slow_inc T
+je_tsd_init_check_recursion T
+je_tsd_init_finish T
+je_tsd_init_head B 88
+je_tsd_postfork_child T
+je_tsd_postfork_parent T
+je_tsd_prefork T
+je_tsd_slow_update T
+je_tsd_state_set T
+je_tsd_tcache_data_init T
+je_tsd_tcache_enabled_data_init T
+je_tsd_tsd B 4
+je_witness_depth_error D 8
+je_witness_init T
+je_witness_lock_error D 8
+je_witness_not_owner_error D 8
+je_witness_owner_error D 8
+je_witness_postfork_child T
+je_witness_postfork_parent T
+je_witness_prefork T
+je_witnesses_cleanup T
+jealigned_alloc T
+jecalloc T
+jedallocx T
+jefree T
+jemallctl T
+jemallctlbymib T
+jemallctlnametomib T
+jemalloc T
+jemalloc_conf V
+jemalloc_message B 8
+jemalloc_stats_print T
+jemalloc_usable_size T
+jemallocx T
+jememalign T
+jenallocx T
+jeposix_memalign T
+jerallocx T
+jerealloc T
+jesallocx T
+jesdallocx T
+jevalloc T
+jexallocx T

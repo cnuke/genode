@@ -1,0 +1,199 @@
+jemalloc.patch
+
+diff --git a/configure.ac b/configure.ac
+index 261d81c..593f98d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -627,7 +627,7 @@ case "${host}" in
+ 	;;
+   *-*-freebsd*)
+ 	abi="elf"
+-	AC_DEFINE([JEMALLOC_SYSCTL_VM_OVERCOMMIT], [ ])
++#	AC_DEFINE([JEMALLOC_SYSCTL_VM_OVERCOMMIT], [ ])
+ 	force_lazy_lock="1"
+ 	;;
+   *-*-dragonfly*)
+@@ -1304,9 +1304,9 @@ if test "x${maps_coalesce}" = "x1" ; then
+ fi
+ 
+ dnl Indicate whether to retain memory (rather than using munmap()) by default.
+-if test "x$default_retain" = "x1" ; then
++#if test "x$default_retain" = "x1" ; then
+   AC_DEFINE([JEMALLOC_RETAIN], [ ])
+-fi
++#fi
+ 
+ dnl Enable allocation from DSS if supported by the OS.
+ have_dss="1"
+@@ -1322,7 +1322,7 @@ else
+ fi
+ 
+ if test "x$have_dss" = "x1" ; then
+-  AC_DEFINE([JEMALLOC_DSS], [ ])
++#  AC_DEFINE([JEMALLOC_DSS], [ ])
+ fi
+ 
+ dnl Support the junk/zero filling option by default.
+@@ -1655,7 +1655,7 @@ dnl Check if we have dlsym support.
+         [AC_CHECK_LIB([dl], [dlsym], [LIBS="$LIBS -ldl"], [have_dlsym="0"])]),
+       [have_dlsym="0"])
+     if test "x$have_dlsym" = "x1" ; then
+-      AC_DEFINE([JEMALLOC_HAVE_DLSYM], [ ])
++#      AC_DEFINE([JEMALLOC_HAVE_DLSYM], [ ])
+     fi
+   else
+     have_dlsym="0"
+@@ -1676,7 +1676,7 @@ dnl Check if we have dlsym support.
+   pthread_setname_np(pthread_self(), "setname_test");
+ ], [je_cv_pthread_setname_np])
+   if test "x${je_cv_pthread_setname_np}" = "xyes" ; then
+-    AC_DEFINE([JEMALLOC_HAVE_PTHREAD_SETNAME_NP], [ ])
++#    AC_DEFINE([JEMALLOC_HAVE_PTHREAD_SETNAME_NP], [ ])
+   fi
+ fi
+ 
+@@ -1811,7 +1811,7 @@ AC_CHECK_FUNC([_malloc_thread_cleanup],
+               [have__malloc_thread_cleanup="0"]
+              )
+ if test "x$have__malloc_thread_cleanup" = "x1" ; then
+-  AC_DEFINE([JEMALLOC_MALLOC_THREAD_CLEANUP], [ ])
++#  AC_DEFINE([JEMALLOC_MALLOC_THREAD_CLEANUP], [ ])
+   wrap_syms="${wrap_syms} _malloc_thread_cleanup"
+   force_tls="1"
+ fi
+@@ -1824,7 +1824,7 @@ AC_CHECK_FUNC([_pthread_mutex_init_calloc_cb],
+               [have__pthread_mutex_init_calloc_cb="0"]
+              )
+ if test "x$have__pthread_mutex_init_calloc_cb" = "x1" ; then
+-  AC_DEFINE([JEMALLOC_MUTEX_INIT_CB])
++#  AC_DEFINE([JEMALLOC_MUTEX_INIT_CB])
+   wrap_syms="${wrap_syms} _malloc_prefork _malloc_postfork"
+ fi
+ 
+@@ -1854,7 +1854,7 @@ if test "x${enable_lazy_lock}" = "x1" -a "x${abi}" = "xpecoff" ; then
+ fi
+ if test "x$enable_lazy_lock" = "x1" ; then
+   if test "x$have_dlsym" = "x1" ; then
+-    AC_DEFINE([JEMALLOC_LAZY_LOCK], [ ])
++#    AC_DEFINE([JEMALLOC_LAZY_LOCK], [ ])
+   else
+     AC_MSG_ERROR([Missing dlsym support: lazy-lock cannot be enabled.])
+   fi
+@@ -1887,7 +1887,7 @@ else
+ fi
+ AC_SUBST([enable_tls])
+ if test "x${enable_tls}" = "x1" ; then
+-  AC_DEFINE_UNQUOTED([JEMALLOC_TLS], [ ])
++#  AC_DEFINE_UNQUOTED([JEMALLOC_TLS], [ ])
+ fi
+ 
+ dnl ============================================================================
+@@ -1998,7 +1998,7 @@ JE_COMPILABLE([madvise(2)], [
+ 	madvise((void *)0, 0, 0);
+ ], [je_cv_madvise])
+ if test "x${je_cv_madvise}" = "xyes" ; then
+-  AC_DEFINE([JEMALLOC_HAVE_MADVISE], [ ])
++#  AC_DEFINE([JEMALLOC_HAVE_MADVISE], [ ])
+ 
+   dnl Check for madvise(..., MADV_FREE).
+   JE_COMPILABLE([madvise(..., MADV_FREE)], [
+@@ -2007,7 +2007,7 @@ if test "x${je_cv_madvise}" = "xyes" ; then
+ 	madvise((void *)0, 0, MADV_FREE);
+ ], [je_cv_madv_free])
+   if test "x${je_cv_madv_free}" = "xyes" ; then
+-    AC_DEFINE([JEMALLOC_PURGE_MADVISE_FREE], [ ])
++#    AC_DEFINE([JEMALLOC_PURGE_MADVISE_FREE], [ ])
+   elif test "x${je_cv_madvise}" = "xyes" ; then
+     case "${host_cpu}" in i686|x86_64)
+         case "${host}" in *-*-linux*)
+@@ -2026,7 +2026,7 @@ if test "x${je_cv_madvise}" = "xyes" ; then
+ 	madvise((void *)0, 0, MADV_DONTNEED);
+ ], [je_cv_madv_dontneed])
+   if test "x${je_cv_madv_dontneed}" = "xyes" ; then
+-    AC_DEFINE([JEMALLOC_PURGE_MADVISE_DONTNEED], [ ])
++#    AC_DEFINE([JEMALLOC_PURGE_MADVISE_DONTNEED], [ ])
+   fi
+ 
+   dnl Check for madvise(..., MADV_DO[NT]DUMP).
+@@ -2153,7 +2153,7 @@ dnl ============================================================================
+ dnl Enable background threads if possible.
+ 
+ if test "x${have_pthread}" = "x1" -a "x${je_cv_os_unfair_lock}" != "xyes" ; then
+-  AC_DEFINE([JEMALLOC_BACKGROUND_THREAD])
++#  AC_DEFINE([JEMALLOC_BACKGROUND_THREAD])
+ fi
+ 
+ dnl ============================================================================
+diff --git a/src/background_thread.c b/src/background_thread.c
+index 57b9b25..e935ed0 100644
+--- a/src/background_thread.c
++++ b/src/background_thread.c
+@@ -877,6 +877,7 @@ background_thread_ctl_init(tsdn_t *tsdn) {
+ 
+ bool
+ background_thread_boot0(void) {
++#ifdef JEMALLOC_BACKGROUND_THREAD
+ 	if (!have_background_thread && opt_background_thread) {
+ 		malloc_printf("<jemalloc>: option background_thread currently "
+ 		    "supports pthread only\n");
+@@ -887,6 +888,7 @@ background_thread_boot0(void) {
+ 	    pthread_create_fptr_init()) {
+ 		return true;
+ 	}
++#endif
+ #endif
+ 	return false;
+ }
+diff --git a/src/pages.c b/src/pages.c
+index 13de27a..46c1bcb 100644
+--- a/src/pages.c
++++ b/src/pages.c
+@@ -194,7 +194,10 @@ pages_map(void *addr, size_t size, size_t alignment, bool *commit) {
+ 		int flags = mmap_flags;
+ 
+ 		if (addr != NULL) {
++#if 0
++			/* not supported on Genode */
+ 			flags |= MAP_FIXED | MAP_EXCL;
++#endif
+ 		} else {
+ 			unsigned alignment_bits = ffs_zu(alignment);
+ 			assert(alignment_bits > 1);
+@@ -620,7 +623,7 @@ pages_boot(void) {
+ 	}
+ #  endif
+ #else
+-	os_overcommits = false;
++	os_overcommits = true;
+ #endif
+ 
+ 	init_thp_state();
+diff --git a/test/integration/extent.c b/test/integration/extent.c
+index b5db087..07fb164 100644
+--- a/test/integration/extent.c
++++ b/test/integration/extent.c
+@@ -57,8 +57,11 @@ test_extent_body(unsigned arena_ind) {
+ 	if (xallocx_success_a) {
+ 		assert_true(called_dalloc, "Expected dalloc call");
+ 		assert_true(called_decommit, "Expected decommit call");
++#if 0
++		/* purge is not supported on Genode */
+ 		assert_true(did_purge_lazy || did_purge_forced,
+ 		    "Expected purge");
++#endif
+ 	}
+ 	assert_true(called_split, "Expected split call");
+ 	dallocx(p, flags);
+diff --git a/test/integration/mallocx.c b/test/integration/mallocx.c
+index 645d4db..c264261 100644
+--- a/test/integration/mallocx.c
++++ b/test/integration/mallocx.c
+@@ -267,7 +267,7 @@ int
+ main(void) {
+ 	return test(
+ 	    test_overflow,
+-	    test_oom,
++	    /*test_oom,*/
+ 	    test_remote_free,
+ 	    test_basic,
+ 	    test_alignment_and_size);
