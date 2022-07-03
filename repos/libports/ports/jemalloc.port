@@ -1,0 +1,10 @@
+LICENSE   := jemalloc
+VERSION   := 5.2.1
+DOWNLOADS := jemalloc.archive
+
+URL(jemalloc) := https://github.com/jemalloc/jemalloc/releases/download/$(VERSION)/jemalloc-$(VERSION).tar.bz2
+DIR(jemalloc) := src/lib/jemalloc
+SHA(jemalloc) := 34330e5ce276099e2e8950d9335db5a875689a4c6a56751ef3b1d8c537f887f6
+
+PATCHES := src/lib/jemalloc/jemalloc.patch
+PATCH_OPT := -p1 -d src/lib/jemalloc
