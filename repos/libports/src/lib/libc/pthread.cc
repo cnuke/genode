@@ -554,10 +554,17 @@ class Key_allocator : public Genode::Bit_allocator<PTHREAD_KEYS_MAX>
 			return alloc();
 		}
 
-		void free_key(addr_t key)
+		int free_key(addr_t key)
 		{
 			Mutex::Guard guard(_mutex);
-			free(key);
+
+			try {
+				free(key);
+			} catch(...) {
+				return EINVAL;
+			}
+
+			return 0;
 		}
 };
 
@@ -597,8 +604,7 @@ extern "C" {
 			return EINVAL;
 
 		key_destructors[key] = nullptr;
-		key_allocator().free_key(key);
-		return 0;
+		return key_allocator().free_key(key);
 	}
 
 	typeof(pthread_key_delete) _pthread_key_delete
