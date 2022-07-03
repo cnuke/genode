@@ -385,8 +385,13 @@ void Libc::Kernel::_clone_state_from_parent()
 		};
 
 		/* clone application stack */
-		if (node.type() == "stack")
-			copy_from_parent(range_attr(node));
+		if (node.type() == "stack") {
+			Range stack_range = range_attr(node);
+			copy_from_parent(stack_range);
+
+			/* clone main Pthread object */
+			Pthread::clone_main_pthread(*_clone_connection, stack_range.at);
+		}
 
 		/* clone RW segment of a shared library or the binary */
 		if (node.type() == "rw") {
