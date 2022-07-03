@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 int main(int argc, char **argv)
@@ -19,6 +20,9 @@ int main(int argc, char **argv)
 
 	if (count <= 0)
 		return 0;
+
+	printf("mmap: %p\n", mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+	                          MAP_ANONYMOUS, -1, 0));
 
 	{
 		char argv0[20];
