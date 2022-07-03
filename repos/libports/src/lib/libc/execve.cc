@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 #include <string.h>
 #include <stdio.h>
 #include <libc/allocator.h>
@@ -408,6 +409,10 @@ extern "C" int execve(char const *filename,
 		destroy(*_alloc_ptr, orig_saved_args);
 	}
 
+	/* purge line buffers, which may be allocated at the application heap */
+	setvbuf(stdout, nullptr, _IONBF, 0);
+	setvbuf(stderr, nullptr, _IONBF, 0);
+
 	try {
 		_main_ptr = Dynamic_linker::respawn<main_fn_ptr>(*_env_ptr, resolved_path.string(), "main");
 	}
@@ -420,9 +425,11 @@ extern "C" int execve(char const *filename,
 		return Libc::Errno(EACCES);
 	}
 
-	/* purge line buffers, which may be allocated at the application heap */
-	setvbuf(stdout, nullptr, _IONBF, 0);
-	setvbuf(stderr, nullptr, _IONBF, 0);
+	/*
+	 * Free pthread TLS keys (for jemalloc)
+	 */
+	for (pthread_key_t key = 0; key < PTHREAD_KEYS_MAX; key++)
+		pthread_key_delete(key);
 
 	/*
 	 * Reconstruct mmap backend
