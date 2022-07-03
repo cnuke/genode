@@ -39,7 +39,8 @@ Libc::Mem_alloc_impl::Dataspace_pool::~Dataspace_pool()
 		void const * const local_addr = ds->local_addr;
 
 		remove(ds);
-		delete ds;
+		ds->~Dataspace();
+		_alloc.free(ds);
 
 		_region_map->detach(local_addr);
 		_ram->free(ds_cap);
@@ -47,7 +48,7 @@ Libc::Mem_alloc_impl::Dataspace_pool::~Dataspace_pool()
 }
 
 
-int Libc::Mem_alloc_impl::Dataspace_pool::expand(size_t size, Range_allocator *alloc)
+int Libc::Mem_alloc_impl::Dataspace_pool::expand(size_t size)
 {
 	Ram_dataspace_capability new_ds_cap;
 	void *local_addr;
@@ -68,10 +69,10 @@ int Libc::Mem_alloc_impl::Dataspace_pool::expand(size_t size, Range_allocator *a
 	}
 
 	/* add new local address range to our local allocator */
-	alloc->add_range((addr_t)local_addr, size);
+	_alloc.add_range((addr_t)local_addr, size);
 
 	/* now that we have new backing store, allocate Dataspace structure */
-	return alloc->alloc_aligned(sizeof(Dataspace), 2).convert<int>(
+	return _alloc.alloc_aligned(sizeof(Dataspace), 2).convert<int>(
 
 		[&] (void *ptr) {
 			/* add dataspace information to list of dataspaces */
@@ -119,7 +120,7 @@ void *Libc::Mem_alloc_impl::alloc(size_t size, size_t align_log2)
 		_chunk_size = min(2*_chunk_size, (size_t)MAX_CHUNK_SIZE);
 	}
 
-	if (_ds_pool.expand(align_addr(request_size, 12), &_alloc) < 0) {
+	if (_ds_pool.expand(align_addr(request_size, 12)) < 0) {
 		warning("libc: could not expand dataspace pool");
 		return 0;
 	}
@@ -157,21 +158,18 @@ static Libc::Mem_alloc *_libc_mem_alloc_rw  = nullptr;
 static Libc::Mem_alloc *_libc_mem_alloc_rwx = nullptr;
 
 
-static void _init_mem_alloc(Region_map &rm, Ram_allocator &ram)
+void Libc::init_mem_alloc(Genode::Env &env)
 {
 	enum { MEMORY_EXECUTABLE = true };
 
-	static Libc::Mem_alloc_impl inst_rw(rm, ram, !MEMORY_EXECUTABLE);
-	static Libc::Mem_alloc_impl inst_rwx(rm, ram, MEMORY_EXECUTABLE);
+	static Constructible<Libc::Mem_alloc_impl> inst_rw;
+	static Constructible<Libc::Mem_alloc_impl> inst_rwx;
 
-	_libc_mem_alloc_rw  = &inst_rw;
-	_libc_mem_alloc_rwx = &inst_rwx;
-}
+	inst_rw.construct(env.rm(), env.ram(), !MEMORY_EXECUTABLE);
+	inst_rwx.construct(env.rm(), env.ram(), MEMORY_EXECUTABLE);
 
-
-void Libc::init_mem_alloc(Genode::Env &env)
-{
-	_init_mem_alloc(env.rm(), env.ram());
+	_libc_mem_alloc_rw  = inst_rw.operator->();
+	_libc_mem_alloc_rwx = inst_rwx.operator->();
 }
 
 
