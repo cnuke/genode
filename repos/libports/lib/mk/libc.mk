@@ -6,7 +6,7 @@ LIBS   = libc-string libc-locale libc-stdlib libc-stdio libc-gen libc-gdtoa \
          libc-resolv libc-isc libc-nameser libc-net libc-rpc libc-tzcode \
          libc-libkern
 
-LIBS  += base vfs
+LIBS  += base vfs jemalloc
 
 #
 # Back end
