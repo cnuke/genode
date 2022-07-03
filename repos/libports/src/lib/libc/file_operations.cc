@@ -436,7 +436,13 @@ __SYS_(void *, mmap, (void *addr, ::size_t length,
 		}
 
 		bool const executable = prot & PROT_EXEC;
-		void *start = mem_alloc(executable)->alloc(length, _mmap_align_log2);
+		int alignment_log2 = (flags & MAP_ALIGNMENT_MASK) >>
+		                     MAP_ALIGNMENT_SHIFT;
+		if (alignment_log2 == 0)
+			alignment_log2 = _mmap_align_log2;
+
+		void *start = mem_alloc(executable)->alloc(length, alignment_log2);
+
 		if (!start) {
 			errno = ENOMEM;
 			return MAP_FAILED;
