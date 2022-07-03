@@ -23,6 +23,7 @@
 /* libc includes */
 #include <errno.h>
 #include <libc-plugin/plugin.h>
+#include <sys/mman.h>
 
 /* libc-internal includes */
 #include <internal/types.h>
@@ -45,10 +46,11 @@ class Libc::Mmap_registry
 		struct Entry : Avl_node<Entry>
 		{
 			void   * const start;
+			size_t         length;
 			Plugin * const plugin;
 
-			Entry(void *start, Plugin *plugin)
-			: start(start), plugin(plugin) { }
+			Entry(void *start, size_t length, Plugin *plugin)
+			: start(start), length(length), plugin(plugin) { }
 
 			bool higher(Entry *other)
 			{
@@ -95,7 +97,7 @@ class Libc::Mmap_registry
 
 	public:
 
-		void insert(void *start, size_t len, Plugin *plugin)
+		void insert(void *start, size_t length, Plugin *plugin)
 		{
 			Mutex::Guard guard(_mutex);
 
@@ -105,7 +107,7 @@ class Libc::Mmap_registry
 				return;
 			}
 
-			_tree.insert(new (&_md_alloc) Entry(start, plugin));
+			_tree.insert(new (&_md_alloc) Entry(start, length, plugin));
 		}
 
 		Plugin *lookup_plugin_by_addr(void *start) const
@@ -137,6 +139,12 @@ class Libc::Mmap_registry
 
 			_tree.remove(e);
 			destroy(&_md_alloc, e);
+		}
+
+		void reset()
+		{
+			while (Entry *e = _tree.first())
+				munmap(e->start, e->length);
 		}
 };
 
