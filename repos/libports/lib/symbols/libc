@@ -420,6 +420,8 @@ lcong48 T
 ldexp T
 ldiv T
 lfind T
+libc_free T
+libc_malloc T
 link W
 listen T
 llabs T
@@ -436,7 +438,7 @@ lseek T
 lstat T
 madvise W
 makecontext W
-malloc T
+malloc W
 mblen T
 mbrlen T
 mbrtowc T
