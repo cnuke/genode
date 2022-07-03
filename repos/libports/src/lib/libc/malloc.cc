@@ -151,7 +151,11 @@ class Libc::Malloc
 				_slabs[i - SLAB_START].construct(1U << i, backing_store);
 		}
 
-		~Malloc() { warning(__func__, " unexpectedly called"); }
+		~Malloc()
+		{
+			warning(__func__,
+			        ": error messages about freeing non-empty slab blocks are expected");
+		}
 
 		/**
 		 * Allocator interface
@@ -308,7 +312,10 @@ void Libc::init_malloc_cloned(Clone_connection &clone_connection)
 
 void Libc::reinit_malloc(Genode::Allocator &heap)
 {
-	Malloc &malloc = *constructible_malloc();
+//	Malloc &malloc = *constructible_malloc();
 
-	construct_at<Malloc>(&malloc, heap);
+//	construct_at<Malloc>(&malloc, heap);
+
+	Constructible<Malloc> &malloc = constructible_malloc();
+	malloc.construct(heap);
 }
