@@ -57,13 +57,14 @@ size_t Libc::Kernel::_user_stack_size()
 
 void Libc::Kernel::reset_malloc_heap()
 {
-	_malloc_ram.construct(_heap, _env.ram());
+//	_malloc_ram.construct(_heap, _env.ram());
 
-	_cloned_heap_ranges.for_each([&] (Registered<Cloned_malloc_heap_range> &r) {
-		destroy(_heap, &r); });
+//	_cloned_heap_ranges.for_each([&] (Registered<Cloned_malloc_heap_range> &r) {
+//		destroy(_heap, &r); });
 
 	Heap &raw_malloc_heap = *_malloc_heap;
-	construct_at<Heap>(&raw_malloc_heap, *_malloc_ram, _env.rm());
+//	construct_at<Heap>(&raw_malloc_heap, *_malloc_ram, _env.rm());
+//	_malloc_heap.construct(*_malloc_ram, _env.rm());
 
 	reinit_malloc(raw_malloc_heap);
 }
