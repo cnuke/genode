@@ -920,7 +920,8 @@ extern "C" {
 		if (!attr)
 			return EINVAL;
 
-		Libc::Allocator alloc { };
+		/* used during jemalloc initialization */
+		Libc::Old_allocator alloc { };
 		*attr = new (alloc) pthread_mutex_attr { PTHREAD_MUTEX_NORMAL };
 
 		return 0;
@@ -935,7 +936,7 @@ extern "C" {
 		if (!attr || !*attr)
 			return EINVAL;
 
-		Libc::Allocator alloc { };
+		Libc::Old_allocator alloc { };
 		destroy(alloc, *attr);
 		*attr = nullptr;
 
@@ -966,8 +967,8 @@ extern "C" {
 		if (!mutex)
 			return EINVAL;
 
-
-		Libc::Allocator alloc { };
+		/* used during jemalloc initialization */
+		Libc::Old_allocator alloc { };
 
 		pthread_mutextype const type = (!attr || !*attr)
 		                             ? PTHREAD_MUTEX_NORMAL : (*attr)->type;
@@ -994,7 +995,7 @@ extern "C" {
 		if ((!mutex) || (*mutex == PTHREAD_MUTEX_INITIALIZER))
 			return EINVAL;
 
-		Libc::Allocator alloc { };
+		Libc::Old_allocator alloc { };
 		destroy(alloc, *mutex);
 		*mutex = PTHREAD_MUTEX_INITIALIZER;
 

@@ -6,8 +6,8 @@
  * public APIs to be prefixed.  This makes it possible, with some care, to use
  * multiple allocators simultaneously.
  */
-#define JEMALLOC_PREFIX "je"
-#define JEMALLOC_CPREFIX "JE"
+/* #undef JEMALLOC_PREFIX */
+/* #undef JEMALLOC_CPREFIX */
 
 /*
  * Define overrides for non-standard allocator-related functions if they are
@@ -19,7 +19,7 @@
 /* #undef JEMALLOC_OVERRIDE___LIBC_MEMALIGN */
 /* #undef JEMALLOC_OVERRIDE___LIBC_REALLOC */
 /* #undef JEMALLOC_OVERRIDE___LIBC_VALLOC */
-/* #undef JEMALLOC_OVERRIDE___POSIX_MEMALIGN */
+#define JEMALLOC_OVERRIDE___POSIX_MEMALIGN 
 
 /*
  * JEMALLOC_PRIVATE_NAMESPACE is used as a prefix for all library-private APIs.
@@ -354,7 +354,7 @@
 #define JEMALLOC_CONFIG_MALLOC_CONF ""
 
 /* If defined, jemalloc takes the malloc/free/etc. symbol names. */
-/* #undef JEMALLOC_IS_MALLOC */
+#define JEMALLOC_IS_MALLOC 1
 
 /*
  * Defined if strerror_r returns char * if _GNU_SOURCE is defined.

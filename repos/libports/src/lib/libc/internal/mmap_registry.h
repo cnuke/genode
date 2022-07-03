@@ -70,7 +70,8 @@ class Libc::Mmap_registry
 
 	private:
 
-		Libc::Allocator _md_alloc;
+		/* used during jemalloc initialization */
+		Libc::Old_allocator _md_alloc;
 
 		Avl_tree<Mmap_registry::Entry> _tree;
 
