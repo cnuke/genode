@@ -32,6 +32,8 @@ set build_components {
 	timer
 	drivers/usb_host
 	server/report_rom
+
+	lib/vfs/pipe
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -111,12 +113,13 @@ append config {
 
 		<config ld_verbose="yes">
 
-			<libc stdout="/dev/log" stderr="/dev/log"/>
+			<libc stdout="/dev/log" stderr="/dev/log" pipe="/dev/pipe"/>
 
 			<vfs>
 				<dir name="dev">
 					<log/>
 					<libusb/>
+					<dir name="pipe"> <pipe/> </dir>
 				</dir>
 			</vfs>
 
@@ -149,6 +152,8 @@ set boot_modules {
 	init
 	timer
 	report_rom
+
+	vfs_pipe.lib.so
 }
 
 
