@@ -744,9 +744,12 @@ void Driver_manager::Main::_generate_usb_drv_config(Reporter &usb_drv_config,
 			 */
 			unsigned long const class_code = device.attribute_value("class", 0UL);
 
-			enum { USB_CLASS_MASS_STORAGE = 8, USB_CLASS_VENDOR_SPECIFIC = 0xff };
+			enum { USB_CLASS_MASS_STORAGE    = 8,
+			       USB_CLASS_SMART_CARD      = 0xb,
+			       USB_CLASS_VENDOR_SPECIFIC = 0xff };
 
 			bool const expose_as_usb_raw = (class_code == USB_CLASS_MASS_STORAGE) ||
+			                               (class_code == USB_CLASS_SMART_CARD) ||
 			                               (class_code == USB_CLASS_VENDOR_SPECIFIC);
 			if (!expose_as_usb_raw)
 				return;
