@@ -122,12 +122,13 @@ append config {
 
 		<config ld_verbose="yes">
 
-			<libc stdout="/dev/log" stderr="/dev/log" pipe="/dev/pipe"/>
+			<libc stdout="/dev/log" stderr="/dev/log" pipe="/dev/pipe" rtc="/dev/rtc"/>
 
 			<vfs>
 				<dir name="dev">
 					<log/>
 					<libusb/>
+					<inline name="rtc">2022-07-12 00:01</inline>
 					<dir name="pipe"> <pipe/> </dir>
 				</dir>
 				<dir name="ifd-ccid.bundle">
