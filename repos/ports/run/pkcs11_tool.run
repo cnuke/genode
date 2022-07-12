@@ -130,6 +130,11 @@ append config {
 					<libusb/>
 					<dir name="pipe"> <pipe/> </dir>
 				</dir>
+				<dir name="ifd-ccid.bundle">
+					<dir name="Contents">
+						<rom name="Info.plist"/>
+					</dir>
+				</dir>
 			</vfs>
 
 			<arg value="pkcs11-tool" />
