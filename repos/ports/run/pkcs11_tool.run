@@ -131,6 +131,9 @@ append config {
 					<inline name="rtc">2022-07-12 00:01</inline>
 					<dir name="pipe"> <pipe/> </dir>
 				</dir>
+				<dir name="etc">
+					<inline name="opensc.conf"> # empty </inline>
+				</dir>
 				<dir name="ifd-ccid.bundle">
 					<dir name="Contents">
 						<rom name="Info.plist"/>
