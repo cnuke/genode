@@ -16,6 +16,15 @@ if {[have_include power_on/qemu]} {
 	set usb_dev_addr $::env(USB_DEV_ADDR)
 }
 
+#
+# 0 show help
+# 1 show token info
+# 2 list token objects
+# 3 delete key pair
+# 4 generate key pair
+#
+set test_id 0
+
 
 #
 # Ensure that we have permission to access the usb device
@@ -126,8 +135,80 @@ append config {
 			<arg value="pkcs11-tool" />
 			<arg value="--module" />
 			<arg value="opensc_pkcs11.lib.so" />
+			<arg value="--login" />
+			<arg value="--pin" />
+			<arg value="123456" /> }
+
+
+append_if [expr $test_id == 1] config {
+
 			<arg value="--show-info" />
-			<arg value="-v" />
+			<arg value="-v" /> }
+
+# Cryptoki version 3.0
+# Manufacturer     OpenSC Project
+# Library          OpenSC smartcard framework (ver 0.22)
+# Using slot 0 with a present token (0x0)
+
+
+append_if [expr $test_id == 2] config {
+
+			<arg value="--list-objects" /> }
+
+# Using slot 0 with a present token (0x0)
+# Public Key Object; RSA 2048 bits
+#   label:      Private Key
+#   ID:         01
+#   Usage:      encrypt, verify, wrap
+#   Access:     none
+# Public Key Object; EC  EC_POINT 256 bits
+#   EC_POINT:   04410490e8ce931459dbd7f6ee63a051ca20d2556c69a56ab0b036d740c988d389033660bf31c66da2f3e9dca4b4ff78643ad8dc531881db0817eea3a07e22af5842a9
+#   EC_PARAMS:  06082a8648ce3d030107
+#   label:      defaultkey
+#   ID:         12
+#   Usage:      verify
+#   Access:     none
+# Profile object 707413456
+#   profile_id:          CKP_PUBLIC_CERTIFICATES_TOKEN (4)
+
+
+append_if [expr $test_id == 3] config {
+
+			<arg value="--delete-object" />
+			<arg value="--id" />
+			<arg value="12" />
+			<arg value="--type privkey" /> }
+
+# Using slot 0 with a present token (0x0)
+
+
+append_if [expr $test_id == 4] config {
+
+			<arg value="--keypairgen" />
+			<arg value="--key-type" />
+			<arg value="EC:prime256v1" />
+			<arg value="--id" />
+			<arg value="12" />
+			<arg value="--label" />
+			<arg value="defaultkey" /> }
+
+# Using slot 0 with a present token (0x0)
+# Key pair generated:
+# Private Key Object; EC
+#   label:      defaultkey
+#   ID:         12
+#   Usage:      sign, derive
+#   Access:     none
+# Public Key Object; EC  EC_POINT 256 bits
+#   EC_POINT:   04410489a00b0b994115a89257c531ccd26b70da62ade89d63e0838f8ffd3f8dbb46d4152c436c3148318518faaed817af1b29f4f37ff97e5ac0887f6ba02393d232e1
+#   EC_PARAMS:  06082a8648ce3d030107
+#   label:      defaultkey
+#   ID:         12
+#   Usage:      verify, derive
+#   Access:     none
+
+
+append config {
 
 			<env key="LIBUSB_DEBUG" value="1"/>
 
@@ -137,7 +218,8 @@ append config {
 		</route>
 	</start>
 
-</config>}
+</config> }
+
 
 install_config $config
 
