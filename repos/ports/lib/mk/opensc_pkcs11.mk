@@ -18,6 +18,8 @@ SRC_C += sm/sm-eac.c
 SRC_C += common/simclist.c
 SRC_C += $(shell cd $(PORT_DIR)/src; find scconf/*.c)
 
+SRC_C += dummies.c
+
 CC_OPT += -shared -fPIC -DPIC -lcrypto -ldl -g -DHAVE_CONFIG_H
 CC_OPT += -DOPENSC_CONF_PATH=\"$(PORT_DIR)/etc/opensc.conf\"
 CC_OPT += -DDEFAULT_SM_MODULE_PATH=\"/\"
@@ -28,6 +30,7 @@ LIBS += stdcxx libc libssl pcsc-lite
 INC_DIR += $(REP_DIR)/src/lib/opensc_pkcs11
 INC_DIR += $(PORT_DIR)/src
 
+vpath dummies.c $(REP_DIR)/src/lib/opensc_pkcs11
 vpath % $(PORT_DIR)/src
 
 SHARED_LIB := yes
