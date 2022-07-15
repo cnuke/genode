@@ -4,6 +4,7 @@ all: content
 MIRROR_FROM_REP_DIR := \
                        lib/mk/egl.mk \
                        lib/mk/mesa_gpu-etnaviv.mk \
+                       lib/mk/mesa_gpu-lima.mk \
                        lib/mk/mesa_gpu-softpipe.mk \
                        lib/mk/etnaviv.mk \
                        lib/mk/iris_gen.inc \
@@ -14,6 +15,7 @@ MIRROR_FROM_REP_DIR := \
                        lib/mk/mesa-common.inc \
                        lib/mk/softpipe.mk \
                        lib/mk/spec/arm_v8/mesa.mk \
+                       lib/mk/spec/arm_v8/mesa-lima.mk \
                        lib/mk/spec/x86/mesa_gpu-iris.mk \
                        lib/mk/spec/x86/iris.mk \
                        lib/mk/spec/x86/iris_gen110.mk \
