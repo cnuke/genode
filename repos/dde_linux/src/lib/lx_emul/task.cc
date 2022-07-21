@@ -100,3 +100,8 @@ extern "C" void * lx_emul_task_stack(struct task_struct const * t)
 
 	return ret;
 }
+
+extern "C" void lx_emul_task_mark_for_destruction(struct task_struct const *t)
+{
+	Lx_kit::env().scheduler.task((void*)t).mark_for_destruction();
+}
