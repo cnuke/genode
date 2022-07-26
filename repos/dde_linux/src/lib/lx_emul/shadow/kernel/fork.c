@@ -50,7 +50,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 
 	*task = (struct task_struct) {
 	.__state         = 0,
-	.usage           = REFCOUNT_INIT(2),
+	.usage           = REFCOUNT_INIT(1),
 	.flags           = PF_KTHREAD,
 	.prio            = MAX_PRIO - 20,
 	.static_prio     = MAX_PRIO - 20,
@@ -103,3 +103,21 @@ err_signal:
 }
 
 #pragma GCC diagnostic pop
+
+
+void __put_task_struct(struct task_struct *tsk)
+{
+	if (!tsk)
+		return;
+
+	WARN_ON(refcount_read(&tsk->usage));
+	WARN_ON(tsk == current);
+
+#ifndef CONFIG_THREAD_INFO_IN_TASK
+	kfree(task->stack);
+#endif
+
+	kfree(tsk->signal);
+	kfree(tsk->cred);
+	kfree(tsk);
+}
