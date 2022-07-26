@@ -141,14 +141,6 @@ void fwnode_remove_software_node(struct fwnode_handle * fwnode)
 }
 
 
-#include <linux/sched/task.h>
-
-void __put_task_struct(struct task_struct * tsk)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/kernel.h>
 
 int get_option(char ** str,int * pint)
