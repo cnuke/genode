@@ -195,6 +195,8 @@ static Pins &pins()
 
 extern "C" void lx_emul_pin_control(char const *pin_name, bool enabled)
 {
+	Genode::error(__func__, ":", __LINE__, ": pin_name: '", pin_name, "' enabled: ", enabled);
+
 	pins().with_pin(pin_name, [&] (Pin &pin) {
 		pin.control(enabled); });
 }
