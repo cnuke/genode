@@ -353,6 +353,7 @@ Device_list::Device_list(Entrypoint           & ep,
 	_platform(platform)
 {
 	_platform.with_xml([&] (Xml_node & xml) {
+		Genode::log("devices: ", xml);
 		xml.for_each_sub_node("device", [&] (Xml_node node) {
 			insert(new (heap) Device(ep, _platform, node, heap));
 		});
