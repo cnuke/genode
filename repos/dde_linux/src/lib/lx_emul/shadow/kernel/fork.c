@@ -105,6 +105,9 @@ err_signal:
 #pragma GCC diagnostic pop
 
 
+extern char const * lx_emul_task_get_name(struct task_struct const * t);
+
+
 void __put_task_struct(struct task_struct *tsk)
 {
 	if (!tsk)
@@ -112,6 +115,8 @@ void __put_task_struct(struct task_struct *tsk)
 
 	WARN_ON(refcount_read(&tsk->usage));
 	WARN_ON(tsk == current);
+
+	printk("%s:%d task: '%s' return early\n", __func__, __LINE__, lx_emul_task_get_name(tsk));
 
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	kfree(tsk->stack);

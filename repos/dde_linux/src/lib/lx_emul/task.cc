@@ -89,6 +89,19 @@ extern "C" void lx_emul_task_name(struct task_struct * t, const char * name)
 }
 
 
+extern "C" char const * lx_emul_task_get_name(struct task_struct const * t)
+{
+	static char buffer[64];
+
+	Lx_kit::env().scheduler.for_each_task([&] (Lx_kit::Task const & task) {
+		if (t == task.lx_task())
+			Genode::copy_cstring(buffer, task.name().string(), ~0u);
+	});
+
+	return buffer;
+}
+
+
 extern "C" void * lx_emul_task_stack(struct task_struct const * t)
 {
 	void * ret = nullptr;
