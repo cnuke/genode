@@ -114,7 +114,7 @@ void __put_task_struct(struct task_struct *tsk)
 	WARN_ON(tsk == current);
 
 #ifndef CONFIG_THREAD_INFO_IN_TASK
-	kfree(task->stack);
+	kfree(tsk->stack);
 #endif
 
 	kfree(tsk->signal);
