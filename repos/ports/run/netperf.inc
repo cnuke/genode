@@ -162,7 +162,7 @@ append_if $use_wifi_driver  packages " [depot_user]/raw/wifi_firmware     "
 
 import_from_depot $packages
 
-set build_components { app/netperf }
+set build_components { app/netperf drivers/wifi/pc }
 
 append_if $use_usb_driver build_components " drivers/usb_host "
 append_if $use_usb_driver build_components " drivers/usb_net  "
@@ -246,7 +246,7 @@ append  config { </wifi_config>
 	<start name="nic_drv" caps="300">
 		<binary name="pc_wifi_drv"/>
 		<resource name="RAM" quantum="32M"/>
-		<config>
+		<config ld_verbose="yes">
 			<libc stdout="/dev/null" stderr="/dev/log" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev">
@@ -431,7 +431,7 @@ append config {
 
 install_config $config
 
-set boot_modules { netserver }
+set boot_modules { netserver pc_wifi_drv wifi.lib.so }
 
 append_if $use_usb_driver boot_modules " [usb_host_drv_binary] "
 append_if $use_usb_driver boot_modules " usb_net_drv  "
