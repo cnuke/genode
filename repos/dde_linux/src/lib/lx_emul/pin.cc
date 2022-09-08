@@ -99,19 +99,19 @@ namespace {
 			}
 
 			if (_state.constructed()) {
-				error(__func__, ": destruct state");
+				error(__func__, ": ", name, " destruct state");
 				_state.destruct();
 			}
 
 			if (!_control.constructed()) {
-				error(__func__, ": construct control");
+				error(__func__, ": ", name, " construct control");
 				_control.construct(_env, name.string());
 			}
 
-			if (name == "PE16" && enabled == true)
-				enabled = false;
+			// if (name == "PE16" && enabled == true)
+			// 	enabled = false;
 
-			error(__func__, ": ", name, ": state: ", enabled);
+			// error(__func__, ": ", name, ": state: ", enabled);
 			_control->state(enabled);
 		}
 
@@ -123,17 +123,17 @@ namespace {
 			}
 
 			if (_control.constructed()) {
-				error(__func__, ": destruct control");
+				error(__func__, ": ", name, " destruct control");
 				_control.destruct();
 			}
 
 			if (!_state.constructed()) {
-				error(__func__, ": construct state");
+				error(__func__, ": ", name, " construct state");
 				_state.construct(_env, name.string());
 			}
 
 			bool const state = _state->state();
-			error(__func__, ": ", name, ": state: ", state);
+			// error(__func__, ": ", name, ": state: ", state);
 			return state;
 		}
 
