@@ -11,7 +11,6 @@ import_from_depot [depot_user]/pkg/[drivers_interactive_pkg] \
                   [depot_user]/src/libc \
                   [depot_user]/src/mesa \
                   [depot_user]/src/nitpicker \
-                  [depot_user]/src/qt5_base \
                   [depot_user]/src/report_rom \
                   [depot_user]/src/rom_filter \
                   [depot_user]/src/stdcxx \
