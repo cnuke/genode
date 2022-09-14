@@ -1110,11 +1110,15 @@ proc build_core_image { modules } {
 		check_xml_syntax $file }
 
 	# create core binary containing the boot modules
+puts "build_core"
 	build_core [run_dir]/genode/$core_obj $modules [run_dir]/image.elf [core_link_address]
+puts "strip image.elf"
 	exec [cross_dev_prefix]strip [run_dir]/image.elf
 
 	# Save config part of the image.elf for easy inspection
+puts "cp config"
 	exec cp -f [run_dir]/genode/config [run_dir].config
+puts "cp config done"
 }
 
 

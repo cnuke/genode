@@ -23,6 +23,7 @@ proc run_image { } {
 	}
 
 	# generate head space designated for the partition table
+puts "dd"
 	exec dd if=/dev/zero of=[run_dir].header count=34 bs=512 2>/dev/null
 
 	exec dd if=/dev/zero of=[run_dir].partition bs=1M count=$disk_size 2>/dev/null
@@ -30,12 +31,17 @@ proc run_image { } {
 
 	# copy content to disk image
 	foreach file [exec ls [run_dir]] {
+		puts "mcopy $file"
 		exec [installed_command mcopy] -i [run_dir].partition -s [run_dir]/$file ::
 	}
 
+puts "cat"
 	exec cat [run_dir].header [run_dir].partition > [run_dir].img
+exec cp [run_dir].img /tmp/blob
 
-	exec [installed_command sgdisk] --set-alignment=1 --largest-new=1 --typecode=1:EF00 [run_dir].img
+puts "sgdisk"
+	exec strace -e trace=sync -e inject=sync:retval=0 -o /dev/null [installed_command sgdisk] --set-alignment=1 --largest-new=1 --typecode=1:EF00 [run_dir].img
+puts "DONE"
 
 	exec rm -f [run_dir].header [run_dir].partition
 }
