@@ -1,0 +1,38 @@
+# mandatory config (if not changed 'default' is used)
+#clipboard:     default
+deploy:        fuji4
+drivers:       fuji4
+#fb_drv:        default
+#leitzentrale:  default
+#nitpicker:     default
+#numlock_remap: default
+ram_fs:        fuji4
+system:        pc
+#usb:           default
+
+# optional config (managed by sculpt if not specified)
+nic_router:   fuji4
+gpu_drv:      intel
+#fonts:
+#event_filter:
+#wifi:
+#runtime:
+
+import: pkg/drivers_managed-pc src/pc_nic_drv
+
+# machine.vbox6, fuji4.vmdk etc. in /ram/vm/fuji4/
+import: raw/fuji4
+
+# configure depot user
+depot: cnuke
+
+launcher: shared_fs
+launcher: fuji4_fs fuji4_usb_devices
+launcher: fuji4_vbox6_cpu1 fuji4_vbox6_cpu2 fuji4_vbox6_cpu4
+launcher: fuji4_vbox5_cpu2
+launcher: trace_logger
+
+build: virtualbox6
+build: virtualbox5/nova
+build: app/top
+build: lib/qemu-usb

@@ -1,0 +1,11 @@
+<launcher pkg="rom_filter">
+	<config>
+		<output node="devices">
+			<inline>
+<!--
+				<device label="LABEL"/>
+-->
+			</inline>
+		</output>
+	</config>
+</launcher>
