@@ -1,9 +1,5 @@
 assert_spec x86
 
-if {[have_include "power_on/qemu"]} {
-	puts "\nAudio_out test running on Qemu is not supported.\n"
-	exit 0
-}
 
 if {[have_spec linux]} {
 	puts"\nAudio_out test running on Linux is not supported.\n"
@@ -135,6 +131,7 @@ build_boot_image {
 	pci_audio_drv test-audio_out sample.raw
 }
 
+append qemu_args "  -nographic -soundhw hda "
 
 #
 # For obvious reasons the timeout depends on the total
