@@ -41,7 +41,7 @@ install_config {
 	<start name="report_rom">
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config>
+		<config verbose="yes">
 			<policy label="pci_decode -> system"    report="acpi_drv -> acpi"/>
 			<policy label="platform_drv -> devices" report="pci_decode -> devices"/>
 		</config>
@@ -90,7 +90,7 @@ install_config {
 			<service name="Timer">   <parent/> </service>
 		</route>
 		<config>
-			<policy label="audio_drv -> "> <pci class="AUDIO"/> <pci class="HDAUDIO"/> </policy>
+			<policy label="audio_drv -> "> <pci vendor_id="0x8086" device_id="0x9ca0"/> </policy>
 		</config>
 	</start>
 

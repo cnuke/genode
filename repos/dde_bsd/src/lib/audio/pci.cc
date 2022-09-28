@@ -110,17 +110,20 @@ class Pci_driver
 			bool found = false;
 			_pci.update();
 			_pci.with_xml([&] (Xml_node node) {
+				log("devices: ", node);
 				node.for_each_sub_node("device", [&] (Xml_node node)
 				{
 					if (found) return;
 
+					String<16> name = node.attribute_value("name", String<16>());
+
 					node.with_optional_sub_node("pci-config", [&] (Xml_node node)
 					{
-						String<16> name = node.attribute_value("name", String<16>());
 						_vendor     = node.attribute_value("vendor_id", 0U);
 						_device     = node.attribute_value("device_id", 0U);
 						_class_code = node.attribute_value("class", 0U);
 
+						error("_vendor: ", Hex(_vendor), " (", Hex((unsigned)PCI_VENDOR_INTEL), " device: ", Hex(_device));
 						if ((_device == PCI_PRODUCT_INTEL_CORE4G_HDA_2) ||
 						    (_vendor == PCI_VENDOR_INTEL && name == "00:03.0")) {
 							warning("ignore ", name,
