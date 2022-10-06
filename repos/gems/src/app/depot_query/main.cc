@@ -68,9 +68,7 @@ struct Depot_query::Directory_cache : Noncopyable
 				Directory(dir, path).for_each_entry([&] (Directory::Entry const &entry) {
 					new (_alloc) File(_files, entry.name()); });
 			}
-			catch (Directory::Nonexistent_directory) {
-				warning("directory '", path, "' does not exist");
-			}
+			catch (Directory::Nonexistent_directory) { }
 		}
 
 		~Listing()
