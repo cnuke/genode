@@ -98,9 +98,6 @@ namespace {
 				return;
 			}
 
-			if (_state.constructed())
-				_state.destruct();
-
 			if (!_control.constructed())
 				_control.construct(_env, name.string());
 
@@ -115,7 +112,7 @@ namespace {
 			}
 
 			if (_control.constructed())
-				_control.destruct();
+				_control->yield();
 
 			if (!_state.constructed())
 				_state.construct(_env, name.string());

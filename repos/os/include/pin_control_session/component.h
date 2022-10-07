@@ -39,6 +39,8 @@ class Pin_control::Session_component : public Session_object<Session>
 
 		using Session_object<Session>::label;
 
+		bool _yield;
+
 	public:
 
 		using Pin_id = ID;
@@ -47,7 +49,8 @@ class Pin_control::Session_component : public Session_object<Session>
 		                  Label const &label, Diag &diag, Pin::Driver<ID> &driver)
 		:
 			Session_object<Session>(ep, resources, label, diag),
-			_assignment(driver)
+			_assignment(driver),
+			_yield(false)
 		{
 			update_assignment();
 		}
@@ -57,8 +60,19 @@ class Pin_control::Session_component : public Session_object<Session>
 		 */
 		void state(bool enabled) override
 		{
+			if (_yield) {
+				_assignment.update(label(), Pin::Direction::OUT);
+				_yield = false;
+			}
+
 			if (_assignment.target.constructed())
 				_assignment.driver.pin_state(_assignment.target->id, enabled);
+		}
+
+		void yield() override
+		{
+			_assignment.update(label(), Pin::Direction::IN);
+			_yield = true;
 		}
 
 		void update_assignment()
