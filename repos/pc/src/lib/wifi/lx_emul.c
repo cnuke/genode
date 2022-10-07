@@ -591,7 +591,9 @@ int pci_write_config_byte(const struct pci_dev * dev,int where,u8 val)
 		case PCI_CFG_RETRY_TIMEOUT:
 			return 0;
 	};
-	lx_emul_trace_and_stop(__func__);
+	printk("XXX %s: where: 0x%x from: %p\n", __func__, where, __builtin_return_address(0));
+	// lx_emul_trace_and_stop(__func__);
+	return 0;
 }
 
 
@@ -602,5 +604,43 @@ int pci_read_config_word(const struct pci_dev * dev,int where,u16 * val)
 			*val = PCI_COMMAND_MASTER | PCI_COMMAND_MEMORY | PCI_COMMAND_IO;
 			return 0;
 	};
-	lx_emul_trace_and_stop(__func__);
+	// lx_emul_trace_and_stop(__func__);
+	printk("XXX %s: where: 0x%x from: %p\n", __func__, where, __builtin_return_address(0));
+	*val = 0;
+	return 0;
+}
+
+
+int pci_read_config_byte(const struct pci_dev * dev,int where,u8 * val)
+{
+	printk("XXX %s: where: 0x%x from: %p\n", __func__, where, __builtin_return_address(0));
+	*val = 0;
+
+	return 0;
+}
+
+
+void __iomem *pci_iomap(struct pci_dev *dev, int bar, unsigned long maxlen)
+{
+	struct resource *r;
+	unsigned long phys_addr;
+	unsigned long size;
+
+	if (!dev || bar > 5) {
+		printk("%s:%d: invalid request for dev: %p bar: %d\n",
+			   __func__, __LINE__, dev, bar);
+		return NULL;
+	}
+
+	printk("pci_iomap: request for dev: %s bar: %d\n", dev_name(&dev->dev), bar);
+
+	r = &dev->resource[bar];
+
+	phys_addr = r->start;
+	size      = r->end - r->start;
+
+	if (!phys_addr || !size)
+		return NULL;
+
+	return lx_emul_io_mem_map(phys_addr, size);
 }
