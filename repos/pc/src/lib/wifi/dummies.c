@@ -339,3 +339,25 @@ void synchronize_rcu_expedited(void)
 {
 	lx_emul_trace(__func__);
 }
+
+
+#include <linux/pci.h>
+
+void pci_disable_device(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void pci_release_regions(struct pci_dev *pdev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+int pci_request_regions(struct pci_dev *pdev, const char *res_name)
+{
+	printk("%s: res_name: '%s'\n", __func__, res_name);
+	lx_emul_trace(__func__);
+	return 0;
+}
