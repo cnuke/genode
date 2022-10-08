@@ -150,7 +150,7 @@
 			<service name="ROM">     <parent/> </service>
 			<service name="PD">      <parent/> </service>
 			<service name="CPU">     <parent/> </service>
-			<service name="LOG">     <parent/> </service>
+			<service name="LOG"> <parent label="manager"/> </service>
 			<service name="Timer">   <parent/> </service>
 		</route>
 		<config>
@@ -288,7 +288,7 @@
 			<service name="Usb"> <child name="usb_drv"/> </service>
 			<service name="ROM" label="config"> <child name="report_rom"/> </service>
 			<service name="ROM" label="intel_fb_drv -> intel_opregion"> <child name="report_rom"/> </service>
-			<service name="LOG">     <parent/> </service>
+			<service name="LOG"> <parent label="manager"/> </service>
 			<service name="PD">      <parent/> </service>
 			<service name="RM">      <parent/> </service>
 			<service name="CPU">     <parent/> </service>
