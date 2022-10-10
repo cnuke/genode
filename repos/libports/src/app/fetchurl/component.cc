@@ -122,6 +122,7 @@ struct Fetchurl::Main
 		if ((_report_delay.trunc_to_plain_ms().value > 0) &&
 		    (!_report_timeout.scheduled()))
 		{
+			Genode::error(__func__, ": ", _report_delay.trunc_to_plain_us());
 			_report_timeout.schedule(_report_delay.trunc_to_plain_us());
 		}
 	}
@@ -339,7 +340,10 @@ static size_t write_callback(char   *ptr,
                              void   *userdata)
 {
 	Fetchurl::Fetch &fetch = *((Fetchurl::Fetch *)userdata);
-	return write(fetch.fd, ptr, size*nmemb);
+	Genode::error(__func__, ": size: ", size, " nmemb: ", nmemb);
+	ssize_t const written = write(fetch.fd, ptr, size*nmemb);
+	Genode::error("written: ", written);
+	return written;
 }
 
 
@@ -349,6 +353,8 @@ static int progress_callback(void *userdata,
 {
 	(void)ultotal;
 	(void)ulnow;
+
+	Genode::error(__func__, ": dltotal: ", dltotal, " dlnow: ", dlnow);
 
 	using namespace Fetchurl;
 	using namespace Genode;
