@@ -18,6 +18,9 @@
 #include <device_component.h>
 #include <session_component.h>
 
+#include <base/attached_io_mem_dataspace.h>
+#include <pci/config.h>
+
 
 Driver::Device::Owner::Owner(Session_component & session)
 : obj_id(reinterpret_cast<void*>(&session)) {}
@@ -260,5 +263,35 @@ void Driver::Device_model::update(Xml_node const & node)
 	 */
 	for_each([&] (Device const & device) {
 		pci_apply_quirks(_env, device);
+	});
+
+	/*
+	 * XXX disable bus-master DMA on ethernet devices
+	 */
+	for_each([&] (Device const & device) {
+
+		device.for_pci_config([&] (Device::Pci_config const & pc) {
+			if ((pc.class_code & 0xffff00u) != 0x020000)
+				return;
+
+			Genode::error("Disable ethernet device: ", Genode::Hex(pc.vendor_id), ":", Genode::Hex(pc.device_id));
+			pci_disable(_env, device);
+
+#if 0
+			using namespace Genode;
+			using namespace Pci;
+
+			Genode::error("Disable bus-master DMA: ", Genode::Hex(pc.vendor_id), ":", Genode::Hex(pc.device_id));
+
+			Attached_io_mem_dataspace io_mem { _env, pc.addr,   0x1000           };
+			Config                    config { (addr_t)io_mem.local_addr<void>() };
+
+			Config::Command::access_t cmd =
+				config.read<Config::Command>();
+
+			Config::Command::Bus_master_enable::set(cmd, 0);
+			config.write<Config::Command>(cmd);
+#endif
+		});
 	});
 }
