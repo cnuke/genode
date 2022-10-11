@@ -199,7 +199,7 @@ proc log_kernel_start_node { } {
 
 
 install_config {
-<config prio_levels="2">
+<config verbose="yes" prio_levels="2">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="IRQ"/>
@@ -405,6 +405,8 @@ install_config {
 			<service name="Usb"/>
 			<service name="Platform"/>
 			<service name="Gpu"/>
+			<service name="Pin_control"/>
+			<service name="Pin_state"/>
 		</provides>
 	</start>
 
