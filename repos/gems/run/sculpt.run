@@ -153,7 +153,6 @@ proc log_route { } {
 proc nic_drv { } {
 
 	if {[have_board pc]}          { return ipxe_nic_drv }
-	if {[have_board linux]}       { return linux_nic_drv }
 	if {[have_board imx8q_evk]}   { return fec_nic_drv  }
 	if {[have_board mnt_reform2]} { return fec_nic_drv  }
 
@@ -914,8 +913,6 @@ set fd [open [depot_dir]/[depot_user]/index/[sculpt_version] w]
 puts $fd $pkg_index
 close $fd
 
-
-copy_file /home/jws/vfs_block.img [run_dir]/genode/
 
 ##
 ## Create boot image

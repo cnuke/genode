@@ -19,7 +19,6 @@ void Sculpt::gen_nic_drv_start_content(Xml_generator &xml)
 	gen_common_start_content(xml, "nic_drv",
 	                         Cap_quota{300}, Ram_quota{20*1024*1024},
 	                         Priority::NETWORK);
-	xml.attribute("ld", false);
 
 	gen_named_node(xml, "resource", "CPU", [&] () { xml.attribute("quantum", "10"); });
 
