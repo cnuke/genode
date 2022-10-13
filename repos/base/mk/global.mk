@@ -88,6 +88,11 @@ CC_OPT += -ffunction-sections
 CC_OPT += -fno-strict-aliasing
 
 #
+# Do not remove the frame pointer
+#
+CC_OPT += -fno-omit-frame-pointer
+
+#
 # Do not compile/link with standard includes and standard libraries per
 # default.
 #
