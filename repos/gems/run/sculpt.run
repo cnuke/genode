@@ -607,7 +607,7 @@ install_config {
 		</route>
 	</start>
 
-	<start name="leitzentrale" caps="2400" ram="203M" priority="-1">
+	<start name="leitzentrale" caps="2400" ram="210M" priority="-1">
 		<binary name="init"/>
 		<affinity xpos="1" width="1"/> <!-- decouple leitzentrale from boot CPU -->
 		<provides>
