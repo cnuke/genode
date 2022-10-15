@@ -17,6 +17,7 @@
 #include <base/rpc_client.h>
 #include <file_system_session/capability.h>
 #include <packet_stream_tx/client.h>
+#include <trace/probe.h>
 
 namespace File_system { class Session_client; }
 
@@ -74,6 +75,8 @@ class File_system::Session_client : public Genode::Rpc_client<Session>
 
 		Node_handle node(Path const &path) override
 		{
+GENODE_TRACE_CHECKPOINT_NAMED(0, "node()");
+GENODE_TRACE_CHECKPOINT_NAMED(0, path.base());
 			return call<Rpc_node>(path);
 		}
 

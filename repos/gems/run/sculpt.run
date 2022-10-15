@@ -222,7 +222,7 @@ install_config {
 		<service name="VM"/>
 	</parent-provides>
 
-	<affinity-space width="2" height="1"/>
+	<affinity-space width="4" height="1"/>
 
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
@@ -236,6 +236,11 @@ install_config {
 		<resource name="RAM" quantum="1M"/>
 		<resource name="CPU" quantum="5"/>
 		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="top" priority="-1">
+		<resource name="RAM" quantum="2M"/>
+		<config period_ms="10000"/>
 	</start>
 
 	<start name="report_rom" priority="0">
@@ -539,7 +544,7 @@ install_config {
 		<binary name="init"/>
 		<resource name="RAM" quantum="130M"/>
 		<resource name="CPU" quantum="35"/>
-		<affinity xpos="1" width="1"/> <!-- decouple leitzentrale from boot CPU -->
+		<!--<affinity xpos="1" width="1"/>--> <!-- decouple leitzentrale from boot CPU -->
 		<provides>
 			<service name="Gui"/>
 			<service name="Capture"/>
@@ -983,8 +988,8 @@ close $fd
 ## Create boot image
 ##
 
-build [ingredients_of_type build]
+build "[ingredients_of_type build] app/top"
 
-append boot_modules [build_artifacts]
+append boot_modules "[build_artifacts] top"
 
 build_boot_image $boot_modules

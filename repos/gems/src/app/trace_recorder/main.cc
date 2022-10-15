@@ -18,6 +18,7 @@
 #include <base/component.h>
 #include <base/heap.h>
 #include <base/attached_rom_dataspace.h>
+#include <timer_session/connection.h>
 
 namespace Trace_recorder {
 	using namespace Genode;
@@ -74,4 +75,8 @@ void Trace_recorder::Main::_handle_config()
 }
 
 
-void Component::construct(Genode::Env &env) { static Trace_recorder::Main main(env); }
+void Component::construct(Genode::Env &env) {
+	Timer::Connection start_delay_timer(env);
+	start_delay_timer.msleep(300000);
+	static Trace_recorder::Main main(env);
+}

@@ -151,6 +151,7 @@ void Trace_recorder::Monitor::start(Xml_node config)
 			});
 		}
 		catch (Session_policy::No_policy_defined) { return; }
+		catch (...) { return; }
 	});
 
 	/* register timeout */

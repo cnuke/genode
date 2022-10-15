@@ -25,6 +25,10 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 {
 	public:
 
+		Genode::uint64_t exec_buffer_count { 0 };
+		Genode::uint64_t set_tiling_count { 0 };
+		Genode::Signal_context_capability completion { };
+
 		/**
 		 * Constructor
 		 *
@@ -42,13 +46,32 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 
 		Gpu::Sequence_number exec_buffer(Buffer_id id,
 		                                 Genode::size_t size) override {
-			return call<Rpc_exec_buffer>(id, size); }
+//exec_buffer_count++;
+		    if (exec_buffer_count < 1000) {
+			    Sequence_number res = call<Rpc_exec_buffer>(id, size);
+//Genode::log(this, ": exec_buffer(): ", res.value);
+			    return res;
+			} else if (exec_buffer_count == 1000) {
+Genode::log(this, ": *** exec_buffer() stopped");
+			}
+			return Sequence_number { exec_buffer_count };
+		}
 
 		bool complete(Sequence_number seqno) override {
-			return call<Rpc_complete>(seqno); }
+			if (exec_buffer_count < 1000) {
+				bool res = call<Rpc_complete>(seqno);
+//Genode::log(this, ": complete(): ", seqno.value, " -> ", res);
+				return res;
+			}
+			Genode::Signal_transmitter(completion).submit();
+			return true;
+		}
 
 		void completion_sigh(Genode::Signal_context_capability sigh) override {
-			call<Rpc_completion_sigh>(sigh); }
+//Genode::log(this, ": completion_sigh()");
+			completion = sigh;
+			call<Rpc_completion_sigh>(sigh);
+		}
 
 		Genode::Dataspace_capability alloc_buffer(Buffer_id id, Genode::size_t size) override {
 			return call<Rpc_alloc_buffer>(id, size); }
@@ -80,7 +103,16 @@ class Gpu::Session_client : public Genode::Rpc_client<Session>
 			return call<Rpc_query_buffer_ppgtt>(id); }
 
 		bool set_tiling(Buffer_id id, unsigned mode) override {
-			return call<Rpc_set_tiling>(id, mode); }
+//set_tiling_count++;
+			if (set_tiling_count < 20000) {
+				bool res = call<Rpc_set_tiling>(id, mode);
+//Genode::log(this, ": set_tiling(): ", set_tiling_count, ", res: ", res);
+				return res;
+			} else if (set_tiling_count == 20000) {
+Genode::log(this, ": *** set_tiling() stopped");
+			}
+			return true;
+		}
 };
 
 #endif /* _INCLUDE__GPU_SESSION__CLIENT_H_ */

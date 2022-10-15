@@ -18,6 +18,7 @@
 #include <base/semaphore.h>
 #include <semaphore.h>
 #include <libc/allocator.h>
+#include <trace/probe.h>
 
 /* libc includes */
 #include <errno.h>
@@ -307,9 +308,10 @@ extern "C" {
 
 	int sem_wait(sem_t *sem)
 	{
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "sem_wait()");
 		if (int res = (*sem)->down())
 			return Errno(res);
-
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "sem_wait() finished");
 		return 0;
 	}
 
