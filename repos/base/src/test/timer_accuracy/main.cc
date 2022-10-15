@@ -18,7 +18,7 @@
 
 using namespace Genode;
 
-
+#if 0
 struct Main
 {
 	Timer::Connection    timer;
@@ -38,6 +38,24 @@ struct Main
 		handle_timer();
 	}
 };
+#endif
 
+void Component::construct(Env &env)
+{
+//	static Main main(env);
+	for (;;) {
 
-void Component::construct(Env &env) { static Main main(env); }
+#if 0
+		static Genode::Trace::Timestamp last_ts = Genode::Trace::timestamp();
+		Genode::Trace::Timestamp ts = Genode::Trace::timestamp();
+		if (ts >= last_ts + 816000000UL) {
+			Genode::log(ts);
+			last_ts = ts;
+		}
+#endif
+		static Timer::Connection timer(env);
+		timer.msleep(1000);
+		Genode::Trace::Timestamp ts = Genode::Trace::timestamp();
+		Genode::log(ts);
+	}
+}

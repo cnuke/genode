@@ -16,6 +16,7 @@
 
 /* Genode includes */
 #include <base/trace/buffer.h>
+#include <base/sleep.h>
 
 
 /**
@@ -50,6 +51,7 @@ class Trace_buffer
 				warning("lost ", _buffer.lost_entries() - _lost_count,
 				        ", entries; you might want to raise buffer size");
 				_lost_count = (unsigned)_buffer.lost_entries();
+				Genode::sleep_forever();
 			}
 
 			Entry entry { _curr };

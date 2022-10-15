@@ -17,6 +17,7 @@
 #include <base/thread.h>
 #include <util/list.h>
 #include <libc/allocator.h>
+#include <trace/probe.h>
 
 /* Genode-internal includes */
 #include <base/internal/unmanaged_singleton.h>
@@ -993,7 +994,10 @@ extern "C" {
 		if (*mutex == PTHREAD_MUTEX_INITIALIZER)
 			pthread_mutex_init(mutex, nullptr);
 
-		return (*mutex)->lock();
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_mutex_lock()");
+		int res = (*mutex)->lock();
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_mutex_lock() finished");
+		return res;
 	}
 
 	typeof(pthread_mutex_lock) _pthread_mutex_lock
@@ -1246,6 +1250,7 @@ extern "C" {
 
 	int pthread_cond_signal(pthread_cond_t *cond)
 	{
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_cond_signal()");
 		if (!cond)
 			return EINVAL;
 
@@ -1259,10 +1264,12 @@ extern "C" {
 			++c->num_signallers;
 			sem_post(&c->signal_sem);
 			pthread_mutex_unlock(&c->counter_mutex);
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_cond_signal(): calling sem_wait()");
 			sem_wait(&c->handshake_sem);
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_cond_signal(): sem_wait() returned");
 		} else
 			pthread_mutex_unlock(&c->counter_mutex);
-
+//GENODE_TRACE_CHECKPOINT_NAMED(0, "pthread_cond_signal() finished");
 		return 0;
 	}
 

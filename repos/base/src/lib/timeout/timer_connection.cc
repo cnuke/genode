@@ -12,6 +12,8 @@
  */
 
 /* Genode includes */
+#include <trace/probe.h>
+
 #include <timer_session/connection.h>
 #include <base/internal/globals.h>
 
@@ -78,7 +80,7 @@ uint64_t Timer::Connection::_ts_to_us_ratio(Timestamp ts,
 }
 
 
-Duration Timer::Connection::_update_interpolated_time(Duration &interpolated_time)
+Timer::Connection::Duration Timer::Connection::_update_interpolated_time(Duration &interpolated_time)
 {
 	/*
 	 * The new interpolated time value may be smaller than a
@@ -97,6 +99,7 @@ Duration Timer::Connection::_update_interpolated_time(Duration &interpolated_tim
 void Timer::Connection::_handle_timeout()
 {
 	uint64_t const us = elapsed_us();
+GENODE_TRACE_CHECKPOINT_NAMED(us, "Timer::Connection::_handle_timeout()");
 	if (us - _us > REAL_TIME_UPDATE_PERIOD_US) {
 		_update_real_time();
 	}
@@ -116,6 +119,7 @@ void Timer::Connection::set_timeout(Microseconds     duration,
 		duration.value = REAL_TIME_UPDATE_PERIOD_US;
 
 	_handler = &handler;
+GENODE_TRACE_CHECKPOINT_NAMED(duration.value, "Timer::Connection::set_timeout()");
 	trigger_once(duration.value);
 }
 
