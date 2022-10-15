@@ -514,10 +514,7 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 				if (_scheduled_select_handler)
 					_scheduled_select_handler->dispatch_select();
 			} else {
-				if (_main_context())
-					_resume_main();
-				else
-					Signal_transmitter(*_resume_main_handler).submit();
+				resume_main();
 			}
 
 			_pthreads.resume_all();
@@ -615,7 +612,7 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 			if (_main_context())
 				_resume_main();
 			else
-				Signal_transmitter(*_resume_main_handler).submit();
+				_resume_main_handler->local_submit();
 		}
 
 		/**
