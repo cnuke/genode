@@ -18,12 +18,20 @@
 
 /* Genode includes */
 #include <kernel/interface.h>
+#include <trace/timestamp.h>
 #include <timer_session/connection.h>
 
 using namespace Genode;
 
 
 Trace::Timestamp Timer::Connection::_timestamp()
+{
+//	return (Trace::Timestamp)Kernel::time();
+	return Trace::timestamp();
+}
+
+
+Trace::Timestamp Timer::Connection::kernel_time()
 {
 	return (Trace::Timestamp)Kernel::time();
 }
