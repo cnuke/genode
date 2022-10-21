@@ -420,7 +420,7 @@ memmove W
 memset W
 stdout_reconnect T
 wait_for_continue T
-
+_ZN5Timer10Connection11kernel_timeEv T
 
 #
 # C++ runtime

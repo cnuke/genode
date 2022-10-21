@@ -340,6 +340,11 @@ class Timer::Connection : public  Genode::Connection<Session>,
 		 *****************/
 
 		Duration curr_time() override;
+
+
+		/* Debugging */
+
+		Timestamp kernel_time();
 };
 
 #endif /* _INCLUDE__TIMER_SESSION__CONNECTION_H_ */

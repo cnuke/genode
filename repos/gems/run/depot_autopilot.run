@@ -428,6 +428,10 @@ proc prepare_to_run_genode { } {
 			</route>
 		</start>
 
+		<start name="time_logger" priority="0">
+			<resource name="RAM" quantum="2M"/>
+		</start>
+
 	</config>}
 	install_config $config
 
@@ -436,7 +440,7 @@ proc prepare_to_run_genode { } {
 	# Create the rest of the boot modules
 	#
 
-	set build_components { app/depot_autopilot }
+	set build_components { app/depot_autopilot app/time_logger }
 	append build_components $test_builds
 	build $build_components
 
@@ -447,7 +451,7 @@ proc prepare_to_run_genode { } {
 	# Build boot image from boot modules
 	#
 
-	set boot_modules { depot_autopilot }
+	set boot_modules { depot_autopilot time_logger }
 	append boot_modules $test_modules
 	build_boot_image $boot_modules
 
@@ -646,90 +650,8 @@ if {[expr ![have_spec x86] && \
 # ! find . -type d -wholename *recipes/pkg/test-* -printf '%f\n' | sort
 #
 set default_test_pkgs {
-	test-spark
-	test-spark_exception
-	test-spark_secondary_stack
-	test-black_hole
-	test-clipboard
-	test-depot_query_index
-	test-ds_ownership
-	test-dynamic_config
-	test-dynamic_config_loader
-	test-entrypoint
-	test-expat
-	test-fault_detection
-	test-fs_packet
-	test-fs_report
-	test-fs_rom_update
-	test-fs_rom_update_fs
-	test-fs_rom_update_ram
-	test-fs_tool
-	test-init
-	test-init_loop
-	test-ldso
-	test-libc
-	test-libc_connect_lwip
-	test-libc_connect_lxip
-	test-libc_connect_vfs_server_lwip
-	test-libc_connect_vfs_server_lxip
-	test-libc_counter
-	test-libc_execve
-	test-libc_fifo_pipe
-	test-libc_fork
-	test-libc_getenv
-	test-libc_pipe
-	test-libc_vfs
-	test-libc_vfs_audit
-	test-libc_vfs_block
-	test-libc_vfs_counter
-	test-libc_vfs_fs
-	test-libc_vfs_fs_chained
-	test-libc_vfs_ram
-	test-log
-	test-lx_block
-	test-mmio
-	test-new_delete
-	test-nic_loopback
-	test-part_block_gpt
-	test-part_block_mbr
-	test-pthread
-	test-ram_fs_chunk
-	test-read_only_rom
-	test-reconstructible
-	test-registry
-	test-report_rom
-	test-resource_request
-	test-resource_yield
-	test-rm_fault
-	test-rm_fault_no_nox
-	test-rm_nested
-	test-rm_stress
-	test-rom_filter
-	test-sandbox
-	test-sanitizer
-	test-sequence
-	test-signal
-	test-slab
-	test-stack_smash
-	test-stdcxx
-	test-synced_interface
-	test-tcp_bulk_lwip
-	test-tcp_bulk_lxip
-	test-terminal_crosslink
-	test-timer
-	test-tls
-	test-token
-	test-trace
-	test-trace_buffer
 	test-trace_logger
-	test-utf8
-	test-vfs_block
-	test-vfs_stress_fs
-	test-vfs_stress_ram
-	test-weak_ptr
-	test-xml_generator
-	test-xml_node
-	gcov
+	test-pthread
 }
 
 #
