@@ -40,7 +40,7 @@
 	ldr  x1, =_crt0_qemu_start_secondary_cpus
 	ldr  w1, [x1]
 	cbnz w1, _crt0_enable_fpu
-	wfe
+	nop
 	b 1b
 	.global _crt0_qemu_start_secondary_cpus
 	_crt0_qemu_start_secondary_cpus:
