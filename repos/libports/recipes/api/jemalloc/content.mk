@@ -1,4 +1,4 @@
-content: include lib/symbols/jemalloc LICENSE
+content: include LICENSE
 
 PORT_DIR := $(call port_dir,$(REP_DIR)/ports/jemalloc)
 
