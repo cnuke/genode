@@ -1,14 +1,20 @@
-content: include/libc-plugin src/lib/libc lib/mk LICENSE
+content: include/libc-plugin include/jemalloc src/lib/libc src/lib/jemalloc lib/mk LICENSE
 
-LIBC_PORT_DIR := $(call port_dir,$(REP_DIR)/ports/libc)
-LIBM_PORT_DIR := $(LIBC_PORT_DIR)
+LIBC_PORT_DIR     := $(call port_dir,$(REP_DIR)/ports/libc)
+LIBM_PORT_DIR     := $(LIBC_PORT_DIR)
+JEMALLOC_PORT_DIR := $(call port_dir,$(REP_DIR)/ports/jemalloc)
 
 src/lib/libc:
 	mkdir -p $@
 	cp -r $(LIBC_PORT_DIR)/src/lib/libc/* $@
 	cp -r $(REP_DIR)/src/lib/libc/* $@
 
-include/libc-plugin:
+src/lib/jemalloc:
+	mkdir -p $@
+	cp -r $(JEMALLOC_PORT_DIR)/src/lib/jemalloc/* $@
+	cp -r $(REP_DIR)/src/lib/jemalloc/* $@
+
+include/libc-plugin include/jemalloc:
 	$(mirror_from_rep_dir)
 
 lib/mk:

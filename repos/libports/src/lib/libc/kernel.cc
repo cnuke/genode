@@ -55,6 +55,27 @@ size_t Libc::Kernel::_user_stack_size()
 }
 
 
+extern "C" {
+	extern long _jemalloc_data_start;
+	extern long _jemalloc_data_end;
+	extern long _jemalloc_bss_start;
+	extern long _jemalloc_bss_end;
+}
+
+
+void Libc::Kernel::_save_initial_jemalloc_state()
+{
+	addr_t const jemalloc_data_start = (addr_t)&_jemalloc_data_start,
+	             jemalloc_data_end   = (addr_t)&_jemalloc_data_end;
+	size_t const jemalloc_data_bytes = jemalloc_data_end - jemalloc_data_start;
+
+	_initial_jemalloc_state = _heap.alloc(jemalloc_data_bytes);
+
+	Genode::memcpy(_initial_jemalloc_state, &_jemalloc_data_start,
+	               jemalloc_data_bytes);
+}
+
+
 void Libc::Kernel::reset_malloc_heap()
 {
 //	_malloc_ram.construct(_heap, _env.ram());
@@ -67,6 +88,22 @@ void Libc::Kernel::reset_malloc_heap()
 //	_malloc_heap.construct(*_malloc_ram, _env.rm());
 
 	reinit_malloc(raw_malloc_heap);
+
+
+	/* reset jemalloc state */
+
+	addr_t const jemalloc_data_start = (addr_t)&_jemalloc_data_start,
+	             jemalloc_data_end   = (addr_t)&_jemalloc_data_end;
+	size_t const jemalloc_data_bytes = jemalloc_data_end - jemalloc_data_start;
+
+	Genode::memcpy(&_jemalloc_data_start, _initial_jemalloc_state,
+	               jemalloc_data_bytes);
+
+	addr_t const jemalloc_bss_start = (addr_t)&_jemalloc_bss_start,
+	             jemalloc_bss_end   = (addr_t)&_jemalloc_bss_end;
+	size_t const jemalloc_bss_bytes = jemalloc_bss_end - jemalloc_bss_start;
+
+	Genode::memset(&_jemalloc_bss_start, 0, jemalloc_bss_bytes);
 }
 
 
@@ -429,6 +466,18 @@ void Libc::Kernel::_clone_state_from_parent()
 	_cloned_mem_alloc_exec_ranges.for_each([&] (Cloned_mem_alloc_range &mem_alloc_range) {
 		mem_alloc_exec->update_cloned_ds_cap(mem_alloc_range.local_addr, mem_alloc_range.ds);
 	});
+
+	/* import jemalloc state from parent */
+
+	addr_t const jemalloc_data_start = (addr_t)&_jemalloc_data_start,
+	             jemalloc_data_end   = (addr_t)&_jemalloc_data_end;
+	size_t const jemalloc_data_bytes = jemalloc_data_end - jemalloc_data_start;
+	_clone_connection->memory_content(&_jemalloc_data_start, jemalloc_data_bytes);
+
+	addr_t const jemalloc_bss_start = (addr_t)&_jemalloc_bss_start,
+	             jemalloc_bss_end   = (addr_t)&_jemalloc_bss_end;
+	size_t const jemalloc_bss_bytes = jemalloc_bss_end - jemalloc_bss_start;
+	_clone_connection->memory_content(&_jemalloc_bss_start, jemalloc_bss_bytes);
 }
 
 
@@ -500,6 +549,8 @@ Libc::Kernel::Kernel(Genode::Env &env, Genode::Allocator &heap)
 	init_pthread_support(env.cpu(), _pthread_config(), _heap);
 
 	_env.ep().register_io_progress_handler(*this);
+
+	_save_initial_jemalloc_state();
 
 	if (_cloned) {
 		_clone_state_from_parent();

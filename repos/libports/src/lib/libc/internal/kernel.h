@@ -297,6 +297,8 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 
 		Absolute_path _cwd { "/" };
 
+		void *_initial_jemalloc_state;
+
 
 		/**
 		 * Trampoline to application (user) code
@@ -392,6 +394,8 @@ struct Libc::Kernel final : Vfs::Io_response_handler,
 		void _init_file_descriptors();
 
 		void _clone_state_from_parent();
+
+		void _save_initial_jemalloc_state();
 
 	public:
 
