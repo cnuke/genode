@@ -74,7 +74,7 @@ struct Placement_policy
 				}
 			});
 			/* if no entry is found, Policy::ALL is applied */
-			return found ? cpu : pthread_id;
+			return found ? cpu : /*pthread_id*/0U;
 		}
 		case Policy::ALL:
 		default:
