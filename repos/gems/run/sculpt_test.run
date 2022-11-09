@@ -1,29 +1,43 @@
-set use_nvme 0
+set use_nvme 1
 
 source ${genode_dir}/repos/gems/run/sculpt.run
 
 # enable Qemu networking, usable via the nic_drv
 append_qemu_nic_args
-append qemu_args " -m 1024 "
+append qemu_args " -m 1024 -boot d "
 
 # attach small SATA disk to Qemu to experiment with file-system access
 set disk_image "bin/sculpt-ahci.raw"
-if {![file exists bin/sculpt-ahci.raw]} {
-	puts stderr "creating toy disk image $disk_image for use in Qemu"
-	catch { exec dd if=/dev/zero of=$disk_image bs=1M count=512 }
+if {![file exists bin/sculpt-ahci.raw-0]} {
+	catch { exec dd if=/dev/zero of=$disk_image-0 bs=1M count=128 }
 }
-append qemu_args " -device ahci,id=ahci "
-append qemu_args " -drive id=hdd,file=$disk_image,format=raw,if=none -device ide-hd,drive=hdd,bus=ahci.1 "
+if {![file exists bin/sculpt-ahci.raw-1]} {
+	catch { exec dd if=/dev/zero of=$disk_image-1 bs=1M count=32 }
+}
+if {![file exists bin/sculpt-ahci.raw-2]} {
+	catch { exec dd if=/dev/zero of=$disk_image-2 bs=1M count=64 }
+}
+append qemu_args " -device ahci,id=ahci-0 "
+append qemu_args " -drive id=hdd1,file=$disk_image-0,format=raw,if=none -device ide-hd,drive=hdd1,bus=ahci-0.1 "
+append qemu_args " -device ahci,id=ahci-1 "
+append qemu_args " -drive id=hdd2,file=$disk_image-1,format=raw,if=none -device ide-hd,drive=hdd2,bus=ahci-1.1 "
+append qemu_args " -drive id=hdd3,file=$disk_image-2,format=raw,if=none -device ide-hd,drive=hdd3,bus=ahci-1.2 "
 
 # attach small NVMe disk to Qemu to experiment with file-system access
 if {$use_nvme} {
 	set disk_image "bin/sculpt-nvme.raw"
-	if {![file exists bin/sculpt-nvme.raw]} {
+	if {![file exists bin/sculpt-nvme.raw-0]} {
 		puts stderr "creating toy disk image $disk_image for use in Qemu"
-		catch { exec dd if=/dev/zero of=$disk_image bs=1M count=512 }
+		catch { exec dd if=/dev/zero of=$disk_image-0 bs=1M count=96 }
 	}
-	append qemu_args " -drive id=nvme0,file=$disk_image,format=raw,if=none "
+	if {![file exists bin/sculpt-nvme.raw-1]} {
+		puts stderr "creating toy disk image $disk_image for use in Qemu"
+		catch { exec dd if=/dev/zero of=$disk_image-1 bs=1M count=80 }
+	}
+	append qemu_args " -drive id=nvme0,file=$disk_image-0,format=raw,if=none "
 	append qemu_args " -device nvme,drive=nvme0,serial=NVMe_666,id=nvme0n1 "
+	append qemu_args " -drive id=nvme1,file=$disk_image-1,format=raw,if=none "
+	append qemu_args " -device nvme,drive=nvme1,serial=NVMe_667,id=nvme1n1 "
 }
 
 run_genode_until forever
