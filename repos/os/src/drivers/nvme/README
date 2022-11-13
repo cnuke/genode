@@ -17,12 +17,15 @@ Configuration
 The following config illustrates how the driver is configured:
 
 !<start name="nvme_drv">
-!  <resource name="ram" quantum="8M"/>
+!  <resource name="ram" quantum="24M"/>
 !  <provides><service name="Block"/></provides>
-!  <config>
+!  <config hmb_size="16M">
 !    <policy label_prefix="client1" writeable="yes"/>
 !  </config>
 !</start>
+
+The 'hmb_size' instructs the driver to setup a host-memory-buffer
+of 16 MiB of DMA-capable memory if the device requires the buffer.
 
 
 Report
