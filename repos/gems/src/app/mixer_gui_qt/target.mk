@@ -6,6 +6,9 @@ QT5_PORT_LIBS = libQt5Core libQt5Gui libQt5Widgets
 
 LIBS = base libc libm mesa stdcxx qoost $(QT5_PORT_LIBS)
 
+# internal/thread_create.h for Libc::pthread_create
+INC_DIR += $(call select_from_repositories,src/lib/libc)
+
 include $(call select_from_repositories,lib/import/import-qt5_qmake.mk)
 
 QT5_GENODE_LIBS_APP += ld.lib.so
