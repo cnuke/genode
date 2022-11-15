@@ -238,10 +238,12 @@ install_config {
 		<provides><service name="Timer"/></provides>
 	</start>
 
+	<!--
 	<start name="top" priority="-1">
 		<resource name="RAM" quantum="2M"/>
 		<config period_ms="10000"/>
 	</start>
+	-->
 
 	<start name="report_rom" priority="0">
 		<binary name="report_rom"/>
