@@ -17,6 +17,9 @@
 #include <base/attached_rom_dataspace.h>
 #include <libc/component.h>
 
+/* libc internal includes */
+#include <internal/thread_create.h>
+
 /* Qt includes */
 #include <QApplication>
 #include <QDebug>
@@ -32,13 +35,39 @@
 enum { SIGNAL_EP_STACK_SIZE = 16*1024 };
 
 
+struct Signal_ep : Genode::Entrypoint
+{
+	pthread_t _pthread;
+
+	void _handle_pthread_registration()
+	{
+		Genode::Thread *myself = Genode::Thread::myself();
+		if (!myself || Libc::pthread_create_from_thread(&_pthread, *myself, &myself)) {
+			Genode::error("signal ep will not work - thread for "
+			              "pthread registration invalid");
+		}
+	}
+
+	Genode::Signal_handler<Signal_ep> _pthread_reg_sigh;
+
+	Signal_ep(Genode::Env &env)
+	:
+		Genode::Entrypoint(env, SIGNAL_EP_STACK_SIZE, "signal_ep",
+		                   Genode::Affinity::Location()),
+		_pthread_reg_sigh(*this, *this, &Signal_ep::_handle_pthread_registration)
+	{
+		Genode::Signal_transmitter(_pthread_reg_sigh).submit();
+	}
+};
+
+
 struct Report_handler
 {
 	QMember<Report_proxy> proxy;
 
 	Genode::Attached_rom_dataspace channels_rom;
 
-	Genode::Entrypoint                     sig_ep;
+	Signal_ep                              sig_ep;
 	Genode::Signal_handler<Report_handler> channels_handler;
 
 	Genode::Blockade _report_blockade { };
@@ -68,8 +97,7 @@ struct Report_handler
 	Report_handler(Genode::Env &env)
 	:
 		channels_rom(env, "channel_list"),
-		sig_ep(env, SIGNAL_EP_STACK_SIZE, "signal ep",
-		       Genode::Affinity::Location()),
+		sig_ep(env),
 		channels_handler(sig_ep, *this, &Report_handler::_handle_channels)
 	{
 		channels_rom.sigh(channels_handler);
