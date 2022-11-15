@@ -452,8 +452,8 @@ Main_window::Main_window(Genode::Env &env)
 		Xml_node node = config.xml().sub_node("default");
 		_default_out_volume = node.attribute_value<long>("out_volume", 0);
 		_default_volume     = node.attribute_value<long>("volume", 0);
-		_default_muted      = node.attribute_value<long>("muted", 1);
-	} catch (...) { Genode::warning("no <default> node found, fallback is 'muted=1'"); }
+		_default_muted      = node.attribute_value<long>("muted", true);
+	} catch (...) { Genode::warning("no <default> node found, fallback is muted"); }
 }
 
 
