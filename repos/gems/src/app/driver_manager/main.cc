@@ -1059,7 +1059,7 @@ void Driver_manager::Main::_generate_usb_drv_config(Reporter &usb_drv_config,
 
 			enum { USB_CLASS_HID = 3, USB_CLASS_MASS_STORAGE = 8, };
 
-			bool const expose_as_usb_raw = (class_code == USB_CLASS_HID);
+			bool const expose_as_usb_raw = (class_code != USB_CLASS_HID);
 
 			if (!expose_as_usb_raw)
 				return;
