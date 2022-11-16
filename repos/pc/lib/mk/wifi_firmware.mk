@@ -5,7 +5,7 @@
 FW_CONTRIB_DIR := $(call select_from_ports,linux-firmware)
 
 IMAGES  := $(notdir $(wildcard $(FW_CONTRIB_DIR)/firmware/*.ucode))
-IMAGES  := $(notdir $(wildcard $(FW_CONTRIB_DIR)/firmware/*.pnvm))
+IMAGES  += $(notdir $(wildcard $(FW_CONTRIB_DIR)/firmware/*.pnvm))
 IMAGES  += $(notdir $(wildcard $(FW_CONTRIB_DIR)/firmware/*.db))
 IMAGES  += $(notdir $(wildcard $(FW_CONTRIB_DIR)/firmware/*.p7s))
 BIN_DIR := $(BUILD_BASE_DIR)/bin
