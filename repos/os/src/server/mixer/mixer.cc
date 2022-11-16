@@ -165,6 +165,7 @@ class Audio_out::Mixer
 		Connection  _right { env, "right", false, false };
 		Connection *_out[MAX_CHANNELS];
 		float       _out_volume[MAX_CHANNELS];
+		bool        _out_muted[MAX_CHANNELS];
 
 		/*
 		 * Default settings used as fallback for new sessions
@@ -224,6 +225,7 @@ class Audio_out::Mixer
 						Channel::Number const num = (Channel::Number)i;
 						char const * const   name = string_from_number(num);
 						int const             vol = (int)(MAX_VOLUME * _out_volume[i]);
+						bool const          muted = _out_muted[i];
 
 						xml.node("channel", [&] () {
 							xml.attribute("type",  "output");
@@ -231,7 +233,7 @@ class Audio_out::Mixer
 							xml.attribute("name",   name);
 							xml.attribute("number", (int)num);
 							xml.attribute("volume", (int)vol);
-							xml.attribute("muted",  false);
+							xml.attribute("muted",  muted);
 						});
 					});
 
@@ -474,6 +476,8 @@ class Audio_out::Mixer
 			/* reset out volume in case there is no 'channel_list' node */
 			_out_volume[LEFT]  = _default_out_volume;
 			_out_volume[RIGHT] = _default_out_volume;
+			_out_muted[LEFT]   = _default_muted;
+			_out_muted[RIGHT]  = _default_muted;
 
 			try {
 				Xml_node channel_list_node = config_node.sub_node("channel_list");
@@ -506,13 +510,14 @@ class Audio_out::Mixer
 							if (ch.number != i) return;
 
 							_out_volume[i] = (float)ch.volume / MAX_VOLUME;
+							_out_muted[i] = ch.muted;
 
 							if (_verbose->changes) {
 								log("Set label: 'master' "
 								    "channel: '", string_from_number(ch.number), "' "
 								    "nr: ",       (int)ch.number, " "
 								    "volume: ",   (int)(MAX_VOLUME*_out_volume[i]), " "
-								    "muted: ",    ch.muted);
+								    "muted: ",    _out_muted[i]);
 							}
 						});
 					}
