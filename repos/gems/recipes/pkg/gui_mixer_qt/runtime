@@ -1,0 +1,167 @@
+<runtime ram="80M" caps="800" binary="init">
+
+	<requires>
+		<audio_out/>
+		<gui/>
+		<file_system label="config"/>
+		<report label="mixer_gui_qt -> shape"/>
+		<timer/>
+	</requires>
+
+	<provides>
+		<audio_out/>
+	</provides>
+
+	<config verbose="no">
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="PD"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="LOG"/>
+			<service name="Timer"/>
+			<service name="Report"/>
+			<service name="File_system"/>
+			<service name="Gui"/>
+			<service name="Audio_out"/>
+		</parent-provides>
+
+		<default-route> <any-service> <parent/> </any-service> </default-route>
+		<default caps="100"/>
+
+		<service name="Audio_out">
+			<default-policy> <child name="mixer"/> </default-policy>
+		</service>
+
+		<start name="vfs">
+			<resource name="RAM" quantum="2M"/>
+			<provides> <service name="File_system"/> </provides>
+			<config>
+				<vfs>
+					<fs/>
+					<import>
+						<inline name="mixer.config">
+<config>
+	<default out_volume="100" volume="25" muted="false"/>
+	<channel_list/>
+</config>
+						</inline>
+					</import>
+				</vfs>
+				<policy label_prefix="fs_rom" root="/" writeable="no"/>
+				<policy label_prefix="mixer_gui_qt" root="/" writeable="yes"/>
+			</config>
+			<route>
+				<!-- force omission of sub directory -->
+				<service name="File_system"> <parent label=""/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="fs_rom">
+			<resource name="RAM" quantum="1M"/>
+			<provides> <service name="ROM"/> </provides>
+			<route>
+				<service name="File_system"> <child name="vfs"/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="report_rom">
+			<resource name="RAM" quantum="1M"/>
+			<provides> <service name="Report"/> <service name="ROM"/> </provides>
+			<config verbose="no">
+				<policy label="mixer_gui_qt -> channel_list" report="mixer -> channel_list"/>
+			</config>
+			<route>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="mixer">
+			<resource name="RAM" quantum="16M"/>
+			<provides> <service name="Audio_out"/> </provides>
+			<route>
+				<service name="ROM" label="config">
+					<child name="fs_rom" label="mixer.config"/>
+				</service>
+				<service name="Report" label="channel_list">
+					<child name="report_rom"/>
+				</service>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+
+		<start name="mixer_gui_qt" caps="200">
+			<resource name="RAM" quantum="48M"/>
+			<config verbose="no">
+				<default out_volume="100" volume="25" muted="false"/>
+				<vfs>
+					<dir name="dev">
+						<log/>
+						<inline name="rtc">2022-11-16 12:00</inline>
+					</dir>
+					<dir name="config"> <fs/> </dir>
+					<dir name="pipe"> <pipe/> </dir>
+					<tar name="qt5_dejavusans.tar"/>
+					<tar name="qt5_libqgenode.tar"/>
+				</vfs>
+				<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc"/>
+			</config>
+			<route>
+				<service name="File_system">
+					<child name="vfs"/>
+				</service>
+				<service name="Gui"> <parent/> </service>
+				<!-- always use CPU rendering from archives -->
+				<service name="ROM" label="mesa_gpu_drv.lib.so">
+					<parent label="mesa_gpu-softpipe.lib.so"/>
+				</service>
+				<service name="ROM" label="channel_list">
+					<child name="report_rom"/>
+				</service>
+				<any-service> <parent/> <any-child/> </any-service>
+			</route>
+		</start>
+	</config>
+
+	<content>
+		<!-- common for Qt GUI applications -->
+
+		<rom label="egl.lib.so"/>
+		<rom label="expat.lib.so"/>
+		<rom label="freetype.lib.so"/>
+		<rom label="glapi.lib.so"/>
+		<rom label="jpeg.lib.so"/>
+		<rom label="libQt5Core.lib.so"/>
+		<rom label="libQt5Gui.lib.so"/>
+		<rom label="libc.lib.so"/>
+		<rom label="libdrm.lib.so"/>
+		<rom label="libm.lib.so"/>
+		<rom label="libpng.lib.so"/>
+		<rom label="libqgenode.lib.so"/>
+		<rom label="mesa.lib.so"/>
+		<rom label="qt5_dejavusans.tar"/>
+		<rom label="qt5_libqgenode.tar"/>
+		<rom label="stdcxx.lib.so"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="vfs_gpu.lib.so"/>
+		<rom label="vfs_pipe.lib.so"/>
+		<rom label="zlib.lib.so"/>
+
+		<!-- application -->
+
+		<rom label="fs_rom"/>
+		<rom label="init"/>
+		<rom label="ld.lib.so"/>
+		<rom label="libQt5Widgets.lib.so"/>
+		<rom label="mesa_gpu-softpipe.lib.so"/>
+		<rom label="mixer"/>
+		<rom label="mixer_gui_qt"/>
+		<rom label="qt5_component.lib.so"/>
+		<rom label="report_rom"/>
+		<rom label="vfs"/>
+		<rom label="vfs_import.lib.so"/>
+	</content>
+
+</runtime>
