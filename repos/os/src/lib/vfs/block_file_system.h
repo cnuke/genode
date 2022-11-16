@@ -313,10 +313,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					 * (Since the plugin operates in a synchronous fashion
 					 * that should not happen.)
 					 */
-					if (!_tx_source->ready_to_submit()) {
-						Genode::error("vfs_block: could not sync blocks");
+					if (!_tx_source->ready_to_submit())
 						return SYNC_ERR_INVALID;
-					}
 
 					Block::Packet_descriptor p =
 						Block::Session::sync_all_packet_descriptor(
@@ -329,10 +327,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					p = _tx_source->get_acked_packet();
 					_tx_source->release_packet(p);
 
-					if (!p.succeeded()) {
-						Genode::error("vfs_block: syncing blocks failed");
+					if (!p.succeeded())
 						return SYNC_ERR_INVALID;
-					}
 
 					return SYNC_OK;
 				}
