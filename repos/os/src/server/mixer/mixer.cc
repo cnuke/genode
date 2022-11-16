@@ -348,7 +348,7 @@ class Audio_out::Mixer
 			Packet  * const    out     = stream->get(out_pos + offset);
 			Session_channel * const sc = &_channels[nr];
 
-			float const out_vol  = _out_volume[nr];
+			float const out_vol  = _out_muted[nr] ? 0.0f : _out_volume[nr];
 
 			bool       clear     = true;
 			bool       mix_all   = remix;
@@ -361,7 +361,7 @@ class Audio_out::Mixer
 				 */
 				[&] {
 					sc->for_each_session([&] (Session_elem &session) {
-						if (session.stopped() || session.muted || session.volume < 0.01f)
+						if (session.stopped())
 							return;
 
 						Packet *in = session.get_packet(offset);
@@ -372,7 +372,10 @@ class Audio_out::Mixer
 						/* skip if packet has been processed or was already played */
 						if ((!in->valid() && !mix_all) || in->played()) return;
 
-						_mix_packet(out, in, clear, out_vol, session.volume);
+						float const volume =
+							session.muted || session.volume < 0.01f ? 0.0f
+							                                        : session.volume;
+						_mix_packet(out, in, clear, out_vol, volume);
 
 						clear = false;
 					});
