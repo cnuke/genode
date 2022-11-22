@@ -49,7 +49,8 @@ namespace Audio_out {
 	class Session;
 
 	enum {
-		QUEUE_SIZE  = 256,           /* buffer queue size */
+		FACTOR      = 1,
+		QUEUE_SIZE  = 256 / FACTOR,           /* buffer queue size */
 		SAMPLE_RATE = 44100,
 		SAMPLE_SIZE = sizeof(float),
 	};
@@ -57,7 +58,7 @@ namespace Audio_out {
 	/**
 	 * Samples per perios (~11.6ms)
 	 */
-	static constexpr Genode::size_t PERIOD = 512;
+	static constexpr Genode::size_t PERIOD = 512 * FACTOR;
 }
 
 
