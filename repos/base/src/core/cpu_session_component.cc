@@ -58,6 +58,14 @@ Thread_capability Cpu_session_component::create_thread(Capability<Pd_session> pd
 			throw Thread_creation_failed();
 		}
 
+		Affinity::Location const ta = _thread_affinity(affinity);
+
+		Genode::error("create_thread: '", _label, " -> ", name, "' affinity: ",
+		              "(xpos=", ta.xpos(), " ypos=", ta.ypos(),
+		              " width=", ta.width(), " height=", ta.height(), ")",
+		              " priority: ", _priority,
+		              " quota: ", _weight_to_quota(weight.value));
+
 		Mutex::Guard slab_lock_guard(_thread_alloc_lock);
 		thread = new (&_thread_alloc)
 			Cpu_thread_component(
@@ -204,6 +212,7 @@ int Cpu_session_component::transfer_quota(Cpu_session_capability dst_cap,
 			return -3;
 		}
 		/* transfer quota */
+		Genode::error("transfer_quota: ", _label, " (", _quota, ") to ", dst->_label, " quota: ", quota);
 		_transfer_quota(*dst, quota);
 		return 0;
 	};
