@@ -46,6 +46,8 @@ namespace Genode {
 				if (!affinity.valid())
 					throw Service_denied();
 
+				Genode::error(__func__, ":", __LINE__, ": args: '", args, "'");
+
 				return new (md_alloc())
 					Cpu_session_component(*this->ep(),
 					                      session_resources_from_args(args),
