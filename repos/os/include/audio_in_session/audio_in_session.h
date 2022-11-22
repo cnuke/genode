@@ -35,7 +35,8 @@ namespace Audio_in {
 	class Session;
 
 	enum {
-		QUEUE_SIZE  = 431,            /* buffer queue size (~5s) */
+		FACTOR      = 1,
+		QUEUE_SIZE  = 256 / FACTOR,
 		SAMPLE_RATE = 44100,
 		SAMPLE_SIZE = sizeof(float),
 	};
@@ -43,7 +44,7 @@ namespace Audio_in {
 	/**
 	 * Samples per period (~11.6ms)
 	 */
-	static constexpr Genode::size_t PERIOD = 512;
+	static constexpr Genode::size_t PERIOD = 512 * FACTOR;
 }
 
 
