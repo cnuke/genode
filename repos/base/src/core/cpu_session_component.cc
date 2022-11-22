@@ -85,6 +85,14 @@ Thread_capability Cpu_session_component::create_thread(Capability<Pd_session> pd
 
 	_thread_list.insert(thread);
 
+	Affinity::Location const ta = _thread_affinity(affinity);
+	if (_weight_to_quota(weight.value) > 0)
+		Genode::error("create_thread: '", _label, " -> ", name, "' affinity: ",
+		              "(xpos=", ta.xpos(), " ypos=", ta.ypos(),
+		              " width=", ta.width(), " height=", ta.height(), ")",
+		              " priority: ", _priority,
+		              " quota: ", _weight_to_quota(weight.value));
+
 	return thread->cap();
 }
 
@@ -204,6 +212,7 @@ int Cpu_session_component::transfer_quota(Cpu_session_capability dst_cap,
 			return -3;
 		}
 		/* transfer quota */
+		Genode::error("transfer_quota: ", _label, " (", _quota, ") to ", dst->_label, " quota: ", quota);
 		_transfer_quota(*dst, quota);
 		return 0;
 	};
