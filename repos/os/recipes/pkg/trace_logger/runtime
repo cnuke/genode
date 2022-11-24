@@ -14,7 +14,7 @@
 	        session_parent_levels="1"
 	        period_sec="10"
 	        default_policy="null"
-	        default_buffer="8K">
+	        default_buffer="64K">
 
 		<policy label_prefix="init -> runtime -> "/>
 
