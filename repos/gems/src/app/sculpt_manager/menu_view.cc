@@ -102,8 +102,10 @@ void Menu_view::_gen_start_node_content(Xml_generator &xml) const
 {
 	_child_state.gen_start_node_content(xml);
 
+#if 0
 	gen_named_node(xml, "resource", "CPU", [&] () {
 		xml.attribute("quantum", 10); });
+#endif
 
 	gen_named_node(xml, "binary", "menu_view");
 
