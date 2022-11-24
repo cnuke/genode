@@ -58,14 +58,6 @@ Thread_capability Cpu_session_component::create_thread(Capability<Pd_session> pd
 			throw Thread_creation_failed();
 		}
 
-		Affinity::Location const ta = _thread_affinity(affinity);
-
-		Genode::error("create_thread: '", _label, " -> ", name, "' affinity: ",
-		              "(xpos=", ta.xpos(), " ypos=", ta.ypos(),
-		              " width=", ta.width(), " height=", ta.height(), ")",
-		              " priority: ", _priority,
-		              " quota: ", _weight_to_quota(weight.value));
-
 		Mutex::Guard slab_lock_guard(_thread_alloc_lock);
 		thread = new (&_thread_alloc)
 			Cpu_thread_component(
@@ -92,6 +84,14 @@ Thread_capability Cpu_session_component::create_thread(Capability<Pd_session> pd
 	thread->session_exception_sigh(_exception_sigh);
 
 	_thread_list.insert(thread);
+
+	Affinity::Location const ta = _thread_affinity(affinity);
+	if (_weight_to_quota(weight.value) > 0)
+		Genode::error("create_thread: '", _label, " -> ", name, "' affinity: ",
+		              "(xpos=", ta.xpos(), " ypos=", ta.ypos(),
+		              " width=", ta.width(), " height=", ta.height(), ")",
+		              " priority: ", _priority,
+		              " quota: ", _weight_to_quota(weight.value));
 
 	return thread->cap();
 }
