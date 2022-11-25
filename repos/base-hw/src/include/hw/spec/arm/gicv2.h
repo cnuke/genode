@@ -16,9 +16,20 @@
 #define _SRC__LIB__HW__SPEC__ARM__GICv2_H_
 
 #include <util/mmio.h>
+#include <trace/timestamp.h>
+#include <base/log.h>
 
 namespace Hw { class Gicv2; }
 
+#if 0
+struct event
+{
+	Genode::uint64_t tsc;
+};
+
+enum { MAX_EVENTS = 2000 };
+static event _events[MAX_EVENTS + 8];
+#endif
 
 class Hw::Gicv2
 {
@@ -182,6 +193,8 @@ class Hw::Gicv2
 
 		Gicv2();
 
+		// Genode::uint64_t _events_count = 0;
+
 		/**
 		 * Try to take an IRQ and return wether it was successful
 		 *
@@ -191,6 +204,26 @@ class Hw::Gicv2
 		{
 			_last_iar = _cpui.read<Cpu_interface::Iar>();
 			irq = Cpu_interface::Iar::Irq_id::get(_last_iar);
+
+#if 0
+			if (irq == 82) {
+
+				_events[_events_count].tsc = Genode::Trace::timestamp();
+				// Genode::raw(_events[_events_count].tsc);
+				_events_count = (_events_count + 1) % MAX_EVENTS;
+			}
+
+			if (_events_count > 0 && _events_count > (MAX_EVENTS / 2)) {//(_events_count % MAX_EVENTS) == 0) {
+				static bool once = false;
+				if (!once) {
+					once = true;
+					Genode::raw("dump irq 82 tscs: ", _events_count);
+					for (Genode::uint64_t i = 0; i < _events_count; i++) {
+						Genode::raw(_events[i].tsc);
+					}
+				}
+			}
+#endif
 			return _valid(irq);
 		}
 
