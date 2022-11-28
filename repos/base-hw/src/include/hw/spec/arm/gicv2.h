@@ -21,7 +21,9 @@
 
 namespace Hw { class Gicv2; }
 
-#if 0
+extern bool foo_finished;
+
+#if 1
 struct event
 {
 	Genode::uint64_t tsc;
@@ -193,7 +195,9 @@ class Hw::Gicv2
 
 		Gicv2();
 
-		// Genode::uint64_t _events_count = 0;
+#if 1
+		Genode::uint64_t _events_count = 0;
+#endif
 
 		/**
 		 * Try to take an IRQ and return wether it was successful
@@ -205,7 +209,7 @@ class Hw::Gicv2
 			_last_iar = _cpui.read<Cpu_interface::Iar>();
 			irq = Cpu_interface::Iar::Irq_id::get(_last_iar);
 
-#if 0
+#if 1
 			if (irq == 82) {
 
 				_events[_events_count].tsc = Genode::Trace::timestamp();
@@ -221,6 +225,8 @@ class Hw::Gicv2
 					for (Genode::uint64_t i = 0; i < _events_count; i++) {
 						Genode::raw(_events[i].tsc);
 					}
+
+					foo_finished = true;
 				}
 			}
 #endif
