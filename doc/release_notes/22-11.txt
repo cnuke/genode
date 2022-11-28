@@ -126,66 +126,57 @@ Date:   Wed Nov 16 12:36:21 2022 +0100
 Hardware-accelerated graphics with Intel GEN12+ GPUs
 ####################################################
 
-; @ssumpf
+With our big [https://mesa3d.org - Mesa 3D] library update from version 11.2.2
+to version [https://genode.org/documentation/release-notes/21.08 - 21.0.0] we
+also switched the Intel graphics back end from the dated DRI2/i965 to the
+Gallium/Iris based graphics driver. The reason for doing so is becoming apparent
+with the current Genode release. The old i965 driver does not support newer Intel
+Graphics hardware and is limited to (U)HD graphics devices found, for example,
+on Broadwell, Skylake, or Kabylake platforms. The new
+[https://en.wikipedia.org/wiki/Intel_Xe - Intel Xe] (eXascale for
+everyone = GEN12) hardware is only supported by the Iris driver and can be found
+on current architectures like Tigerlake or Alderlake. Intel Xe comes with a
+completely new instruction set architecture (ISA). Thanks to our switch to Iris,
+most of these ISA changes are handled transparently by the Mesa library for us.
+The main task for Genode was to adjust the Intel-GPU multiplexer to the new
+graphics device generation.
 
-commit 2aa01e309ced36ea439ea93934959c13efcacd03
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Jul 1 14:35:04 2022 +0200
 
-    gpu/intel: GEN12+
-    
-    * clock frequency
-    * topology
-    * exec lists
-    * IRQ handling
-    * improved resource management
-    
-    issue #4664
+Intel GPU-GEN12 multiplexer adjustments
+=======================================
 
-commit aafe9ae2d62626beaa09a75ec17bfcfa909a65a2
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Apr 25 09:53:48 2022 +0200
+Genode's GPU multiplexer is a very low level component within the 3D graphics
+stack. Technically it handles the GPU resources (like graphics memory) and the
+scheduling and execution of compiled GPU code (i.e., batch buffers) of the
+graphics device. It is also responsible for providing separation of different
+GPU clients, which is achieved by GPU contexts with a separate page table per
+client in hardware. Also it serves interrupts and informs the client,
+respectively the 3D application, about progress so the client can submit the
+next rendering request. For Intel Xe there are only two changes within this low
+level ISA. First, the interrupt handling registers have been improved, it has
+become easier to distinguish, for example, between a display engine interrupt
+and a rendering interrupt, since graphics cards can have many interrupt causes,
+this is a useful and welcome change. Second, it is now possible to schedule 16
+instead of 4 jobs onto the GPU. While we don't take advantage of this feature
+yet - we schedule one job at a time - this may come in handy on use cases like
+3D compositing. Additionally, the multiplexer has to provide information about
+slices, subslices, and EUs to Mesa clients.
 
-    sculpt: add Intel Xe GPU (Tigerlake)
-    
-    issue #4664
 
-commit 25c1cdec9507ac1349229d88ab8fa897ef136d31
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Nov 10 17:10:12 2022 +0100
+Stability and resource improvements
+===================================
 
-    libdrm/iris: GEN12+
-    
-    * timestamp fequency
-    * topology
-    
-    issue #4664
+Resources need to be traded on Genode and it is essential that the GPU
+multiplexer does not pay for memory allocations or capability upgrades from it's
+own budget. The client has to donate these resources beforehand. If this rule is
+violated, the multiplexer might run out of budget and stall all clients. Because
+3D applications can require a huge amount of resources this has been a
+challenging topic during the last release cycle and we are glad to announce that
+even sophisticated workloads are now running well on Genode. There is still room
+for improvement, but the current situation looks promising.
 
-commit c0367fc30e2083fd31dca2dbc223ff6975b4d1dc
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Nov 7 09:39:14 2022 +0100
-
-    libdrm/iris: synchronization
-    
-    The Morph browser seems to access libdrm multi-threaded. Put this into a
-    separate commit in order to revert it easily.
-    
-    issue #4664
-
-commit 0b569ed8c77fd746ff3b655d20e277e82e36e799
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Nov 8 14:44:39 2022 +0100
-
-    mesa/iris: remove binder patch
-    
-    There is one binder with one memory zone per OpenGL context. The patch was
-    needed before because Genode didn't have proper context support (separate page
-    tables) leading to binders from one or more context being allocated to the same
-    GPU address with the same page tables. This was clearly an error and is fixed
-    with context support.
-    
-    issue #4664
-
+Stability wise we have tested the 3D stack with various workloads (games,
+browsers, VirtualBox6-3D) and did fix many issues.
 
 
 Base framework and OS-level infrastructure
