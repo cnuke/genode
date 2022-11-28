@@ -194,36 +194,32 @@ Base framework and OS-level infrastructure
 Base API changes
 ================
 
-; @nfeske
+New 'Dictionary' utility
+------------------------
 
-commit 7d143087c90c52ad2fe8dbc91b210b83c6c2dac7
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Thu Sep 8 10:17:26 2022 +0200
+Throughout the Genode code base, there are several places where objects are
+accessed by using a name as key. To avoid the repeated manual crafting of such
+data structures, we introduced a basic 'Dictionary' data structure located at
+_base/include/util/dictionary.h_.
 
-    xml_node: change `with_sub_node` signature
-    
-    The `with_sub_node` method is renamed to `with_optional_sub_node` to
-    better reflect that the non-existence of a sub node with the desired type is
-    ignored.
-    At the same time, the new `with_sub_node` now takes a second functor that is
-    called when no sub node of the desired type exists.
-    
-    genodelabs/genode#4600
+It follow the patterns of the existing 'Id_space' and 'Registry'. That is,
+elements are automatically added to the dictionary at construction time,
+respectively removed at destruction time. There exists an 'with_element'
+method for applying a functor to one element by specifying a name as key, and
+an 'with_any_element' method that can be used to destruct all dictionary
+items.
 
-commit 3be0136901069a50cf12d21bea49950f5a43dec6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 14 15:35:13 2022 +0200
 
-    base: add util/dictionary.h utility
-    
-    The new 'Dictionary' provides an easy way to access objects using
-    strings as key. The 'String' received the 'operator >' to simplify the
-    organization of strings in an AVL tree.
-    
-    The patch removes the former definition of the 'operator >' from the
-    platform driver because it would be ambigious now.
-    
-    Fixes #4610
+Tightening the 'Xml_node' interface
+-----------------------------------
+
+The former 'with_sub_node' method has been renamed to 'with_optional_sub_node'
+to better reflect the intention of the caller. If no sub node of the specified
+type exists, the specified functor is not executed.
+
+Use cases where a sub node is mandatory are best covered by the new
+'with_sub_node' method that takes two functors as arguments, one called with
+the matching sub node, and one that is called if no such sub node exists.
 
 
 NIC router
@@ -359,26 +355,18 @@ Date:   Mon Oct 10 14:00:29 2022 +0200
 Improved support for time-multiplexed GPIO pins
 ===============================================
 
-; @nfeske
+Prompted by the need to enable a bit-banging I2C driver on the PinePhone,
+we extended Genode's pin-driver framework introduced in version
+[https://genode.org/documentation/release-notes/21.11#Pin_I_O_session_interfaces - 21.11]
+with the support for the time-multiplexed operation of a pin as output or
+input.
 
-commit 49b4b8597dc4e0ff5bc3319eb4b8cd1e61bc6f45
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Oct 10 18:18:01 2022 +0200
-
-    os/pin_driver: support for time-multiplexed in/out
-    
-    This patch equips the pin-driver framework with support for the
-    time-multiplexed operation of a pin as output or input. This is needed
-    when implementing I2C communication via a bit-banging driver.
-    
-    To operate pin in both directions, a driver obtains both a pin-state and
-    a pin-control session for the same pin. The pin-state session can be
-    used to sense the current pin state. The control session allows the
-    client to set the pin to high or low (using the 'state' method), or to
-    set it to high-impedance via the 'yield' method. Once switched to
-    high-impedance, the pin can be used as input.
-    
-    Issue genodelabs/genode-allwinner#10
+To operate pin in both directions, a driver obtains both a pin-state and a
+pin-control session for the same pin. The pin-state session can be used to
+sense the current pin state. The control session allows the client to set the
+pin to high or low (using the 'state' method), or to set it to high-impedance
+via the 'yield' method. Once switched to high-impedance, the pin can be used
+as input.
 
 
 Libraries and applications
@@ -1609,102 +1597,24 @@ Build system and tools
 Streamlined building of libraries
 =================================
 
-; @nfeske
+The release adds special handling for 'lib/<libname>' arguments to the
+build system, which supersedes the former 'LIB=<libname>' mechanism.
+Whereas the old mechanism was limited to a single library, the new
+convention allows multiple library arguments, similar to regular
+targets.
 
-    build: support library builds via lib/<libname>
-    
-    This patch adds special handling for lib/<libname> arguments to the
-    build system, which supersedes the former LIB=<libname> mechanism.
-    Whereas the old mechanism was limited to a single library, the new
-    convention allows multiple library arguments, similar to regular
-    targets. The change brings the two immediate benefits.
-    
-    First, the streamlining of library and target arguments allows for the
-    building of libraries via the 'build' command of the run tool.
-    
-    Second, it alleviates the need for pseudo target.mk files for building
-    shared libraries that have no direct dependencies, in particular VFS
-    plugins.
-    
-    Since this change eases the explicit creation of shared libraries
-    from run scripts, we may reconsider the automatic implicit building
-    of shared libraries driven by targets. E.g., while developing a Qt
-    application, a run script could import the Qt libraries from the
-    depot and combine those with the developed (fresh built) target without
-    triggering the build of the Qt libraries in the build directory.
-    
-    When issueing 'make' without arguments, all targets are built. This
-    patch applies this behavior to libraries as well, thereby removing the
-    need for the base/src/lib/target.mk pseudo target as used by the CI
-    tools to build all libraries.
-    
-    Note that target.mk files located under src/lib/ are no longer
-    reachable. Therefore, all run scripts that used to trigger the
-    build of a shared library via a pseudo target must be adapted.
-    E.g., 'build lib/vfs/tap' must be replaced by 'build lib/vfs_tap'.
-    
-    With this patch, the LIB=<libname> option is no longer supported.
-    
-    Fixes #4599
+The change brings the two immediate benefits. First, the streamlining of
+library and target arguments allows for the building of libraries via the
+'build' command of the run tool. Second, it alleviates the need for pseudo
+_target.mk_ files for building shared libraries that have no direct
+dependencies, in particular VFS plugins.
 
-commit dd9e12601e137fb6b2d960de9c6262efe158b8d7
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Sep 1 13:12:13 2022 +0200
+Note that _target.mk_ files located under _src/lib/_ are no longer reachable.
+Therefore, all run scripts that used to trigger the build of a shared library
+via a pseudo target must be adapted. E.g., 'build lib/vfs/tap' must be
+replaced by 'build lib/vfs_tap'.
 
-    Remove pseudo targets for building shared libs
-    
-    Thanks to the change "build: support library builds via lib/<libname>",
-    shared libraries can now be built directly by the build system.
-    
-    Issue #4599
-
-commit 9aab61f5a721ac469685c473b43eaf3860b5e42a
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Sep 2 15:17:19 2022 +0200
-
-    mk: allow declaration of build artifacts for libs
-    
-    The build system automatically announces the names of shared libraries
-    as build artifacts. However, in rare cases, it is required to manually
-    define them. In particular, the 'ld' stub library plays no role at runtime
-    and should not be integrated into the boot image.
-    
-    This patch adds a customization hook following the same pattern as used
-    for target.mk files, namely the BUILD_ARTIFACTS variable. If defined,
-    its value is taken as the list of boot artifacts generated by the
-    library-description file.
-    
-    Issue #4368
-
-commit f1f0ee3a215c3d63c294e6729bb44daa0e137739
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Sep 2 15:58:12 2022 +0200
-
-    base: disregard ld.lib.so stub as build artifact
-    
-    The ld.lib.so stub library generated by base/lib/mk/ld.mk has no
-    purpose at runtime. On the contrary, it must not be integrated into the
-    boot image because its name collides with the kernel-specific dynamic
-    linker.
-
-commit 7be98166ee1119361f1fa884a3f1be18e5a02bb4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Sep 2 15:43:25 2022 +0200
-
-    run: improve 'build_boot_image [build_artifacts]'
-    
-    This patch make the use of the result of the 'build_artifacts' function
-    as input for 'build_boot_image' more robust. Since 'build_artifacts'
-    obtains binary names from the progress.log, the names of core,
-    ld.lib.so, and the timer correspond to the kernel-specific names.
-    
-    However, 'build_boot_image' expects the kernel-agnostic names as
-    arguments. Kernel-specific files need special treatment when integrated
-    in the boot image: the kernel-specific file is copied and renamed to the
-    kernel-agnostic name. Without this patch, the kernel-specific file is
-    copied as is (e.g., ld-nova.lib.so). So the name of the ROM module is
-    wrong. This patch resets the kernel-specific names to the generic names
-    so that the special-case handling comes into effect.
+The former 'LIB=<libname>' option is no longer supported.
 
 
 Boot-loading over HTTP
