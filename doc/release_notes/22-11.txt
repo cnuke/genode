@@ -1,0 +1,1749 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 22.11
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro -> @nfeske
+
+
+Hardware-software co-design with Genode on Xilinx Zynq
+######################################################
+
+; @jschlatow
+
+
+; Mention Goa enhancements?
+
+
+commit 98a201fa3ba4f41aa7d825ac42e7c98c0ca351ef
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 16 14:33:00 2022 +0200
+
+    implement devices manager
+    
+    The devices manager takes care of merging a static 'devices' ROM and a
+    bitstream-dependent set of devices. The latter is specified by the
+    component config. The result is provided in terms of a report and is
+    intended to be consumed by the platform driver.
+    
+    genodelabs/genode-zynq#2
+
+commit 6134049742dc7112efbfad1714f16d22bf2ce26a
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 16 15:01:22 2022 +0200
+
+    drivers_fpga: allow switching between bitstreams
+    
+    In order to allow switching between bitstreams, the following changes
+    are applied to the `driver_fpga-zynq` subsystem:
+    
+    - The `fpga_devices` ROM is replaced by a `devices_manager.config`.
+    - The `fpga.bit` ROM is replaced by a File_system session. The file
+      system is accessed by an internal `fs_rom` component translating ROM session
+      request by the internal `fpga_drv`. The file system must therefore provide
+      the bitstream data as well as a `/config` file containing the driver's
+      config ROM.
+    
+    Fixes genodelabs/genode-zynq#2
+
+commit e05c638bae30da905511b92fb97279fccf5fff38
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 9 13:38:46 2022 +0200
+
+    implement Pin driver
+    
+    The Pin driver for the Zynq-7000 SoC is largely based on the a64_pio_drv
+    from the genode-allwinner repository. Most of the code could be shared
+    and went into `common_types.h` and `main.cc`. The platform-specific
+    parts (register interface, irqs, number of banks and pins) is thereby
+    kept minimal.
+
+commit 96bb29a4e8f672b3bc4486c8fc95b9efc70f9259
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 16 16:57:15 2022 +0200
+
+    driver_manager: add Irq and Pin services
+
+commit 31381f0bcc7975224b2ec126b0ebf1a9395e65cd
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 16 16:08:10 2022 +0200
+
+    Zybo-Board GPIO demo
+    
+    The demo controls all on-board LEDs, buttons and switches. Since most
+    GPIOs are connected to the PL, we must load a bitstream with the
+    corresponding routing first. The demo also illustrates how to switch
+    bitstreams at runtime.
+    
+    - Btn4 loads the bitstream allowing MMIO control of the RGB LEDs 5 & 6.
+    - Btn5 loads the bitstream without support of RGB LEDs.
+    - Sw0 controls Led0.
+    - Sw1 controls Led1.
+    - Sw2 controls Led2.
+    - Sw3 controls Led3.
+    - Btn0 controls the colour of Led5.
+    - Btn1 controls the brightness of Led5.
+    - Btn2 controls the colour of Led6.
+    - Btn3 controls the brightness of Led6.
+
+commit d40a88377de5764a099e27069534be8371b9aeca
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Nov 22 16:05:13 2022 +0100
+
+    platform_driver: get/set fpga clock rates
+
+commit caa3886d063e7c3d1626e78b572160f771c58a61
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Nov 23 11:57:25 2022 +0100
+
+    platform_driver: add fpga reset domains
+
+commit 4ad81eb692764af78d6fb4dddc59a50c83cf3094
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Nov 25 11:37:13 2022 +0100
+
+    fpga_drv: fix occasional freeze on reconfiguration
+    
+    Reconfiguration apparently also requires asserting the FPGA resets and
+    setting the voltage level shifters. This is now supported by the
+    platform driver, which provides the reset domain "fpga_nreset" for this
+    purpose. By binding this reset domain to the devcfg device, the fpga
+    driver is able to halt the fpga when it acquires the device and to reset
+    the fpga when it releases the device.
+
+commit 16c05779e52bd1e6f1b08bc5de1e07c2447ea92f
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Nov 16 12:36:21 2022 +0100
+
+    add tool for extracting device parameters from xsa
+
+
+Hardware-accelerated graphics with Intel GEN12+ GPUs
+####################################################
+
+; @ssumpf
+
+commit 2aa01e309ced36ea439ea93934959c13efcacd03
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Jul 1 14:35:04 2022 +0200
+
+    gpu/intel: GEN12+
+    
+    * clock frequency
+    * topology
+    * exec lists
+    * IRQ handling
+    * improved resource management
+    
+    issue #4664
+
+commit aafe9ae2d62626beaa09a75ec17bfcfa909a65a2
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Apr 25 09:53:48 2022 +0200
+
+    sculpt: add Intel Xe GPU (Tigerlake)
+    
+    issue #4664
+
+commit 25c1cdec9507ac1349229d88ab8fa897ef136d31
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Nov 10 17:10:12 2022 +0100
+
+    libdrm/iris: GEN12+
+    
+    * timestamp fequency
+    * topology
+    
+    issue #4664
+
+commit c0367fc30e2083fd31dca2dbc223ff6975b4d1dc
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Nov 7 09:39:14 2022 +0100
+
+    libdrm/iris: synchronization
+    
+    The Morph browser seems to access libdrm multi-threaded. Put this into a
+    separate commit in order to revert it easily.
+    
+    issue #4664
+
+commit 0b569ed8c77fd746ff3b655d20e277e82e36e799
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Nov 8 14:44:39 2022 +0100
+
+    mesa/iris: remove binder patch
+    
+    There is one binder with one memory zone per OpenGL context. The patch was
+    needed before because Genode didn't have proper context support (separate page
+    tables) leading to binders from one or more context being allocated to the same
+    GPU address with the same page tables. This was clearly an error and is fixed
+    with context support.
+    
+    issue #4664
+
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+Base API changes
+================
+
+; @nfeske
+
+commit 7d143087c90c52ad2fe8dbc91b210b83c6c2dac7
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 8 10:17:26 2022 +0200
+
+    xml_node: change `with_sub_node` signature
+    
+    The `with_sub_node` method is renamed to `with_optional_sub_node` to
+    better reflect that the non-existence of a sub node with the desired type is
+    ignored.
+    At the same time, the new `with_sub_node` now takes a second functor that is
+    called when no sub node of the desired type exists.
+    
+    genodelabs/genode#4600
+
+commit 3be0136901069a50cf12d21bea49950f5a43dec6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 14 15:35:13 2022 +0200
+
+    base: add util/dictionary.h utility
+    
+    The new 'Dictionary' provides an easy way to access objects using
+    strings as key. The 'String' received the 'operator >' to simplify the
+    organization of strings in an AVL tree.
+    
+    The patch removes the former definition of the 'operator >' from the
+    platform driver because it would be ambigious now.
+    
+    Fixes #4610
+
+
+NIC router
+==========
+
+; @m-stein
+
+commit b82d83e2716f78534686c31ec394e8f02d2a5a0d
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Sep 7 10:43:53 2022 +0200
+
+    nic_router: handle bad DNS in DHCP ACK gracefully
+    
+    The DHCP client of the NIC router used to end up in an uncaught exception if
+    an IP address in the DNS server option of a DHCP ACK was invalid. This commit
+    makes the 'Dns_server' constructor (where the exception originated from)
+    private and instead introduces a public lambda method 'construct' that calls
+    one lambda argument on success and another on failure. This is also in line
+    with the most recent changes to the 'find_by_*' methods of other classes in
+    the NIC router and contributes to the goal of reducing expensive exception
+    handling.
+    
+    Fixes #4465
+
+commit aff1db15433dd107ff6ab9fb3be094f9e9d9ab42
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Sep 7 14:44:39 2022 +0200
+
+    nic_router: generate reports asynchronously
+    
+    The NIC router used to generate reports triggered by IP config changes or link
+    state changes synchonously, i.e., inline with the activation context that
+    caused the change. This has two disadvantages. First, it can lead to an
+    excessive number of report updates in situations with quick bursts of
+    triggering changes. In such situations it is preferable to collect the changes
+    and reflect them with only one final report update.
+    
+    Second, synchronous reporting may happen while the router is in a state that
+    leads to an incorrect report (e.g. during reconfiguration). To prevent this
+    from happening, the router so far explicitely switched off reporting when
+    entering incoherent states and back on when leaving them. However, this
+    solution is error-prone as the exclusion windows must be maintained manually.
+    
+    Both issues can be solved by not directly generating a report when necessary
+    but instead submitting a signal and letting the signal handler do the work in
+    a dedicated activation context.
+    
+    Ref #4462
+
+commit 79cc9af2121442a7933cebe749b5a8f05306c679
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Sep 7 20:24:10 2022 +0200
+
+    nic_router: intf. con/destruct reports link state
+    
+    Creating and destructing an interface was not considered a change of its real
+    link state as defined in the description of the <report link_state_triggers="">
+    config attribute in the router's README. In case of Uplink sessions this is
+    obviously a problem as they communicate their real link state through session
+    lifetime. But also in case of NIC sessions it's a possible to create an
+    interface that is immediately "up" after creation or destruct an interface
+    without its link state going "down" beforehand.
+    
+    Taking into account also the practical application of the
+    <report link_state_triggers=""> attribute, reporting only on destruction and
+    construction of interfaces that are "up" seems shorthanded. This is because a
+    report-receiver most likely needs to be able to synchronize the lifetime of
+    the objects that keep track of the link states with the lifetime of the
+    corresponding sessions.
+    
+    That said, with this commit, the router triggers a report update on each
+    session construction/destruction when <report link_state_triggers=""> is
+    set.
+    
+    Fixes #4462
+
+commit 99254b4d52ace5f663cb5af43fd42783a2ffaa4a
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Sep 14 14:30:56 2022 +0200
+
+    nic_router: bind link state to remote DNS config
+    
+    The NIC router README claims that the 'dns_config_from' attribute in a DHCP
+    server configuration binds the propagated link state of all interfaces at the
+    domain of the server to the validity of the IP config of the domain that is
+    given through 'dns_config_from'.
+    
+    However, this was not true. The router missed to implement this detail which
+    led to clients of such a DHCP server sending DHCP DISCOVER packets too early.
+    These early DHCP DISCOVER packets were dropped by the router potentially
+    causing a big delay until the client started a new attempt. Unnecessary long
+    network boot-up delays were observed with at least the lwip run script and
+    Sculpt on the PinePhone and could be tracked down to this former
+    inconsistency in the router.
+    
+    This commit fixes the inconsistency.
+    
+    Fixes #4612
+
+commit f59ee209d2177a2978791a226dde74d332d4bdf5
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Mon Sep 26 16:03:37 2022 +0200
+
+    nic_router: use exact packet sizes in dhcp client
+    
+    The DHCP client used to always send packets with a size of 1024 regardless of
+    the size of the actual content, which was always significantly lower. 1024
+    bytes was simply a guess to provide enough space for all types of DHCP client
+    packets. As we know the exact size of each packet the DHCP client sends even
+    before packet creation, this commit makes use of the knowledge resulting in
+    much smaller packets sent by the DHCP client.
+    
+    Fixes #4619
+
+commit c83f307b62babd936f752eb81c199704924ec2f2
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Mon Oct 10 14:00:29 2022 +0200
+
+    nic_router: consider DHCP client optimization
+    
+    Some DHCP clients (Debian VM in Sculpt) persistently store the last lease they
+    obtained and try to directly DHCP REQUEST it on a new startup whithout doing
+    DHCP DISCOVER beforehand. In case the NIC router doesn't know about the lease
+    anymore (timeout, new router instance), the router used to just ignore the DHCP
+    REQUEST. This led to significant delays in the network startup of the client
+    (delayed retries until give-up and DHCP DISCOVER). With this commit, the router
+    answers such packets with a DHCP NAK instead, causing the client to directly
+    switch to DHCP DISCOVER.
+    
+    Fixes #4634
+
+
+Improved support for time-multiplexed GPIO pins
+===============================================
+
+; @nfeske
+
+commit 49b4b8597dc4e0ff5bc3319eb4b8cd1e61bc6f45
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Oct 10 18:18:01 2022 +0200
+
+    os/pin_driver: support for time-multiplexed in/out
+    
+    This patch equips the pin-driver framework with support for the
+    time-multiplexed operation of a pin as output or input. This is needed
+    when implementing I2C communication via a bit-banging driver.
+    
+    To operate pin in both directions, a driver obtains both a pin-state and
+    a pin-control session for the same pin. The pin-state session can be
+    used to sense the current pin state. The control session allows the
+    client to set the pin to high or low (using the 'state' method), or to
+    set it to high-impedance via the 'yield' method. Once switched to
+    high-impedance, the pin can be used as input.
+    
+    Issue genodelabs/genode-allwinner#10
+
+
+Libraries and applications
+##########################
+
+Emerging Sculpt OS variant for the PinePhone
+============================================
+
+; @nfeske
+
+commit 64fd15bb774751ee59e0191f0a0cb747cdd7cbd4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 14:00:36 2022 +0200
+
+    sculpt/phone-pinephone: add SD-card driver
+    
+    Issue #6
+
+commit b1afeaf896a0c5a297e80ad659e4333e07f5e06a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 16:15:54 2022 +0200
+
+    sculpt/drivers/pinephone: enable GPU access
+
+commit 14a36354ff3dea73044cd64eefc032b3399acfa6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 28 13:48:40 2022 +0200
+
+    sculpt/drivers/pinephone: two-staged boot
+    
+    This commit separates the Sculpt startup into two phases. The first phase
+    starts only the drivers needed for the bare-bones interactive GUI. Once
+    the GUI is up, the second phase starts the USB and storage drivers. This
+    way, the boot time into the initial GUI is no longer impacted by the
+    execution of the second-stage drivers.
+
+commit 610ee9c99bb7e4bbe373fd2856fa5908fd1963d6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Oct 11 14:11:48 2022 +0200
+
+    sculpt: support for hosting a camera subsystem
+    
+    This patch makes the hardware resources needed for operating the
+    PinePhone cameras available to the runtime subsystem. This way, a camera
+    driver can be hosted as installable component. The pkg/camera-pinephone
+    is an example package that switches between the frond and rear cameras
+    of the PinePhone every 10 seconds.
+    
+    Issue #10
+
+commit d4d50eed6fdc428f81f30f804caa541d7c744067
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 19 17:34:50 2022 +0200
+
+    phone_manager: software tabs
+
+commit cdf234598328de5a346bec81a8ed34d4807007c6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 28 11:43:54 2022 +0200
+
+    phone_manager: storage dialog
+
+commit 8a7290aae35800a78ab4ab5f5ed480ed4e9bbd2d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Nov 9 17:44:26 2022 +0100
+
+    sculpt/phone: monitor power state
+
+commit 9666caf99a3a2223c0570b96cc725a490e2f8c7f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Aug 24 13:41:43 2022 +0200
+
+    sculpt/phone: example scenario
+
+commit 5ad850af136e436532c1bd8281fc6aa6e4720138
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 18 16:38:20 2022 +0100
+
+    sculpt/phone: show battery charge/discharge info
+
+commit 3d68bbd30182f5b82be8d5fec1019f0b1b30734c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 18 18:47:07 2022 +0100
+
+    sculpt/phone: present device-power options
+    
+    This commit presents the user with the choice of the device's power
+    state in the "Device" section of the user interface. The options are
+    
+    - Performance: operate the CPUs at high clock rate
+    - Economic:    reduce CPU performance to conserve battery
+    - Reboot:      trigger a cold reboot of the device
+    - Power down:  shut the device off completely
+    
+    The latter two options ask for a confirmation.
+
+commit f2029b334f22dabdc43370c2120e90e364465d4c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 22 16:52:07 2022 +0100
+
+    sculpt/phone: brightness control
+
+commit f2029b334f22dabdc43370c2120e90e364465d4c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 22 16:52:07 2022 +0100
+
+    sculpt/phone: brightness control
+
+
+ARM virtual machine monitor
+===========================
+
+; @skalk
+
+commit b78b543011ba2a120998e6bf71a133a5c5946cac
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Nov 15 13:34:37 2022 +0100
+
+    vmm: make ARM VMM configureable
+    
+    This commit enables users of the VMM to define CPU type and count, RAM size,
+    kernel and initrd ROM names, GIC version, and Virtio devices to be used.
+    Derived from the configuration values a flattened device-tree blob (DTB) is
+    generated and transfered to the VM.
+    
+    Fix genodelabs/genode#4670
+
+
+Seoul VMM
+=========
+
+; @alex-ab
+
+; A few intoductory words about what it is
+
+commit 0d707ed35a06f78f1f7e0a029b84257ae692526c
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sun May 22 19:29:28 2022 +0200
+
+    seoul: add virtio audio support
+
+commit e05a687a872cca3b21f3b901069973e4c9d3d67e
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sat Jul 16 20:35:33 2022 +0200
+
+    seoul: add support to resize windows
+    
+    Fixes genodelabs/genode-world#307
+
+
+Device drivers
+##############
+
+Uniform use of new platform-driver interface
+============================================
+
+; @skalk
+
+commit c583446adedccd0ed1dac5e8b3169cc9718983c6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 9 11:46:27 2022 +0200
+
+    platform_drv: add HDAUDIO PCI quirks
+    
+    Ref genodelabs/genode#4578
+
+commit 281785f6bd9a7f60dfa3c25af47ff1d2fa27a92c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Sep 13 14:26:08 2022 +0200
+
+    platform API: make MMIO dataspace cap accessible
+    
+    In case of the GPU multiplexer, we need to delegate MMIO memory
+    to the framebuffer client in form of a managed dataspace. To be
+    able to attach a given Platform::Device::Mmio object to a region map
+    we need to access its capability.
+    
+    Ref genodelabs/genode#4578
+
+commit 85dc2e5b9bd55e8b968a3b920e0a62a03982f26e
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 15 11:26:32 2022 +0200
+
+    pci_decode: interpret reserved memory from ACPI
+    
+    We need the information about reserved memory region reports
+    from the ACPI tables within the platform driver to pre-fill
+    IOMMU tables with the corresponding mappings. Therefore,
+    the pci_decode component now parses the information from the
+    ACPI ROM, and adds "reserved_memory" nodes to all related
+    devices in the devices report.
+    
+    Ref genodelabs/genode#4578
+
+commit 5e42f347d89b50dc93a3975395707c8137ae3436
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 15 11:28:29 2022 +0200
+
+    platform_drv: attach reserved memory to device PD
+    
+    Consumes the information about reserved memory region reports from
+    the devices ROM, and adds appropriated mappings to the corresponding
+    device PD.
+    
+    Ref genodelabs/genode#4578
+
+commit 71129fca2d9bd5d5762ead5c2b82c83e039015d0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue May 3 14:02:30 2022 +0200
+
+    nvme_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit 9f9a5186e0a0877eb7be1d0370863f9ab51f5ea0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Apr 28 15:56:02 2022 +0200
+
+    ps2_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit 5528434fb64afe95fe6e6c3fb3baa56cbbc7349c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Jul 29 17:31:20 2022 +0200
+
+    lx_kit & lx_emul: use generic platform API
+    
+    * Remove wrapper for legacy x86 platform API
+    * Move PCI configuration space quirks to corresponding driver
+      (pc_usb_host_drv, pc_wifi_drv, pc_intel_fb_drv)
+    * Adapt driver test run-scripts to changed configuration
+    
+    Ref genodelabs/genode#4578
+
+commit ed8f71e459de2a4fdb664c25711e3b288a53eac1
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 31 11:31:17 2022 +0200
+
+    ahci_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit 92b5dda2bc944d4bc82f230b67a6a89aa60c49cf
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 31 13:51:10 2022 +0200
+
+    vesa_fb_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit feaaaa3e8be3b5a2b3f379e2909b8926485c7682
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 31 13:51:54 2022 +0200
+
+    drivers_interactive-pc: use generic platform_drv
+    
+    Ref genodelabs/genode#4578
+
+commit 7cf6651d2c2f3e746b08aacc56bad1815108db95
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 2 13:35:47 2022 +0200
+
+    ipxe_nic_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit 8d746a701edbc85cce438f2a6681db52d74b5b6d
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 2 13:37:36 2022 +0200
+
+    drivers_nic-pc: use generic platform_drv
+    
+    Ref genodelabs/genode#4578
+
+commit 03cec5cdd7be8d5cd3819ae29be9ec3765a68c7f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 9 11:49:07 2022 +0200
+
+    dde_bsd: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit 250275fbfbc86afeb6989fb91e3dbac186a631e1
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Sep 13 14:27:24 2022 +0200
+
+    gpu_drv: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit e7571c539c182da1aa2ef9c80a193c541dcd22d5
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 15 15:12:14 2022 +0200
+
+    sculpt: use generic platform driver
+    
+    Ref genodelabs/genode#4578
+
+commit c8f055c9e3c3d8ccd132863921bafe2f3a1cf1f3
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 15 16:15:08 2022 +0200
+
+    smbios_decoder.run: remove legacy platform_drv
+    
+    Ref genodelabs/genode#4578
+
+commit 9b38af4d7dbb866cd213112c6bbec0309f847fa8
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 11:51:38 2022 +0200
+
+    smartcard.run: remove legacy platform_drv
+    
+    Ref genodelabs/genode#4511
+    Ref genodelabs/genode#4578
+
+commit 203f24742a45dcabd06cb2a3801a4d261e4796ba
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 13:30:25 2022 +0200
+
+    netperf tests: remove legacy platform_drv
+    
+    Ref genodelabs/genode#4511
+    Ref genodelabs/genode#4578
+
+commit 71eefc3315b611cf260806f1cb7c5d5d8d7861a4
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 14:05:32 2022 +0200
+
+    nic_router_uplinks.run: remove legacy platform_drv
+    
+    Ref genodelabs/genode#4511
+    Ref genodelabs/genode#4578
+
+commit 91e64c3f27bcb0846b5b3cbcaeb2def915b77d18
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 15:17:51 2022 +0200
+
+    vbox5_genode_usb_hid: remove legacy platform_drv
+    
+    Ref genodelabs/genode#4578
+
+commit b8eab65536ac249c574ddc383cbee20fa02668aa
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 15:33:58 2022 +0200
+
+    dde_linux: remove legacy usb_host_drv for x86
+    
+    Remove legacy platform_session API usage from legacy lx_kit/lx_emul
+    
+    Ref genodelabs/genode#4578
+
+commit de0c339e0b7a5ca5b8565aabdf2479f2a71cdf13
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 16 15:38:15 2022 +0200
+
+    pci: remove pci test of legacy platform API
+    
+    Ref genodelabs/genode#4578
+
+commit fdba7259ab07a45240dc0c08eafee7d3e0544907
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Sep 20 12:01:21 2022 +0200
+
+    platform_drv: provide Virtio PCI information
+    
+    Ref genodelabs/genode#4578
+
+commit ec6f89111ef9c27492b1b9bc9cd8e5c6032fc2d6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Sep 20 12:02:32 2022 +0200
+
+    virtio_pci: use generic platform API
+    
+    Ref genodelabs/genode#4578
+
+commit afa0bed5fcd2f6c220cf382eb0c580e90495a924
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 22 09:47:12 2022 +0200
+
+    platform_drv: add USB4 pci class, update README
+    
+    Ref genodelabs/genode#4578
+
+commit c7c460f6e01c358cd8d334a2790f436251123f78
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Sep 26 15:59:36 2022 +0200
+
+    os: add include/pci/* to os api
+    
+    Ref genodelabs/genode#4578
+
+commit 7334128a2eaf880454b58b733de1c8db07fd52e6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 28 13:56:17 2022 +0200
+
+    pci_decode: export prefetchable attribute of BARs
+    
+    Memory descriptors in PCI BARs have a prefetchable bit, which can
+    be used to optimize memory access when setting, e.g. write-combined
+    in page-table entries.
+    
+    Ref genodelabs/genode#4578
+
+commit 6a7247ab443e787d041770e6b40d37e152ce0d3a
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 28 13:59:17 2022 +0200
+
+    platform: remove cache attribute from io_mem call
+    
+    Instead of allowing the client to set a caching attribute
+    in the io_mem() call of the device interface, which was
+    only used to decide in between of the memory  being
+    write-combined or not, remove it from the API.
+    Instead use the information delivered by the devices ROM,
+    whether memory from a PCI BAR is prefetchable or not,
+    to decide whether it is mapped write-combined or not.
+    
+    Ref genodelabs/genode#4578
+
+commit b20cabb6e424d1d62b050f5f0351888060ad26d2
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Wed Sep 28 17:01:45 2022 +0200
+
+    pci: fix PCIe extended capability definition
+    
+    Also removed the warning about unhandled capability IDs.
+    
+    Ref genodelabs/genode#4578
+
+commit 9e33e572945b512c151b3ddcd70eff0f6c8884d4
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Sep 29 08:09:18 2022 +0200
+
+    nova: support more MSIs
+    
+    Issue #4578
+    
+    Ref alex-ab/nova#8
+
+commit 00c9ac363ffb73d128c3f2f5021a08a93dc7b265
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 30 16:19:00 2022 +0200
+
+    platform_drv: add EHCI PCI quirk, apply in order
+    
+    * Add EHCI PCI quirk
+    * Add UHCI reset to UHCI quirk
+    * Apply all PCI quirks in order of the PCI bus numbering
+      otherwise the machine might stall
+    
+    Ref genodelabs/genode#4578
+
+commit fa124dd3405767a8c56f49664b26c1a8240d6804
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 30 17:15:32 2022 +0200
+
+    lx_kit: do not close/re-open IRQ session
+    
+    Instead of dynamically close/open IRQ session whenever an IRQ
+    gots masked/unmasked, track the state internally and resp.
+    deliver an interrupt delayed.
+
+commit 2ccdbf10507e6db5aaf3d62347b38f68b2cd4ade
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Sep 30 17:17:40 2022 +0200
+
+    platform_drv: implement shared interrupt support
+    
+    Ref genodelabs/genode#4578
+
+commit 08f1f94fcb7dcdbf6b961c400e02d96b91b248c1
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Wed Oct 5 15:04:34 2022 +0200
+
+    pci_decode: IRQ reporting for MSI/MSI-X only devices
+    
+    Don't skip IRQ reporting if legacy IRQ/GSIs are not supported as the
+    device may support MSI/MSI-X exclusively.
+    
+    The commit also enables reserved_memory reporting of devices without
+    IRQs.
+    
+    Ref genodelabs/genode#4578
+
+commit 243c819257995b683a1629585b983b49d4d7f2f2
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 5 14:57:04 2022 +0200
+
+    pci_decode: use MSI enumerator as function value
+    
+    Instead of using a global value to enumerate the MSIs, use a function argument
+    instead. Whenever the process of PCI device reporting gets started again,
+    due to an initially too small report buffer, the MSI enumeration value is reset
+    again. Formerly, we wasted MSI numbers.
+    
+    Ref genodelabs/genode#4628
+
+commit 1504041c82855f27e7956b6f02d9300791f62462
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 5 16:16:27 2022 +0200
+
+    pc_platform_drv: introduce pc-specific driver
+    
+    This driver observes a "system" ROM, as well as the acpi ROM to implement
+    reset functionality.
+    
+    Ref genodelabs/genode#4578
+
+commit 3841ee1d51fa17d3b8702d43770e90a886e7689d
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 5 18:25:55 2022 +0200
+
+    platform_drv: implement MSI-x support
+    
+    Ref genodelabs/genode#4578
+
+commit ba97415ef90568c4d31e4893155773d49ba7aa31
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Oct 7 11:17:09 2022 +0200
+
+    pci_decode: prefer MSI over MSI-x
+    
+    Ref genodelabs/genode#4578
+
+commit e7ba0b7371b6a5d044a575fc92eb504d2a62c6a9
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Oct 7 17:10:05 2022 +0200
+
+    pci: initialize BAR config on demand only
+    
+    On-demand initialization prevents read-write operations on BARs of
+    invalid devices at construction time, which may result in surprising
+    behavior later on, for example, when resetting X260 notebooks via ACPI
+    information.
+
+commit 7f0c89f37839525f53e5b0ce667912f52bee4626
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Oct 7 14:31:42 2022 +0200
+
+    pci_decode: enable all bridges
+    
+    set I/O port, MMIO, and bus master to enabled for bridges where
+    disabled.
+    
+    issue #4578
+
+commit 8f0a012345652a6c0fedbda085640823497967b7
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Oct 4 13:21:01 2022 +0200
+
+    acpica: adjust to new platform driver
+    
+    genodelabs/genode#4578
+
+commit bc1e2317759295b0f921d7d0a55e0c1ab151bbae
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Oct 10 15:17:55 2022 +0200
+
+    platform_drv: implement PCI powering and reset
+    
+    Ref genodelabs/genode#4578
+
+commit a4206702174574e292ee7e1adfe3363f71d6eadc
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Oct 7 21:00:10 2022 +0200
+
+    pci_decode: disable MSI on HDAUDIO cards
+    
+    According to OpenBSD's azalia driver some AMD HDAudio devices do not
+    play nice with MSIs although the capability is set. At least the
+    0x1457 device was tested and worked using GSIs only.
+    
+    genodelabs/genode#4578
+
+commit 01e1e4e5b91084b3bf303f9c4ce45a7f44c85964
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Oct 27 14:37:42 2022 +0200
+
+    platform_drv: add "leave_operational" attribute
+    
+    If a device should not be reset, powered off, and its clocks
+    shall stay untouched when it gets released, the leave_operational
+    attribute can be set to true in the device node of the related
+    device inside the devices ROM delivered to the platform driver.
+    This is useful for drivers, which only enable and initialize
+    their device, and can be closed afterwards.
+    
+    Ref genodelabs/genode#4654
+
+commit 1057c7d6a9965a32a477dae8306935787fe93a8b
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Nov 15 15:59:31 2022 +0100
+
+    Remove legacy platform_drv, API, and platform.inc
+    
+    Fix genodelabs/genode#4671
+
+commit 66491ddba1f6e1d83f88f20522ae081e245f66e7
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Nov 18 13:59:10 2022 +0100
+
+    pci_decode: report devices from ACPI info
+    
+    Although we do not have the full ACPI information parsed yet, to
+    announce non-PCI devices derived from the ACPI tables, the device
+    description of the assumed devices is now integral-part of pci_decode.
+    Formerly, the information was gained separatedly as boot-module, whereby
+    we lost synchronization in between ACPI/PCI parsing, BIOS handover, and
+    PS/2 emulation code already acting.
+
+commit 768029398d42485c6fa75ffc3704cf662202a406
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Nov 18 14:11:38 2022 +0100
+
+    pci_decode: increase default ram quota
+    
+    To circumvent problems of the page-table entries getting short on sel4,
+    increase the RAM quota for this component in all run-scripts.
+    
+    Fix #4686
+
+
+PinePhone drivers for SD-card, audio, camera, and power control
+===============================================================
+
+; @nfeske
+
+commit 41999c560b932fc926fc0477388a4de4ed64257a
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Oct 14 13:17:50 2022 +0200
+
+    a64_linux: use orange-pi-5.14 as basis
+    
+    Switch to Ondrej Jirman's custom kernel.
+    
+    Fixes #11.
+
+
+commit 675ccdb585cce8cbcaf837009bebba4ea304be4f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 13:37:24 2022 +0200
+
+    Add SD-card resources to board/pinephone/devices
+
+commit 64fd15bb774751ee59e0191f0a0cb747cdd7cbd4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 14:00:36 2022 +0200
+
+    sculpt/phone-pinephone: add SD-card driver
+    
+    Issue #6
+
+commit b1afeaf896a0c5a297e80ad659e4333e07f5e06a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 16:15:54 2022 +0200
+
+    sculpt/drivers/pinephone: enable GPU access
+
+commit 675ccdb585cce8cbcaf837009bebba4ea304be4f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 7 13:37:24 2022 +0200
+
+    Add SD-card resources to board/pinephone/devices
+
+commit 646e7968dbf6397493bce3d901498f220ff78e0f
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Aug 24 18:20:05 2022 +0200
+
+    a64_platform_drv: add resources required for audio
+    
+    * enable DMA engine
+    * add 2 configurations for audio PLL. One configuration sets the PLL to
+      44.1KHz the other to 48KHz.
+    
+    issue #8
+
+commit 63e4661caff4eba2b3de76a359fe42b471312363
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 12 15:30:42 2022 +0200
+
+    audio_control: add playback/capture from/to SoC
+    
+    * remove I2S part (will be used by audio driver)
+    * add routing from Aif1 (SoC) to playback and cpature to Aif1
+    * make volumes configurable, volumes can be configured by nodes within
+      the <config> using a volume attribute (range 0-100) where 0 implies
+      turning off the input or output device.
+      Supported nodes are: <mic>, <speaker>, <earpiece>
+    
+    issue #8
+
+commit b073d56c1ada61406bd1c6ef1048a048b96a3301
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 19 15:16:46 2022 +0200
+
+    audio_control: add modes for SoC and modem
+    
+    This commit introduces a new configuration node called "<codec>". The
+    attribute value of "target" can be either "soc" (default) or "modem".
+    Currently, soc will set the codec's sample rate to 44.1KHz, while
+    "modem" sets the sample rate to 48KHz. This is required because the
+    modem runs at 8KHz only, with a 44.1KHz base samples get lost.
+    
+    Example:
+    
+    ! <config>
+    !  <codec target="modem"/>
+    ! </config>
+    
+    issue #8
+
+commit b1b57cb6f7c03278905ad5a4eac6d6178150ea0a
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Aug 24 18:22:06 2022 +0200
+
+    a64_audio_drv: Audio driver for the Allwinner A64 SoC
+    
+    The driver provides Genode's audio out and audio in session. To work
+    properly the drivers needs access to the A64's DMA controller and uses
+    channels 0 and 1 to transfer data to/from the I2S bus.
+    
+    issue #8
+
+commit c48b3746cfd6f9e812b1ea278e6c655562cffe28
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 12 15:12:43 2022 +0200
+
+    audio_pinephone.run: script to test audio on the PinePhone
+    
+    The script provides a loopback audio service.
+    
+    issue #8
+
+commit e206cca133edf4a3063572d7662c0daf59153a6e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 12 18:04:06 2022 +0200
+
+    modem_pinephone.run: adjust to audio changes
+    
+    Each input/output can now be assigned a volume between 0 and 100
+    (0 = disable).
+    
+    issue #8
+
+commit cad977e61ebce833604be2b6b0d484d6725eedb9
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 12 18:05:19 2022 +0200
+
+    phone_manager: adjust to audio changes
+    
+    * each input/output can now be assigned a volume between 0 and 100
+      (0 = disable).
+    
+    * change codec to "modem" during call. This leads to a reconfiguration
+      of the audio codec. When no call is active the codec will be set to
+      "soc".
+    
+    issue #8
+
+commit a883871a4ae05b7eceac3bc7a12ee78241b5b5f8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 6 13:30:46 2022 +0200
+
+    Support for SCP calls locally from the SCP driver
+    
+    This change is a preparatory step for the integration of the SCP driver
+    into the platform driver. It allows the SCP driver to use its own
+    service interface via the new 'Local_connection'.
+
+commit f65c08c5952c7e016ff40566b91b68a8adc3e386
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 6 15:52:04 2022 +0200
+
+    Integrate SCP driver into the platform driver
+    
+    This patch merges the SCP driver into the platform driver, which clears
+    the way towards accessing the PMIC through the SCP instead of driving
+    the RSB bus directly by the platform driver. This way, the SCP can act
+    as the arbiter for accessing the PMIC by both the SCP firmware and
+    Genode components using the SCP service interface.
+    
+    Issue #13
+
+commit f4781dd51f41df7286178e12a2140fc0e158ae02
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Nov 2 16:35:36 2022 +0100
+
+    drivers/platform/a64: address PMIC via SCP
+    
+    This patch replaces the former direct access of the reduced serial bus
+    (RSB) by calls to the system control processor (SCP). This way, both the
+    SCP firmware and Genode-based SCP clients become able to safely access
+    the PMIC without stepping on each other's toes.
+    
+    Fixes #13
+
+commit 7294e43b4560145d76955c6e7141533f069f773d
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Jul 29 16:58:51 2022 +0200
+
+    a64_linux: enable camera drivers for PinePhone
+    
+    Issue #10.
+
+commit dc0955543e21469a0403fa4e9828d427d8cabb0d
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Jul 29 17:00:56 2022 +0200
+
+    initcall_order: add camera driver initcalls
+    
+    Issue #10.
+
+commit 37de9ebaf3fdcd56e1269175c929a7a594d141ae
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Aug 1 13:19:06 2022 +0200
+
+    platform/a64: add CSI settings
+    
+    This commit adds the various CSI related clocks to CCU driver and
+    the CSI related LDO settings to the PMIC driver.
+    
+    Issue #10.
+
+commit 9185ec4e832e207365502b58e2b9fae971370d3e
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Aug 10 17:12:07 2022 +0200
+
+    lx_emul: allow GPIO input for CSI
+    
+    Allow for setting and reading values from input GPIOs. This is needed
+    for the `i2c-gpio` bit-banging driver.
+    
+    Issue #10.
+
+commit a44c54212fc32e3c4e9b024a629cd4464f20a591
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Sep 27 15:29:23 2022 +0200
+
+    lx_emul/a64: add CCU stub driver
+    
+    The driver is necessary because the CCU is referenced by the i2c
+    camera devices (as "xclk").
+    
+    Issue #10.
+
+commit afc4a8a7ee7aa666f0095f20baad3baab687f3e3
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Jul 29 17:02:26 2022 +0200
+
+    Driver for PinePhone cameras
+    
+    This driver component consists of a port of the Linux sun6i-csi as
+    well as OV5640 and GC2145 drivers. For more detailed information
+    about how to operate the component please look into
+    'src/drivers/camera/pinephone/README'.
+    
+    The accompanied camera_pinephone.run script contains a test scenario
+    that displays the camera image on the framebuffer. It repeatedly
+    switches between front and rear camera.
+    
+    Fixes #10
+
+commit e4cb48d3e26205cbbeb279387029a1dbcc48af2c
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Aug 26 20:16:18 2022 +0200
+
+    Add pkg recipe for lima GPU driver
+
+commit 5d855f06c7aa2faafe1ecf261c3526b9dd6dd49b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Nov 9 15:50:48 2022 +0100
+
+    Power monitoring driver for the PinePhone
+
+
+New PCI and network drivers for NXP i.MX
+========================================
+
+; @skalk
+
+commit 0981d4b504129abac7cd81c6af2949ec4a7a5506
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Oct 4 09:51:25 2022 +0200
+
+    imx8mq_pci_host_drv: remove pci/*.h from src pkg
+    
+    It is now part of the os api package.
+    
+    Ref genodelabs/genode#4578
+
+commit e3c0180eb2af76e6d12fef113e1a706c7018793e
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Oct 4 09:52:33 2022 +0200
+
+    imx53_platform_drv: use common target.inc makefile
+    
+    To cover changes of the generic platform driver this one is derived
+    from use the common, generic makefile description.
+
+commit 32f9c2f64710106f53b2168d5253e8e0daa95d4b
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Oct 14 16:12:20 2022 +0200
+
+    imx8mq_pci_host_drv: keep bridge alive
+    
+    * Keep the PCI Express host bridge alive, and do not close
+      the Platform device again after parsing the PCI information.
+      The platform driver will now power off the device otherwise.
+    * Export all relevant fields about the PCI devices, like:
+      revision, sub-vendor/device, PCI BAR indices
+
+commit 5f3da641a580f2bf17c759373bf098a2b121e9fb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Oct 14 17:19:34 2022 +0200
+
+    sculpt imx8*: integrate nvme in sculpt
+    
+    * Provide imx8mq specific driver manager, which starts sd_card driver,
+      and NVME driver if available
+    * Introduce drivers_managed-* packages to reduce duplications in
+      Sculpt flavors
+    * Integrate PCI host driver and NVME driver in Sculpt for MNT Reform 2
+
+commit fccdc147dab7aa53fff7d5dc335d5f81d0f1032d
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 14:49:14 2022 +0200
+
+    imx53_platform_drv: introduce ethernet clocking
+    
+    Ref genodelabs/genode#4651
+
+commit 815b2fcdcbf4b663b4adb85cefe2c0459a2087d9
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 14:50:43 2022 +0200
+
+    imx6q_platform_drv: introduce SoC specific version
+    
+    The new platform driver for i.MX 6Quad is derived from the generic
+    implementation. It adds rudimentary support for network clocks.
+    
+    Ref genodelabs/genode#4651
+
+commit c126dd02f618e68c65da0664a540870583e4081f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 14:52:44 2022 +0200
+
+    imx7d_platform_drv: introduce SoC specific version
+    
+    The new platform driver for i.MX 7Dual is derived from the generic
+    implementation. It adds rudimentary support for network clocks.
+    
+    Ref genodelabs/genode#4651
+
+commit 9edd5abcfd3440fd985a56fc52ee99121512a8b0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 15:13:43 2022 +0200
+
+    mnt_reform2_linux: split into ARM v7 and v8
+    
+    Ref genodelabs/genode#4651
+
+commit a7bdd5cbdce98371e22fc3ff1330d6ac6b29ef88
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 17:16:05 2022 +0200
+
+    introduce fec_nic_driver on mnt_reform2_linux base
+    
+    Ref genodelabs/genode#4651
+
+commit f6ee03dd6afaa731f81040cf3b41ebaf27b4ccd7
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Oct 27 15:03:04 2022 +0200
+
+    pci_host_drv: release PCI device resources
+    
+    Leave the PCI host bridge device resources again, after scanning
+    for the PCI devices. Mark the PCI host bridges as useable after
+    device release.
+    
+    Ref genodelabs/genode#4654
+
+commit 80c7f995a54db5e795a6d58daefc00ea0c70b7b7
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Nov 8 12:09:35 2022 +0100
+
+    imx8q_evk: enable host-controller driving USB-C
+    
+    Patch the vanilla i.MX8MQ EVK device-tree provided by Linux to
+    enable the first USB host controller in addition to the second one,
+    which is used to drive the USC-C connector of the EVK board.
+
+
+Intel graphics
+==============
+
+; @nfeske, @alex-ab
+
+commit 80e2cea4aa2ebc1b84210c03f0ba191a4c152576
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 5 15:22:33 2022 +0200
+
+    dde_linux: enable Intel Alderlake graphics
+    
+    With this patch, the Intel framebuffer driver works on the Framework
+    Gen12 laptop.
+    
+    Fixes #4627
+
+commit dc228b952a3a9c079e7cbcb0b113e33f6e036bde
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 5 17:36:04 2022 +0200
+
+    intel_fb_drv: add gpu/drm/drm_scdc_helper.c
+    
+    With this patch, the Dell UltraSharp 4K display works in principle when
+    connected via HDMI to a Lenovo x260 laptop.
+    
+    Fixes #4630
+
+commit 72217a6771a3a1401743194d9d9430e65f6b3a0a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Nov 2 16:00:57 2022 +0100
+
+    intel_fb: support larger resolutions
+    
+    Increase "assumed" internal kernel memory size based on available memory
+    to support allocation of framebuffer larger than 16M, which was before
+    hardcoded.
+    
+    Issue #4659
+
+commit eb318d5ceba8b9627c10c7d0bc618b98820a407a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Nov 2 16:02:43 2022 +0100
+
+    intel_fb: handle too large framebuffer allocation
+    
+    In case the allocation fails for the largest possible connector mode,
+    try smaller modes. Additional add option to specify maximal resolution.
+    
+    Issue #4659
+
+commit 95ee0f58f2f78fedadd903995b89623089fcc62e
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Nov 2 15:58:46 2022 +0100
+
+    sculpt: enforce max width/height by configuration
+    
+    Issue #4659
+
+
+Audio driver updated to OpenBSD 7.1
+===================================
+
+; @cnuke
+
+commit e0f5cdacf0cd288f15d8040c63bea1d27b375225
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Fri Sep 30 19:35:01 2022 +0000
+
+    dde_bsd: update audio driver to OpenBSD 7.1
+    
+    This commit updates the driver from version 6.6 to 7.1. In contrast
+    to the old driver the new one will now probe all available HDA devices
+    and will drive the first usable one, e.g.:
+    
+    ```
+    [init -> audio_drv] azalia0 [8086:160c]
+    [init -> audio_drv] :
+    [init -> audio_drv] azalia0: no supported codecs
+    [init -> audio_drv] azalia1 [8086:9ca0]
+    [init -> audio_drv] :
+    [init -> audio_drv] azalia1: codecs: Realtek ALC292
+    [init -> audio_drv] audio0 at azalia1
+    ```
+    
+    Fixes #4629.
+
+
+Improved ACPICA driver
+======================
+
+; @alex-ab
+
+commit 00ac4afb9f4f01026b437a536f9eca5da2cfe78b
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Oct 13 09:04:58 2022 +0200
+
+    acpica: make battery report working for thinkpads
+    
+    tested on T460p, X201, T470p
+    
+    by periodically checking and reporting.
+    
+    Issue #4631
+
+
+Wireless-networking improvements
+================================
+
+; @ben
+
+commit e46a7dd6f555eb1653d56f0847641194d14efcb6
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Mon Nov 7 12:36:58 2022 +0100
+
+    dde_linux: fix Intel Intel AX211 wifi without MSI-X
+    
+    Lack of MSI-X support in DDE Linux causes a timeout when the Intel AX211
+    tries to call back into the driver while loading the PNVM file while
+    interrupts are still disabled.
+    
+    With the patch picked up from QubesOS the card works on an X1 Nano G2:
+    https://github.com/QubesOS/qubes-linux-kernel/commit/5fcfe0f19ed5ff2bd3514644afce0af642c326c6
+    
+    Issue #4663
+
+commit 0e9a49d1cf4a7e402029fc99d83f25b37fc55e2b
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Mon Nov 7 11:49:59 2022 +0100
+
+    wifi/pc: add firmware for the Intel AX211
+    
+    Lenovo Thinkpads with 12th gen Intel i7 CPUs such as the X1 Nano G2 may
+    contain such a wifi card.
+    
+    Issue #4663
+
+
+Platforms
+#########
+
+Low-level mechanism for suspend/resume on PC platforms
+======================================================
+
+; @alex-ab
+
+commit 03470e7babed4033c4351149323abd67316df5bc
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Aug 1 14:41:05 2022 +0200
+
+    nova: use kernel with suspend/resume support
+    
+    Issue #4669
+
+commit fd2a21690988c4a89902f5f4a02e0dae8307a013
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Sep 29 14:32:36 2022 +0200
+
+    base: support ACPI suspend via Pd::managing_system
+    
+    Issue #4669
+
+commit 58ff53ec526a4f9da9be099025de08d1f5221a4f
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Sep 21 15:47:15 2022 +0200
+
+    acpica: report S0-S5 sleep state support
+    
+    Issue #4669
+
+commit dee178aae57ea2e479992171d8a037a849fb9a67
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Jan 22 13:22:37 2021 +0100
+
+    acpica: execute suspend&resume ACPI methods
+    
+    on 'system' ROM state changes.
+    
+    Issue #4669
+
+commit 041eba5922fb8425a4c3ce328ac2b59b6ee2823a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Aug 1 17:14:10 2022 +0200
+
+    add acpi suspend test scenario
+    
+    Test to trigger periodically ACPI suspend and resume and periodically
+    trying to restart graphic driver.
+    
+    Tested successfully with X201 and T420.
+    
+    Issue #4669
+
+
+
+Base-HW microkernel
+===================
+
+; @skalk
+
+commit 759ed40d987b3e9a3f09eee5cfc2990754a2f421
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Oct 6 14:17:35 2022 +0200
+
+    hw: implement MSI support for x86
+    
+    Fix genodelabs/genode#4633
+
+
+NOVA microhypervisor
+====================
+
+; @alex-ab
+
+commit 7ebd3a086adba526a15083030fe40a5f04cb5fcf
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Oct 14 11:51:59 2022 +0200
+
+    nova: avoid reset on machines with too many CPUs
+    
+    The NOVA kernel and Genode's roottask core are configured to be runnable
+    with up to 64 CPUs (MAX_SUPPORTED_CPUS in core resp. NUM_CPU in kernel).
+    On machines with more CPUs a reset occurred. The commit checks for this
+    case, bootstraps the first 64 CPUs only, and sends all other CPUs to
+    sleep.
+    
+    Also, the platform_info ROM size is increased to host information about
+    more than 32 CPUs.
+    
+    Issue #4640
+
+
+Build system and tools
+######################
+
+Streamlined building of libraries
+=================================
+
+; @nfeske
+
+    build: support library builds via lib/<libname>
+    
+    This patch adds special handling for lib/<libname> arguments to the
+    build system, which supersedes the former LIB=<libname> mechanism.
+    Whereas the old mechanism was limited to a single library, the new
+    convention allows multiple library arguments, similar to regular
+    targets. The change brings the two immediate benefits.
+    
+    First, the streamlining of library and target arguments allows for the
+    building of libraries via the 'build' command of the run tool.
+    
+    Second, it alleviates the need for pseudo target.mk files for building
+    shared libraries that have no direct dependencies, in particular VFS
+    plugins.
+    
+    Since this change eases the explicit creation of shared libraries
+    from run scripts, we may reconsider the automatic implicit building
+    of shared libraries driven by targets. E.g., while developing a Qt
+    application, a run script could import the Qt libraries from the
+    depot and combine those with the developed (fresh built) target without
+    triggering the build of the Qt libraries in the build directory.
+    
+    When issueing 'make' without arguments, all targets are built. This
+    patch applies this behavior to libraries as well, thereby removing the
+    need for the base/src/lib/target.mk pseudo target as used by the CI
+    tools to build all libraries.
+    
+    Note that target.mk files located under src/lib/ are no longer
+    reachable. Therefore, all run scripts that used to trigger the
+    build of a shared library via a pseudo target must be adapted.
+    E.g., 'build lib/vfs/tap' must be replaced by 'build lib/vfs_tap'.
+    
+    With this patch, the LIB=<libname> option is no longer supported.
+    
+    Fixes #4599
+
+commit dd9e12601e137fb6b2d960de9c6262efe158b8d7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Sep 1 13:12:13 2022 +0200
+
+    Remove pseudo targets for building shared libs
+    
+    Thanks to the change "build: support library builds via lib/<libname>",
+    shared libraries can now be built directly by the build system.
+    
+    Issue #4599
+
+commit 9aab61f5a721ac469685c473b43eaf3860b5e42a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Sep 2 15:17:19 2022 +0200
+
+    mk: allow declaration of build artifacts for libs
+    
+    The build system automatically announces the names of shared libraries
+    as build artifacts. However, in rare cases, it is required to manually
+    define them. In particular, the 'ld' stub library plays no role at runtime
+    and should not be integrated into the boot image.
+    
+    This patch adds a customization hook following the same pattern as used
+    for target.mk files, namely the BUILD_ARTIFACTS variable. If defined,
+    its value is taken as the list of boot artifacts generated by the
+    library-description file.
+    
+    Issue #4368
+
+commit f1f0ee3a215c3d63c294e6729bb44daa0e137739
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Sep 2 15:58:12 2022 +0200
+
+    base: disregard ld.lib.so stub as build artifact
+    
+    The ld.lib.so stub library generated by base/lib/mk/ld.mk has no
+    purpose at runtime. On the contrary, it must not be integrated into the
+    boot image because its name collides with the kernel-specific dynamic
+    linker.
+
+commit 7be98166ee1119361f1fa884a3f1be18e5a02bb4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Sep 2 15:43:25 2022 +0200
+
+    run: improve 'build_boot_image [build_artifacts]'
+    
+    This patch make the use of the result of the 'build_artifacts' function
+    as input for 'build_boot_image' more robust. Since 'build_artifacts'
+    obtains binary names from the progress.log, the names of core,
+    ld.lib.so, and the timer correspond to the kernel-specific names.
+    
+    However, 'build_boot_image' expects the kernel-agnostic names as
+    arguments. Kernel-specific files need special treatment when integrated
+    in the boot image: the kernel-specific file is copied and renamed to the
+    kernel-agnostic name. Without this patch, the kernel-specific file is
+    copied as is (e.g., ld-nova.lib.so). So the name of the ROM module is
+    wrong. This patch resets the kernel-specific names to the generic names
+    so that the special-case handling comes into effect.
+
+
+Boot-loading over HTTP
+======================
+
+; @chelmuth
+
+commit 57f510d67fc87e6c8dba16edb3f01977df3de5c8
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Wed Sep 7 08:02:09 2022 +0200
+
+    run/load/ipxe: spawn lighttpd on demand
+    
+    An installed lighttpd HTTP server can now optionally be started to serve
+    the boot image with the follow run options.
+    
+    --load-ipxe-lighttpd             run lighttpd automatically (default: off)
+    --load-ipxe-lighttpd-port <port> TCP port to run lighttpd on (default: 8080)
+
+
+Configurable Intel HWP mode
+===========================
+
+; @m-stein
+
+commit ede007c2dd90d774864149dad663b4d3a7f72c5f
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Mon Sep 5 13:34:36 2022 +0200
+
+    Bender: Intel HWP mode configurable via RUN_OPT
+    
+    The updated Bender version is configurable regarding the mode in which to run
+    the Intel HWP plugin. This can now be controlled via the new run option
+    '--bender-intel-hwp-mode' (only when running on NOVA). The option knows 4 valid
+    values 'off', 'performance', 'balanced', and 'power_saving'. When running on
+    NOVA, the default value applied by the run tool is 'performance'. when running
+    on any other kernel, the default value of Bender ('off') is used. Therefore,
+    when not setting the new '--bender-intel-hwp-mode' flag, the behavior is the
+    same as before this commit.
+    
+    Fixes #4224
+
