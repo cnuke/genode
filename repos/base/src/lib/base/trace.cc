@@ -131,6 +131,7 @@ bool Trace::Logger::_evaluate_control()
 
 		try {
 			buffer = _env().rm().attach(buffer_ds);
+			memset(buffer, 0, Dataspace_client(buffer_ds).size());
 			buffer->init(Dataspace_client(buffer_ds).size());
 		} catch (...) { }
 
