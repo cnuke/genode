@@ -21,6 +21,11 @@
 #include <hw/assert.h>
 #include <hw/boot_info.h>
 
+#include <platform_pd.h>
+#include <util/string.h>
+
+#include <trace/timestamp.h>
+
 using namespace Kernel;
 
 
@@ -138,6 +143,8 @@ bool Cpu::handle_if_cpu_local_interrupt(unsigned const irq_id)
 	return true;
 }
 
+bool foo_finished;
+
 
 Cpu_job & Cpu::schedule()
 {
@@ -154,8 +161,26 @@ Cpu_job & Cpu::schedule()
 		old_job.update_execution_time(duration);
 	}
 
+	Job & new_job = scheduled_job();
+	if (&new_job != &old_job && !foo_finished) {
+		Thread *old_thread = static_cast<Thread*>(&old_job);
+		Thread *new_thread = static_cast<Thread*>(&new_job);
+
+		using namespace Genode;
+		if ((new_thread->type() == Thread::USER &&
+			strcmp(new_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)
+		 && (old_thread->type() == Thread::USER &&
+			strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)) {
+			Genode::raw(Trace::timestamp(), " old: ", *old_thread, " new: ", *new_thread);
+		}
+		// if ((strcmp(new_thread->label(), "pager_ep") == 0)
+		//  && (old_thread->type() == Thread::USER &&
+		// 	strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)) {
+		// 	Genode::raw(Trace::timestamp(), " old: ", *old_thread, " (ip=", Hex(old_thread->regs->ip), ") new: ", *new_thread);
+		// }
+	}
 	/* return new job */
-	return scheduled_job();
+	return new_job;
 }
 
 
