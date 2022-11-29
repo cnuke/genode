@@ -1184,33 +1184,12 @@ Date:   Thu Oct 13 09:04:58 2022 +0200
 Wireless-networking improvements
 ================================
 
-; @ben
-
-commit e46a7dd6f555eb1653d56f0847641194d14efcb6
-Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
-Date:   Mon Nov 7 12:36:58 2022 +0100
-
-    dde_linux: fix Intel Intel AX211 wifi without MSI-X
-    
-    Lack of MSI-X support in DDE Linux causes a timeout when the Intel AX211
-    tries to call back into the driver while loading the PNVM file while
-    interrupts are still disabled.
-    
-    With the patch picked up from QubesOS the card works on an X1 Nano G2:
-    https://github.com/QubesOS/qubes-linux-kernel/commit/5fcfe0f19ed5ff2bd3514644afce0af642c326c6
-    
-    Issue #4663
-
-commit 0e9a49d1cf4a7e402029fc99d83f25b37fc55e2b
-Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
-Date:   Mon Nov 7 11:49:59 2022 +0100
-
-    wifi/pc: add firmware for the Intel AX211
-    
-    Lenovo Thinkpads with 12th gen Intel i7 CPUs such as the X1 Nano G2 may
-    contain such a wifi card.
-    
-    Issue #4663
+In the process of enabling the Intel AX211 wifi card, DDE-Linux and the wifi
+driver were enhanced to support loading PNVM firmware files. Ultimately, a
+[https://github.com/QubesOS/qubes-linux-kernel/commit/5fcfe0f19ed5ff2bd3514644afce0af642c326c6 - workaround]
+from QubesOS was needed to make the card work, highlighting shared challenges
+that both our projects face when using Linux drivers in unconventional ways to
+improve system security.
 
 
 Platforms
