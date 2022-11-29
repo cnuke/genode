@@ -281,7 +281,7 @@ struct Hw::Arm_64_cpu
 			"b.eq 2f              \n"
 
 			/* if not, wait for other CPU to send us an event */
-			"wfe                  \n"
+			"nop                  \n"
 			"b.ne 1b              \n"
 
 			/* if yes, attempt to write 'new_value' to 'addr' */
