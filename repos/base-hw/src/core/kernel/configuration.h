@@ -30,7 +30,7 @@ namespace Kernel {
 	constexpr time_t cpu_quota_us = 1000000;
 
 	/* time slice for the round-robin mode and the idle in CPU scheduling */
-	constexpr time_t cpu_fill_us = 10000;
+	constexpr time_t cpu_fill_us = 2000;
 }
 
 #endif /* _CORE__KERNEL__CONFIGURATION_H_ */
