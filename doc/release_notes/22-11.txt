@@ -375,105 +375,62 @@ Libraries and applications
 Emerging Sculpt OS variant for the PinePhone
 ============================================
 
-; @nfeske
+Genode on the PinePhone has come a long way, most of which is covered by the
+[https://genode.org/documentation/genode-platforms-22-05.pdf - Genode Platforms]
+document. Device-driver work accounts for the majority of the effort, which is
+nicely wrapped up with the current release as described in
+Section [PinePhone drivers for SD-card, audio, camera, and power control].
+With the fundamental device drivers for the PinePhone covered, we can
+now turn our attention to system-integrative work, ultimately raising the
+question of how a Genode-based phone should best present itself to the user.
 
-commit 64fd15bb774751ee59e0191f0a0cb747cdd7cbd4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 14:00:36 2022 +0200
+[image sculpt_pinephone_22_11]
+  The forthcoming phone variant of the administrative user interface of
+  Sculpt OS.
 
-    sculpt/phone-pinephone: add SD-card driver
-    
-    Issue #6
+We take this question as an opportunity for exploration. Similarly to
+how the so-called Leitzentrale of [https://genode.org/download/sculpt - Sculpt OS]
+provides the user with an administrative view on the system that is separate
+from the user-defined desktop runtime, we pursued the division of the phone's
+UI into two faces that can be toggled with a simple touch gesture.
+The first one accommodates the role of the device as a fixed-function
+appliance similar to the functionality of a feature phone whereas the second
+one can be shaped entirely by the user. The screenshots above give a glimpse
+of the user interface of the appliance side. It covers low-level device
+parameters, voice calls, establishing network connectivity, and the
+installation and management of the software running on the user-defined side.
+One can see several cues from Sculpt OS such as the component graph.
 
-commit b1afeaf896a0c5a297e80ad659e4333e07f5e06a
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 16:15:54 2022 +0200
+The clear-cut separation of the two roles of the device opens up new ways to
+leverage Genode's component architecture. For example, observing that the
+appliance role needs only a subset of components, we can orchestrate the
+startup of the system such that those components are started first. This way,
+the device's basic functions like voice calls become available in under 7
+seconds when powering-on the device.
 
-    sculpt/drivers/pinephone: enable GPU access
+Regarding the built-in feature set, we implemented the fundamental device
+functions that everyone takes for granted, like displaying the battery
+state, triggering the charging when a charger gets connected, controlling
+the brightness of the display, or powering down the device.
 
-commit 14a36354ff3dea73044cd64eefc032b3399acfa6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 28 13:48:40 2022 +0200
+The phone variant of Sculpt OS evolves in the
+[https://github.com/nfeske/genode-allwinner - genode-allwinner] repository,
+specifically within the _sculpt/_ and _src/app/phone_manager/_ directories.
+It can be built via the following command:
 
-    sculpt/drivers/pinephone: two-staged boot
-    
-    This commit separates the Sculpt startup into two phases. The first phase
-    starts only the drivers needed for the bare-bones interactive GUI. Once
-    the GUI is up, the second phase starts the USB and storage drivers. This
-    way, the boot time into the initial GUI is no longer impacted by the
-    execution of the second-stage drivers.
+! built/arm_v8a$ make run/sculpt KERNEL=hw BOARD=pinephone SCULPT=phone
 
-commit 610ee9c99bb7e4bbe373fd2856fa5908fd1963d6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Oct 11 14:11:48 2022 +0200
+For loading the system on the PinePhone, please follow the instructions given
+in the following article.
 
-    sculpt: support for hosting a camera subsystem
-    
-    This patch makes the hardware resources needed for operating the
-    PinePhone cameras available to the runtime subsystem. This way, a camera
-    driver can be hosted as installable component. The pkg/camera-pinephone
-    is an example package that switches between the frond and rear cameras
-    of the PinePhone every 10 seconds.
-    
-    Issue #10
+:Booting Genode on the PinePhone:
 
-commit d4d50eed6fdc428f81f30f804caa541d7c744067
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 19 17:34:50 2022 +0200
+  [https://genodians.org/nfeske/2021-09-20-pine-fun-pinephone-boot]
 
-    phone_manager: software tabs
-
-commit cdf234598328de5a346bec81a8ed34d4807007c6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 28 11:43:54 2022 +0200
-
-    phone_manager: storage dialog
-
-commit 8a7290aae35800a78ab4ab5f5ed480ed4e9bbd2d
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Nov 9 17:44:26 2022 +0100
-
-    sculpt/phone: monitor power state
-
-commit 9666caf99a3a2223c0570b96cc725a490e2f8c7f
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Aug 24 13:41:43 2022 +0200
-
-    sculpt/phone: example scenario
-
-commit 5ad850af136e436532c1bd8281fc6aa6e4720138
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 18 16:38:20 2022 +0100
-
-    sculpt/phone: show battery charge/discharge info
-
-commit 3d68bbd30182f5b82be8d5fec1019f0b1b30734c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 18 18:47:07 2022 +0100
-
-    sculpt/phone: present device-power options
-    
-    This commit presents the user with the choice of the device's power
-    state in the "Device" section of the user interface. The options are
-    
-    - Performance: operate the CPUs at high clock rate
-    - Economic:    reduce CPU performance to conserve battery
-    - Reboot:      trigger a cold reboot of the device
-    - Power down:  shut the device off completely
-    
-    The latter two options ask for a confirmation.
-
-commit f2029b334f22dabdc43370c2120e90e364465d4c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Nov 22 16:52:07 2022 +0100
-
-    sculpt/phone: brightness control
-
-commit f2029b334f22dabdc43370c2120e90e364465d4c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Nov 22 16:52:07 2022 +0100
-
-    sculpt/phone: brightness control
+Note that the current version is still at a rather developer-focused stage.
+To avoid testimonies of a prematurely released version, we decided to postpone
+the release of a ready-to-use image until the feature set generally expected
+from a phone is complete and well tested.
 
 
 ARM virtual machine monitor
