@@ -347,24 +347,41 @@ Date:   Tue Nov 15 13:34:37 2022 +0100
 Seoul VMM
 =========
 
-; @alex-ab
+The Seoul/Vancouver VMM - introduced to Genode with release 11.11 - is a
+x86 based VMM which runs on Genode@NOVA, Genode@seL4 and Genode@Fiasco.OC on
+Intel and on AMD hardware. It is used with 32-bit Linux VMs typically.
 
-; A few intoductory words about what it is
+Over the last and this year the VMM got Virtio support with the goal to improve
+the usability when used day-to-day, e.g. on Sculpt OS. The observation nowadays
+is, that most Linux VMs come readily (or easy to install) equipped with Virtio
+driver support, avoiding to fiddle with building or integrating guest drivers
+by oneself. The Seoul VMM got extended by implementations for the Virtio input
+device model, Virtio GPU device model (2D by now) and Virtio audio device
+model.
 
-commit 0d707ed35a06f78f1f7e0a029b84257ae692526c
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Sun May 22 19:29:28 2022 +0200
+With the new input model, absolute mouse positions are supported, so
+that the mouse pointer positions in Genode's Sculpt OS and in the guest VM
+can be kept in sync. Beforehand it was hardly possible when solely the ps2
+model with relative coordinates could be used.
+With the new 2D GPU model, the mouse pointer shape of the guest VM can be
+exported and shown by Genode's GUI multiplexer instead of the native mouse
+pointer, which improves the visual impression and avoids confusion.
+Additionally, with the new GPU model resizeable and arbitrary resolution
+dimension are possible, which was not feasible with the former vga/vesa model.
+The overall painting overhead is better managable since partial updates are
+supported by the device model.
+The Virtio audio model enables playback of music when streaming & surfing in
+the VM, which was beforehand not possible because no audio model was available.
+The new Virtio models of the Seoul VMM were finally mapped to Genode's Gui,
+Input and Audio_out interfaces.
 
-    seoul: add virtio audio support
-
-commit e05a687a872cca3b21f3b901069973e4c9d3d67e
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Sat Jul 16 20:35:33 2022 +0200
-
-    seoul: add support to resize windows
-    
-    Fixes genodelabs/genode-world#307
-
+The new models improve the overall usability and can be used on Sculpt OS readily.
+Several packages of alex-ab's depot are available to easy starting, starting
+from a full on target Debian installation over pre-packed and ready to use VMs
+for up-to-date Firefox and Thunderbird VMs, which are based on Tiny Core Linux.
+The Firefox VM is a disposal one, as mentioned in
+[https://genodians.org/alex-ab/2019-03-06-disposal-browser-vm],
+and the Thunderbird VM has persistent storage support.
 
 Device drivers
 ##############
