@@ -1229,25 +1229,12 @@ Date:   Thu Oct 6 14:17:35 2022 +0200
 NOVA microhypervisor
 ====================
 
-; @alex-ab
-
-commit 7ebd3a086adba526a15083030fe40a5f04cb5fcf
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Fri Oct 14 11:51:59 2022 +0200
-
-    nova: avoid reset on machines with too many CPUs
-    
-    The NOVA kernel and Genode's roottask core are configured to be runnable
-    with up to 64 CPUs (MAX_SUPPORTED_CPUS in core resp. NUM_CPU in kernel).
-    On machines with more CPUs a reset occurred. The commit checks for this
-    case, bootstraps the first 64 CPUs only, and sends all other CPUs to
-    sleep.
-    
-    Also, the platform_info ROM size is increased to host information about
-    more than 32 CPUs.
-    
-    Issue #4640
-
+Beside the ACPI suspend & resume support, described in the '
+Low-level mechanism for suspend/resume on PC platforms' section,
+the kernel got principal support to run on more than 32 CPUs. By
+default Genode's and the kernel CPU limit is set to 64, configurable by
+the constants MAX_SUPPORTED_CPUS in Genode's core respectively NUM_CPU in the
+kernel. Testwise up to 250 CPUs were usable in Qemu.
 
 Build system and tools
 ######################
