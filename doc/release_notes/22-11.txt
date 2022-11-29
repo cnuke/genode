@@ -1586,19 +1586,39 @@ The former 'LIB=<libname>' option is no longer supported.
 Boot-loading over HTTP
 ======================
 
-; @chelmuth
+The standard network-boot approach for x86 at Genode Labs has been a
+combination of the PC-integrated Preboot Execution Environment (PXE), the
+Pulsar boot loader, and the TFTP protocol for years. Because Pulsar is tight
+to legacy BIOS interfaces, UEFI-only hardware demands for alternatives. iPXE
+is a field-tested, UEFI-compatible alternative that is already supported in
+Genode's run tool via _load/ipxe_.
 
-commit 57f510d67fc87e6c8dba16edb3f01977df3de5c8
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Wed Sep 7 08:02:09 2022 +0200
+One of the prominent features of iPXE is the support for additional network
+(boot) protocols beyond TFTP with HTTP as a tempting option to improve boot
+performance. This release enhances the _load/ipxe_ run module to optionally
+configure and spawn the lightweight HTTP server _lighttpd_ to serve the boot
+image to iPXE using the following declarations in _etc/build.conf_.
 
-    run/load/ipxe: spawn lighttpd on demand
-    
-    An installed lighttpd HTTP server can now optionally be started to serve
-    the boot image with the follow run options.
-    
-    --load-ipxe-lighttpd             run lighttpd automatically (default: off)
-    --load-ipxe-lighttpd-port <port> TCP port to run lighttpd on (default: 8080)
+! RUN_OPT += --include load/ipxe
+! RUN_OPT +=   --load-ipxe-base-dir /tftpboot
+! RUN_OPT +=   --load-ipxe-boot-dir /ipxe
+! RUN_OPT +=   --load-ipxe-lighttpd
+! RUN_OPT +=   --load-ipxe-lighttpd-port 2209
+
+The HTTP server is run only while the run tool is executed, killed on exit,
+and limited to serve the contents of the test-specific directory under
+*var/run/* in your build directory. Your iPXE boot loader should be
+configured to chain the automatically generated _boot.cfg_ file like
+follows.
+
+! #!ipxe
+! chain http://<host ip address>:2209/boot.cfg
+
+For more details please refer to the dedicated Genodians.org article.
+
+:Getting Fujitsu U7411 up and running - Network Boot:
+
+  [https://genodians.org/chelmuth/2022-11-24-u7411-up-and-running]
 
 
 Configurable Intel HWP mode
