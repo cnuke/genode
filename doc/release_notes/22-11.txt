@@ -409,471 +409,147 @@ Device drivers
 Uniform use of new platform-driver interface
 ============================================
 
-; @skalk
-
-commit c583446adedccd0ed1dac5e8b3169cc9718983c6
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 9 11:46:27 2022 +0200
-
-    platform_drv: add HDAUDIO PCI quirks
-    
-    Ref genodelabs/genode#4578
-
-commit 281785f6bd9a7f60dfa3c25af47ff1d2fa27a92c
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Sep 13 14:26:08 2022 +0200
-
-    platform API: make MMIO dataspace cap accessible
-    
-    In case of the GPU multiplexer, we need to delegate MMIO memory
-    to the framebuffer client in form of a managed dataspace. To be
-    able to attach a given Platform::Device::Mmio object to a region map
-    we need to access its capability.
-    
-    Ref genodelabs/genode#4578
-
-commit 85dc2e5b9bd55e8b968a3b920e0a62a03982f26e
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 15 11:26:32 2022 +0200
-
-    pci_decode: interpret reserved memory from ACPI
-    
-    We need the information about reserved memory region reports
-    from the ACPI tables within the platform driver to pre-fill
-    IOMMU tables with the corresponding mappings. Therefore,
-    the pci_decode component now parses the information from the
-    ACPI ROM, and adds "reserved_memory" nodes to all related
-    devices in the devices report.
-    
-    Ref genodelabs/genode#4578
-
-commit 5e42f347d89b50dc93a3975395707c8137ae3436
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 15 11:28:29 2022 +0200
-
-    platform_drv: attach reserved memory to device PD
-    
-    Consumes the information about reserved memory region reports from
-    the devices ROM, and adds appropriated mappings to the corresponding
-    device PD.
-    
-    Ref genodelabs/genode#4578
-
-commit 71129fca2d9bd5d5762ead5c2b82c83e039015d0
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue May 3 14:02:30 2022 +0200
-
-    nvme_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit 9f9a5186e0a0877eb7be1d0370863f9ab51f5ea0
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Apr 28 15:56:02 2022 +0200
-
-    ps2_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit 5528434fb64afe95fe6e6c3fb3baa56cbbc7349c
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Jul 29 17:31:20 2022 +0200
-
-    lx_kit & lx_emul: use generic platform API
-    
-    * Remove wrapper for legacy x86 platform API
-    * Move PCI configuration space quirks to corresponding driver
-      (pc_usb_host_drv, pc_wifi_drv, pc_intel_fb_drv)
-    * Adapt driver test run-scripts to changed configuration
-    
-    Ref genodelabs/genode#4578
-
-commit ed8f71e459de2a4fdb664c25711e3b288a53eac1
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Aug 31 11:31:17 2022 +0200
-
-    ahci_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit 92b5dda2bc944d4bc82f230b67a6a89aa60c49cf
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Aug 31 13:51:10 2022 +0200
-
-    vesa_fb_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit feaaaa3e8be3b5a2b3f379e2909b8926485c7682
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Aug 31 13:51:54 2022 +0200
-
-    drivers_interactive-pc: use generic platform_drv
-    
-    Ref genodelabs/genode#4578
-
-commit 7cf6651d2c2f3e746b08aacc56bad1815108db95
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 2 13:35:47 2022 +0200
-
-    ipxe_nic_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit 8d746a701edbc85cce438f2a6681db52d74b5b6d
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 2 13:37:36 2022 +0200
-
-    drivers_nic-pc: use generic platform_drv
-    
-    Ref genodelabs/genode#4578
-
-commit 03cec5cdd7be8d5cd3819ae29be9ec3765a68c7f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 9 11:49:07 2022 +0200
-
-    dde_bsd: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit 250275fbfbc86afeb6989fb91e3dbac186a631e1
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Sep 13 14:27:24 2022 +0200
-
-    gpu_drv: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit e7571c539c182da1aa2ef9c80a193c541dcd22d5
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 15 15:12:14 2022 +0200
-
-    sculpt: use generic platform driver
-    
-    Ref genodelabs/genode#4578
-
-commit c8f055c9e3c3d8ccd132863921bafe2f3a1cf1f3
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 15 16:15:08 2022 +0200
-
-    smbios_decoder.run: remove legacy platform_drv
-    
-    Ref genodelabs/genode#4578
-
-commit 9b38af4d7dbb866cd213112c6bbec0309f847fa8
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 11:51:38 2022 +0200
-
-    smartcard.run: remove legacy platform_drv
-    
-    Ref genodelabs/genode#4511
-    Ref genodelabs/genode#4578
-
-commit 203f24742a45dcabd06cb2a3801a4d261e4796ba
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 13:30:25 2022 +0200
-
-    netperf tests: remove legacy platform_drv
-    
-    Ref genodelabs/genode#4511
-    Ref genodelabs/genode#4578
-
-commit 71eefc3315b611cf260806f1cb7c5d5d8d7861a4
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 14:05:32 2022 +0200
-
-    nic_router_uplinks.run: remove legacy platform_drv
-    
-    Ref genodelabs/genode#4511
-    Ref genodelabs/genode#4578
-
-commit 91e64c3f27bcb0846b5b3cbcaeb2def915b77d18
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 15:17:51 2022 +0200
-
-    vbox5_genode_usb_hid: remove legacy platform_drv
-    
-    Ref genodelabs/genode#4578
-
-commit b8eab65536ac249c574ddc383cbee20fa02668aa
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 15:33:58 2022 +0200
-
-    dde_linux: remove legacy usb_host_drv for x86
-    
-    Remove legacy platform_session API usage from legacy lx_kit/lx_emul
-    
-    Ref genodelabs/genode#4578
-
-commit de0c339e0b7a5ca5b8565aabdf2479f2a71cdf13
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 16 15:38:15 2022 +0200
-
-    pci: remove pci test of legacy platform API
-    
-    Ref genodelabs/genode#4578
-
-commit fdba7259ab07a45240dc0c08eafee7d3e0544907
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Sep 20 12:01:21 2022 +0200
-
-    platform_drv: provide Virtio PCI information
-    
-    Ref genodelabs/genode#4578
-
-commit ec6f89111ef9c27492b1b9bc9cd8e5c6032fc2d6
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Sep 20 12:02:32 2022 +0200
-
-    virtio_pci: use generic platform API
-    
-    Ref genodelabs/genode#4578
-
-commit afa0bed5fcd2f6c220cf382eb0c580e90495a924
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 22 09:47:12 2022 +0200
-
-    platform_drv: add USB4 pci class, update README
-    
-    Ref genodelabs/genode#4578
-
-commit c7c460f6e01c358cd8d334a2790f436251123f78
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Sep 26 15:59:36 2022 +0200
-
-    os: add include/pci/* to os api
-    
-    Ref genodelabs/genode#4578
-
-commit 7334128a2eaf880454b58b733de1c8db07fd52e6
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 28 13:56:17 2022 +0200
-
-    pci_decode: export prefetchable attribute of BARs
-    
-    Memory descriptors in PCI BARs have a prefetchable bit, which can
-    be used to optimize memory access when setting, e.g. write-combined
-    in page-table entries.
-    
-    Ref genodelabs/genode#4578
-
-commit 6a7247ab443e787d041770e6b40d37e152ce0d3a
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 28 13:59:17 2022 +0200
-
-    platform: remove cache attribute from io_mem call
-    
-    Instead of allowing the client to set a caching attribute
-    in the io_mem() call of the device interface, which was
-    only used to decide in between of the memory  being
-    write-combined or not, remove it from the API.
-    Instead use the information delivered by the devices ROM,
-    whether memory from a PCI BAR is prefetchable or not,
-    to decide whether it is mapped write-combined or not.
-    
-    Ref genodelabs/genode#4578
-
-commit b20cabb6e424d1d62b050f5f0351888060ad26d2
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Wed Sep 28 17:01:45 2022 +0200
-
-    pci: fix PCIe extended capability definition
-    
-    Also removed the warning about unhandled capability IDs.
-    
-    Ref genodelabs/genode#4578
-
-commit 9e33e572945b512c151b3ddcd70eff0f6c8884d4
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Sep 29 08:09:18 2022 +0200
-
-    nova: support more MSIs
-    
-    Issue #4578
-    
-    Ref alex-ab/nova#8
-
-commit 00c9ac363ffb73d128c3f2f5021a08a93dc7b265
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 30 16:19:00 2022 +0200
-
-    platform_drv: add EHCI PCI quirk, apply in order
-    
-    * Add EHCI PCI quirk
-    * Add UHCI reset to UHCI quirk
-    * Apply all PCI quirks in order of the PCI bus numbering
-      otherwise the machine might stall
-    
-    Ref genodelabs/genode#4578
-
-commit fa124dd3405767a8c56f49664b26c1a8240d6804
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 30 17:15:32 2022 +0200
-
-    lx_kit: do not close/re-open IRQ session
-    
-    Instead of dynamically close/open IRQ session whenever an IRQ
-    gots masked/unmasked, track the state internally and resp.
-    deliver an interrupt delayed.
-
-commit 2ccdbf10507e6db5aaf3d62347b38f68b2cd4ade
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Sep 30 17:17:40 2022 +0200
-
-    platform_drv: implement shared interrupt support
-    
-    Ref genodelabs/genode#4578
-
-commit 08f1f94fcb7dcdbf6b961c400e02d96b91b248c1
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Wed Oct 5 15:04:34 2022 +0200
-
-    pci_decode: IRQ reporting for MSI/MSI-X only devices
-    
-    Don't skip IRQ reporting if legacy IRQ/GSIs are not supported as the
-    device may support MSI/MSI-X exclusively.
-    
-    The commit also enables reserved_memory reporting of devices without
-    IRQs.
-    
-    Ref genodelabs/genode#4578
-
-commit 243c819257995b683a1629585b983b49d4d7f2f2
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 5 14:57:04 2022 +0200
-
-    pci_decode: use MSI enumerator as function value
-    
-    Instead of using a global value to enumerate the MSIs, use a function argument
-    instead. Whenever the process of PCI device reporting gets started again,
-    due to an initially too small report buffer, the MSI enumeration value is reset
-    again. Formerly, we wasted MSI numbers.
-    
-    Ref genodelabs/genode#4628
-
-commit 1504041c82855f27e7956b6f02d9300791f62462
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 5 16:16:27 2022 +0200
-
-    pc_platform_drv: introduce pc-specific driver
-    
-    This driver observes a "system" ROM, as well as the acpi ROM to implement
-    reset functionality.
-    
-    Ref genodelabs/genode#4578
-
-commit 3841ee1d51fa17d3b8702d43770e90a886e7689d
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 5 18:25:55 2022 +0200
-
-    platform_drv: implement MSI-x support
-    
-    Ref genodelabs/genode#4578
-
-commit ba97415ef90568c4d31e4893155773d49ba7aa31
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Oct 7 11:17:09 2022 +0200
-
-    pci_decode: prefer MSI over MSI-x
-    
-    Ref genodelabs/genode#4578
-
-commit e7ba0b7371b6a5d044a575fc92eb504d2a62c6a9
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Fri Oct 7 17:10:05 2022 +0200
-
-    pci: initialize BAR config on demand only
-    
-    On-demand initialization prevents read-write operations on BARs of
-    invalid devices at construction time, which may result in surprising
-    behavior later on, for example, when resetting X260 notebooks via ACPI
-    information.
-
-commit 7f0c89f37839525f53e5b0ce667912f52bee4626
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Oct 7 14:31:42 2022 +0200
-
-    pci_decode: enable all bridges
-    
-    set I/O port, MMIO, and bus master to enabled for bridges where
-    disabled.
-    
-    issue #4578
-
-commit 8f0a012345652a6c0fedbda085640823497967b7
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Tue Oct 4 13:21:01 2022 +0200
-
-    acpica: adjust to new platform driver
-    
-    genodelabs/genode#4578
-
-commit bc1e2317759295b0f921d7d0a55e0c1ab151bbae
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Oct 10 15:17:55 2022 +0200
-
-    platform_drv: implement PCI powering and reset
-    
-    Ref genodelabs/genode#4578
-
-commit a4206702174574e292ee7e1adfe3363f71d6eadc
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Oct 7 21:00:10 2022 +0200
-
-    pci_decode: disable MSI on HDAUDIO cards
-    
-    According to OpenBSD's azalia driver some AMD HDAudio devices do not
-    play nice with MSIs although the capability is set. At least the
-    0x1457 device was tested and worked using GSIs only.
-    
-    genodelabs/genode#4578
-
-commit 01e1e4e5b91084b3bf303f9c4ce45a7f44c85964
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Oct 27 14:37:42 2022 +0200
-
-    platform_drv: add "leave_operational" attribute
-    
-    If a device should not be reset, powered off, and its clocks
-    shall stay untouched when it gets released, the leave_operational
-    attribute can be set to true in the device node of the related
-    device inside the devices ROM delivered to the platform driver.
-    This is useful for drivers, which only enable and initialize
-    their device, and can be closed afterwards.
-    
-    Ref genodelabs/genode#4654
-
-commit 1057c7d6a9965a32a477dae8306935787fe93a8b
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Nov 15 15:59:31 2022 +0100
-
-    Remove legacy platform_drv, API, and platform.inc
-    
-    Fix genodelabs/genode#4671
-
-commit 66491ddba1f6e1d83f88f20522ae081e245f66e7
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Nov 18 13:59:10 2022 +0100
-
-    pci_decode: report devices from ACPI info
-    
-    Although we do not have the full ACPI information parsed yet, to
-    announce non-PCI devices derived from the ACPI tables, the device
-    description of the assumed devices is now integral-part of pci_decode.
-    Formerly, the information was gained separatedly as boot-module, whereby
-    we lost synchronization in between ACPI/PCI parsing, BIOS handover, and
-    PS/2 emulation code already acting.
-
-commit 768029398d42485c6fa75ffc3704cf662202a406
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Nov 18 14:11:38 2022 +0100
-
-    pci_decode: increase default ram quota
-    
-    To circumvent problems of the page-table entries getting short on sel4,
-    increase the RAM quota for this component in all run-scripts.
-    
-    Fix #4686
+In release 22.02 a generic platform API for all architectures got introduced.
+The x86-specific platform API got deprecated. However, all x86-based device
+drivers still used the deprecated API and the deprecated platform driver. With
+this release all device drivers are now reworked to use the generic platform API,
+and driver. The deprecated platform driver and API have been deleted.
+
+To make all previous scenarios work again, however several changes were
+necessary. The changes especially concerned the 'pci_decode' and 'platform_drv'
+component, and are described in the following:
+
+PCI decoder
+-----------
+
+The PCI decoder, introduced in release 22.05, consumes ACPI information
+delivered by the ACPI driver, and additional platform information from the core
+component. It uses these informations to find and scan PCI buses for devices and
+their capabilities. Finally it creates a Report about all PCI devices found.
+
+While running more and more device drivers using the generic platform driver and
+PCI decoder, we realized that on some platforms not all PCI bridges are
+necessarily enabled, which leaves the devices behind as unuseable. This is now
+fixed by enabling all PCI bridges.
+
+The information about reserved memory regions for PCI devices already used in
+the boot process, e.g., memory for video graphic cards, is delivered by the
+ACPI driver. However, the PCI decoder did not yet offered this information in
+its devices report. Therefore, the platform driver did not know about the
+reserved memory, and could not setup an IOMMU appriopriatedly. From now on,
+the PCI decoder will report such memory regions like the following:
+
+! <device name="00:02.0" type="pci">
+!   ...
+!   <reserved_memory address="0xdd000000" size="0x2800000"/>
+! </device>
+
+The PCI memory Base Address Registers (BARs) provide information about
+pre-fetchable memory. This information is now exported by the PCI decoder in
+addition, and can be used by the platform driver, see the upcoming section. The
+information is presented in the following form:
+
+! <device name="00:02.0" type="pci">
+!   ...
+!   <io_mem pci_bar="2" address="0xe0000000" size="0x10000000" prefetchable="true"/>
+! </device>
+
+Currently, the PCI decoder decides about the type of interrupt, which can be
+used for a PCI device. The background is that several kernels, like OKL4,
+do not support the usage of Message-Signaled-Interrupts (MSI) or MSI-x.  Older
+kernels, like Pistachio, do not even support the I/O Advanced Programmable
+Interrupt Controller (IOAPIC), and are even more limited regarding available
+interrupt pins.
+On kernels that support all kinds of interrupts, devices with support for MSI,
+or MSI-x were reported to use MSI-x in favor. However, in rare use-cases we had
+problems with the WiFi driver on MSI-x capable hardware. Therefore, we switch
+the priority of reporting MSI over MSI-x if both are available.
+In addition we experienced problems with some Intel HDAUDIO cards and MSIs.
+Therefore, we do not report the MSI capability of Intel HDAUDIO cards for the
+time being.
+
+Platform driver
+---------------
+
+The generic platform driver got re-worked to support the newly provided
+information from the PCI decoder. The given reserved memory regions of a device
+are used to add corresponding entries in the IOMMU.
+
+The new "prefetchable" attribute for corresponding I/O memory regions, typically
+only "stolen memory" of the video graphics card, is used to decide when I/O
+memory can be mapped as write-combined into the address space of the client. Now
+that the platform driver decides for which I/O memory these special paging
+attributes are senseful, there is no need for a platform API client anymore to
+define paging attributes for I/O memory. Therefore, we removed the ability from
+the 'io_mem' call.
+
+PCI devices on x86 without MSI or MSI-x support still possibly share the same
+interrupt line. To make the generic platform driver functional on these
+platforms to, we had to add shared interrupt support. When the platform driver
+gains its devices report, it iterates over all devices and their interrupt
+resources, and detects the shared interrupts. For those interrupts the platform
+driver provides it own IRQ service, thereby realizing the sharing. For all other
+interrupts, it hands out the IRQ capability from core directly.
+
+The generic platform driver can now setup MSI-x within the PCI configuration
+space of a device, if the devices ROM instructs it to do so.
+
+The ability to power and reset PCI devices was also missing in the generic
+platform driver so far. We catched up on implementing this feature.
+
+Several PCI enablement quirks are needed for correctly running devices and
+drivers. Especially the hand-off of device in between BIOS/UEFI and OS are an
+example for this. We encountered problems when doing this too late. Therefore,
+we moved the PCI quirks from the moment of first usage to the startup of the
+platform driver. Moreover, PCI quirks for EHCI and HDAUDIO were added.
+
+VirtIO PCI devices hide several important information about their queues inside
+the PCI configuration space. Now that we do not provide direct access to it
+to device drivers, the platform driver needs to identify VirtIO devices, and
+provide the necessary information via the devices ROM of the client. It does so
+like the following:
+
+! <device ...>
+!   <pci-config ...>
+!     ...
+!     <virtio_range type="notify" index="1" offset="0x200" size="0x100"/>
+!   </pci-config>
+! </device>
+
+Sometimes a device driver is needed to setup a device only, but doesn't
+necessarily needs to exist while the device is active. The PCIe host controller
+for the i.MX 8MQ SoC described in section [PCIe host controller for i.MX 8MQ]
+is such an example. To be able to destruct a platform resp. single device
+session at the platform driver without automatically powering it off, or
+resetting it, we introduce the "leave_operational" attribute. As the name
+suggests it leaves a device untouched when its session gets closed. The
+attribute is part of the policy node for the client within the platform driver's
+configuration.
+
+Platform driver for PC
+----------------------
+
+The vanished and deprecated x86-specific platform driver was able to reset a
+machine via I/O port access. It did so when a system ROM was instruct it to do
+so. This feature is mainly used within the Sculpt OS. To not loose this ability
+a platform driver specific to PCs is now part of the 'repos/pc' directory. It
+shares all code and semantic with the generic platform driver, but adds this
+single functionality.
+
+Platform API clients
+--------------------
+
+All remaining x86-centered device drivers got reworked to use the generic
+platform API and its helper utilities in 'platform_session/device.h' and
+platform_session/dma_buffer.h'.
+
+The lx_kit and lx_emul layers within the 'repos/dde_linux' repository now use
+one and the same generic layer too. While reworking these libraries, we
+addressed a performance penalty in the interrupt handling. The multiple opening
+and closing of interrupt sessions is now eliminated.
+Moreover, we removed the legacy_pc_usb_host_drv from 'repos/dde_linux'.
+
+All run-scripts and packages were revised to use the new drivers.
 
 
 PinePhone drivers for audio, camera, and power control
