@@ -1422,29 +1422,38 @@ Date:   Wed Nov 2 15:58:46 2022 +0100
 Audio driver updated to OpenBSD 7.1
 ===================================
 
-; @cnuke
+We updated the audio driver component to OpenBSD version 7.1 that
+brings in support for playback on more recent 12th Gen Intel machines.
+Besides the update we remedied a long-standing shortcoming when
+handling multiple HD-Audio devices and removed the support for old
+audio devices.
 
-commit e0f5cdacf0cd288f15d8040c63bea1d27b375225
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Fri Sep 30 19:35:01 2022 +0000
+The component contained a simple check to exclude known non-working devices
+but depending on the machine's configuration this check incomplete. Rather
+than extending the check we took a step back and changed the probing
+behavior of the component:
 
-    dde_bsd: update audio driver to OpenBSD 7.1
-    
-    This commit updates the driver from version 6.6 to 7.1. In contrast
-    to the old driver the new one will now probe all available HDA devices
-    and will drive the first usable one, e.g.:
-    
-    ```
-    [init -> audio_drv] azalia0 [8086:160c]
-    [init -> audio_drv] :
-    [init -> audio_drv] azalia0: no supported codecs
-    [init -> audio_drv] azalia1 [8086:9ca0]
-    [init -> audio_drv] :
-    [init -> audio_drv] azalia1: codecs: Realtek ALC292
-    [init -> audio_drv] audio0 at azalia1
-    ```
-    
-    Fixes #4629.
+![init -> audio_drv] azalia0 [8086:160c]
+![init -> audio_drv] :
+![init -> audio_drv] azalia0: no supported codecs
+![init -> audio_drv] azalia1 [8086:9ca0]
+![init -> audio_drv] :
+![init -> audio_drv] azalia1: codecs: Realtek ALC292
+![init -> audio_drv] audio0 at azalia1
+
+It now checks all available devices and picks the first
+one it can use. This comes in handy in configurations where the virtual
+PCI-bus is populated with all audio devices found in a machine and some of
+them contain unsupported codecs as, among others, found on GPUs.
+
+Furthermore we decided to remove the _eap_ and _auich_ driver as these drivers
+rely on I/O port access, which still had to be enabled in the component after
+the switch to the new platform driver and due to being of minor importance in
+daily use.
+The first one was mainly used to initially develop the component and later on
+for testing in QEMU. The second one on the other hand was merely enabled to
+provide a shot at getting audio in VirtualBox VMs where the component did not
+work with the HDA device model at the time.
 
 
 Improved ACPICA driver
