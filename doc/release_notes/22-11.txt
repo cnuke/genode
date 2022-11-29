@@ -1166,20 +1166,17 @@ work with the HDA device model at the time.
 Improved ACPICA driver
 ======================
 
-; @alex-ab
+The ACPICA driver got improved support for Thinkpad notebooks to report ACPI
+events and in particular battery state changes. The frequency of checking of
+state changes, which are not triggered by an ACPI event, can now be configured
+explicitly, which is documented in the README file of the component.
 
-commit 00ac4afb9f4f01026b437a536f9eca5da2cfe78b
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Oct 13 09:04:58 2022 +0200
-
-    acpica: make battery report working for thinkpads
-    
-    tested on T460p, X201, T470p
-    
-    by periodically checking and reporting.
-    
-    Issue #4631
-
+Additionally, the ACPICA component got extended to support ACPI suspend & resume
+functionality. On the one hand the component can be configured to determine and
+report the supported ACPI sleep states (S1-S5) of an PC machine. On the other
+hand, the component can now react on 'system' ROM changes and participate on
+sleep state preparation and follow up wakeup procedure using the ACPICA library,
+e.g. AcpiEnterSleepStatePrep, AcpiLeaveSleepStatePrep and AcpiLeaveSleepState.
 
 Wireless-networking improvements
 ================================
