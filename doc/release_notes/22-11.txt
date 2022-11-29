@@ -348,40 +348,41 @@ Seoul VMM
 =========
 
 The Seoul/Vancouver VMM - introduced to Genode with release 11.11 - is a
-x86 based VMM which runs on Genode@NOVA, Genode@seL4 and Genode@Fiasco.OC on
+x86 based VMM which runs on Genode@NOVA, Genode@seL4, and Genode@Fiasco.OC on
 Intel and on AMD hardware. It is used with 32-bit Linux VMs typically.
 
-Over the last and this year the VMM got Virtio support with the goal to improve
-the usability when used day-to-day, e.g. on Sculpt OS. The observation nowadays
-is, that most Linux VMs come readily (or easy to install) equipped with Virtio
-driver support, avoiding to fiddle with building or integrating guest drivers
-by oneself. The Seoul VMM got extended by implementations for the Virtio input
+Over the last and this year, the VMM got Virtio support with the goal to improve
+the usability when used day-to-day, e.g., on Sculpt OS. Given the observation
+that most Linux guests come readily (or easy to install) equipped with Virtio
+driver support, we can avoid to fiddle with building or integrating guest drivers
+manually. The Seoul VMM got extended by implementations for the Virtio input
 device model, Virtio GPU device model (2D by now) and Virtio audio device
 model.
 
 With the new input model, absolute mouse positions are supported, so
 that the mouse pointer positions in Genode's Sculpt OS and in the guest VM
-can be kept in sync. Beforehand it was hardly possible when solely the ps2
-model with relative coordinates could be used.
+can be kept in sync. Beforehand, it was hardly possible when solely using
+the PS/2 model using relative motion vectors.
 With the new 2D GPU model, the mouse pointer shape of the guest VM can be
 exported and shown by Genode's GUI multiplexer instead of the native mouse
 pointer, which improves the visual impression and avoids confusion.
-Additionally, with the new GPU model resizeable and arbitrary resolution
-dimension are possible, which was not feasible with the former vga/vesa model.
-The overall painting overhead is better managable since partial updates are
+Additionally, with the new GPU model, resizeable and arbitrary resolution
+dimension are possible, which was not feasible with the former VGA/VESA model.
+The overall painting overhead is better manageable since partial updates are
 supported by the device model.
 The Virtio audio model enables playback of music when streaming & surfing in
 the VM, which was beforehand not possible because no audio model was available.
-The new Virtio models of the Seoul VMM were finally mapped to Genode's Gui,
-Input and Audio_out interfaces.
+The new Virtio models of the Seoul VMM were finally mapped to Genode's GUI,
+input and audio-out session interfaces.
 
-The new models improve the overall usability and can be used on Sculpt OS readily.
-Several packages of alex-ab's depot are available to easy starting, starting
+Combined, the new device models improve the overall usability when using Seoul on Sculpt OS.
+Several packages of alex-ab's depot are available to get started, ranging
 from a full on target Debian installation over pre-packed and ready to use VMs
-for up-to-date Firefox and Thunderbird VMs, which are based on Tiny Core Linux.
-The Firefox VM is a disposal one, as mentioned in
-[https://genodians.org/alex-ab/2019-03-06-disposal-browser-vm],
-and the Thunderbird VM has persistent storage support.
+to up-to-date Firefox and Thunderbird VMs based on Tiny Core Linux.
+Whereas the Firefox VM is entirely disposable - as mentioned in
+[https://genodians.org/alex-ab/2019-03-06-disposal-browser-vm] -
+the Thunderbird VM relies on persistent storage.
+
 
 Device drivers
 ##############
@@ -1087,13 +1088,18 @@ Date:   Tue Nov 8 12:09:35 2022 +0100
 Intel graphics
 ==============
 
-The Intel display driver was enabled to run on Intel Alderlake graphic PCs,
-tested on a CPU Generation 12 based Framework notebook. Furthermore, the driver
-supports now 4K displays, tested namely on Dell Ultrasharp and LG 27MU67.
+The Intel display driver was enabled to run on Intel Alderlake graphics PCs,
+tested on the 12th Gen
+[https://frame.work/de/en/products/laptop-12-gen-intel - Framework Laptop].
+Furthermore, the driver
+supports now 4K displays, tested specifically on Dell Ultrasharp and LG 27MU67
+hardware.
 Additionally, the driver may now be configured to setup an upper resolution
-dimension, to avoid out of service exceptions. This feature is used by default
+bound to avoid out-of-service exceptions due to unexpectedly high memory needs.
+This feature is used by default
 on Sculpt to limit resolutions to WQHD aka 1440p aka 2560x1440 pixels and
-can be changed in repos/gems/sculpt/fb_drv/default.
+can be changed in _repos/gems/sculpt/fb_drv/default_.
+
 
 Audio driver updated to OpenBSD 7.1
 ===================================
@@ -1142,10 +1148,11 @@ explicitly, which is documented in the README file of the component.
 
 Additionally, the ACPICA component got extended to support ACPI suspend & resume
 functionality. On the one hand the component can be configured to determine and
-report the supported ACPI sleep states (S1-S5) of an PC machine. On the other
+report the supported ACPI sleep states (S1-S5) of a PC machine. On the other
 hand, the component can now react on 'system' ROM changes and participate on
-sleep state preparation and follow up wakeup procedure using the ACPICA library,
-e.g. AcpiEnterSleepStatePrep, AcpiLeaveSleepStatePrep and AcpiLeaveSleepState.
+sleep state preparation and the subsequent wakeup procedure using the ACPICA library,
+e.g., AcpiEnterSleepStatePrep, AcpiLeaveSleepStatePrep and AcpiLeaveSleepState.
+
 
 Wireless-networking improvements
 ================================
@@ -1164,70 +1171,73 @@ Platforms
 Low-level mechanism for suspend/resume on PC platforms
 ======================================================
 
-On modern PC platform suspend and resume is realized by using the ACPI
-provided mechanism. The Advanced Configuration and Power interface defines
+On modern PC platforms, suspend and resume is realized by using a mechanism
+provided by ACPI. The Advanced Configuration and Power interface defines
 (beside many other things) several global states (Gx) and six sleep states (Sx)
-an operating system (OS) can choose of. Oversimplified, the S0 state is the
-normal working state, S1-S2 a light sleeping state, S3 is known as
-'suspend to RAM' state, S4 is called 'suspend to disk' and S5 is mostly 'off'.
+an operating system (OS) can choose. Oversimplified, the S0 state is the
+normal working state, S1-S2 are light sleeping states, S3 is known as
+"suspend to RAM" state, S4 is called "suspend to disk" and S5 is mostly "off".
 See [https://en.wikipedia.org-wiki/ACPI#OSPM_responsibilities] for a basic
 overview and further pointers for reading.
 
-The supported sleep states per PC varies, even not all states are supported
-always. An operating system has to lookup and determine the supported Sx
+The supported sleep states varies between PCs, some of which not even support
+all states. An operating system has to lookup and determine the supported Sx
 states, which are part of ACPI tables and ACPI AML code. Beginning with this
-Genode release we can use the ACPICA driver to lookup the supported Sx states.
-The sleep states itself are represented as two values
+Genode release, we can use the ACPICA driver to lookup the supported Sx states.
+The sleep states themselves are represented as two values
 (TYP_SLPa and TYP_SLPb in ACPI specification) and are reported by the ACPICA
 driver.
 
 In order to trigger/program the intended sleep state, an OS like Genode + used
-kernel has to lookup and setup several ACPI tables, e.g. FACS & FADT. Via the
-tables the OS deposit a wakeup vector, which is called by the UEFI firmware on
+kernel has to look up and setup several ACPI tables, e.g., FACS & FADT. Via the
+tables, the OS deposits a wakeup vector, which is called by the UEFI firmware on
 wakeup. Before going to sleep actually, the OS has to take care to flush all
-kind of hardware cached state either to memory or persistence storage,
+kinds of hardware cached state either to memory or persistence storage,
 depending on the Sx state.
 
-With this release we added principal support for S3 'suspend to RAM' for
+With this release, we added principal support for S3 "suspend to RAM" for
 Genode using the NOVA kernel. The kernel supports now
-an privileged suspend syscall, which is solely available to Genode's core
-roottask. The invocation is triggered and guarded by Genode's Pd::managing_system
-RPC, which takes both TYPE_SLPa and TYP_SLPb values as parameter representing
-the intended Sx state. On invocation 'core' will check that the component
-holds Genode's 'managing_system' capability. On success, the suspend syscall
+a privileged suspend syscall, which is solely available to Genode's core
+roottask. The invocation is triggered and guarded by Genode's
+'Pd::managing_system' RPC function,
+which takes both TYPE_SLPa and TYP_SLPb values as parameters representing
+the intended Sx state. On invocation, Genode's core will check that the component
+holds Genode's managing-system capability. On success, the suspend syscall
 of the NOVA kernel is invoked and will lead to hold all CPUs, depositing the
 wakeup vector in the ACPI tables, flushing cached state of Genode's
 components to memory, like CPU registers, FPU state, IO-APIC state and
 virtualisation state of Intel VMX's or AMD SVM's. Finally, the both TYP_SLP
 values will be used to trigger the sleep state.
 
-On ACPI wakeup, the UEFI/BIOS firmware will wake the NOVA kernel via the
-deposited wakeup vector. The kernel will re-initialize the CPU and
-wakeup all other CPUs. Finally, control will be transferred to Genode's
-roottask which than can finish and return from the Pd::managing_system RPC call.
+On ACPI wakeup, the UEFI/BIOS firmware wakes up the NOVA kernel via the
+deposited wakeup vector. The kernel re-initializes the CPU and
+wakes up all other CPUs. Finally, control will be transferred to Genode's
+roottask (core), which than can thereby return from the 'Pd::managing_system'
+RPC call.
 
 Before and after the actual suspend and resume, the ACPICA driver should
 be used to run ACPI AML methods to prepare and post process the system state
 change, which may effect the success of the Sx state transfer depending on the
-used PC platform. Additionally, after resume all hardware and their drivers
+used PC platform. Additionally, after resume, all hardware and their drivers
 must be considered to be re-initialized. The re-initialization and re-starting
-of drivers and hardware, e.g. PCI, is not finished currently.
+of drivers and hardware, e.g., PCI, is not finished currently.
 
-An early prototype for exercising this scenario is available by the
-repos/libports/run/acpi_suspend.run scenario. This test scenario suspends and
-resumes periodically the hardware and also restarts periodically the used
-display driver. The low level ACPI suspend and resume itself seems to work
-quite reliable, which was monitored across several generations of Intel
+An early prototype for exercising this scenario is available in the form of
+the _acpi_suspend.run_ script in the _libports_ repository. This test scenario
+periodically suspends and resumes the hardware and also restarts the used
+display driver. The low level ACPI suspend and resume can be observed to work
+quite reliable, which we could validate across several generations of Intel
 notebooks and some AMD desktop machines. However, the re-starting of the
-display driver is not reliable always. Restarting the Intel display driver
-worked good on older Thinkpad notebooks, e.g. X201 and T420.
+display driver is not always reliable. Restarting the Intel display driver
+worked notably well on older Thinkpad notebooks, e.g., X201 and T420.
 
 This work is still work in progress. The next potential work items consist
 of adding support to suspend and resume also the base-hw kernel, ways to
-poweroff and poweron (PCI) hardware, e.g. via the new platform driver and
-re-initializing and/or re-starting drivers. Additionally, an convenient way to
-debug resume issue is desired when no serial output is working anymore after
+power-off and power-on (PCI) hardware, e.g., via the new platform driver and
+re-initializing and/or re-starting drivers. Additionally, a convenient way to
+debug resume issues is desired when no serial output is working anymore after
 resume.
+
 
 Base-HW microkernel
 ===================
@@ -1246,12 +1256,13 @@ Date:   Thu Oct 6 14:17:35 2022 +0200
 NOVA microhypervisor
 ====================
 
-Beside the ACPI suspend & resume support, described in the '
-Low-level mechanism for suspend/resume on PC platforms' section,
-the kernel got principal support to run on more than 32 CPUs. By
-default Genode's and the kernel CPU limit is set to 64, configurable by
+Besides the added ACPI suspend/resume support described in
+Section [Low-level mechanism for suspend/resume on PC platforms],
+the kernel received principal support to run on more than 32 CPUs. By
+default, Genode's and the kernel's CPU limit is set to 64, configurable by
 the constants MAX_SUPPORTED_CPUS in Genode's core respectively NUM_CPU in the
-kernel. Testwise up to 250 CPUs were usable in Qemu.
+kernel. According to our tests, up to 250 CPUs were usable in Qemu.
+
 
 Build system and tools
 ######################
