@@ -145,6 +145,19 @@ bool Cpu::handle_if_cpu_local_interrupt(unsigned const irq_id)
 
 bool foo_finished;
 
+// #define DUMP 1
+
+#ifdef DUMP_SCHED_EVENTS
+struct sched_event
+{
+	char old_label[64];
+	char new_label[64];
+	Genode::uint64_t tsc;
+};
+
+static Genode::uint64_t _sched_events_count;
+static sched_event _sched_events[100000];
+#endif
 
 Cpu_job & Cpu::schedule()
 {
@@ -162,23 +175,48 @@ Cpu_job & Cpu::schedule()
 	}
 
 	Job & new_job = scheduled_job();
+#ifdef DUMP_SCHED_EVENTS
 	if (&new_job != &old_job && !foo_finished) {
 		Thread *old_thread = static_cast<Thread*>(&old_job);
 		Thread *new_thread = static_cast<Thread*>(&new_job);
 
 		using namespace Genode;
-		if ((new_thread->type() == Thread::USER &&
-			strcmp(new_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)
-		 && (old_thread->type() == Thread::USER &&
-			strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)) {
-			Genode::raw(Trace::timestamp(), " old: ", *old_thread, " new: ", *new_thread);
+
+		if (old_thread->type() == Thread::USER &&
+			strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0) {
+
+			_sched_events[_sched_events_count].tsc = Trace::timestamp();
+			Genode::String<64> old_label { old_thread->pd().platform_pd().label(), " -> ", old_thread->label() };
+			Genode::String<64> new_label { new_thread->pd().platform_pd().label(), " -> ", new_thread->label() };
+
+			Genode::copy_cstring(_sched_events[_sched_events_count].old_label, old_label.string(), sizeof(sched_event::old_label));
+			Genode::copy_cstring(_sched_events[_sched_events_count].new_label, new_label.string(), sizeof(sched_event::old_label));
+			_sched_events_count++;
 		}
+		// if ((new_thread->type() == Thread::USER &&
+		// 	strcmp(new_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)
+		//  && (old_thread->type() == Thread::USER &&
+		// 	strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)) {
+		// 	Genode::raw(Trace::timestamp(), " old: ", *old_thread, " new: ", *new_thread);
+		// }
 		// if ((strcmp(new_thread->label(), "pager_ep") == 0)
 		//  && (old_thread->type() == Thread::USER &&
 		// 	strcmp(old_thread->pd().platform_pd().label(), "init -> audio_drv") == 0)) {
 		// 	Genode::raw(Trace::timestamp(), " old: ", *old_thread, " (ip=", Hex(old_thread->regs->ip), ") new: ", *new_thread);
 		// }
 	}
+
+	static bool dump_once = false;
+	if (foo_finished && !dump_once) {
+		dump_once = true;
+
+		Genode::raw("dump sched_event ", _sched_events_count);
+		for (Genode::uint64_t i = 0; i < _sched_events_count; i++) {
+			sched_event const &e = _sched_events[i];
+			Genode::raw(e.tsc, " old: ", e.old_label, " new: ", e.new_label);
+		}
+	}
+#endif
 	/* return new job */
 	return new_job;
 }
