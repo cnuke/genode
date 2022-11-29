@@ -272,7 +272,7 @@ Genode on the PinePhone has come a long way, most of which is covered by the
 [https://genode.org/documentation/genode-platforms-22-05.pdf - Genode Platforms]
 document. Device-driver work accounts for the majority of the effort, which is
 nicely wrapped up with the current release as described in
-Section [PinePhone drivers for SD-card, audio, camera, and power control].
+Section [PinePhone drivers for audio, camera, and power control].
 With the fundamental device drivers for the PinePhone covered, we can
 now turn our attention to system-integrative work, ultimately raising the
 question of how a Genode-based phone should best present itself to the user.
@@ -840,257 +840,116 @@ Date:   Fri Nov 18 14:11:38 2022 +0100
     Fix #4686
 
 
-PinePhone drivers for SD-card, audio, camera, and power control
-===============================================================
+PinePhone drivers for audio, camera, and power control
+======================================================
 
-; @nfeske
+Over the past 18 months, we have steadily expanded the base of device drivers
+for the PinePhone, first addressing the
+[https://genodians.org/nfeske/2021-12-21-pine-fun-display - display] and
+[https://genodians.org/nfeske/2022-03-16-pine-fun-touchscreen - touchscreen],
+later covering the
+[https://genode.org/documentation/release-notes/22.02#PinePhone_modem_access - modem],
+[https://genode.org/documentation/release-notes/22.05#Custom_system-control_processor__SCP__firmware - system control],
+[https://genode.org/documentation/release-notes/22.08#GPU_and_Mesa_driver_for_Mali-400 - GPU], and
+[https://genode.org/documentation/release-notes/22.08#SD-card_driver_for_the_PinePhone - SD-card].
+With the current release are wrapping up this line of work with drivers for
+audio, camera, and power control.
 
-commit 41999c560b932fc926fc0477388a4de4ed64257a
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Oct 14 13:17:50 2022 +0200
-
-    a64_linux: use orange-pi-5.14 as basis
-    
-    Switch to Ondrej Jirman's custom kernel.
-    
-    Fixes #11.
+As a prerequisite step for enabling the camera, we changed the version of
+Linux kernel that we use as donor of the driver code. We used to rely on the
+vanilla Linux kernel for the Allwinner SoC. However, the camera support still
+resides on Ondrej Jirman's custom kernel (orange-pi-5.14), which is apparently
+the kernel of choice for most Linux distributions for the PinePhone.
+We follow suit.
 
 
-commit 675ccdb585cce8cbcaf837009bebba4ea304be4f
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 13:37:24 2022 +0200
+Audio
+-----
 
-    Add SD-card resources to board/pinephone/devices
+The audio support consists of two separate components, namely an audio-control
+and audio in/out. The former controls the audio routing and mixing on the
+hardware level. It is responsible to route the mic to the modem during voice
+call, control the gain, or enable/disable the speaker. The privacy-sensitive
+audio-control driver is meant to be part of the base system of Sculpt.
+The operation of audio-control driver is defined by its configuration, which
+can be updated dynamically.
 
-commit 64fd15bb774751ee59e0191f0a0cb747cdd7cbd4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 14:00:36 2022 +0200
+Volumes can be configured by nodes within the '<config>' node using a volume
+attribute (range 0-100) where 0 implies turning off the input or output
+device. Supported nodes are '<mic>', '<speaker>', and '<earpiece>'.
+Furthermore, a '<codec>' node can be used to switch the audio path between the
+modem and the ARM application processor (SoC). Its 'target' attribute can be
+set to either "soc" (default) or "modem". The "soc" mode implicitly sets the
+codec's sample rate to 44.1 KHz whereas "modem" mode sets the sample rate to
+48 KHz. This distinction is required because the modem runs at 8 KHz only, with
+a 44.1 KHz base samples get lost.
 
-    sculpt/phone-pinephone: add SD-card driver
-    
-    Issue #6
+In contrast to the audio-control driver, the audio in/out driver is concerned
+with streaming PCM audio data to/from the ARM application processor. It allows
+audio applications hosted in the user-defined runtime of Sculpt OS to record
+and play audio via Genode's audio-in and audio-out session interfaces.
+The combination of both drivers can be exercised by the
+[https://github.com/genodelabs/genode-allwinner/blob/master/run/audio_pinephone.run - audio_pinephone.run]
+script.
 
-commit b1afeaf896a0c5a297e80ad659e4333e07f5e06a
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 16:15:54 2022 +0200
 
-    sculpt/drivers/pinephone: enable GPU access
+Power control
+-------------
 
-commit 675ccdb585cce8cbcaf837009bebba4ea304be4f
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 7 13:37:24 2022 +0200
+The new power-control driver is based on our custom firmware for the A64's
+system-control processor (SCP) in combination with Genode's dedicated
+scp-session interface that allow Genode components to interact with the SCP.
 
-    Add SD-card resources to board/pinephone/devices
+To properly arbitrate the access to the power-management IC (PMIC) between
+the SCP firmware and the ARM application processor, the PMIC driver has been
+moved entirely to the SCP firmware. This way, both the SCP firmware and
+Genode-based SCP clients become able to safely access the PMIC without
+stepping on each other's toes. In particular, the platform driver acts as an
+SCP client to toggle power controls. Since the platform driver now depends
+on the SCP, we co-located the formerly separate SCP driver component with the
+platform driver.
 
-commit 646e7968dbf6397493bce3d901498f220ff78e0f
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Aug 24 18:20:05 2022 +0200
+Built upon this infrastructure, a new power driver exercises control over
+several low-level aspects of the PinePhone hardware such as:
 
-    a64_platform_drv: add resources required for audio
-    
-    * enable DMA engine
-    * add 2 configurations for audio PLL. One configuration sets the PLL to
-      44.1KHz the other to 48KHz.
-    
-    issue #8
+* Platform reboot (via the PMIC),
+* Powering down the system (via the PMIC),
+* Switching between the power profiles "performance" and "economic",
+  which clock the ARM CPU at 1296 MHz and 816 MHz respectively,
+* Reporting the remaining battery capacity, power draw, or charge current,
+* Triggering the charging when connecting a charger, and
+* Adjusting the backlight brightness.
 
-commit 63e4661caff4eba2b3de76a359fe42b471312363
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Sep 12 15:30:42 2022 +0200
+Besides being integrated in Sculpt OS, the driver can be exercised in
+isolation using the
+[https://github.com/genodelabs/genode-allwinner/blob/master/run/power_pinephone.run - power_pinephone.run]
+script.
 
-    audio_control: add playback/capture from/to SoC
-    
-    * remove I2S part (will be used by audio driver)
-    * add routing from Aif1 (SoC) to playback and cpature to Aif1
-    * make volumes configurable, volumes can be configured by nodes within
-      the <config> using a volume attribute (range 0-100) where 0 implies
-      turning off the input or output device.
-      Supported nodes are: <mic>, <speaker>, <earpiece>
-    
-    issue #8
 
-commit b073d56c1ada61406bd1c6ef1048a048b96a3301
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Sep 19 15:16:46 2022 +0200
+Camera
+------
 
-    audio_control: add modes for SoC and modem
-    
-    This commit introduces a new configuration node called "<codec>". The
-    attribute value of "target" can be either "soc" (default) or "modem".
-    Currently, soc will set the codec's sample rate to 44.1KHz, while
-    "modem" sets the sample rate to 48KHz. This is required because the
-    modem runs at 8KHz only, with a 44.1KHz base samples get lost.
-    
-    Example:
-    
-    ! <config>
-    !  <codec target="modem"/>
-    ! </config>
-    
-    issue #8
+The added camera driver component consists of a port of the Linux SUN6I-CSI as
+well as OV5640 and GC2145 drivers. It renders the captured camera image data
+into a GUI session according to the following configuration attributes.
 
-commit b1b57cb6f7c03278905ad5a4eac6d6178150ea0a
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Aug 24 18:22:06 2022 +0200
+The 'camera' attribute selects the camera. Supported values as "front" and "rear".
+The 'width' attribute selects the horizontal resolution and the 'height'
+attribute the vertical resolution. Valid configurations are "640x480"
+as well as "1280x720".
+The 'fps' attribute selects the capture rate of the camera. Valid values
+are "15" and "30".
+The 'format' attribute selects the capture format. The only valid value
+is "yuv", which selects YUV420.
+The 'convert' attribute specifies if the captured image data is converted
+to the pixel format suitable for displaying directly. Default is "true".
+The 'rotate' attribute specifies if the capture image data is rotated
+counter-clockwise and flipped. Default is 'true'.
 
-    a64_audio_drv: Audio driver for the Allwinner A64 SoC
-    
-    The driver provides Genode's audio out and audio in session. To work
-    properly the drivers needs access to the A64's DMA controller and uses
-    channels 0 and 1 to transfer data to/from the I2S bus.
-    
-    issue #8
-
-commit c48b3746cfd6f9e812b1ea278e6c655562cffe28
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Sep 12 15:12:43 2022 +0200
-
-    audio_pinephone.run: script to test audio on the PinePhone
-    
-    The script provides a loopback audio service.
-    
-    issue #8
-
-commit e206cca133edf4a3063572d7662c0daf59153a6e
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Sep 12 18:04:06 2022 +0200
-
-    modem_pinephone.run: adjust to audio changes
-    
-    Each input/output can now be assigned a volume between 0 and 100
-    (0 = disable).
-    
-    issue #8
-
-commit cad977e61ebce833604be2b6b0d484d6725eedb9
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon Sep 12 18:05:19 2022 +0200
-
-    phone_manager: adjust to audio changes
-    
-    * each input/output can now be assigned a volume between 0 and 100
-      (0 = disable).
-    
-    * change codec to "modem" during call. This leads to a reconfiguration
-      of the audio codec. When no call is active the codec will be set to
-      "soc".
-    
-    issue #8
-
-commit a883871a4ae05b7eceac3bc7a12ee78241b5b5f8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 6 13:30:46 2022 +0200
-
-    Support for SCP calls locally from the SCP driver
-    
-    This change is a preparatory step for the integration of the SCP driver
-    into the platform driver. It allows the SCP driver to use its own
-    service interface via the new 'Local_connection'.
-
-commit f65c08c5952c7e016ff40566b91b68a8adc3e386
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 6 15:52:04 2022 +0200
-
-    Integrate SCP driver into the platform driver
-    
-    This patch merges the SCP driver into the platform driver, which clears
-    the way towards accessing the PMIC through the SCP instead of driving
-    the RSB bus directly by the platform driver. This way, the SCP can act
-    as the arbiter for accessing the PMIC by both the SCP firmware and
-    Genode components using the SCP service interface.
-    
-    Issue #13
-
-commit f4781dd51f41df7286178e12a2140fc0e158ae02
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Nov 2 16:35:36 2022 +0100
-
-    drivers/platform/a64: address PMIC via SCP
-    
-    This patch replaces the former direct access of the reduced serial bus
-    (RSB) by calls to the system control processor (SCP). This way, both the
-    SCP firmware and Genode-based SCP clients become able to safely access
-    the PMIC without stepping on each other's toes.
-    
-    Fixes #13
-
-commit 7294e43b4560145d76955c6e7141533f069f773d
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Jul 29 16:58:51 2022 +0200
-
-    a64_linux: enable camera drivers for PinePhone
-    
-    Issue #10.
-
-commit dc0955543e21469a0403fa4e9828d427d8cabb0d
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Jul 29 17:00:56 2022 +0200
-
-    initcall_order: add camera driver initcalls
-    
-    Issue #10.
-
-commit 37de9ebaf3fdcd56e1269175c929a7a594d141ae
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Aug 1 13:19:06 2022 +0200
-
-    platform/a64: add CSI settings
-    
-    This commit adds the various CSI related clocks to CCU driver and
-    the CSI related LDO settings to the PMIC driver.
-    
-    Issue #10.
-
-commit 9185ec4e832e207365502b58e2b9fae971370d3e
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Aug 10 17:12:07 2022 +0200
-
-    lx_emul: allow GPIO input for CSI
-    
-    Allow for setting and reading values from input GPIOs. This is needed
-    for the `i2c-gpio` bit-banging driver.
-    
-    Issue #10.
-
-commit a44c54212fc32e3c4e9b024a629cd4464f20a591
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Sep 27 15:29:23 2022 +0200
-
-    lx_emul/a64: add CCU stub driver
-    
-    The driver is necessary because the CCU is referenced by the i2c
-    camera devices (as "xclk").
-    
-    Issue #10.
-
-commit afc4a8a7ee7aa666f0095f20baad3baab687f3e3
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Jul 29 17:02:26 2022 +0200
-
-    Driver for PinePhone cameras
-    
-    This driver component consists of a port of the Linux sun6i-csi as
-    well as OV5640 and GC2145 drivers. For more detailed information
-    about how to operate the component please look into
-    'src/drivers/camera/pinephone/README'.
-    
-    The accompanied camera_pinephone.run script contains a test scenario
-    that displays the camera image on the framebuffer. It repeatedly
-    switches between front and rear camera.
-    
-    Fixes #10
-
-commit e4cb48d3e26205cbbeb279387029a1dbcc48af2c
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Fri Aug 26 20:16:18 2022 +0200
-
-    Add pkg recipe for lima GPU driver
-
-commit 5d855f06c7aa2faafe1ecf261c3526b9dd6dd49b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Nov 9 15:50:48 2022 +0100
-
-    Power monitoring driver for the PinePhone
+The integration of the driver is exemplified by the
+[https://github.com/genodelabs/genode-allwinner/blob/master/run/camera_pinephone.run - camera_pinephone.run] script.
+The test scenario displays the camera image on the framebuffer. It repeatedly
+switches between front and rear camera.
 
 
 New PCI and network drivers for NXP i.MX
