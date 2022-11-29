@@ -127,7 +127,7 @@ Hardware-accelerated graphics with Intel GEN12+ GPUs
 ####################################################
 
 With our big [https://mesa3d.org - Mesa 3D] library update from version 11.2.2
-to version [https://genode.org/documentation/release-notes/21.08 - 21.0.0] we
+to version [https://genode.org/documentation/release-notes/21.08 - 21.0.0], we
 also switched the Intel graphics back end from the dated DRI2/i965 to the
 Gallium/Iris based graphics driver. The reason for doing so is becoming apparent
 with the current Genode release. The old i965 driver does not support newer Intel
@@ -138,24 +138,24 @@ everyone = GEN12) hardware is only supported by the Iris driver and can be found
 on current architectures like Tigerlake or Alderlake. Intel Xe comes with a
 completely new instruction set architecture (ISA). Thanks to our switch to Iris,
 most of these ISA changes are handled transparently by the Mesa library for us.
-The main task for Genode was to adjust the Intel-GPU multiplexer to the new
-graphics device generation.
+The main task for Genode was to adjust our Intel GPU multiplexer to the new
+graphics-device generation.
 
 
 Intel GPU-GEN12 multiplexer adjustments
 =======================================
 
 Genode's GPU multiplexer is a very low level component within the 3D graphics
-stack. Technically it handles the GPU resources (like graphics memory) and the
+stack. Technically, it handles the GPU resources (like graphics memory) and the
 scheduling and execution of compiled GPU code (i.e., batch buffers) of the
 graphics device. It is also responsible for providing separation of different
 GPU clients, which is achieved by GPU contexts with a separate page table per
-client in hardware. Also it serves interrupts and informs the client,
-respectively the 3D application, about progress so the client can submit the
-next rendering request. For Intel Xe there are only two changes within this low
-level ISA. First, the interrupt handling registers have been improved, it has
-become easier to distinguish, for example, between a display engine interrupt
-and a rendering interrupt, since graphics cards can have many interrupt causes,
+client in hardware. Also it serves interrupts and informs the clients,
+respectively the 3D applications, about progress so a client can submit the
+next rendering request. For Intel Xe, there are only two changes within this low
+level ISA. First, the interrupt handling registers have been improved. It has
+become easier to distinguish, for example, between a display-engine interrupt
+and a rendering interrupt. Since graphics cards can have many interrupt causes,
 this is a useful and welcome change. Second, it is now possible to schedule 16
 instead of 4 jobs onto the GPU. While we don't take advantage of this feature
 yet - we schedule one job at a time - this may come in handy on use cases like
@@ -170,13 +170,12 @@ Resources need to be traded on Genode and it is essential that the GPU
 multiplexer does not pay for memory allocations or capability upgrades from it's
 own budget. The client has to donate these resources beforehand. If this rule is
 violated, the multiplexer might run out of budget and stall all clients. Because
-3D applications can require a huge amount of resources this has been a
+3D applications can require a huge amount of resources, this has been a
 challenging topic during the last release cycle and we are glad to announce that
 even sophisticated workloads are now running well on Genode. There is still room
-for improvement, but the current situation looks promising.
-
-Stability wise we have tested the 3D stack with various workloads (games,
-browsers, VirtualBox6-3D) and did fix many issues.
+for improvement, but the current situation is already reassuring.
+Stability-wise, we have tested the updated 3D stack with various workloads (games,
+browsers, VirtualBox6-3D) and did fix all issues that we came across.
 
 
 Base framework and OS-level infrastructure
@@ -222,21 +221,21 @@ benefit that the potentially expensive report update does not delay the event
 processing that triggered the update and that a report is guaranteed to reflect
 a consistent state of the router's internals.
 
-Furthermore, if the <report> flag 'link_state_triggers' is set, the router now
+Furthermore, if the '<report>' attribute 'link_state_triggers' is set, the router now
 updates the report also whenever a network session gets constructed or
 destructed. This is definitely necessary with sessions whose link state
 is "up" because we should consider a non-existent session to be "down".
 However, in real-world scenarios, a subscriber might want to know about the
-construction and destruction of sessions that are "down" as well because he
+construction and destruction of sessions that are "down" as well because one
 has to be able to synchronize the lifetime of local objects that keep track
 of the link states.
 
 Beside the polishing of the report functionality, there are some improvements
-connected to the DHCP processing in the router. First, the router is now robust
+related to the DHCP processing in the router. First, the router is now robust
 against invalid DNS addresses in DHCP ACK packets. Next, the DHCP client
 doesn't produce oversized Ethernet packets anymore. This is important in
 networks with a low bandwidth. Then, the link state of a session that is bound
-to the state of a another domain via the <dhcp-server> attribute
+to the state of a another domain via the '<dhcp-server>' attribute
 'dns_config_from' is now correctly synchronized to whether that domain has an
 IP configuration or not. And, last but not least, the DHCP server now accepts
 the optimized startup sequence of clients like Debian that store their lease
@@ -844,7 +843,7 @@ PinePhone drivers for audio, camera, and power control
 ======================================================
 
 Over the past 18 months, we have steadily expanded the base of device drivers
-for the PinePhone, first addressing the
+for the PinePhone, initially addressing the
 [https://genodians.org/nfeske/2021-12-21-pine-fun-display - display] and
 [https://genodians.org/nfeske/2022-03-16-pine-fun-touchscreen - touchscreen],
 later covering the
@@ -852,27 +851,27 @@ later covering the
 [https://genode.org/documentation/release-notes/22.05#Custom_system-control_processor__SCP__firmware - system control],
 [https://genode.org/documentation/release-notes/22.08#GPU_and_Mesa_driver_for_Mali-400 - GPU], and
 [https://genode.org/documentation/release-notes/22.08#SD-card_driver_for_the_PinePhone - SD-card].
-With the current release are wrapping up this line of work with drivers for
+With the current release, we wrap up this line of work with drivers for
 audio, camera, and power control.
 
 As a prerequisite step for enabling the camera, we changed the version of
-Linux kernel that we use as donor of the driver code. We used to rely on the
+Linux kernel that we use as donor of the driver code. Up to now, we relied on the
 vanilla Linux kernel for the Allwinner SoC. However, the camera support still
-resides on Ondrej Jirman's custom kernel (orange-pi-5.14), which is apparently
-the kernel of choice for most Linux distributions for the PinePhone.
-We follow suit.
+resides on [https://xnux.eu - Ondrej Jirman's] custom kernel (orange-pi-5.14),
+which is apparently the kernel of choice for most Linux distributions for the
+PinePhone. We follow suit.
 
 
 Audio
 -----
 
-The audio support consists of two separate components, namely an audio-control
-and audio in/out. The former controls the audio routing and mixing on the
-hardware level. It is responsible to route the mic to the modem during voice
-call, control the gain, or enable/disable the speaker. The privacy-sensitive
-audio-control driver is meant to be part of the base system of Sculpt.
-The operation of audio-control driver is defined by its configuration, which
-can be updated dynamically.
+The added audio support consists of two separate components, namely an
+audio-control driver and audio in/out driver. The former controls the audio
+routing and mixing on the hardware level. It is responsible to route the mic
+to the modem during voice call, control the gain, or enable/disable the
+speaker. The privacy-sensitive audio-control driver is meant to be part of the
+base system of Sculpt. It operates according to its configuration, which can
+be updated dynamically.
 
 Volumes can be configured by nodes within the '<config>' node using a volume
 attribute (range 0-100) where 0 implies turning off the input or output
@@ -881,14 +880,14 @@ Furthermore, a '<codec>' node can be used to switch the audio path between the
 modem and the ARM application processor (SoC). Its 'target' attribute can be
 set to either "soc" (default) or "modem". The "soc" mode implicitly sets the
 codec's sample rate to 44.1 KHz whereas "modem" mode sets the sample rate to
-48 KHz. This distinction is required because the modem runs at 8 KHz only, with
-a 44.1 KHz base samples get lost.
+48 KHz. This distinction is required because the modem is compatible with 8
+KHz only. The modem's 8 KHz can be cleanly converted to 48 KHz.
 
 In contrast to the audio-control driver, the audio in/out driver is concerned
 with streaming PCM audio data to/from the ARM application processor. It allows
 audio applications hosted in the user-defined runtime of Sculpt OS to record
 and play audio via Genode's audio-in and audio-out session interfaces.
-The combination of both drivers can be exercised by the
+The combination of both drivers can be exercised via the
 [https://github.com/genodelabs/genode-allwinner/blob/master/run/audio_pinephone.run - audio_pinephone.run]
 script.
 
@@ -902,7 +901,7 @@ scp-session interface that allow Genode components to interact with the SCP.
 
 To properly arbitrate the access to the power-management IC (PMIC) between
 the SCP firmware and the ARM application processor, the PMIC driver has been
-moved entirely to the SCP firmware. This way, both the SCP firmware and
+moved entirely to the SCP side. This way, both the SCP firmware and
 Genode-based SCP clients become able to safely access the PMIC without
 stepping on each other's toes. In particular, the platform driver acts as an
 SCP client to toggle power controls. Since the platform driver now depends
@@ -934,15 +933,14 @@ well as OV5640 and GC2145 drivers. It renders the captured camera image data
 into a GUI session according to the following configuration attributes.
 
 The 'camera' attribute selects the camera. Supported values as "front" and "rear".
-The 'width' attribute selects the horizontal resolution and the 'height'
-attribute the vertical resolution. Valid configurations are "640x480"
-as well as "1280x720".
+The 'width' and 'height' attributes select the horizontal and vertical
+resolution. Valid configurations are 640x480 as well as 1280x720.
 The 'fps' attribute selects the capture rate of the camera. Valid values
 are "15" and "30".
 The 'format' attribute selects the capture format. The only valid value
 is "yuv", which selects YUV420.
 The 'convert' attribute specifies if the captured image data is converted
-to the pixel format suitable for displaying directly. Default is "true".
+to the pixel format suitable for the GUI display. Default is "true".
 The 'rotate' attribute specifies if the capture image data is rotated
 counter-clockwise and flipped. Default is 'true'.
 
@@ -1131,15 +1129,15 @@ Date:   Wed Nov 2 15:58:46 2022 +0100
 Audio driver updated to OpenBSD 7.1
 ===================================
 
-We updated the audio driver component to OpenBSD version 7.1 that
+We updated the audio-driver component to OpenBSD version 7.1 that
 brings in support for playback on more recent 12th Gen Intel machines.
-Besides the update we remedied a long-standing shortcoming when
+Besides the update, we remedied a long-standing shortcoming when
 handling multiple HD-Audio devices and removed the support for old
 audio devices.
 
 The component contained a simple check to exclude known non-working devices
-but depending on the machine's configuration this check incomplete. Rather
-than extending the check we took a step back and changed the probing
+but depending on the machine's configuration, this check was incomplete. Rather
+than extending the check, we took a step back and changed the probing
 behavior of the component:
 
 ![init -> audio_drv] azalia0 [8086:160c]
@@ -1155,7 +1153,7 @@ one it can use. This comes in handy in configurations where the virtual
 PCI-bus is populated with all audio devices found in a machine and some of
 them contain unsupported codecs as, among others, found on GPUs.
 
-Furthermore we decided to remove the _eap_ and _auich_ driver as these drivers
+Furthermore, we decided to remove the _eap_ and _auich_ drivers as these drivers
 rely on I/O port access, which still had to be enabled in the component after
 the switch to the new platform driver and due to being of minor importance in
 daily use.
@@ -1360,13 +1358,13 @@ image to iPXE using the following declarations in _etc/build.conf_.
 The HTTP server is run only while the run tool is executed, killed on exit,
 and limited to serve the contents of the test-specific directory under
 *var/run/* in your build directory. Your iPXE boot loader should be
-configured to chain the automatically generated _boot.cfg_ file like
-follows.
+configured to chain the automatically generated _boot.cfg_ file
+as follows.
 
 ! #!ipxe
 ! chain http://<host ip address>:2209/boot.cfg
 
-For more details please refer to the dedicated Genodians.org article.
+For more details, please refer to the dedicated Genodians.org article.
 
 :Getting Fujitsu U7411 up and running - Network Boot:
 
@@ -1376,9 +1374,9 @@ For more details please refer to the dedicated Genodians.org article.
 Configurable Intel HWP mode
 ===========================
 
-We updated our version of Bender to be configurable regarding the mode in which
+We updated our version of the Bender chain-boot loader to be configurable regarding the mode, in which
 to run Intel's Hardware P-States (HWP). When running Genode on NOVA, The HWP
 mode can now be controlled via the new run option '--bender-intel-hwp-mode'.
-The option knows 4 valid values 'off', 'performance', 'balanced', and
+The option responds to the values 'off', 'performance', 'balanced', and
 'power_saving'. The default value is 'performance' in order to stay backwards
 compatible. On kernels other than NOVA, HWP remains turned off in general.
