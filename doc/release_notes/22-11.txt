@@ -1070,61 +1070,13 @@ Date:   Tue Nov 8 12:09:35 2022 +0100
 Intel graphics
 ==============
 
-; @nfeske, @alex-ab
-
-commit 80e2cea4aa2ebc1b84210c03f0ba191a4c152576
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 5 15:22:33 2022 +0200
-
-    dde_linux: enable Intel Alderlake graphics
-    
-    With this patch, the Intel framebuffer driver works on the Framework
-    Gen12 laptop.
-    
-    Fixes #4627
-
-commit dc228b952a3a9c079e7cbcb0b113e33f6e036bde
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 5 17:36:04 2022 +0200
-
-    intel_fb_drv: add gpu/drm/drm_scdc_helper.c
-    
-    With this patch, the Dell UltraSharp 4K display works in principle when
-    connected via HDMI to a Lenovo x260 laptop.
-    
-    Fixes #4630
-
-commit 72217a6771a3a1401743194d9d9430e65f6b3a0a
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed Nov 2 16:00:57 2022 +0100
-
-    intel_fb: support larger resolutions
-    
-    Increase "assumed" internal kernel memory size based on available memory
-    to support allocation of framebuffer larger than 16M, which was before
-    hardcoded.
-    
-    Issue #4659
-
-commit eb318d5ceba8b9627c10c7d0bc618b98820a407a
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed Nov 2 16:02:43 2022 +0100
-
-    intel_fb: handle too large framebuffer allocation
-    
-    In case the allocation fails for the largest possible connector mode,
-    try smaller modes. Additional add option to specify maximal resolution.
-    
-    Issue #4659
-
-commit 95ee0f58f2f78fedadd903995b89623089fcc62e
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed Nov 2 15:58:46 2022 +0100
-
-    sculpt: enforce max width/height by configuration
-    
-    Issue #4659
-
+The Intel display driver was enabled to run on Intel Alderlake graphic PCs,
+tested on a CPU Generation 12 based Framework notebook. Furthermore, the driver
+supports now 4K displays, tested namely on Dell Ultrasharp and LG 27MU67.
+Additionally, the driver may now be configured to setup an upper resolution
+dimension, to avoid out of service exceptions. This feature is used by default
+on Sculpt to limit resolutions to WQHD aka 1440p aka 2560x1440 pixels and
+can be changed in repos/gems/sculpt/fb_drv/default.
 
 Audio driver updated to OpenBSD 7.1
 ===================================
