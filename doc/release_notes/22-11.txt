@@ -329,16 +329,18 @@ ARM virtual machine monitor
 ===========================
 
 The hardware-assisted virtual machine monitor (VMM) for ARM developed for Genode
-resides within the framework since release 15.02. Over the years it got
+is part of the framework since release
+[https://genode.org/documentation/release-notes/15.02#Virtualization_on_ARM - 15.02].
+Over the years, it got
 extended to support recent ARMv8 hardware, VirtIO device models for console,
 network, block, and so on. Nevertheless, the given device models, memory
-dimensions, and Linux specifics like initramfs size were hard-coded within the
-VMM component, and not configureable.
+dimensions, and Linux specifics like initramfs size remained hard-coded within the
+VMM component, and not easily configurable.
 
-Now, the VMM accepts a configuration that enables you to define various aspects
-for the virtual machine, and guest OS. The VMM still focuses on Linux OS guests.
+Now, the VMM accepts a configuration that enables one to define various aspects
+of the virtual machine and guest OS. The VMM is still focused on Linux OS guests though.
 Formerly, a pre-compiled flattened device-tree binary (DTB) was used by the VMM
-to boot the Linux guest.  Now the VMM has to generate the DTB dependent on its
+to boot the Linux guest. The new version of the VMM generates the DTB based on its
 own configuration.
 
 An example configuration looks like the following:
@@ -357,7 +359,7 @@ An example configuration looks like the following:
 
 The RAM size and CPU count attributes are mandatory. All other attributes are
 optional and use default values. However, it is noteworthy that you should use
-the correct values for CPU type and Generic Interrupt Controller (GIC) version
+the correct values for the CPU type and the Generic Interrupt Controller (GIC) version
 that matches your underlying hardware. Due to the usage of hardware-dependent
 virtualization extensions, the VMM and guest OS should see the correct hardware
 description for CPU and interrupt controller.
@@ -409,44 +411,48 @@ Device drivers
 Uniform use of new platform-driver interface
 ============================================
 
-In release 22.02 a generic platform API for all architectures got introduced.
-The x86-specific platform API got deprecated. However, all x86-based device
+In release
+[https://genode.org/documentation/release-notes/22.02#Platform_driver - 22.02],
+Genode's generic platform API for all architectures got introduced and
+the x86-specific platform API got deprecated. However, at that point, all x86-based device
 drivers still used the deprecated API and the deprecated platform driver. With
-this release all device drivers are now reworked to use the generic platform API,
+this release, all device drivers are now reworked to use the generic platform API,
 and driver. The deprecated platform driver and API have been deleted.
 
-To make all previous scenarios work again, however several changes were
-necessary. The changes especially concerned the 'pci_decode' and 'platform_drv'
-component, and are described in the following:
+To make all previous scenarios work again, several changes were
+necessary. The changes - especially concerning the _pci_decode_ and
+_platform_drv_ components - are described in the following.
 
 PCI decoder
 -----------
 
-The PCI decoder, introduced in release 22.05, consumes ACPI information
-delivered by the ACPI driver, and additional platform information from the core
-component. It uses these informations to find and scan PCI buses for devices and
-their capabilities. Finally it creates a Report about all PCI devices found.
+The PCI decoder, introduced in release
+[https://genode.org/documentation/release-notes/22.05#Platform_driver - 22.05],
+consumes ACPI information
+delivered by the ACPI driver and additional platform information from the core
+component. It uses this information to find and scan PCI buses for devices and
+their capabilities. Finally it creates a report about all PCI devices found.
 
-While running more and more device drivers using the generic platform driver and
-PCI decoder, we realized that on some platforms not all PCI bridges are
-necessarily enabled, which leaves the devices behind as unuseable. This is now
-fixed by enabling all PCI bridges.
+While using more and more device drivers with the generic platform driver and
+PCI decoder, we realized that on some platforms, not all PCI bridges are
+necessarily enabled, which leaves the devices behind such a bridge unusable.
+This is now fixed by enabling all PCI bridges.
 
-The information about reserved memory regions for PCI devices already used in
-the boot process, e.g., memory for video graphic cards, is delivered by the
-ACPI driver. However, the PCI decoder did not yet offered this information in
+The information about reserved memory regions for PCI devices is already used in
+the boot process, e.g., memory for video graphic cards is discovered by the
+ACPI driver. However, the PCI decoder did not yet offer this information in
 its devices report. Therefore, the platform driver did not know about the
-reserved memory, and could not setup an IOMMU appriopriatedly. From now on,
-the PCI decoder will report such memory regions like the following:
+reserved memory, and could not setup an IOMMU appropriately. From now on,
+the PCI decoder reports such memory regions as follows.
 
 ! <device name="00:02.0" type="pci">
 !   ...
 !   <reserved_memory address="0xdd000000" size="0x2800000"/>
 ! </device>
 
-The PCI memory Base Address Registers (BARs) provide information about
+The PCI memory _Base Address Registers_ (BARs) provide information about
 pre-fetchable memory. This information is now exported by the PCI decoder in
-addition, and can be used by the platform driver, see the upcoming section. The
+addition and can be used by the platform driver, see the upcoming section. The
 information is presented in the following form:
 
 ! <device name="00:02.0" type="pci">
@@ -456,17 +462,18 @@ information is presented in the following form:
 
 Currently, the PCI decoder decides about the type of interrupt, which can be
 used for a PCI device. The background is that several kernels, like OKL4,
-do not support the usage of Message-Signaled-Interrupts (MSI) or MSI-x.  Older
-kernels, like Pistachio, do not even support the I/O Advanced Programmable
-Interrupt Controller (IOAPIC), and are even more limited regarding available
+do not support the use of _Message-Signaled-Interrupts_ (MSI) or MSI-x.  Older
+kernels, like Pistachio, do not even support the I/O _Advanced Programmable_
+_Interrupt Controller_ (IOAPIC), and are even more limited regarding available
 interrupt pins.
 On kernels that support all kinds of interrupts, devices with support for MSI,
-or MSI-x were reported to use MSI-x in favor. However, in rare use-cases we had
+or MSI-x were reported to use MSI-x in favor. However, in rare cases we observed
 problems with the WiFi driver on MSI-x capable hardware. Therefore, we switch
 the priority of reporting MSI over MSI-x if both are available.
-In addition we experienced problems with some Intel HDAUDIO cards and MSIs.
+In addition, we experienced problems with some Intel HDAUDIO cards and MSIs.
 Therefore, we do not report the MSI capability of Intel HDAUDIO cards for the
 time being.
+
 
 Platform driver
 ---------------
@@ -475,38 +482,38 @@ The generic platform driver got re-worked to support the newly provided
 information from the PCI decoder. The given reserved memory regions of a device
 are used to add corresponding entries in the IOMMU.
 
-The new "prefetchable" attribute for corresponding I/O memory regions, typically
-only "stolen memory" of the video graphics card, is used to decide when I/O
+The new "prefetchable" attribute for corresponding I/O memory regions - typically
+only "stolen memory" of the video graphics card - is used to decide when I/O
 memory can be mapped as write-combined into the address space of the client. Now
-that the platform driver decides for which I/O memory these special paging
-attributes are senseful, there is no need for a platform API client anymore to
-define paging attributes for I/O memory. Therefore, we removed the ability from
-the 'io_mem' call.
+that the platform driver decides, for which I/O memory these special paging
+attributes are sensible to use, the actual driver no longer needs to
+distinguish special paging attributes for I/O memory. Therefore, we removed the
+those details from the 'io_mem' call.
 
-PCI devices on x86 without MSI or MSI-x support still possibly share the same
+PCI devices on x86 without MSI or MSI-x support may still share the same
 interrupt line. To make the generic platform driver functional on these
-platforms to, we had to add shared interrupt support. When the platform driver
-gains its devices report, it iterates over all devices and their interrupt
-resources, and detects the shared interrupts. For those interrupts the platform
-driver provides it own IRQ service, thereby realizing the sharing. For all other
-interrupts, it hands out the IRQ capability from core directly.
+platforms, we had to add shared interrupt support. When the platform driver
+receives its devices report, it iterates over all devices and their interrupt
+resources, and detects any shared interrupts. For those interrupts, the platform
+driver provides a custom IRQ service, thereby realizing the sharing. For all other
+interrupts, it hands out the IRQ capability as obtained from core directly.
 
 The generic platform driver can now setup MSI-x within the PCI configuration
 space of a device, if the devices ROM instructs it to do so.
 
 The ability to power and reset PCI devices was also missing in the generic
-platform driver so far. We catched up on implementing this feature.
+platform driver so far. We caught up on implementing this feature.
 
 Several PCI enablement quirks are needed for correctly running devices and
-drivers. Especially the hand-off of device in between BIOS/UEFI and OS are an
+drivers. Especially the hand-off of devices in between BIOS/UEFI and OS are an
 example for this. We encountered problems when doing this too late. Therefore,
 we moved the PCI quirks from the moment of first usage to the startup of the
 platform driver. Moreover, PCI quirks for EHCI and HDAUDIO were added.
 
 VirtIO PCI devices hide several important information about their queues inside
-the PCI configuration space. Now that we do not provide direct access to it
-to device drivers, the platform driver needs to identify VirtIO devices, and
-provide the necessary information via the devices ROM of the client. It does so
+the PCI configuration space. Now that we do not provide direct access to the
+PCI configuration space to device drivers, the platform driver needs to identify VirtIO devices, and
+provide the necessary information via the devices ROM to the driver. It does so
 like the following:
 
 ! <device ...>
@@ -516,38 +523,39 @@ like the following:
 !   </pci-config>
 ! </device>
 
-Sometimes a device driver is needed to setup a device only, but doesn't
-necessarily needs to exist while the device is active. The PCIe host controller
+Sometimes a device driver is needed to setup a device but doesn't
+necessarily need to stay present while the device is active. The PCIe host controller
 for the i.MX 8MQ SoC described in section [PCIe host controller for i.MX 8MQ]
 is such an example. To be able to destruct a platform resp. single device
 session at the platform driver without automatically powering it off, or
-resetting it, we introduce the "leave_operational" attribute. As the name
-suggests it leaves a device untouched when its session gets closed. The
+resetting it, we introduced the "leave_operational" attribute. As the name
+suggests, it leaves a device untouched when its session gets closed. The
 attribute is part of the policy node for the client within the platform driver's
 configuration.
 
-Platform driver for PC
-----------------------
+Platform driver for PC hardware
+-------------------------------
 
 The vanished and deprecated x86-specific platform driver was able to reset a
-machine via I/O port access. It did so when a system ROM was instruct it to do
-so. This feature is mainly used within the Sculpt OS. To not loose this ability
-a platform driver specific to PCs is now part of the 'repos/pc' directory. It
-shares all code and semantic with the generic platform driver, but adds this
+machine via I/O port access. It did so upon observing the 'state' attribute of
+the system ROM having the value "reset".
+This feature is mainly used within Sculpt OS. To not loose this ability,
+a platform driver specific to PCs is now part of the _repos/pc_ repository. It
+shares all code and semantics with the generic platform driver, but adds this
 single functionality.
 
 Platform API clients
 --------------------
 
 All remaining x86-centered device drivers got reworked to use the generic
-platform API and its helper utilities in 'platform_session/device.h' and
-platform_session/dma_buffer.h'.
+platform API and its helper utilities in _platform_session/device.h_ and
+_platform_session/dma_buffer.h_.
 
-The lx_kit and lx_emul layers within the 'repos/dde_linux' repository now use
+The lx_kit and lx_emul layers within the _repos/dde_linux_ repository now use
 one and the same generic layer too. While reworking these libraries, we
 addressed a performance penalty in the interrupt handling. The multiple opening
 and closing of interrupt sessions is now eliminated.
-Moreover, we removed the legacy_pc_usb_host_drv from 'repos/dde_linux'.
+Moreover, we removed the legacy_pc_usb_host_drv from _repos/dde_linux_.
 
 All run-scripts and packages were revised to use the new drivers.
 
@@ -669,46 +677,48 @@ New PCI and network drivers for NXP i.MX
 PCIe host controller for i.MX 8MQ
 ---------------------------------
 
-The i.MX 8MQ SoC includes two PCI express host controllers. The MNT Reform 2
+The i.MX 8MQ SoC includes two PCI-express host controllers. The MNT Reform 2
 laptop for example exposes both via one M.2 and one miniPCIe socket, e.g., to
-drive a NVMe card and a WiFi card.
+drive an NVMe card and a WiFi card.
 In contrast to x86-based PCs, those PCIe controllers are not set up by
-boot-firmware like BIOS or UEFI, but needs to be driven by the OS first.
+boot-firmware like BIOS or UEFI, but need to be driven by the OS first.
 Therefore, this release contains a new PCIe driver for the mentioned SoC. This
-driver does not provide a special API. It uses the platform driver to gain the
+driver does not provide a special API. It uses the platform driver to obtain the
 device resources of the PCIe controller, and enables and configures it
-appropriatedly.
-Then it parses the PCI config space of the device behind the controller, which
+appropriately.
+It then parses the PCI configuration space of the device behind the controller, which
 in fact acts as PCI host bridge. The collected device and PCI information are
-then exposed via the Report service analoque to the PCI decode component
+then exposed via the report service analogously to the PCI decode component
 available for x86. Finally, the platform driver resp. another incarnation of the
 platform driver can consume this report as devices ROM, and provide the device
 resources to a driver of the PCI device.
 
-In practice, we've tested the PCIe host controller driver in combination with
+In practice, we have tested the PCIe host controller driver in combination with
 a NVMe card used in the MNT Reform 2 laptop only. Moreover, it got integrated in
 the Sculpt OS for the MNT Reform 2. Therefore, we had to add an i.MX 8MQ specific
 driver manager. This management component is able to check for the availability
-of a NVMe device, controls driver's lifetime, and block device report assembly
-for SD-card and NVMe devices.
+of a NVMe device, controls the driver's lifetime, and assembles a block-device
+report that covers both SD-card and NVMe devices.
 
 
 FEC Network driver
 ------------------
 
-There is long-standing support for the Freescale Ethernet Controller (FEC)
-within Genode available, supporting a broad range of SoCs from i.MX 53 till
+There is long-standing support for the _Freescale Ethernet Controller_ (FEC)
+within Genode available, supporting a broad range of SoCs from i.MX 53 up to
 i.MX 8.
-But the initial driver port taken from Linux 4.16.3 was running shaky on the
+But the existing driver port taken from Linux 4.16.3 was running shaky on the
 i.MX 8MQ SoC and the i.MX 6 Sabrelite board. Instead of trying to investigate
 potential violated semantics in the legacy DDE Linux emulation code, we ported
 the Linux device driver for FEC from scratch. Thereby, we've used the recent DDE
-Linux porting approach, first described in the 21.08 release.
-The Linux kernel code we used therefore is the Linux kernel 5.11 vanilla kernel
-plus MNT Reform 2 patches provided by Lukas Hartmann, which we already use for
-other drivers available in the genode-imx repository.
+Linux porting approach, first described in the
+[https://genode.org/documentation/release-notes/21.08#Linux-device-driver_environment_re-imagined - 21.08]
+release.
+The new driver is thereby based on the vanilla Linux kernel 5.11 plus the MNT
+Reform 2 patches provided by Lukas Hartmann, which we already use for other
+drivers available in the genode-imx repository.
 
-To let the driver work correctly, it needs information about its clock
+To enable the driver to work correctly, it needs information about its clock
 frequencies. Therefore, we have extended the platform driver for i.MX 53, and
 introduced new rudimentary platform drivers specific to i.MX 6 and 7, which
 expose the needed clock frequencies.
@@ -717,7 +727,7 @@ expose the needed clock frequencies.
 USB-C on i.MX 8MQ EVK
 ---------------------
 
-The USB host controller driver for the i.MX 8MQ EVK board did not enabled the
+The USB host controller driver for the i.MX 8MQ EVK board did not enable the
 second USB host controller yet, which is connected to the USB-C socket of the
 board. Now this host controller gets driven too.
 
@@ -879,8 +889,8 @@ resume.
 Base-HW microkernel
 ===================
 
-The base-hw kernel, which was developed directly for Genode, did not provided
-the usage of Message-Signaled-Interrupts (MSI), and MSI-x yet. With this release
+The base-hw kernel, which was specifically developed for Genode, did not provide
+the use of _Message-Signaled-Interrupts_ (MSI), and MSI-x yet. With this release,
 x86 architectural support for MSI and MSI-x entered the base-hw kernel.
 The usage of MSI or legacy interrupts is transparent to the user. It gets
 determined in the interplay of the PCI decode component, platform driver, and
