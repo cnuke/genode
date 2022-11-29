@@ -328,20 +328,39 @@ from a phone is complete and well tested.
 ARM virtual machine monitor
 ===========================
 
-; @skalk
+The hardware-assisted virtual machine monitor (VMM) for ARM developed for Genode
+resides within the framework since release 15.02. Over the years it got
+extended to support recent ARMv8 hardware, VirtIO device models for console,
+network, block, and so on. Nevertheless, the given device models, memory
+dimensions, and Linux specifics like initramfs size were hard-coded within the
+VMM component, and not configureable.
 
-commit b78b543011ba2a120998e6bf71a133a5c5946cac
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Nov 15 13:34:37 2022 +0100
+Now, the VMM accepts a configuration that enables you to define various aspects
+for the virtual machine, and guest OS. The VMM still focuses on Linux OS guests.
+Formerly, a pre-compiled flattened device-tree binary (DTB) was used by the VMM
+to boot the Linux guest.  Now the VMM has to generate the DTB dependent on its
+own configuration.
 
-    vmm: make ARM VMM configureable
-    
-    This commit enables users of the VMM to define CPU type and count, RAM size,
-    kernel and initrd ROM names, GIC version, and Virtio devices to be used.
-    Derived from the configuration values a flattened device-tree blob (DTB) is
-    generated and transfered to the VM.
-    
-    Fix genodelabs/genode#4670
+An example configuration looks like the following:
+
+! <config kernel_rom="linux"
+!         initrd_rom="initrd"
+!         ram_size="512M"
+!         cpu_count="4"
+!         cpu_type="arm,cortex-a53"
+!         gic_version="3"
+!         bootargs="console=hvc0">
+!   <virtio_device name="hvc0" type="console"/>
+!   <virtio_device name="eth0" type="net"/>
+!   <virtio_device name="hd0"  type="block"/>
+! </config>
+
+The RAM size and CPU count attributes are mandatory. All other attributes are
+optional and use default values. However, it is noteworthy that you should use
+the correct values for CPU type and Generic Interrupt Controller (GIC) version
+that matches your underlying hardware. Due to the usage of hardware-dependent
+virtualization extensions, the VMM and guest OS should see the correct hardware
+description for CPU and interrupt controller.
 
 
 Seoul VMM
@@ -971,118 +990,60 @@ switches between front and rear camera.
 New PCI and network drivers for NXP i.MX
 ========================================
 
-; @skalk
+PCIe host controller for i.MX 8MQ
+---------------------------------
 
-commit 0981d4b504129abac7cd81c6af2949ec4a7a5506
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Oct 4 09:51:25 2022 +0200
+The i.MX 8MQ SoC includes two PCI express host controllers. The MNT Reform 2
+laptop for example exposes both via one M.2 and one miniPCIe socket, e.g., to
+drive a NVMe card and a WiFi card.
+In contrast to x86-based PCs, those PCIe controllers are not set up by
+boot-firmware like BIOS or UEFI, but needs to be driven by the OS first.
+Therefore, this release contains a new PCIe driver for the mentioned SoC. This
+driver does not provide a special API. It uses the platform driver to gain the
+device resources of the PCIe controller, and enables and configures it
+appropriatedly.
+Then it parses the PCI config space of the device behind the controller, which
+in fact acts as PCI host bridge. The collected device and PCI information are
+then exposed via the Report service analoque to the PCI decode component
+available for x86. Finally, the platform driver resp. another incarnation of the
+platform driver can consume this report as devices ROM, and provide the device
+resources to a driver of the PCI device.
 
-    imx8mq_pci_host_drv: remove pci/*.h from src pkg
-    
-    It is now part of the os api package.
-    
-    Ref genodelabs/genode#4578
+In practice, we've tested the PCIe host controller driver in combination with
+a NVMe card used in the MNT Reform 2 laptop only. Moreover, it got integrated in
+the Sculpt OS for the MNT Reform 2. Therefore, we had to add an i.MX 8MQ specific
+driver manager. This management component is able to check for the availability
+of a NVMe device, controls driver's lifetime, and block device report assembly
+for SD-card and NVMe devices.
 
-commit e3c0180eb2af76e6d12fef113e1a706c7018793e
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Oct 4 09:52:33 2022 +0200
 
-    imx53_platform_drv: use common target.inc makefile
-    
-    To cover changes of the generic platform driver this one is derived
-    from use the common, generic makefile description.
+FEC Network driver
+------------------
 
-commit 32f9c2f64710106f53b2168d5253e8e0daa95d4b
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Oct 14 16:12:20 2022 +0200
+There is long-standing support for the Freescale Ethernet Controller (FEC)
+within Genode available, supporting a broad range of SoCs from i.MX 53 till
+i.MX 8.
+But the initial driver port taken from Linux 4.16.3 was running shaky on the
+i.MX 8MQ SoC and the i.MX 6 Sabrelite board. Instead of trying to investigate
+potential violated semantics in the legacy DDE Linux emulation code, we ported
+the Linux device driver for FEC from scratch. Thereby, we've used the recent DDE
+Linux porting approach, first described in the 21.08 release.
+The Linux kernel code we used therefore is the Linux kernel 5.11 vanilla kernel
+plus MNT Reform 2 patches provided by Lukas Hartmann, which we already use for
+other drivers available in the genode-imx repository.
 
-    imx8mq_pci_host_drv: keep bridge alive
-    
-    * Keep the PCI Express host bridge alive, and do not close
-      the Platform device again after parsing the PCI information.
-      The platform driver will now power off the device otherwise.
-    * Export all relevant fields about the PCI devices, like:
-      revision, sub-vendor/device, PCI BAR indices
+To let the driver work correctly, it needs information about its clock
+frequencies. Therefore, we have extended the platform driver for i.MX 53, and
+introduced new rudimentary platform drivers specific to i.MX 6 and 7, which
+expose the needed clock frequencies.
 
-commit 5f3da641a580f2bf17c759373bf098a2b121e9fb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Oct 14 17:19:34 2022 +0200
 
-    sculpt imx8*: integrate nvme in sculpt
-    
-    * Provide imx8mq specific driver manager, which starts sd_card driver,
-      and NVME driver if available
-    * Introduce drivers_managed-* packages to reduce duplications in
-      Sculpt flavors
-    * Integrate PCI host driver and NVME driver in Sculpt for MNT Reform 2
+USB-C on i.MX 8MQ EVK
+---------------------
 
-commit fccdc147dab7aa53fff7d5dc335d5f81d0f1032d
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 14:49:14 2022 +0200
-
-    imx53_platform_drv: introduce ethernet clocking
-    
-    Ref genodelabs/genode#4651
-
-commit 815b2fcdcbf4b663b4adb85cefe2c0459a2087d9
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 14:50:43 2022 +0200
-
-    imx6q_platform_drv: introduce SoC specific version
-    
-    The new platform driver for i.MX 6Quad is derived from the generic
-    implementation. It adds rudimentary support for network clocks.
-    
-    Ref genodelabs/genode#4651
-
-commit c126dd02f618e68c65da0664a540870583e4081f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 14:52:44 2022 +0200
-
-    imx7d_platform_drv: introduce SoC specific version
-    
-    The new platform driver for i.MX 7Dual is derived from the generic
-    implementation. It adds rudimentary support for network clocks.
-    
-    Ref genodelabs/genode#4651
-
-commit 9edd5abcfd3440fd985a56fc52ee99121512a8b0
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 15:13:43 2022 +0200
-
-    mnt_reform2_linux: split into ARM v7 and v8
-    
-    Ref genodelabs/genode#4651
-
-commit a7bdd5cbdce98371e22fc3ff1330d6ac6b29ef88
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 17:16:05 2022 +0200
-
-    introduce fec_nic_driver on mnt_reform2_linux base
-    
-    Ref genodelabs/genode#4651
-
-commit f6ee03dd6afaa731f81040cf3b41ebaf27b4ccd7
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Oct 27 15:03:04 2022 +0200
-
-    pci_host_drv: release PCI device resources
-    
-    Leave the PCI host bridge device resources again, after scanning
-    for the PCI devices. Mark the PCI host bridges as useable after
-    device release.
-    
-    Ref genodelabs/genode#4654
-
-commit 80c7f995a54db5e795a6d58daefc00ea0c70b7b7
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Nov 8 12:09:35 2022 +0100
-
-    imx8q_evk: enable host-controller driving USB-C
-    
-    Patch the vanilla i.MX8MQ EVK device-tree provided by Linux to
-    enable the first USB host controller in addition to the second one,
-    which is used to drive the USC-C connector of the EVK board.
+The USB host controller driver for the i.MX 8MQ EVK board did not enabled the
+second USB host controller yet, which is connected to the USB-C socket of the
+board. Now this host controller gets driven too.
 
 
 Intel graphics
@@ -1242,15 +1203,12 @@ resume.
 Base-HW microkernel
 ===================
 
-; @skalk
-
-commit 759ed40d987b3e9a3f09eee5cfc2990754a2f421
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Oct 6 14:17:35 2022 +0200
-
-    hw: implement MSI support for x86
-    
-    Fix genodelabs/genode#4633
+The base-hw kernel, which was developed directly for Genode, did not provided
+the usage of Message-Signaled-Interrupts (MSI), and MSI-x yet. With this release
+x86 architectural support for MSI and MSI-x entered the base-hw kernel.
+The usage of MSI or legacy interrupts is transparent to the user. It gets
+determined in the interplay of the PCI decode component, platform driver, and
+core.
 
 
 NOVA microhypervisor
