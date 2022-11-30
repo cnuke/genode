@@ -192,7 +192,7 @@ accessed by using a name as key. To avoid the repeated manual crafting of such
 data structures, we introduced a basic 'Dictionary' data structure located at
 _base/include/util/dictionary.h_.
 
-It follow the patterns of the existing 'Id_space' and 'Registry'. That is,
+It follows the patterns of the existing 'Id_space' and 'Registry'. That is,
 elements are automatically added to the dictionary at construction time,
 respectively removed at destruction time. There exists an 'with_element'
 method for applying a functor to one element by specifying a name as key, and
@@ -253,7 +253,7 @@ we extended Genode's pin-driver framework introduced in version
 with the support for the time-multiplexed operation of a pin as output or
 input.
 
-To operate pin in both directions, a driver obtains both a pin-state and a
+To operate a pin in both directions, a driver obtains both a pin-state and a
 pin-control session for the same pin. The pin-state session can be used to
 sense the current pin state. The control session allows the client to set the
 pin to high or low (using the 'state' method), or to set it to high-impedance
@@ -372,12 +372,12 @@ The Seoul/Vancouver VMM - introduced to Genode with release 11.11 - is a
 x86 based VMM which runs on Genode@NOVA, Genode@seL4, and Genode@Fiasco.OC on
 Intel and on AMD hardware. It is used with 32-bit Linux VMs typically.
 
-Over the last and this year, the VMM got Virtio support with the goal to improve
+Over the last and this year, the VMM got VirtIO support with the goal to improve
 the usability when used day-to-day, e.g., on Sculpt OS. Given the observation
-that most Linux guests come readily (or easy to install) equipped with Virtio
+that most Linux guests come readily (or easy to install) equipped with VirtIO
 driver support, we can avoid to fiddle with building or integrating guest drivers
-manually. The Seoul VMM got extended by implementations for the Virtio input
-device model, Virtio GPU device model (2D by now) and Virtio audio device
+manually. The Seoul VMM got extended by implementations for the VirtIO input
+device model, VirtIO GPU device model (2D by now) and VirtIO audio device
 model.
 
 With the new input model, absolute mouse positions are supported, so
@@ -391,9 +391,9 @@ Additionally, with the new GPU model, resizeable and arbitrary resolution
 dimension are possible, which was not feasible with the former VGA/VESA model.
 The overall painting overhead is better manageable since partial updates are
 supported by the device model.
-The Virtio audio model enables playback of music when streaming & surfing in
+The VirtIO audio model enables playback of music when streaming & surfing in
 the VM, which was beforehand not possible because no audio model was available.
-The new Virtio models of the Seoul VMM were finally mapped to Genode's GUI,
+The new VirtIO models of the Seoul VMM were finally mapped to Genode's GUI,
 input and audio-out session interfaces.
 
 Combined, the new device models improve the overall usability when using Seoul on Sculpt OS.
@@ -471,7 +471,7 @@ or MSI-x were reported to use MSI-x in favor. However, in rare cases we observed
 problems with the WiFi driver on MSI-x capable hardware. Therefore, we switch
 the priority of reporting MSI over MSI-x if both are available.
 In addition, we experienced problems with some Intel HDAUDIO cards and MSIs.
-Therefore, we do not report the MSI capability of Intel HDAUDIO cards for the
+Therefore, we do not report the MSI capability on those devices for the
 time being.
 
 
@@ -514,7 +514,7 @@ VirtIO PCI devices hide several important information about their queues inside
 the PCI configuration space. Now that we do not provide direct access to the
 PCI configuration space to device drivers, the platform driver needs to identify VirtIO devices, and
 provide the necessary information via the devices ROM to the driver. It does so
-like the following:
+in the following way:
 
 ! <device ...>
 !   <pci-config ...>
@@ -618,7 +618,7 @@ Power control
 
 The new power-control driver is based on our custom firmware for the A64's
 system-control processor (SCP) in combination with Genode's dedicated
-scp-session interface that allow Genode components to interact with the SCP.
+scp-session interface that allows Genode components to interact with the SCP.
 
 To properly arbitrate the access to the power-management IC (PMIC) between
 the SCP firmware and the ARM application processor, the PMIC driver has been
@@ -853,7 +853,7 @@ holds Genode's managing-system capability. On success, the suspend syscall
 of the NOVA kernel is invoked and will lead to hold all CPUs, depositing the
 wakeup vector in the ACPI tables, flushing cached state of Genode's
 components to memory, like CPU registers, FPU state, IO-APIC state and
-virtualisation state of Intel VMX's or AMD SVM's. Finally, the both TYP_SLP
+virtualisation state of Intel VMX's or AMD SVM's. Finally, both TYP_SLP
 values will be used to trigger the sleep state.
 
 On ACPI wakeup, the UEFI/BIOS firmware wakes up the NOVA kernel via the
