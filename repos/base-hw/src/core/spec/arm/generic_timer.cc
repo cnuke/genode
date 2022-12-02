@@ -43,7 +43,13 @@ void Timer::_start_one_shot(time_t const ticks)
 
 time_t Timer::_duration() const
 {
-	return Cpu::Cntpct::read() - _time;
+	time_t v;
+
+	do {
+		v = Cpu::Cntpct::read();
+	} while (((v + 1) & 0x7ff) <= 1);
+
+	return v - _time;
 }
 
 
