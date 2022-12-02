@@ -43,11 +43,16 @@ void Timer::_start_one_shot(time_t const ticks)
 
 time_t Timer::_duration() const
 {
-	time_t v;
+	time_t v, u;
 
-	do {
-		v = Cpu::Cntpct::read();
-	} while (((v + 1) & 0x7ff) <= 1);
+	v = Cpu::Cntpct::read();
+	u = Cpu::Cntpct::read();
+	long long diff = ((long long)u) - ((long long)v);
+	if (diff < 0) {
+		time_t w = Cpu::Cntpct::read();
+		Genode::raw("timer unstable: ", Genode::Hex(v), " ", Genode::Hex(u), " ", Genode::Hex(w));
+		v = w;
+	}
 
 	return v - _time;
 }
