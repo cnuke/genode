@@ -26,6 +26,7 @@
 #include <runtime.h>
 #include <keyboard_focus.h>
 #include <managed_config.h>
+#include <wifi_variant.h>
 
 namespace Sculpt { struct Network; }
 
@@ -158,8 +159,8 @@ struct Sculpt::Network : Network_dialog::Action
 				xml.attribute("scan_interval", 10U);
 				xml.attribute("use_11n", false);
 
-				xml.attribute("verbose_state", false);
-				xml.attribute("verbose",       false);
+				xml.attribute("verbose_state", true);
+				xml.attribute("verbose",       true);
 
 				xml.node("network", [&]() {
 					xml.attribute("ssid", ap.ssid);
@@ -193,8 +194,8 @@ struct Sculpt::Network : Network_dialog::Action
 			xml.attribute("scan_interval", 10U);
 			xml.attribute("use_11n", false);
 
-			xml.attribute("verbose_state", false);
-			xml.attribute("verbose",       false);
+			xml.attribute("verbose_state", true);
+			xml.attribute("verbose",       true);
 
 			xml.node("network", [&]() {
 				/* generate attributes to ease subsequent manual tweaking */

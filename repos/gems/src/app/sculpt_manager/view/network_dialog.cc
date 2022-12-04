@@ -237,7 +237,7 @@ void Network_dialog::generate(Xml_generator &xml) const
 						gen_nic_button("wired", Nic_target::WIRED, "Wired");
 
 				if (_nic_target.managed() || _nic_target.manual_type == Nic_target::WIFI)
-					if (_pci_info.wifi_present)
+					if (_pci_info.wifi_present || true) // Allow wifi in USB too
 						gen_nic_button("wifi",  Nic_target::WIFI,  "Wifi");
 
 				if (_nic_target.managed() || _nic_target.manual_type == Nic_target::MODEM)

@@ -20,6 +20,7 @@
 #include <model/storage_target.h>
 #include <model/nic_target.h>
 #include <model/child_state.h>
+#include <wifi_variant.h>
 
 namespace Sculpt {
 

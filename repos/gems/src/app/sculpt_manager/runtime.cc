@@ -28,6 +28,10 @@
 #include <runtime/ram_fs.cc>
 #include <runtime/runtime_view.cc>
 #include <runtime/update.cc>
+#if defined(WIFI_VARIANT_PC_WIFI_DRV)
 #include <runtime/wifi_drv.cc>
+#elif defined(WIFI_VARIANT_WIFI_ATH9K_DRV)
+#include <runtime/wifi_ath9k_drv.cc>
+#endif
 #include <runtime/fs_tool.cc>
 #include <runtime/usb_net.cc>
