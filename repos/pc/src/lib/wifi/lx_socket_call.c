@@ -18,6 +18,7 @@
 /* kernel includes */
 #include <linux/socket.h>
 #include <linux/net.h>
+#include <linux/netdevice.h>
 #include <net/sock.h>
 
 struct task_struct *socketcall_task_struct_ptr;
@@ -198,6 +199,25 @@ unsigned char const* lx_get_mac_addr()
 	memcpy(mac_addr_buffer, addr.sa_data, length);
 
 	return mac_addr_buffer;
+}
+
+
+unsigned int lx_get_wifi_ifindex(const char *ifname)
+{
+	struct net_device *named_dev;
+
+	named_dev = __dev_get_by_name(&init_net, ifname);
+	if (named_dev == NULL)
+		return 0;
+	else
+		return named_dev->ifindex;
+}
+
+
+int lx_ioctl(unsigned long request, void * ifr)
+{
+	return dev_ioctl(&init_net, (unsigned int)request, (struct ifreq *)ifr,
+	                 NULL);
 }
 
 

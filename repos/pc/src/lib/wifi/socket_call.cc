@@ -158,7 +158,7 @@ struct Call
 	enum Opcode {
 		NONE, SOCKET, CLOSE,
 		BIND, GETSOCKNAME, RECVMSG, SENDMSG, SENDTO, SETSOCKOPT,
-		GET_MAC_ADDRESS, POLL_ALL, NON_BLOCK,
+		GET_MAC_ADDRESS, GET_WIFI_IFINDEX, IOCTL, POLL_ALL, NON_BLOCK,
 	};
 
 	Opcode        opcode = NONE;
@@ -204,6 +204,17 @@ struct Call
 			unsigned char *addr;
 			unsigned int   addr_len;
 		} get_mac_address;
+		struct
+		{
+			const char *ifname;
+			unsigned int ifindex;
+		} get_wifi_ifindex;
+		struct
+		{
+			unsigned long request;
+			int reply;
+			void * ifr;
+		} ioctl;
 		struct
 		{
 			Wifi::Poll_socket_fd *sockets;
@@ -338,6 +349,19 @@ class Lx::Socket
 			memcpy(_call.get_mac_address.addr, addr, copy);
 		}
 
+		void _do_get_wifi_ifindex()
+		{
+			unsigned int ifindex;
+			ifindex = lx_get_wifi_ifindex(_call.get_wifi_ifindex.ifname);
+			_call.get_wifi_ifindex.ifindex = ifindex;
+		}
+
+		void _do_ioctl()
+		{
+			int reply = lx_ioctl(_call.ioctl.request, _call.ioctl.ifr);
+			_call.ioctl.reply = reply;
+		}
+
 		void _do_poll_all()
 		{
 			Wifi::Poll_socket_fd *sockets = _call.poll_all.sockets;
@@ -445,6 +469,8 @@ class Lx::Socket
 			case Call::SETSOCKOPT:      _do_setsockopt();      break;
 			case Call::SOCKET:          _do_socket();          break;
 			case Call::GET_MAC_ADDRESS: _do_get_mac_address(); break;
+			case Call::GET_WIFI_IFINDEX:_do_get_wifi_ifindex();break;
+			case Call::IOCTL:           _do_ioctl();           break;
 			case Call::NON_BLOCK:       _do_non_block();       break;
 
 			case Call::NONE: [[fallthrough]];/* ignore silently */
@@ -735,4 +761,31 @@ void Socket_call::get_mac_address(unsigned char *addr)
 	_call.get_mac_address.addr_len = 6; // XXX enforce and set from caller
 
 	_socket->submit_and_block();
+}
+
+
+unsigned int Socket_call::get_wifi_ifindex(const char *ifname)
+{
+	_call.opcode                   = Call::GET_WIFI_IFINDEX;
+	_call.handle                   = 0;
+	_call.get_wifi_ifindex.ifname  = ifname;
+	_call.get_wifi_ifindex.ifindex = 0; /* default just in case */
+
+	_socket->submit_and_block();
+
+	return _call.get_wifi_ifindex.ifindex;
+}
+
+
+int Socket_call::ioctl(unsigned long request, void * ifr)
+{
+	_call.opcode                   = Call::IOCTL;
+	_call.handle                   = 0;
+	_call.ioctl.request            = request;
+	_call.ioctl.ifr                = ifr;
+	_call.ioctl.reply              = 0;
+
+	_socket->submit_and_block();
+
+	return _call.ioctl.reply;
 }
