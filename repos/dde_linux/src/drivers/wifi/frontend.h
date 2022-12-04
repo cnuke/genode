@@ -75,6 +75,7 @@ static struct Recv_msg_table {
 } recv_table[] = {
 	{ "OK",                            2 },
 	{ "FAIL",                          4 },
+	{ "IFACE-DEINIT",                 12 },
 	{ "CTRL-EVENT-SCAN-RESULTS",      23 },
 	{ "CTRL-EVENT-CONNECTED",         20 },
 	{ "CTRL-EVENT-DISCONNECTED",      23 },
@@ -85,6 +86,7 @@ static struct Recv_msg_table {
 enum Rmi {
 	OK = 0,
 	FAIL,
+	IFACE_DEINIT,
 	SCAN_RESULTS,
 	CONNECTED,
 	DISCONNECTED,
@@ -116,6 +118,10 @@ static bool connecting_to_network(char const *msg) {
 
 static bool network_not_found(char const *msg) {
 	return check_recv_msg(msg, recv_table[NOT_FOUND]); }
+
+
+static bool iface_deinit(char const *msg) {
+	return check_recv_msg(msg, recv_table[IFACE_DEINIT]); }
 
 
 static bool scan_results(char const *msg) {
@@ -567,6 +573,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		REMOVE_NETWORK        = 0x50|NETWORK,
 		ENABLE_NETWORK        = 0x60|NETWORK,
 		DISABLE_NETWORK       = 0x70|NETWORK,
+		DISCONNECT_NETWORK    = 0x80|NETWORK,
 		LIST_NETWORKS         = 0x90|NETWORK,
 		SET_NETWORK_PMF       = 0xA0|NETWORK,
 
@@ -591,6 +598,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		case REMOVE_NETWORK:     return "remove network";
 		case ENABLE_NETWORK:     return "enable network";
 		case DISABLE_NETWORK:    return "disable network";
+		case DISCONNECT_NETWORK: return "disconnect network";
 		case CONNECTING:         return "connecting";
 		case CONNECTED:          return "connected";
 		case DISCONNECTED:       return "disconnected";
@@ -784,6 +792,19 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_remove_stale_aps();
 	}
 
+	void _remove_all_aps()
+	{
+		/* only called from IDLE state */
+		/* removes APs without removing their networks from the supplicant
+		 * used when a supplicant interface de-inits, so all APs are taken
+		 * down automatically */
+		Genode::log("Interface disabled, removing all accesspoints.");
+		_connected_ap.invalidate();
+		_aps.for_each([&] (Accesspoint &ap) {
+			_free_ap(ap);
+		});
+	}
+
 	void _remove_stale_aps()
 	{
 		if (_state != State::IDLE) {
@@ -908,6 +929,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		_state_transition(_state, State::DISABLE_NETWORK);
 		_submit_cmd(Cmd_str("DISABLE_NETWORK ", ap.id));
+	}
+
+	void _network_disconnect()
+	{
+		_state_transition(_state, State::DISCONNECT_NETWORK);
+		_submit_cmd(Cmd_str("DISCONNECT"));
 	}
 
 	void _network_set_ssid(char const *msg)
@@ -1149,6 +1176,23 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					}
 				}
 
+				successfully = true;
+			}
+			break;
+		}
+		case State::DISCONNECT_NETWORK:
+		{
+			_state_transition(_state, State::IDLE);
+
+			if (!cmd_successful(msg)) {
+				Genode::error("could not disconnect from network: ", msg);
+			} else {
+				if (_processed_ap != nullptr) {
+					Accesspoint &ap = *_processed_ap;
+					/* reset processed AP as this is an end state */
+					_processed_ap = nullptr;
+					_network_disable(ap);
+				}
 				successfully = true;
 			}
 			break;
@@ -1518,6 +1562,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			}
 
 		} else
+
+		if (iface_deinit(msg)) {
+			_state_transition(_state, State::IDLE);
+			_remove_all_aps();
+			/* re-read config if the interface re-connects */
+			_deferred_config_update = true;
+		}
 
 		{
 			_handle_connection_events(msg);

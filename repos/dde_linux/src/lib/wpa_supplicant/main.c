@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <net/if.h>
 
 /* local includes */
 #include "includes.h"
@@ -34,6 +35,20 @@
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "scan.h"
+
+
+/*
+ * These are only needed for wpa_supplicant_match_existing,
+ * dummy implementation is OK.
+ */
+struct if_nameindex *if_nameindex(void)
+{
+	static struct if_nameindex empty = { 0, NULL };
+	return &empty;
+}
+
+
+void if_freenameindex(struct if_nameindex *ptr) { }
 
 
 int wpa_main(void)
@@ -49,21 +64,22 @@ int wpa_main(void)
 	params.wpa_debug_level = 1 ? MSG_DEBUG : MSG_INFO;
 	params.ctrl_interface = "GENODE";
 
-	global = wpa_supplicant_init(&params);
-	if (global == NULL)
-		return -1;
-
 	memset(&iface, 0, sizeof(iface));
 
 	iface.ifname   = "wlan0";
 	iface.confname = 0;
 	iface.ctrl_interface = "GENODE";
 
-	if (wpa_supplicant_add_iface(global, &iface, NULL) == NULL)
-		exitcode = -1;
+	params.match_iface_count = 1;
+	params.match_ifaces = &iface;
 
-	if (exitcode == 0)
-		exitcode = wpa_supplicant_run(global);
+	global = wpa_supplicant_init(&params);
+	if (global == NULL)
+		return -1;
+
+	wpa_supplicant_add_iface(global, &iface, NULL);
+
+	exitcode = wpa_supplicant_run(global);
 
 	wpa_supplicant_deinit(global);
 

@@ -56,6 +56,8 @@ int lx_sock_sendmsg(struct socket *socket, struct lx_msghdr* lx_msg,
 int lx_sock_setsockopt(struct socket *sock, int level, int optname,
                        void const *optval, unsigned optlen);
 unsigned char const* lx_get_mac_addr(void);
+unsigned int lx_get_wifi_ifindex(const char *ifname);
+int lx_ioctl(unsigned long request, void *ifr);
 
 struct lx_poll_result
 {

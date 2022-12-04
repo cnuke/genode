@@ -16,6 +16,7 @@
 
 /* Genode includes */
 #include <base/log.h>
+#include <util/string.h>
 
 /* libc includes */
 #include <sys/sockio.h>
@@ -31,7 +32,9 @@ extern Wifi::Socket_call socket_call;
 
 extern "C" {
 
-unsigned int wifi_ifindex(void);
+unsigned int wifi_ifindex(const char *ifname);
+char const * wifi_ifname(void);
+
 
 int ioctl(int fd, unsigned long request, ...)
 {
@@ -48,11 +51,15 @@ int ioctl(int fd, unsigned long request, ...)
 		Genode::error("ioctl: request SIOCGIFADDR not implemented.");
 		return -1;
 	case SIOCGIFINDEX:
-		ifr->ifr_ifindex = wifi_ifindex();
+		ifr->ifr_ifindex = wifi_ifindex(wifi_ifname());
 		return 0;
 	case SIOCGIFHWADDR:
 		socket_call.get_mac_address((unsigned char*)ifr->ifr_hwaddr.sa_data);
 		return 0;
+	case SIOCGIFFLAGS:
+		return socket_call.ioctl(Wifi::Socket_call::LX_SIOCGIFFLAGS, (void *)ifr);
+	case SIOCSIFFLAGS:
+		return socket_call.ioctl(Wifi::Socket_call::LX_SIOCSIFFLAGS, (void *)ifr);
 	}
 
 	Genode::warning("ioctl: request ", request, " not handled by switch");
@@ -62,14 +69,68 @@ int ioctl(int fd, unsigned long request, ...)
 
 int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 {
+	struct ifreq ifr;
+	int ret;
+
+	if (sock < 0)
+		return -1;
+
+	Genode::memset(&ifr, 0, sizeof(ifr));
+	Genode::copy_cstring(ifr.ifr_name, ifname, IFNAMSIZ);
+
+	ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if ( ret != 0) {
+		if (ret > 0)
+			ret = -ret;
+		Genode::error("Could not read interface ", ifname,
+		              " flags: ", ret);
+		return ret;
+	}
+
+	if (dev_up) {
+		if (ifr.ifr_flags & IFF_UP)
+			return 0;
+		ifr.ifr_flags |= IFF_UP;
+	} else {
+		if (!(ifr.ifr_flags & IFF_UP))
+			return 0;
+		ifr.ifr_flags &= ~IFF_UP;
+	}
+
+	ret = ioctl(sock, SIOCSIFFLAGS, &ifr);
+	if ( ret != 0) {
+		if (ret > 0)
+			ret = -ret;
+		Genode::error("Could not set interface ", ifname,
+		              " flags (", dev_up ? "UP" : "DOWN", "): ",
+		              ret);
+		return ret;
+	}
 	return 0;
 }
 
 
 int linux_iface_up(int sock, const char *ifname)
 {
-	/* in our case the interface is by definition always up */
-	return 1;
+	struct ifreq ifr;
+	int ret;
+
+	if (sock < 0)
+		return -1;
+
+	Genode::memset(&ifr, 0, sizeof(ifr));
+	Genode::copy_cstring(ifr.ifr_name, ifname, IFNAMSIZ);
+
+	ret = ioctl(sock, SIOCGIFFLAGS, &ifr);
+	if (ret != 0) {
+		if (ret > 0)
+			ret = -ret;
+		Genode::error("Could not query interface ", ifname,
+		              " flags: ", ret);
+		return ret;
+	}
+
+	return !!(ifr.ifr_flags & IFF_UP);
 }
 
 

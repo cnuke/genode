@@ -263,20 +263,6 @@ int _wifi_request_firmware(char const *name, char *dst, size_t dst_len)
 }
 
 
-extern "C" unsigned int wifi_ifindex(void)
-{
-	/* TODO replace with actual qyery */
-	return 2;
-}
-
-
-extern "C" char const *wifi_ifname(void)
-{
-	/* TODO replace with actual qyery */
-	return "wlan0";
-}
-
-
 struct Mac_address_reporter
 {
 	bool _enabled = false;
