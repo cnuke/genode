@@ -97,6 +97,8 @@ struct Wifi::Socket_call
 	 * Special ioctl related functions
 	 */
 	void get_mac_address(unsigned char *addr);
+	unsigned int get_wifi_ifindex(const char *ifname);
+	int ioctl(unsigned long request, void *ifr);
 };
 
 struct Wifi::Poll_socket_fd
