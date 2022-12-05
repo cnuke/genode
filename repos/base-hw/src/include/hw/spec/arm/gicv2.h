@@ -20,6 +20,9 @@
 namespace Hw { class Gicv2; }
 
 
+extern bool audio_irq;
+
+
 class Hw::Gicv2
 {
 	protected:
@@ -191,6 +194,10 @@ class Hw::Gicv2
 		{
 			_last_iar = _cpui.read<Cpu_interface::Iar>();
 			irq = Cpu_interface::Iar::Irq_id::get(_last_iar);
+			if (irq == 82) {
+				audio_irq = true;
+			}
+
 			return _valid(irq);
 		}
 

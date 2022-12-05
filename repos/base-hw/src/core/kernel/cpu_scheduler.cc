@@ -87,6 +87,11 @@ void Cpu_scheduler::_head_filled(unsigned const r)
 		_next_fill();
 }
 
+#include <kernel/cpu_context.h>
+
+extern Cpu_job *audio_job;
+Genode::uint64_t claim_counter;
+
 
 bool Cpu_scheduler::_claim_for_head()
 {
@@ -99,8 +104,12 @@ bool Cpu_scheduler::_claim_for_head()
 
 		Cpu_share &share { item->payload() };
 
-		if (!share._claim)
+		if (!share._claim) {
+			if (audio_irq && &share == static_cast<Cpu_share*>(&audio_job->share())) {
+				claim_counter++;
+			}
 			return;
+		}
 
 		_set_head(share, share._claim, 1);
 		result = true;

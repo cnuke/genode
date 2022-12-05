@@ -182,6 +182,9 @@ void Signal_receiver::_add_deliverable(Signal_context &c)
 }
 
 
+extern bool audio_irq;
+
+
 void Signal_receiver::_listen()
 {
 	while (1)
@@ -199,6 +202,10 @@ void Signal_receiver::_listen()
 			Signal_imprint const imprint =
 				reinterpret_cast<Signal_imprint>(context->_imprint);
 			Signal::Data data(imprint, context->_submits);
+
+			// if (audio_irq) {
+			// 	Genode::raw("_listen: ", context);
+			// }
 
 			/* communicate signal data to handler */
 			_handlers.dequeue([&] (Signal_handler::Fifo_element &elem) {

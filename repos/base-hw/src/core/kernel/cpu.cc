@@ -45,11 +45,22 @@ void Cpu_job::_yield()
 }
 
 
+bool audio_irq;
+Cpu_job * audio_job;
+Cpu_job * audio_ep;
+
+
 void Cpu_job::_interrupt(Irq::Pool &user_irq_pool, unsigned const /* cpu_id */)
 {
 	/* let the IRQ controller take a pending IRQ for handling, if any */
 	unsigned irq_id;
-	if (_cpu->pic().take_request(irq_id))
+	bool const irq = _cpu->pic().take_request(irq_id);
+
+	// if (audio_irq) {
+	// 	Genode::raw(__func__, ": audio_irq");
+	// }
+
+	if (irq)
 
 		/* let the CPU of this job handle the IRQ if it is a CPU-local one */
 		if (!_cpu->handle_if_cpu_local_interrupt(irq_id)) {
@@ -119,11 +130,16 @@ Cpu::Idle_thread::Idle_thread(Board::Address_space_id_allocator &addr_space_id_a
 }
 
 
+
 void Cpu::schedule(Job * const job)
 {
 	_scheduler.ready(job->share());
 	if (_id != executing_id() && _scheduler.need_to_schedule())
 		trigger_ip_interrupt();
+
+	// if (audio_job != nullptr) {
+	// 	Genode::raw("audio_job not NULL");
+	// }
 }
 
 
@@ -139,23 +155,89 @@ bool Cpu::handle_if_cpu_local_interrupt(unsigned const irq_id)
 }
 
 
+Genode::uint64_t audio_counter;
+Genode::uint64_t kernel_counter;
+
+extern Genode::uint64_t claim_counter;
+
 Cpu_job & Cpu::schedule()
 {
+	audio_irq = false;
+
 	/* update scheduler */
 	Job & old_job = scheduled_job();
 	old_job.exception(*this);
 
+
+	time_t duration = 0;
+	time_t curr_time = 0;
+	static time_t last_time = 0;
+	static signed long count_time = 0;
+
 	if (_scheduler.need_to_schedule()) {
 		_timer.process_timeouts();
-		_scheduler.update(_timer.time());
+		curr_time = _timer.time();
+		_scheduler.update(curr_time);
 		time_t t = _scheduler.head_quota();
 		_timer.set_timeout(this, t);
-		time_t duration = _timer.schedule_timeout();
+		duration = _timer.schedule_timeout();
 		old_job.update_execution_time(duration);
 	}
 
+	if (curr_time) {
+		// Genode::raw("curr_time: ", curr_time, " last_time: ", last_time, " diff: ", curr_time - last_time);
+		count_time += (curr_time - last_time);
+		Genode::raw(count_time);
+		last_time = curr_time;
+	}
+	bool periode_over = false;
+	if (count_time > 1'000'000) {
+		count_time -= 1'000'000;
+		Genode::raw(count_time);
+		periode_over = true;
+	}
+
+
+	Job & new_job = scheduled_job();
+
+	static time_t audio_job_duration = 0;
+	if (&old_job == audio_job && &new_job != audio_job) {
+		audio_job_duration += duration;
+	}
+
+	static time_t audio_ep_duration = 0;
+	if (&old_job == audio_ep && &new_job != audio_ep) {
+		audio_ep_duration += duration;
+	}
+
+	if (periode_over) {
+		Genode::raw(__func__, ": P ", audio_job_duration, " ", audio_ep_duration);
+		audio_job_duration = 0;
+		audio_ep_duration = 0;
+	}
+
+	if (audio_irq && (&new_job != audio_job)) {
+		Thread const *new_thread = static_cast<Thread*>(&new_job);
+		audio_counter++;
+		Genode::raw(__func__, ": A ", *new_thread, " ", audio_job);
+	}
+
+	kernel_counter++;
+
+	if (kernel_counter == 10000) {
+		kernel_counter = 0;
+		Genode::raw(__func__, ": K ", audio_counter, " ", claim_counter);
+	}
+
+	// if (audio_irq) {
+	// 	if (&new_job == audio_job) {
+	// 		Genode::raw("yay audio_job");
+	// 	} else
+	// 		Genode::raw("unexpected new job");
+	// }
+
 	/* return new job */
-	return scheduled_job();
+	return new_job;
 }
 
 

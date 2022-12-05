@@ -222,6 +222,14 @@ void Thread::signal_wait_for_signal()
 
 void Thread::signal_receive_signal(void * const base, size_t const size)
 {
+	// if (audio_irq) {
+	// 	Genode::String<48> const l { *this };
+	// 	if (l == "init -> audio_drv -> audio_drv") {
+	// 		Genode::raw(__func__, ": ", *this);
+	// 	} else
+	// 		Genode::raw(__func__, ": ", *this, " ERROR");
+	// }
+
 	assert(_state == AWAITS_SIGNAL);
 	Genode::memcpy(utcb()->data(), base, size);
 	_become_active();
@@ -315,6 +323,10 @@ void Thread::_call_thread_quota()
 }
 
 
+extern Cpu_job *audio_job;
+extern Cpu_job *audio_ep;
+
+
 void Thread::_call_start_thread()
 {
 	/* lookup CPU */
@@ -345,6 +357,15 @@ void Thread::_call_start_thread()
 	if (thread._pd == &_core_pd && cpu.id() != _cpu_pool.primary_cpu().id())
 	        Genode::raw("Error: do not start core threads"
 	                    " on CPU cores different than boot cpu");
+
+	Genode::String<48> const l { thread };
+	if (l == "init -> audio_drv -> audio_drv") {
+		Genode::raw(__func__, ": ", thread);
+		audio_job = &thread;
+	} else if (l == "init -> audio_drv -> p") {
+		Genode::raw(__func__, ": ", thread);
+		audio_ep = &thread;
+	}
 
 	thread._become_active();
 }
