@@ -954,8 +954,10 @@ ssize_t Libc::Vfs_plugin::write(File_descriptor *fd, const void *buf,
 
 	/* notify remote peers once our VFS' local I/O buffers are saturated */
 	bool const nonblocking_write_stalled = nonblocking && count && !out_count;
-	if (nonblocking_write_stalled)
+	if (nonblocking_write_stalled) {
+		Genode::log("wakeup_remote_peers");
 		Libc::Kernel::kernel().wakeup_remote_peers();
+	}
 
 	return out_count;
 }
