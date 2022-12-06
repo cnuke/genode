@@ -1,0 +1,7 @@
+<launcher pkg="top">
+
+	<route>
+		<service name="TRACE"> <parent/> </service>
+	</route>
+
+</launcher>
