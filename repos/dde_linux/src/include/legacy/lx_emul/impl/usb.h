@@ -14,6 +14,8 @@
 /* Linux kit includes */
 #include <legacy/lx_kit/usb.h>
 
+static DECLARE_WAIT_QUEUE_HEAD(lx_emul_urb_wait);
+
 int usb_control_msg(struct usb_device *dev, unsigned int pipe,
                     __u8 request, __u8 requesttype, __u16 value,
                     __u16 index, void *data, __u16 size, int timeout)
@@ -83,6 +85,8 @@ struct urb *usb_alloc_urb(int iso_packets, gfp_t mem_flags)
 
 int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 {
+	bool success = false;
+
 	if (!urb->dev->bus || !urb->dev->bus->controller)
 		return -ENODEV;
 
@@ -90,7 +94,22 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 	if (!u)
 		return 1;
 
-	Genode::construct_at<Urb>(u, *(Usb::Connection*)(urb->dev->bus->controller), *urb);
+	do {
+		try {
+			Genode::construct_at<Urb>(u, *(Usb::Connection*)(urb->dev->bus->controller), *urb);
+			success = true;
+		} catch (... /* XXX */) {
+			DECLARE_WAITQUEUE(wait, current);
+			add_wait_queue(&lx_emul_urb_wait, &wait);
+
+			set_current_state(TASK_UNINTERRUPTIBLE);
+
+			Lx::scheduler().current()->block_and_schedule();
+
+			__set_current_state(TASK_RUNNING);
+			remove_wait_queue(&lx_emul_urb_wait, &wait);
+		}
+	} while (!success);
 
 	/*
 	 * Self-destruction of the 'Urb' object in its completion function
@@ -129,4 +148,6 @@ void usb_free_urb(struct urb *urb)
 	}
 
 	kfree(urb);
+
+	wake_up(&lx_emul_urb_wait);
 }
