@@ -4,4 +4,6 @@
 		<service name="TRACE"> <parent/> </service>
 	</route>
 
+	<config period_ms="1000" sort_time="ec"/>
+
 </launcher>
