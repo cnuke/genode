@@ -33,6 +33,13 @@ class Urb : public Usb::Completion
 
 		Urb(Usb::Session_client &usb, urb & urb) : _usb(usb), _urb(urb)
 		{
+
+			if (!_usb.source()->ready_to_submit(1)) {
+				_usb.source()->release_packet(_packet);
+				struct Submit_queue_full { };
+				throw Submit_queue_full();
+			}
+
 			_packet.completion = this;
 
 			switch(usb_pipetype(_urb.pipe)) {
