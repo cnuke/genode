@@ -74,9 +74,13 @@ class Vfs_capture::Data_file_system : public Single_file_system
 			Read_result read(char *dst, file_size count,
 			                 file_size &out_count) override
 			{
-				_capture->capture_at(Point(0, 0));
+				try {
+					_capture->capture_at(Point(0, 0));
 
-				Genode::memcpy(dst, _capture_ds->local_addr<char>(), (size_t)count);
+					Genode::memcpy(dst, _capture_ds->local_addr<char>(), (size_t)count);
+				} catch (...) {
+						return READ_ERR_IO;
+				}
 
 				out_count = count;
 
@@ -103,7 +107,9 @@ class Vfs_capture::Data_file_system : public Single_file_system
 			Single_file_system(Node_type::TRANSACTIONAL_FILE, name.string(),
 			                   Node_rwx::rw(), Genode::Xml_node("<data/>")),
 			_name(name), _label(label), _env(env)
-		{ }
+		{
+			Genode::error(__func__, ":", __LINE__, " open count: ", _open_count);
+		}
 
 		static const char *name()   { return "data"; }
 		char const *type() override { return "data"; }
@@ -112,19 +118,31 @@ class Vfs_capture::Data_file_system : public Single_file_system
 		                 Vfs_handle **out_handle,
 		                 Allocator   &alloc) override
 		{
-			if (!_single_file(path))
+			if (!_single_file(path)) {
+				Genode::error(__func__, ":", __LINE__, " path: ", path, " open count: ", _open_count, " denied");
 				return OPEN_ERR_UNACCESSIBLE;
+			}
+			Genode::error(__func__, ":", __LINE__, " path: ", path, " open count: ", _open_count);
 
 			if (_open_count == 0) {
 				try {
 					_capture.construct(_env, _label.string());
+					Genode::error(__func__, ":", __LINE__, " path: ", path, " capture denied");
 				} catch (Genode::Service_denied) {
 					return OPEN_ERR_UNACCESSIBLE;
 				}
-				_capture->buffer(_capture_area);
+				try {
+					_capture->buffer(_capture_area);
+				} catch (...) {
+					Genode::error(__func__, ":", __LINE__, " path: ", path, " buffer failed");
+					return OPEN_ERR_UNACCESSIBLE;
+				}
+				Genode::error(__func__, ":", __LINE__, " path: ", path, " initial success");
 				_capture_ds.construct(_env.rm(), _capture->dataspace());
 			}
 
+			_open_count++;
+			Genode::error(__func__, ":", __LINE__, " path: ", path, " open count: ", _open_count);
 			try {
 				*out_handle = new (alloc)
 					Registered_handle(_handle_registry,
@@ -157,7 +175,7 @@ class Vfs_capture::Data_file_system : public Single_file_system
 		bool notify_read_ready(Vfs_handle *vfs_handle) override
 		{
 			Capture_vfs_handle *handle =
-				static_cast<Capture_vfs_handle*>(vfs_handle);
+				dynamic_cast<Capture_vfs_handle*>(vfs_handle);
 			if (!handle)
 				return false;
 
