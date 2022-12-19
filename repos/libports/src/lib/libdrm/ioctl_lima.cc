@@ -736,11 +736,13 @@ class Lima::Call
 			return -1;
 		}
 
+		Genode::Mutex _call_mutex { };
 
 	public:
 
 		/* arbitrary start value out of the libc's FD alloc range */
 		static constexpr int const SYNC_FD { 10000 };
+		pthread_mutex_t global_mutex { PTHREAD_MUTEX_INITIALIZER };
 
 		Call()
 		{
@@ -766,6 +768,8 @@ class Lima::Call
 
 		int ioctl(unsigned long request, void *arg)
 		{
+			// Genode::Mutex::Guard _ { _call_mutex };
+
 			bool const device_request = device_ioctl(request);
 			return device_request ? _device_ioctl(device_number(request), arg)
 			                      : _generic_ioctl(command_number(request), arg);
@@ -791,6 +795,7 @@ class Lima::Call
 
 		void wait_for_syncobj(unsigned int handle)
 		{
+			// Genode::Mutex::Guard _ { _call_mutex };
 			_wait_for_syncobj(handle);
 		}
 };
@@ -828,12 +833,14 @@ static void dump_ioctl(unsigned long request)
 
 int lima_drm_ioctl(unsigned long request, void *arg)
 {
-	static pthread_mutex_t ioctl_mutex = PTHREAD_MUTEX_INITIALIZER;
-	int const err = pthread_mutex_lock(&ioctl_mutex);
+	// static pthread_mutex_t ioctl_mutex = PTHREAD_MUTEX_INITIALIZER;
+	int const err = pthread_mutex_lock(&_drm->global_mutex);
 	if (err) {
 		Genode::error("could not lock ioctl mutex: ", err);
 		return -1;
 	}
+
+	// Genode::log(__func__, ": pthread: ", pthread_self(), " locked: ", &global_mutex);
 
 	if (verbose_ioctl)
 		dump_ioctl(request);
@@ -844,12 +851,12 @@ int lima_drm_ioctl(unsigned long request, void *arg)
 		if (verbose_ioctl)
 			Genode::log("returned ", ret);
 
-		pthread_mutex_unlock(&ioctl_mutex);
+		pthread_mutex_unlock(&_drm->global_mutex);
 
 		return ret;
 	} catch (...) { }
 
-	pthread_mutex_unlock(&ioctl_mutex);
+	pthread_mutex_unlock(&_drm->global_mutex);
 
 	return -1;
 }
@@ -870,15 +877,17 @@ int lima_drm_munmap(void *addr)
 
 int lima_drm_poll(int fd)
 {
-	static pthread_mutex_t poll_mutex = PTHREAD_MUTEX_INITIALIZER;
-	int const err = pthread_mutex_lock(&poll_mutex);
+	// static pthread_mutex_t poll_mutex = PTHREAD_MUTEX_INITIALIZER;
+	int const err = pthread_mutex_lock(&_drm->global_mutex);
 	if (err) {
 		Genode::error("could not lock poll mutex: ", err);
 		return -1;
 	}
+	// Genode::log(__func__, ": pthread: ", pthread_self(), " locked: ", &global_mutex);
 
 	int const handle = fd - Lima::Call::SYNC_FD;
 	_drm->wait_for_syncobj((unsigned)handle);
-	pthread_mutex_unlock(&poll_mutex);
+	pthread_mutex_unlock(&_drm->global_mutex);
+
 	return 0;
 }
