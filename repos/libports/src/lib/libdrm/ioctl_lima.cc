@@ -892,15 +892,12 @@ int lima_drm_ioctl(unsigned long request, void *arg)
 		if (verbose_ioctl)
 			dump_ioctl(request);
 
-		try {
-			int ret = _drm->ioctl(request, arg);
+		int const ret = _drm->ioctl(request, arg);
 
-			if (verbose_ioctl)
-				Genode::log("returned ", ret);
+		if (verbose_ioctl)
+			Genode::log("returned ", ret);
 
-			return ret;
-		} catch (...) { }
-		return -1;
+		return ret;
 	};
 
 	return _drm->guarded_action(perform_ioctl);
