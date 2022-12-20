@@ -736,13 +736,13 @@ class Lima::Call
 			return -1;
 		}
 
+		pthread_mutex_t _mutex { nullptr };
+
 
 	public:
 
 		/* arbitrary start value out of the libc's FD alloc range */
 		static constexpr int const SYNC_FD { 10000 };
-
-		pthread_mutex_t global_mutex { PTHREAD_MUTEX_INITIALIZER };
 
 		Call()
 		{
@@ -755,6 +755,9 @@ class Lima::Call
 			}
 			if (!_exec_buffer->mmap(_env))
 				throw Gpu::Session::Invalid_state();
+
+			if (pthread_mutex_init(&_mutex, nullptr) == EINVAL)
+				throw Gpu::Session::Invalid_state();
 		}
 
 		~Call()
@@ -766,11 +769,34 @@ class Lima::Call
 				Genode::destroy(_heap, &obj); })) { ; }
 		}
 
+		template<typename FN>
+		int guarded_action(FN const &fn)
+		{
+			int err = pthread_mutex_lock(&_mutex);
+			if (err) {
+				Genode::error(__func__, ": could not lock DRM mutex: ", err);
+				return -1;
+			}
+
+			int const res = fn();
+
+			err = pthread_mutex_unlock(&_mutex);
+			if (err)
+				Genode::error(__func__, ": could not unlock DRM mutex: ", err);
+
+			return res;
+		}
+
 		int ioctl(unsigned long request, void *arg)
 		{
 			bool const device_request = device_ioctl(request);
 			return device_request ? _device_ioctl(device_number(request), arg)
 			                      : _generic_ioctl(command_number(request), arg);
+		}
+
+		void wait_for_syncobj(unsigned int handle)
+		{
+			_wait_for_syncobj(handle);
 		}
 
 		void *mmap(unsigned long offset, unsigned long /* size */)
@@ -789,11 +815,6 @@ class Lima::Call
 			 * (always) followed by the CLOSE I/O control.
 			 */
 			(void)addr;
-		}
-
-		void wait_for_syncobj(unsigned int handle)
-		{
-			_wait_for_syncobj(handle);
 		}
 };
 
@@ -830,29 +851,23 @@ static void dump_ioctl(unsigned long request)
 
 int lima_drm_ioctl(unsigned long request, void *arg)
 {
-	int const err = pthread_mutex_lock(&_drm->global_mutex);
-	if (err) {
-		Genode::error(__func__, ": could not lock DRM mutex: ", err);
-		return -1;
-	}
-
-	if (verbose_ioctl)
-		dump_ioctl(request);
-
-	try {
-		int ret = _drm->ioctl(request, arg);
+	auto perform_ioctl = [&] () {
 
 		if (verbose_ioctl)
-			Genode::log("returned ", ret);
+			dump_ioctl(request);
 
-		pthread_mutex_unlock(&_drm->global_mutex);
+		try {
+			int ret = _drm->ioctl(request, arg);
 
-		return ret;
-	} catch (...) { }
+			if (verbose_ioctl)
+				Genode::log("returned ", ret);
 
-	pthread_mutex_unlock(&_drm->global_mutex);
+			return ret;
+		} catch (...) { }
+		return -1;
+	};
 
-	return -1;
+	return _drm->guarded_action(perform_ioctl);
 }
 
 
@@ -871,15 +886,11 @@ int lima_drm_munmap(void *addr)
 
 int lima_drm_poll(int fd)
 {
-	int const err = pthread_mutex_lock(&_drm->global_mutex);
-	if (err) {
-		Genode::error(__func__, ": could not lock DRM mutex: ", err);
-		return -1;
-	}
+	auto perform_poll = [&] () {
+		int const handle = fd - Lima::Call::SYNC_FD;
+		_drm->wait_for_syncobj((unsigned)handle);
+		return 0;
+	};
 
-	int const handle = fd - Lima::Call::SYNC_FD;
-	_drm->wait_for_syncobj((unsigned)handle);
-	pthread_mutex_unlock(&_drm->global_mutex);
-
-	return 0;
+	return _drm->guarded_action(perform_poll);
 }
