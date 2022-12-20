@@ -421,8 +421,14 @@ class Lima::Call
 			} while (true);
 		}
 
-		void _wait_for_syncobj(unsigned int handle)
+		int _wait_for_syncobj(int fd)
 		{
+			if (fd < SYNC_FD) {
+				Genode::warning("ignore invalid sync fd: ", fd);
+				return -1;
+			}
+
+			unsigned const handle = fd - SYNC_FD;
 			Syncobj::Id_space::Id syncobj_id { .value = handle };
 
 			try {
@@ -438,7 +444,12 @@ class Lima::Call
 					} while (true);
 				};
 				_syncobj_space.apply<Syncobj>(syncobj_id, wait);
-			} catch (Genode::Id_space<Lima::Call::Syncobj>::Unknown_id) { }
+			} catch (Genode::Id_space<Lima::Call::Syncobj>::Unknown_id) {
+				Genode::warning("ignore unknown sync fd: ", fd);
+				return -1;
+			}
+
+			return 0;
 		}
 
 		template <typename FN>
@@ -794,9 +805,9 @@ class Lima::Call
 			                      : _generic_ioctl(command_number(request), arg);
 		}
 
-		void wait_for_syncobj(unsigned int handle)
+		int wait_for_syncobj(int fd)
 		{
-			_wait_for_syncobj(handle);
+			return _wait_for_syncobj(fd);
 		}
 
 		void *mmap(unsigned long offset, unsigned long /* size */)
@@ -884,9 +895,7 @@ int lima_drm_munmap(void *addr)
 int lima_drm_poll(int fd)
 {
 	auto perform_poll = [&] () {
-		int const handle = fd - Lima::Call::SYNC_FD;
-		_drm->wait_for_syncobj((unsigned)handle);
-		return 0;
+		return _drm->wait_for_syncobj(fd);
 	};
 
 	return _drm->guarded_action(perform_poll);
