@@ -130,7 +130,7 @@ class Block::Gpt : public Block::Partition_table
 
 			void dump_hdr(bool check_primary)
 			{
-				if (!verbose) return;
+				// if (!verbose) return;
 
 				log("GPT ", check_primary ? "primary" : "backup", " header:");
 				log(" rev: ",            read<Revision>());
@@ -151,12 +151,15 @@ class Block::Gpt : public Block::Partition_table
 			bool valid(Partition_table::Sector_data &data, bool check_primary = true)
 			{
 				dump_hdr(check_primary);
+				error(__func__, ":", __LINE__);
 
 				/* check sig */
 				uint64_t const magic = 0x5452415020494645; /* "EFI PART" - ascii */;
 				if (read<Sig>() != magic) {
 					return false;
 				}
+
+				error(__func__, ":", __LINE__);
 
 				/* check header crc */
 				uint32_t crc = read<Hdr_crc>();
@@ -165,19 +168,27 @@ class Block::Gpt : public Block::Partition_table
 					error("Wrong GPT header checksum");
 					return false;
 				}
+				error(__func__, ":", __LINE__);
 
 				/* check header lba */
 				if (check_primary)
 					if (read<Hdr_lba>() != Hdr_lba::LBA)
 						return false;
 
+				error(__func__, ":", __LINE__);
 				/* check GPT entry array */
 				size_t length = entries() * entry_size();
 				Sector gpe(data, gpe_lba(), length / data.block.info().block_size);
-				if (crc32(gpe.addr<addr_t>(), length) != read<Gpe_crc>())
-					return false;
+				uint32_t const gpe_crc = crc32(gpe.addr<addr_t>(), length);
+				if (gpe_crc != read<Gpe_crc>()) {
+					error("GPE CRC32 wrong, expected: ",
+					      Hex(read<Gpe_crc>()), " got: ", Hex(gpe_crc));
+					return true;
+				}
+				error(__func__, ":", __LINE__);
 
 				if (check_primary) {
+				error(__func__, ":", __LINE__);
 					/* check backup gpt header */
 					Sector backup_hdr(data, read<Backup_hdr_lba>(), 1);
 					Gpt_hdr backup(backup_hdr.addr<addr_t>());
@@ -186,6 +197,7 @@ class Block::Gpt : public Block::Partition_table
 					}
 				}
 
+				error(__func__, ":", __LINE__);
 				return true;
 			}
 
@@ -235,6 +247,8 @@ class Block::Gpt : public Block::Partition_table
 					Codepoint code { utf16 };
 					code.print(out);
 				}
+
+				Genode::print(out, " [", read<Lba_start>(), ",", read<Lba_end>(), ")");
 			}
 		};
 
@@ -333,6 +347,8 @@ class Block::Gpt : public Block::Partition_table
 			for (int i = 0; i < MAX_PARTITIONS; i++) {
 
 				Gpt_entry e(entries.base() + i * gpt.entry_size());
+
+				log("[", i, "]: ", e);
 
 				if (!e.valid())
 					continue;
