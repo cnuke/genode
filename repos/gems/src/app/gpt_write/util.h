@@ -149,6 +149,8 @@ struct Util::Block_io
 
 		}
 
+		Genode::error(write ? "write" : "read", " lba: ", lba, " count: ", count);
+
 		_block.tx()->submit_packet(_p);
 
 		/* block for job completion */
@@ -156,12 +158,28 @@ struct Util::Block_io
 			ep.wait_and_dispatch_one_io_signal();
 
 		_p = _block.tx()->get_acked_packet();
+		Genode::error(_p.operation() == Packet_descriptor::WRITE ? "write" : "read", " lba: ", _p.block_number(), " count: ", _p.block_count());
 		if (!_p.succeeded()) {
 			Genode::error("could not ", write ? "write" : "read",
 			              " block-range [", _p.block_number(), ",",
 			              _p.block_number() + count, ")");
 			_block.tx()->release_packet(_p);
 			throw Io_error();
+		}
+
+		Block::Packet_descriptor p = 
+			Block::Session::sync_all_packet_descriptor(_block.info(), Block::Session::Tag { 0 }); 
+
+		_block.tx()->submit_packet(p);
+
+		while (!_block.tx()->ack_avail())
+			ep.wait_and_dispatch_one_io_signal();
+
+		p = _block.tx()->get_acked_packet();
+		_block.tx()->release_packet(p);
+
+		if (!p.succeeded()) {
+			Genode::error("vfs_block: syncing blocks failed");
 		}
 	}
 

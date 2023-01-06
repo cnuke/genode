@@ -100,6 +100,29 @@ struct Gpt::Writer
 	Gpt::Header _bgpt                      { };
 	Gpt::Entry  _bgpt_entries[MAX_ENTRIES] { };
 
+	void dump_header(Gpt::Header const &hdr, Gpt::Entry const *e)
+	{
+		uint32_t const crc      = hdr.crc;
+		uint64_t const lba      = hdr.lba;
+		uint64_t const gpe_lba  = hdr.gpe_lba;
+		uint32_t const gpe_num  = hdr.gpe_num;
+		uint32_t const gpe_size = hdr.gpe_size;
+		uint32_t const gpe_crc  = hdr.gpe_crc;
+
+		Genode::log("lba: ", lba);
+		Genode::log("crc: ", Genode::Hex(crc));
+		Genode::log("gpe_lba: ", gpe_lba);
+		Genode::log("gpe_num: ", gpe_num);
+		Genode::log("gpe_size: ", gpe_size);
+		Genode::log("gpe_crc: ", Genode::Hex(gpe_crc));
+
+		for (uint32_t i = 0; i < hdr.gpe_num; i++) {
+			uint64_t const lba_start = e[i].lba_start;
+			uint64_t const lba_end   = e[i].lba_end;
+			Genode::log("[", i, "]: [", lba_start, ",", lba_end, ")");
+		}
+	}
+
 	Block::sector_t _old_backup_hdr_lba { 0 };
 
 	/**
@@ -350,9 +373,17 @@ struct Gpt::Writer
 		if (_new_geometry) { _wipe_old_backup_header(); }
 
 		_sync_backup_header();
+			dump_header(_pgpt, _pgpt_entries);
+			dump_header(_bgpt, _bgpt_entries);
 
 		Gpt::update_crc32(_pgpt, _pgpt_entries);
 		Gpt::update_crc32(_bgpt, _bgpt_entries);
+
+		Genode::error(__func__, ":",
+		              " _pgpt.valid: ", _pgpt.valid(), " _pgpt.entries_valid: ", _pgpt.entries_valid(_pgpt_entries),
+		              " _bgpt.valid: ", _bgpt.valid(), " _bgpt.entries_valid: ", _bgpt.entries_valid(_bgpt_entries));
+			dump_header(_pgpt, _pgpt_entries);
+			dump_header(_bgpt, _bgpt_entries);
 
 		return    _write_header(_pgpt, _pgpt_entries, true)
 		       && _write_header(_bgpt, _bgpt_entries, false)
@@ -599,6 +630,7 @@ struct Gpt::Writer
 
 		uint64_t const new_size = Util::convert(node.attribute_value("new_size",
 		                                        Util::Size_string()));
+		error(__func__, ": new_size: ", new_size);
 		if (new_size) {
 			bool const fill = new_size == ~0ull;
 
@@ -615,6 +647,7 @@ struct Gpt::Writer
 			uint64_t const new_length = length + (fill ? old_length : 0);
 			uint64_t const expand     = new_length > old_length ? new_length - old_length : 0;
 
+			error(__func__, ": length: ", length, " fill: ", fill, " old_length: ", old_length, " new_length: ", new_length, " expand: ", expand);
 			if (expand && expand > _blocks_avail) {
 				Genode::error("cannot modify: new length ", expand, " too large");
 				return false;
@@ -625,6 +658,10 @@ struct Gpt::Writer
 
 			/* XXX overlapping check anyone? */
 			e->lba_end = e->lba_start + new_length - 1;
+
+			uint64_t const e_lba_start = e->lba_start;
+			uint64_t const e_lba_end = e->lba_end;
+			error(__func__, ": lba_start: ", e_lba_start, " lba_end: ", e_lba_end);
 		}
 
 		Gpt::Label const new_label = node.attribute_value("new_label", Gpt::Label());
@@ -679,10 +716,14 @@ struct Gpt::Writer
 			_fill_and_check_header(true);
 			_fill_and_check_header(false);
 
+			dump_header(_pgpt, _pgpt_entries);
+			dump_header(_bgpt, _bgpt_entries);
 			if (_update_geometry) {
 				Genode::log("Update geometry information");
 				_update_geometry_information();
 			}
+			dump_header(_pgpt, _pgpt_entries);
+			dump_header(_bgpt, _bgpt_entries);
 
 			/* set available blocks */
 			uint64_t const total = _pgpt.part_lba_end - _pgpt.part_lba_start;
