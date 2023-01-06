@@ -310,6 +310,7 @@ void ::Root::announce_device(const char * name, Block::Session::Info info)
 			continue;
 
 		_sessions[idx].construct(name, info);
+		error(__func__, ": block_size: ", info.block_size, " block_count: ", info.block_count);
 		if (!_announced) {
 			_env.parent().announce(_env.ep().manage(*this));
 			_announced = true;
