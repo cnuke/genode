@@ -38,7 +38,7 @@ Genode-based smartphone. It entailed the enabling of device hardware ranging
 from touch screen, over power management, audio, storage, telephony, camera,
 GPU, to mobile-data connectivity. The challenge of getting the hardware to
 cooperate was met by the challenge of enabling meaningful application
-workloads. The ability to run the Chromium-based morph browser directly on
+workloads. The ability to run the QtWebEngine-based morph browser directly on
 Genode on the PinePhone is certainly the most prolific result. Moreover, we
 haven't merely managed to get it to work, but we gained detailed guidance
 material [https://genode.org/documentation/genode-platforms-22-05.pdf - (PDF)]
@@ -75,7 +75,7 @@ refine advanced features, like prolonged standby, in an iterative way.
 
 Regarding the PC, we aim at leveraging the different power characteristics
 of CPU cores found in modern Intel platforms, step up our game regarding GPU
-support (peeking a Vulkan), and making suspend/resume a regular feature that
+support (peeking at Vulkan), and making suspend/resume a regular feature that
 just works.
 
 These efforts will be flanked by continuous architectural work that will make
@@ -93,7 +93,7 @@ usability of Genode as desktop OS, easing the work with files on Sculpt,
 supporting drag'n'drop, tightening the work-flow integration of app-VMs
 using the light-weight Seoul VMM, or the use of Qemu on top of Genode for
 cross development.
-Even though those topics are absent from the timeline below, we can expect
+Even though those topics are absent from the timeline below, we hopefully see
 improvements in these areas throughout the year.
 
 
@@ -139,7 +139,7 @@ May - Release 23.05
 * Base-hw kernel support for the tracing of scheduling events
 * Updated DDE-Linux based driver for USB HID and USB network
 * Replacing iPXE network driver by DDE-Linux-based driver
-* Revision of the CBE block encryptor + usability improvements
+* Revision of the consistent block encrypter (CBE) + usability improvements
 * Goa support for building simple Rust programs for Genode
 
 
