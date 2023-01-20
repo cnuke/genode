@@ -35,9 +35,6 @@ _file_content = $(if $(wildcard $1),$(shell cat $1),)
 # its contained hash number to construct the path to the corresponding
 # subdirectory within CONTRIB_DIR. Finally, we check if the path exists.
 #
-# When reading the hash file in the '_hash_of_port' function, we feed stdin
-# to 'cat' to prevent 'cat' from blocking if the hash file is missing.
-#
 # As a side effect of calling 'select_from_ports' we log the used hash file
 # in the 'PORT_HASH_FILES' variable. This enables us incorporate the hash file
 # as dependency for all object files.
