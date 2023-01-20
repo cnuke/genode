@@ -152,13 +152,13 @@ proc run_boot_dir {binaries} {
 		if {[have_include "image/uboot"]} {
 			exec {*}[load_tftp_inst_cmd] \
 				[file join [pwd] [run_dir] boot uImage] \
-				[file join [load_tftp_base_dir] [load_tftp_offset_dir]]
+				[load_tftp_base_dir][load_tftp_offset_dir]
 		}
 
 		if {[have_include "image/uboot_fit"]} {
 			exec {*}[load_tftp_inst_cmd] \
 				[file join [pwd] [run_dir] boot image.itb] \
-				[file join [load_tftp_base_dir] [load_tftp_offset_dir]]
+				[load_tftp_base_dir][load_tftp_offset_dir]
 		}
 	}
 
