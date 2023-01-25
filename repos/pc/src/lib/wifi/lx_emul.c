@@ -297,6 +297,8 @@ void __iomem * const * pcim_iomap_table(struct pci_dev * pdev)
 }
 
 
+// XXX add kernel/task_work.c as well
+#ifdef CONFIG_X86
 #include <linux/task_work.h>
 
 int task_work_add(struct task_struct * task,struct callback_head * work,enum task_work_notify_mode notify)
@@ -304,6 +306,7 @@ int task_work_add(struct task_struct * task,struct callback_head * work,enum tas
 	printk("%s: task: %p work: %p notify: %u\n", __func__, task, work, notify);
 	return -1;
 }
+#endif
 
 
 #include <linux/slab.h>
@@ -345,12 +348,14 @@ pid_t __task_pid_nr_ns(struct task_struct * task,
 
 #include <linux/uaccess.h>
 
+#ifndef INLINE_COPY_FROM_USER
 unsigned long _copy_from_user(void * to, const void __user * from,
                               unsigned long n)
 {
 	memcpy(to, from, n);
 	return 0;
 }
+#endif
 
 
 #include <linux/uio.h>
@@ -455,6 +460,7 @@ u32 prandom_u32(void)
 }
 
 
+#include <linux/version.h>
 #include <linux/gfp.h>
 
 void *page_frag_alloc_align(struct page_frag_cache *nc,
@@ -462,7 +468,11 @@ void *page_frag_alloc_align(struct page_frag_cache *nc,
                             unsigned int align_mask)
 {
 	unsigned int const order = fragsz / PAGE_SIZE;
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5,12,0)
 	struct page *page = __alloc_pages(gfp_mask, order, 0, NULL);
+#else
+	struct page *page = __alloc_pages(gfp_mask, order, 0);
+#endif
 
 	if (!page)
 		return NULL;
@@ -505,7 +515,7 @@ void misc_deregister(struct miscdevice *misc)
 /* rfkill support */
 
 #include <linux/rfkill.h>
-#include <net/rfkill/rfkill.h>
+#include <../net/rfkill/rfkill.h>
 
 int __init rfkill_handler_init(void)
 {
