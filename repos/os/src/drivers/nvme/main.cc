@@ -200,8 +200,8 @@ struct Nvme::Identify_data : Genode::Mmio
 	};
 
 	/* optional host memory buffer */
-	struct Hmpre : Register<0x110, 32> { };
-	struct Hmmin : Register<0x114, 32> { };
+	struct Hmpre : Register<0x110, 32> { }; /* preferred size */
+	struct Hmmin : Register<0x114, 32> { }; /* minimum size */
 
 	struct Nn    : Register<0x204, 32> { }; /* number of namespaces */
 	struct Vwc   : Register<0x204,  8> { }; /* volatile write cache */
@@ -1392,9 +1392,9 @@ class Nvme::Controller : Platform::Device,
 	/**
 	 * Setup HMB
 	 */
-	void setup_hmb(uint32_t units)
+	void setup_hmb(size_t bytes)
 	{
-		_setup_hmb(units);
+		_setup_hmb(bytes);
 	}
 
 	/**
@@ -1646,7 +1646,7 @@ class Nvme::Driver : Genode::Noncopyable
 			_verbose_mem      = config.attribute_value("verbose_mem",      _verbose_mem);
 			_verbose_regs     = config.attribute_value("verbose_regs",     _verbose_regs);
 
-			_hmb_size = config.attribute_value("hmb_size", Genode::Number_of_bytes(0));
+			_hmb_size = config.attribute_value("max_hmb_size", Genode::Number_of_bytes(0));
 		}
 
 		Genode::Signal_handler<Driver> _config_sigh {
