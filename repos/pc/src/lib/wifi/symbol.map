@@ -20,9 +20,6 @@
 		/* used by libnl's time() */
 		jiffies;
 
-		/* for general debugging purposes */
-		lx_backtrace;
-
 	local:
 
 		*;
