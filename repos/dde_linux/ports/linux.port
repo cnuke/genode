@@ -11,6 +11,7 @@ DIR(linux) := src/linux
 #
 PATCHES += $(addprefix patches/,$(notdir $(REP_DIR)/patches/i915_irq.patch))
 PATCHES += $(addprefix patches/,$(notdir $(REP_DIR)/patches/xhci_abort_ring.patch))
+PATCHES += $(addprefix patches/,$(notdir $(REP_DIR)/patches/iwlwifi_force_jiffie_update.patch))
 
 # i915
 PATCH_OPT(patches/i915_irq.patch) := -p1 -d${DIR(linux)}
