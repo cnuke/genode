@@ -166,9 +166,6 @@ static void handle_destroy_uplink(struct net_device *dev)
 }
 
 
-extern void lx_emul_mem_cache_clean_invalidate(const void *, unsigned long);
-
-
 static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_context *ctx,
                                                       char const *ptr, unsigned long len)
 {
@@ -183,8 +180,6 @@ static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_co
 	skb_copy_to_linear_data(skb, ptr, len);
 	skb_put(skb, len);
 	skb->dev = ctx->dev;
-
-	lx_emul_mem_cache_clean_invalidate(skb->data, skb->len);
 
 	if (dev_queue_xmit(skb) < 0) {
 		printk("lx_user: failed to xmit packet\n");
