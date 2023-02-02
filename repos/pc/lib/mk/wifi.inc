@@ -18,6 +18,7 @@ SRC_C   += dummies.c
 SRC_C   += lx_emul.c
 SRC_C   += lx_user.c
 SRC_C   += uplink.c
+SRC_C   += timeout.c
 
 CC_OPT_lx_socket_call += -DKBUILD_MODNAME='"lx_socket_call"'
 SRC_C   += lx_socket_call.c
@@ -48,6 +49,12 @@ vpath %.c $(TARGET_LIB_DIR)
 vpath %.cc $(TARGET_LIB_DIR)
 
 $(LIB).lib.so: $(TARGET_LIB_DIR)/symbol.map
+
+#
+# Original symbol is renamed to __real_* and references to original symbol
+# are replaced by __wrap_*. Used to shadow schedule_timeout, see timeout.c
+#
+LD_OPT += --wrap=schedule_timeout
 
 #
 # Genode C-API backends
