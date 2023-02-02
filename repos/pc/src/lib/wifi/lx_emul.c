@@ -425,7 +425,11 @@ size_t _copy_to_iter(const void * addr, size_t bytes, struct iov_iter * i)
 
 asmlinkage __visible void dump_stack(void)
 {
-	lx_emul_backtrace();
+	/*
+	 * Normally we would call 'lx_emul_backtrace()' here if it
+	 * could not result in a page-fault due to missing frame-pointers.
+	 */
+	printk("%s: backtrace omitted\n");
 }
 
 
