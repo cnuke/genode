@@ -23,7 +23,7 @@ using namespace Genode;
 void Net::Icmp_packet::print(Output &output) const
 {
 	Genode::print(output, "\033[32mICMP\033[0m ", (unsigned)type(), " ",
-	                      (unsigned)code());
+	                      (unsigned)code(), " ", Genode::Hex(checksum()));
 }
 
 
