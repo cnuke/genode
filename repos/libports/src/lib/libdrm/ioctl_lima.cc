@@ -674,7 +674,11 @@ class Lima::Call
 				};
 				_syncobj_space.apply<Syncobj>(syncobj_id, wait);
 			} catch (Genode::Id_space<Lima::Call::Syncobj>::Unknown_id) {
-				Genode::warning("ignore unknown sync fd: ", fd);
+				/*
+				 * XXX We end up here on the last wait as Mesa has already
+				 *     destroy the syncobj. We ignore it for now but maybe
+				 *     we have to defer the destruction until the last wait?
+				 */
 				return -1;
 			} catch (Syncobj::Invalid_gpu_context) {
 				/*
@@ -1026,19 +1030,13 @@ class Lima::Call
 			return -1;
 		}
 
-		pthread_mutex_t _mutex { nullptr };
-
 
 	public:
 
 		/* arbitrary start value out of the libc's FD alloc range */
 		static constexpr int const SYNC_FD { 10000 };
 
-		Call()
-		{
-			if (pthread_mutex_init(&_mutex, nullptr) == EINVAL)
-				throw Gpu::Session::Invalid_state();
-		}
+		Call() { }
 
 		~Call()
 		{
@@ -1047,24 +1045,6 @@ class Lima::Call
 
 			while (_gpu_context_space.apply_any<Gpu_context>([&] (Gpu_context &ctx) {
 				Genode::destroy(_heap, &ctx); })) { ; }
-		}
-
-		template<typename FN>
-		int guarded_action(FN const &fn)
-		{
-			// int err = pthread_mutex_lock(&_mutex);
-			// if (err) {
-			// 	error(__func__, ": could not lock DRM mutex: ", err);
-			// 	return -1;
-			// }
-
-			int const res = fn();
-
-			// err = pthread_mutex_unlock(&_mutex);
-			// if (err)
-			// 	error(__func__, ": could not unlock DRM mutex: ", err);
-
-			return res;
 		}
 
 		int ioctl(unsigned long request, void *arg)
@@ -1131,20 +1111,15 @@ static void dump_ioctl(unsigned long request)
 
 int lima_drm_ioctl(unsigned long request, void *arg)
 {
-	auto perform_ioctl = [&] () {
+	if (verbose_ioctl)
+		dump_ioctl(request);
 
-		if (verbose_ioctl)
-			dump_ioctl(request);
+	int const ret = _drm->ioctl(request, arg);
 
-		int const ret = _drm->ioctl(request, arg);
+	if (verbose_ioctl)
+		Genode::log("returned ", ret);
 
-		if (verbose_ioctl)
-			Genode::log("returned ", ret);
-
-		return ret;
-	};
-
-	return _drm->guarded_action(perform_ioctl);
+	return ret;
 }
 
 
@@ -1163,9 +1138,5 @@ int lima_drm_munmap(void *addr)
 
 int lima_drm_poll(int fd)
 {
-	auto perform_poll = [&] () {
-		return _drm->wait_for_syncobj(fd);
-	};
-
-	return _drm->guarded_action(perform_poll);
+	return _drm->wait_for_syncobj(fd);
 }
