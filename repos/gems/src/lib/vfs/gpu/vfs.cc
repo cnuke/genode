@@ -37,10 +37,11 @@ struct Vfs_gpu::File_system : Single_file_system
 	{
 		bool             _complete { false };
 		Vfs::Env        &_env;
-		Gpu::Connection  _gpu_session { _env.env() };
 
 		Genode::Io_signal_handler<Gpu_vfs_handle> _completion_sigh {
 			_env.env().ep(), *this, &Gpu_vfs_handle::_handle_completion };
+
+		Gpu::Connection  _gpu_session { _env.env() };
 
 		using Id_space = Genode::Id_space<Gpu_vfs_handle>;
 		Id_space::Element const _elem;
