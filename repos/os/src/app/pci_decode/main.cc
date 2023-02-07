@@ -203,6 +203,9 @@ void Main::parse_pci_function(Bdf             bdf,
 				    device_id == 0x780d)
 					msi = msi_x = false;
 			}
+
+			if (vendor_id == 0x8086 && device_id == 0xa0f0)
+				msi = msi_x = false;
 		}
 
 		/*
