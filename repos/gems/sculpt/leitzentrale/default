@@ -44,7 +44,7 @@
 				<inline>
 					<start name="fader">
 						<binary name="gui_fader"/>
-						<resource name="RAM" quantum="70M"/>
+						<resource name="RAM" quantum="100M"/>
 						<resource name="CPU" quantum="20"/>
 						<provides> <service name="Gui"/> </provides>
 						<config initial_fade_in_steps="100" fade_in_steps="20" alpha="210"/>
@@ -59,7 +59,7 @@
 				<inline>
 					<start name="fader">
 						<binary name="gui_fader"/>
-						<resource name="RAM" quantum="70M"/>
+						<resource name="RAM" quantum="100M"/>
 						<resource name="CPU" quantum="20"/>
 						<provides> <service name="Gui"/> </provides>
 						<config fade_out_steps="30" alpha="0"/>
@@ -84,7 +84,7 @@
 			</start>
 
 			<start name="nitpicker" caps="200">
-				<resource name="RAM" quantum="30M"/>
+				<resource name="RAM" quantum="36M"/>
 				<resource name="CPU" quantum="40"/>
 				<provides>
 					<service name="Gui"/> <service name="Capture"/> <service name="Event"/>
@@ -176,7 +176,7 @@
 
 			<start name="decorator" caps="350">
 				<binary name="themed_decorator"/>
-				<resource name="RAM" quantum="14M"/>
+				<resource name="RAM" quantum="24M"/>
 				<resource name="CPU" quantum="20"/>
 				<config>
 					<libc/>
@@ -316,7 +316,7 @@
 			</start>
 
 			<start name="backdrop" caps="150">
-				<resource name="RAM" quantum="4M" />
+				<resource name="RAM" quantum="8M" />
 				<config width="300" height="150">
 					<libc/>
 					<vfs> <rom name="genode_logo.png"/> </vfs>

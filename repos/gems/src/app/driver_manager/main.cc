@@ -160,7 +160,7 @@ struct Driver_manager::Intel_fb_driver : Device_driver
 
 		xml.node("start", [&] () {
 			_gen_common_start_node_content(xml, "intel_fb_drv", "pc_intel_fb_drv",
-			                               Ram_quota{80*1024*1024}, Cap_quota{800},
+			                               Ram_quota{84*1024*1024}, Cap_quota{800},
 			                               Priority{0}, version);
 			xml.node("heartbeat", [&] () { });
 			xml.node("route", [&] () {
