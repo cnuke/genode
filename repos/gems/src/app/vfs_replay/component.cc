@@ -174,12 +174,14 @@ class Vfs_replay
 				using Result = Vfs::File_io_service::Read_result;
 
 				bool completed = false;
-				file_size out = 0;
+				size_t out = 0;
+
+				Byte_range_ptr const dst(_read_buffer.local_addr<char>(),
+				                         request.current_count);
 
 				Result const result =
-					_vfs_handle->fs().complete_read(_vfs_handle,
-					                                _read_buffer.local_addr<char>(),
-					                                request.current_count, out);
+					_vfs_handle->fs().complete_read(_vfs_handle, dst, out);
+
 				if (result == Result::READ_QUEUED
 				 || result == Result::READ_ERR_WOULD_BLOCK) {
 					return progress;
@@ -244,12 +246,13 @@ class Vfs_replay
 				using Result = Vfs::File_io_service::Write_result;
 
 				bool completed = false;
-				file_size out = 0;
+				size_t out = 0;
 
-				Result const result =
-					_vfs_handle->fs().write(_vfs_handle,
-					                        _write_buffer.local_addr<char>(),
-					                        request.current_count, out);
+				Const_byte_range_ptr const src(_write_buffer.local_addr<char>(),
+				                               request.current_count);
+
+				Result const result = _vfs_handle->fs().write(_vfs_handle, src, out);
+
 				switch (result) {
 				case Result::WRITE_ERR_WOULD_BLOCK:
 					return progress;
