@@ -10,6 +10,14 @@ proc wifi_psk { } {
 	return $::env(GENODE_WIFI_PSK)
 }
 
+proc wifi_ssid2 { } {
+	return $::env(GENODE_WIFI_SSID2)
+}
+
+proc wifi_psk2 { } {
+	return $::env(GENODE_WIFI_PSK2)
+}
+
 #
 # widi_drv config generator (supporting a network list)
 #
@@ -77,6 +85,7 @@ set build_components {
 	lib/vfs_wifi
 	lib/vfs_jitterentropy
 	lib/vfs_lwip
+	app/cpu_burner
 }
 
 build $build_components
@@ -106,6 +115,11 @@ append config {
 	<start name="timer">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="cpu_burner">
+		<resource name="RAM" quantum="1M"/>
+		<config percent="50"/>
 	</start>
 
 	<start name="report_rom" caps="70">
@@ -220,18 +234,18 @@ append config {
 } [wifi_config 30 5 no {}] {
 				</inline>
 				<sleep milliseconds="15000"/>
-				<inline description="connect">
+				<inline description="connect manufaktur">
 } [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
 				</inline>
 				<sleep milliseconds="60000"/>
-				<inline description="rfkill block">
-} [wifi_config 30 5 yes [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
+				<inline description="disconnect">
+} [wifi_config 30 5 no {}] {
 				</inline>
-				<sleep milliseconds="30000"/>
-				<inline description="rfkill unblock">
-} [wifi_config 30 5 no [list "[wifi_ssid] WPA2 [wifi_psk] yes"]] {
+				<sleep milliseconds="15000"/>
+				<inline description="connect manufaktur">
+} [wifi_config 30 5 no [list "[wifi_ssid2] WPA2 [wifi_psk2] yes"]] {
 				</inline>
-				<sleep milliseconds="30000"/>
+				<sleep milliseconds="60000"/>
 			</rom>
 		</config>
 	</start>
@@ -333,6 +347,7 @@ set boot_modules {
 	platform_drv acpi_drv pci_decode
 	test-lwip_httpsrv
 	vfs_lwip.lib.so
+	cpu_burner
 }
 
 append boot_modules $firmware_modules
