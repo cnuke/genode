@@ -72,7 +72,7 @@ struct Igd::Device
 	struct Unsupported_device    : Genode::Exception { };
 	struct Out_of_caps           : Genode::Exception { };
 	struct Out_of_ram            : Genode::Exception { };
-	struct Could_not_map_vram  : Genode::Exception { };
+	struct Could_not_map_vram    : Genode::Exception { };
 
 	enum { WATCHDOG_TIMEOUT = 1*1000*1000, };
 
@@ -379,9 +379,9 @@ struct Igd::Device
 		void schedule(int port) { _scheduled = port; }
 		int scheduled() const { return _scheduled; }
 
-		/***************************
+		/*************************
 		 ** Ring vram interface **
-		 ***************************/
+		 *************************/
 
 		void               ring_reset() { _ring.reset(); }
 		Ring_buffer::Index ring_tail() const { return _ring.tail(); }
