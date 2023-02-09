@@ -101,13 +101,13 @@ proc run_boot_dir {binaries} {
 	exec mkdir -p [run_dir]/boot
 	exec mv [run_dir]/image.elf [run_dir]/boot/image.elf
 
+	set options_bender "[boot_output] "
+
 	if {[have_include "image/iso"] || [have_include "image/disk"] || [have_include image/uefi]} {
 		#
 		# Compress Genode image, to be uncompressed by GRUB
 		#
 		exec gzip [run_dir]/boot/image.elf
-
-		set options_bender "[boot_output] "
 
 		if {[have_include "image/disk"]} {
 			install_disk_bootloader_to_run_dir
@@ -164,7 +164,7 @@ proc run_boot_dir {binaries} {
 		# Generate pulsar config file
 		#
 		set fh [open "[run_dir]/config-52-54-00-12-34-56" "WRONLY CREAT TRUNC"]
-		puts $fh " exec /boot/bender"
+		puts $fh " exec /boot/bender $options_bender"
 		puts $fh " load /boot/image.elf"
 		close $fh
 
@@ -179,7 +179,7 @@ proc run_boot_dir {binaries} {
 		puts $fh "#!ipxe"
 
 		install_pxe_bootloader_to_run_dir
-		puts $fh "kernel boot/bender"
+		puts $fh "kernel boot/bender $options_bender"
 		puts $fh "module boot/image.elf"
 		puts $fh "boot"
 		close $fh
