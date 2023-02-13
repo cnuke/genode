@@ -167,6 +167,7 @@ static void handle_destroy_uplink(struct net_device *dev)
 
 
 extern void lx_emul_mem_cache_clean_invalidate(const void *, unsigned long);
+extern void lx_emul_mem_cache_invalidate(const void *, unsigned long);
 
 
 static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_context *ctx,

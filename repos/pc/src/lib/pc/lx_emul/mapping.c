@@ -26,6 +26,10 @@ dma_addr_t dma_map_page_attrs(struct device * dev,
 	dma_addr_t    const dma_addr  = page_to_phys(page);
 	unsigned long const virt_addr = (unsigned long)page_to_virt(page);
 
+	if (!virt_addr || !dma_addr) {
+		printk("%s:%d\n", __func__, __LINE__);
+	}
+
 	lx_emul_mem_cache_clean_invalidate((void *)(virt_addr + offset), size);
 	return dma_addr + offset;
 }
@@ -39,8 +43,10 @@ void dma_unmap_page_attrs(struct device * dev,
 {
 	unsigned long const virt_addr = lx_emul_mem_virt_addr((void*)addr);
 
-	if (!virt_addr)
+	if (!virt_addr) {
+		printk("%s:%d\n", __func__, __LINE__);
 		return;
+	}
 
 	if (dir == DMA_FROM_DEVICE)
 		lx_emul_mem_cache_invalidate((void *)virt_addr, size);
@@ -52,8 +58,10 @@ void dma_sync_single_for_cpu(struct device *dev, dma_addr_t addr,
 {
 	unsigned long const virt_addr = lx_emul_mem_virt_addr((void*)addr);
 
-	if (!virt_addr)
+	if (!virt_addr) {
+		printk("%s:%d\n", __func__, __LINE__);
 		return;
+	}
 
 	lx_emul_mem_cache_invalidate((void *)virt_addr, size);
 }
@@ -64,8 +72,10 @@ void dma_sync_single_for_device(struct device *dev, dma_addr_t addr,
 {
 	unsigned long const virt_addr = lx_emul_mem_virt_addr((void*)addr);
 
-	if (!virt_addr)
+	if (!virt_addr) {
+		printk("%s:%d\n", __func__, __LINE__);
 		return;
+	}
 
 	lx_emul_mem_cache_clean_invalidate((void *)virt_addr, size);
 }
