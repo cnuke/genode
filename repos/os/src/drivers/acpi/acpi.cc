@@ -33,7 +33,7 @@
 using namespace Genode;
 
 /* enable debugging output */
-static const bool verbose = false;
+static const bool verbose = true;
 
 
 /**
@@ -1034,6 +1034,11 @@ class Element : private List<Element>::Element
 
 					if (verbose)
 						Genode::log("indirect ", Genode::Cstring(name));
+
+					if (Genode::strcmp(name, "PD0", 3) == 0) {
+						Genode::warning("skip ", Genode::Cstring(name));
+						continue;
+					}
 
 					for (uint32_t skip = 0; skip <= dev->_name_len / NAME_LEN; skip++) {
 						Element *e = dev->_compare(name, skip * NAME_LEN);
