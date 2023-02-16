@@ -46,7 +46,9 @@ struct Irq_override : List_model<Irq_override>::Element
 	Irq_override(irq_line_t      from,
 	             irq_line_t      to,
 	             Flags::access_t flags)
-	: from(from), to(to), flags(flags) {}
+	: from(from), to(to), flags(flags) {
+		error(__func__, ": from: ", Hex(from), " to: ", Hex(to));
+	}
 
 	void generate(Xml_generator & generator, irq_line_t & irq)
 	{
@@ -115,7 +117,9 @@ struct Irq_routing : List_model<Irq_routing>::Element
 	            irq_line_t to)
 	:
 		bridge_bdf(bridge_bdf),
-		dev(dev), pin(pin), to(to) {}
+		dev(dev), pin(pin), to(to) {
+		error(__func__, ": dev: ", Hex(dev), " pin: ", Hex(pin), " to: ", Hex(to));
+		}
 
 	void route(Bridge     & bridge,
 	           dev_t        device,
