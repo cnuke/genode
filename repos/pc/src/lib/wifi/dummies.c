@@ -397,6 +397,13 @@ void ieee80211_alloc_led_names(struct ieee80211_local * local)
 }
 
 
+extern void ieee80211_free_led_names(struct ieee80211_local * local);
+void ieee80211_free_led_names(struct ieee80211_local * local)
+{
+	lx_emul_trace(__func__);
+}
+
+
 extern void ieee80211_led_assoc(struct ieee80211_local * local,bool associated);
 void ieee80211_led_assoc(struct ieee80211_local * local,bool associated)
 {

@@ -485,13 +485,6 @@ int gnet_stats_copy_queue(struct gnet_dump * d,struct gnet_stats_queue __percpu 
 const u8 guid_index[16] = {};
 
 
-extern void ieee80211_free_led_names(struct ieee80211_local * local);
-void ieee80211_free_led_names(struct ieee80211_local * local)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern void ieee80211_led_exit(struct ieee80211_local * local);
 void ieee80211_led_exit(struct ieee80211_local * local)
 {
@@ -758,14 +751,6 @@ int open_related_ns(struct ns_common * ns,struct ns_common * (* get_ns)(struct n
 #include <linux/reboot.h>
 
 enum reboot_mode panic_reboot_mode;
-
-
-#include <linux/pci.h>
-
-int pci_read_config_dword(const struct pci_dev * dev,int where,u32 * val)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/pci.h>
