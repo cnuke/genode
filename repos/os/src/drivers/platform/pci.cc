@@ -65,6 +65,8 @@ struct Config_helper
 
 		_config.power_on(delayer(_env));
 
+		_config.function_level_reset(delayer(_env));
+
 		Config::Command::access_t cmd =
 			_config.read<Config::Command>();
 

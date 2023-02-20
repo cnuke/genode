@@ -644,6 +644,11 @@ struct Pci::Config : Genode::Mmio
 	{
 		if (power_cap.constructed()) power_cap->power_off();
 	}
+
+	void function_level_reset(Delayer & delayer)
+	{
+		if (pci_e_cap.constructed()) pci_e_cap->reset(delayer);
+	}
 };
 
 
