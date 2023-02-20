@@ -133,6 +133,11 @@ struct Config_helper
 		Driver::pci_hd_audio_quirks(_cfg, _config);
 
 		_config.write<Config::Command>(cmd_old);
+
+		enum { OTHER_NETWORK_CLASS_CODE = 0x28000 };
+
+		if ((_cfg.class_code & 0xffff00) == OTHER_NETWORK_CLASS_CODE)
+			disable();
 	}
 };
 
