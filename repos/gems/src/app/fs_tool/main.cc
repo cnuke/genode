@@ -26,7 +26,7 @@ namespace Fs_tool {
 }
 
 
-struct Fs_tool::Byte_buffer : Byte_range_ptr, Noncopyable
+struct Fs_tool::Byte_buffer : Byte_range_ptr
 {
 	Allocator &_alloc;
 
@@ -58,7 +58,7 @@ struct Fs_tool::Main
 
 	typedef Directory::Path Path;
 
-	void _copy_file(Path const &from, Path const &to, Byte_range_ptr);
+	void _copy_file(Path const &from, Path const &to, Byte_range_ptr const &);
 
 	void _remove_file    (Xml_node const &);
 	void _new_file       (Xml_node const &);
@@ -158,7 +158,7 @@ void Fs_tool::Main::_new_file(Xml_node const &operation)
 
 
 void Fs_tool::Main::_copy_file(Path const &from, Path const &to,
-                               Byte_range_ptr buffer)
+                               Byte_range_ptr const &buffer)
 {
 	try {
 		Readonly_file const src { _root_dir, from };
