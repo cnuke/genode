@@ -367,7 +367,7 @@ class Vfs_ram::Symlink : public Vfs_ram::Node
 
 			for (size_t i = 0; i < len; ++i) {
 				if (src.start[i] == '\0') {
-					len = i;
+					len = i + 1; /* number of characters + terminating zero */
 					break;
 				}
 			}
