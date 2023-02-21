@@ -97,11 +97,11 @@ class Vfs_replay
 			Type        type;
 			State       state;
 			file_offset offset;
-			file_size   count;
-			file_size   out_count;
+			size_t      count;
+			size_t      out_count;
 
 			file_offset current_offset;
-			file_size   current_count;
+			size_t      current_count;
 
 			bool        success;
 			bool        complete;
@@ -345,7 +345,7 @@ class Vfs_replay
 			if (!_current_request.pending()) {
 
 				file_offset const offset = node.attribute_value("offset", file_size(~0llu));
-				file_size   const count  = node.attribute_value("count",  file_size(~0llu));
+				size_t      const count  = node.attribute_value("count",  ~0lu);
 
 				using Type_String = String<16>;
 				Type_String   const type_string = node.attribute_value("type", Type_String());
