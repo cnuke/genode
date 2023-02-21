@@ -104,6 +104,9 @@ void Scheduler::schedule()
 		Genode::sleep_forever();
 	}
 
+	/* make sure the time task can run at least once */
+	unblock_time_handler();
+
 	/*
 	 * Iterate over all tasks and run first runnable.
 	 *
@@ -115,9 +118,6 @@ void Scheduler::schedule()
 	 */
 	while (true) {
 		bool at_least_one = false;
-
-		/* update jiffies before running task */
-		//Lx::timer_update_jiffies();
 
 		for (Task * t = _present_list.first(); t; ) {
 
