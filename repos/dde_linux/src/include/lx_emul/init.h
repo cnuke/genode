@@ -41,6 +41,8 @@ void lx_emul_register_pci_fixup(void (*fn)(struct pci_dev*), char const *name);
 
 void lx_emul_execute_pci_fixup(struct pci_dev *pci_dev);
 
+void lx_emul_unblock_timer_task(void);
+
 #ifdef __cplusplus
 }
 #endif

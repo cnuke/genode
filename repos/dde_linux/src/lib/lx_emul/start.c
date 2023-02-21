@@ -88,6 +88,19 @@ static void timer_loop(void)
 }
 
 
+struct task_struct *timer_task_struct_ptr = NULL;
+
+/* needs to be set by the driver */
+int lx_emul_inhibit_timer_task_unblock = 1;
+
+
+void lx_emul_unblock_timer_task()
+{
+	if (timer_task_struct_ptr && !lx_emul_inhibit_timer_task_unblock)
+		lx_emul_task_unblock(timer_task_struct_ptr);
+}
+
+
 int lx_emul_init_task_function(void * dtb)
 {
 	int pid;
@@ -131,6 +144,9 @@ int lx_emul_init_task_function(void * dtb)
 	system_state = SYSTEM_SCHEDULING;
 
 	complete(&kthreadd_done);
+
+	timer_task_struct_ptr = current;
+	lx_emul_task_priority(timer_task_struct_ptr, 50);
 
 	lx_emul_task_schedule(false);
 

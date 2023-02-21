@@ -91,6 +91,9 @@ Task & Scheduler::task(void * lx_task)
 }
 
 
+extern "C" void lx_emul_unblock_timer_task();
+
+
 void Scheduler::schedule()
 {
 	/* sanity check that right thread & stack is in use */
@@ -103,6 +106,9 @@ void Scheduler::schedule()
 		Genode::backtrace();
 		Genode::sleep_forever();
 	}
+
+	/* always update the time at least once */
+	lx_emul_unblock_timer_task();
 
 	/*
 	 * Iterate over all tasks and run first runnable.
