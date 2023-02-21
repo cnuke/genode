@@ -138,6 +138,9 @@ struct Config_helper
 
 		if ((_cfg.class_code & 0xffff00) == OTHER_NETWORK_CLASS_CODE)
 			disable();
+
+		if (_dev.name() == "00:14.0")
+			disable();
 	}
 };
 
