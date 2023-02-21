@@ -21,14 +21,15 @@
 
 /* CBE includes */
 #include <cbe/library.h>
+#include <cbe/init/library.h>
 #include <cbe/check/library.h>
 #include <cbe/dump/library.h>
 #include <cbe/dump/configuration.h>
-#include <cbe/init/library.h>
 #include <cbe/init/configuration.h>
 
 /* CBE tester includes */
 #include <cbe_librara.h>
+#include <cbe_init_librara.h>
 #include <crypto.h>
 #include <trust_anchor.h>
 #include <verbose_node.h>
@@ -45,7 +46,10 @@ namespace Cbe {
 		switch (id) {
 		case CRYPTO: return "crypto";
 		case CBE_LIBRARA: return "cbe_librara";
+		case CBE_INIT_LIBRARA: return "cbe_init_librara";
 		case CLIENT_DATA: return "client_data";
+		case TRUST_ANCHOR: return "trust_anchor";
+		case COMMAND_POOL: return "command_pool";
 		default: break;
 		}
 		return "?";
@@ -106,12 +110,6 @@ static uint32_t tag_set_module_type(uint32_t    tag,
 		throw Bad_tag { };
 	}
 	return tag | (module_type_to_uint32(type) << 24);
-}
-
-
-static uint32_t tag_unset_module_type(uint32_t tag)
-{
-	return tag & 0xffffff;
 }
 
 
@@ -1001,7 +999,7 @@ class Trust_anchor_node
 {
 	private:
 
-		using Operation = Trust_anchor_request::Operation;
+		using Operation = Trust_anchor_request::Type;
 
 		Operation  const _op;
 		String<64> const _passphrase;
@@ -1039,7 +1037,9 @@ class Trust_anchor_node
 
 		void print(Genode::Output &out) const
 		{
-			Genode::print(out, "op=", to_string(_op));
+			Genode::print(out, "op=",
+				Trust_anchor_request::type_to_string(_op));
+
 			if (has_attr_passphrase()) {
 				Genode::print(out, " passphrase=", _passphrase);
 			}
@@ -1350,7 +1350,7 @@ class Command : public Fifo<Command>::Element
 };
 
 
-class Command_pool {
+class Command_pool : public Module {
 
 	private:
 
@@ -1391,6 +1391,71 @@ class Command_pool {
 				vba += idx + salt;
 				salt += idx + vba;
 			}
+		}
+
+
+		/************
+		 ** Module **
+		 ************/
+
+		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override
+		{
+			Command const cmd {
+				peek_pending_command(Command::TRUST_ANCHOR) };
+
+			if (cmd.type() == Command::INVALID)
+				return false;
+
+			Trust_anchor_node const &node { cmd.trust_anchor_node() };
+			switch (node.op()) {
+			case Trust_anchor_request::INITIALIZE:
+
+				Trust_anchor_request::create(
+					buf_ptr, buf_size, COMMAND_POOL, cmd.id(),
+					(unsigned long)Trust_anchor_request::INITIALIZE,
+					nullptr, 0, nullptr, nullptr, node.passphrase().string(),
+					nullptr);
+
+				return true;
+
+			default: break;
+			}
+			class Exception_1 { };
+			throw Exception_1 { };
+		}
+
+		void _drop_generated_request(Module_request &mod_req) override
+		{
+			if (mod_req.dst_module_id() != TRUST_ANCHOR) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			Trust_anchor_request const &ta_req {
+				*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+
+			if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			mark_command_in_progress(ta_req.src_request_id());
+		}
+
+		void generated_request_complete(Module_request &mod_req) override
+		{
+			if (mod_req.dst_module_id() != TRUST_ANCHOR) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			Trust_anchor_request const &ta_req {
+				*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+
+			if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			mark_command_completed(
+				ta_req.src_request_id(), ta_req.success());
 		}
 
 	public:
@@ -1538,6 +1603,7 @@ class Command_pool {
 				}
 				Request_node const &req_node { cmd.request_node() };
 				if (req_node.salt_avail()) {
+
 					_generate_blk_data(blk_data, vba, req_node.salt());
 				}
 				exit_loop = true;
@@ -1614,7 +1680,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 3 };
+		enum { NR_OF_MODULES = 6 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1633,6 +1699,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
 		Cbe::Librara                 _cbe_librara                { _cbe, _blk_buf };
+		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
 
 		Module *_module_ptrs[NR_OF_MODULES] { };
@@ -1732,83 +1799,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_handle_completed_client_requests_of_module(_cbe_dump, progress);
 		}
 
-		template <typename MODULE>
-		void _handle_pending_ta_requests_of_module(MODULE      &module,
-		                                           Module_type  module_type,
-		                                           bool        &progress)
-		{
-			using Ta_operation = Cbe::Trust_anchor_request::Operation;
-			while (true) {
-
-				if (!_trust_anchor.request_acceptable()) {
-					break;
-				}
-				Cbe::Trust_anchor_request ta_req =
-					module.peek_generated_ta_request();
-
-				if (ta_req.operation() == Ta_operation::INVALID) {
-					return;
-				}
-				Cbe::Trust_anchor_request typed_ta_req { ta_req };
-				typed_ta_req.tag(
-					tag_set_module_type(typed_ta_req.tag(), module_type));
-
-				if (_verbose_node.ta_req_in_progress()) {
-					log("ta req in progress: ", typed_ta_req);
-				}
-				switch (ta_req.operation()) {
-				case Ta_operation::CREATE_KEY:
-
-					_trust_anchor.submit_request(typed_ta_req);
-					module.drop_generated_ta_request(ta_req);
-					progress = true;
-					break;
-
-				case Ta_operation::SECURE_SUPERBLOCK:
-
-					_trust_anchor.submit_request_hash(
-						typed_ta_req,
-						module.peek_generated_ta_sb_hash(ta_req));
-
-					module.drop_generated_ta_request(ta_req);
-					progress = true;
-					break;
-
-				case Ta_operation::ENCRYPT_KEY:
-
-					_trust_anchor.submit_request_key_plaintext_value(
-						typed_ta_req,
-						module.peek_generated_ta_key_value_plaintext(ta_req));
-
-					module.drop_generated_ta_request(ta_req);
-					progress = true;
-					break;
-
-				case Ta_operation::DECRYPT_KEY:
-
-					_trust_anchor.submit_request_key_ciphertext_value(
-						typed_ta_req,
-						module.peek_generated_ta_key_value_ciphertext(ta_req));
-
-					module.drop_generated_ta_request(ta_req);
-					progress = true;
-					break;
-
-				case Ta_operation::LAST_SB_HASH:
-
-					_trust_anchor.submit_request(typed_ta_req);
-					module.drop_generated_ta_request(ta_req);
-					progress = true;
-					break;
-
-				default:
-
-					class Bad_operation { };
-					throw Bad_operation { };
-				}
-			}
-		}
-
 		void _execute_cbe_init(bool &progress)
 		{
 			_cbe_init.execute(_blk_buf);
@@ -1816,9 +1806,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				progress = true;
 			}
 			_handle_pending_blk_io_requests_of_module(
-				_cbe_init, Module_type::CBE_INIT, progress);
-
-			_handle_pending_ta_requests_of_module(
 				_cbe_init, Module_type::CBE_INIT, progress);
 
 			_handle_completed_client_requests_of_module(_cbe_init, progress);
@@ -1904,24 +1891,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_client_data_request._type = Client_data_request::INVALID;
 		}
 
-		bool _peek_generated_request(Genode::uint8_t *,
-		                             Genode::size_t   ) override
-		{
-			return false;
-		}
-
-		void _drop_generated_request(Module_request &) override
-		{
-			class Exception_1 { };
-			throw Exception_1 { };
-		}
-
-		void generated_request_complete(Module_request &) override
-		{
-			class Exception_1 { };
-			throw Exception_1 { };
-		}
-
 		void _execute_cbe(bool &progress)
 		{
 			_cbe->execute(_blk_buf);
@@ -1929,9 +1898,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				progress = true;
 			}
 			_handle_pending_blk_io_requests_of_module(
-				*_cbe, Module_type::CBE, progress);
-
-			_handle_pending_ta_requests_of_module(
 				*_cbe, Module_type::CBE, progress);
 
 			_handle_completed_client_requests_of_module(*_cbe, progress);
@@ -2023,47 +1989,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				_cbe->submit_client_request(cbe_req, 0);
 				_cmd_pool.mark_command_in_progress(cmd.id());
 				progress = true;
-			}
-		}
-
-		void _cmd_pool_handle_pending_ta_cmds(bool &progress)
-		{
-			while (true) {
-
-				if (!_trust_anchor.request_acceptable()) {
-					break;
-				}
-				Command const cmd {
-					_cmd_pool.peek_pending_command(Command::TRUST_ANCHOR) };
-
-				if (cmd.type() == Command::INVALID) {
-					break;
-				}
-				Trust_anchor_node const &node { cmd.trust_anchor_node() };
-				Trust_anchor_request const &ta_req {
-					node.op(), false, cmd.id() };
-
-				Trust_anchor_request typed_ta_req { ta_req };
-				typed_ta_req.tag(
-					tag_set_module_type(
-						typed_ta_req.tag(), Module_type::CMD_POOL));
-
-				switch (node.op()) {
-				case Trust_anchor_request::Operation::INITIALIZE:
-
-					_trust_anchor.submit_request_passphrase(
-						typed_ta_req, node.passphrase());
-
-					_cmd_pool.mark_command_in_progress(cmd.id());
-					progress = true;
-
-					break;
-
-				default:
-
-					class Bad_operation { };
-					throw Bad_operation { };
-				}
 			}
 		}
 
@@ -2209,7 +2134,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				_cmd_pool_handle_pending_list_snapshots_cmds(progress);
 			}
 			_cmd_pool_handle_pending_log_cmds(progress);
-			_cmd_pool_handle_pending_ta_cmds(progress);
 			_cmd_pool_handle_pending_cbe_init_cmds(progress);
 			_cmd_pool_handle_pending_benchmark_cmds(progress);
 			_cmd_pool_handle_pending_construct_cmds(progress);
@@ -2231,136 +2155,16 @@ class Main : Vfs::Env::User, public Cbe::Module
 			}
 		}
 
-		template <typename MODULE>
-		void
-		_trust_anchor_handle_completed_requests_of_module(MODULE                     &module,
-		                                                  Trust_anchor_request const &typed_ta_req,
-		                                                  bool                       &progress)
+		enum { VERBOSE_MODULE_COMMUNICATION = 0 };
+
+		void _modules_add(unsigned long  module_id,
+		                  Module        &module)
 		{
-			using Ta_operation = Cbe::Trust_anchor_request::Operation;
-
-			Trust_anchor_request ta_req { typed_ta_req };
-			ta_req.tag(tag_unset_module_type(ta_req.tag()));
-
-			if (_verbose_node.ta_req_completed()) {
-				log("ta req completed: ", typed_ta_req);
+			if (module_id >= NR_OF_MODULES) {
+				class Exception_1 { };
+				throw Exception_1 { };
 			}
-			switch (ta_req.operation()) {
-			case Ta_operation::CREATE_KEY:
-
-				module.mark_generated_ta_create_key_request_complete(
-					ta_req,
-					_trust_anchor.peek_completed_key_plaintext_value());
-
-				_trust_anchor.drop_completed_request();
-				progress = true;
-				break;
-
-			case Ta_operation::SECURE_SUPERBLOCK:
-
-				module.mark_generated_ta_secure_sb_request_complete(
-					ta_req);
-
-				_trust_anchor.drop_completed_request();
-				progress = true;
-				break;
-
-			case Ta_operation::LAST_SB_HASH:
-
-				module.mark_generated_ta_last_sb_hash_request_complete(
-					ta_req,
-					_trust_anchor.peek_completed_hash());
-
-				_trust_anchor.drop_completed_request();
-				progress = true;
-				break;
-
-			case Ta_operation::ENCRYPT_KEY:
-
-				module.mark_generated_ta_encrypt_key_request_complete(
-					ta_req,
-					_trust_anchor.peek_completed_key_ciphertext_value());
-
-				_trust_anchor.drop_completed_request();
-				progress = true;
-				break;
-
-			case Ta_operation::DECRYPT_KEY:
-
-				module.mark_generated_ta_decrypt_key_request_complete(
-					ta_req,
-					_trust_anchor.peek_completed_key_plaintext_value());
-
-				_trust_anchor.drop_completed_request();
-				progress = true;
-				break;
-
-			default:
-
-				class Bad_ta_operation { };
-				throw Bad_ta_operation { };
-			}
-		}
-
-		void _trust_anchor_handle_completed_requests(bool &progress)
-		{
-			while (true) {
-
-				Trust_anchor_request const typed_ta_req {
-					_trust_anchor.peek_completed_request() };
-
-				if (!typed_ta_req.valid()) {
-					break;
-				}
-				switch (tag_get_module_type(typed_ta_req.tag())) {
-				case Module_type::CMD_POOL:
-				{
-					Trust_anchor_request ta_req { typed_ta_req };
-					ta_req.tag(tag_unset_module_type(ta_req.tag()));
-
-					using Ta_operation = Trust_anchor_request::Operation;
-					if (ta_req.operation() == Ta_operation::INITIALIZE) {
-
-						_cmd_pool.mark_command_completed(ta_req.tag(),
-						                                 ta_req.success());
-
-						_trust_anchor.drop_completed_request();
-						progress = true;
-						continue;
-
-					} else {
-
-						class Bad_operation { };
-						throw Bad_operation { };
-					}
-					break;
-				}
-				case Module_type::CBE_INIT:
-
-					_trust_anchor_handle_completed_requests_of_module(
-						_cbe_init, typed_ta_req, progress);
-
-					break;
-
-				case Module_type::CBE:
-
-					_trust_anchor_handle_completed_requests_of_module(
-						*_cbe, typed_ta_req, progress);
-
-					break;
-
-				default:
-
-					class Bad_module_type { };
-					throw Bad_module_type { };
-				}
-			}
-		}
-
-		void _execute_trust_anchor(bool &progress)
-		{
-			_trust_anchor.execute(progress);
-			_trust_anchor_handle_completed_requests(progress);
+			_module_ptrs[module_id] = &module;
 		}
 
 		void _modules_execute(bool &progress)
@@ -2376,11 +2180,24 @@ class Main : Vfs::Env::User, public Cbe::Module
 					}
 					Module &dst_module { *_module_ptrs[req.dst_module_id()] };
 					if (!dst_module.ready_to_submit_request()) {
-						Genode::log(module_name(id), ":", req.src_request_id_str(), " --", req.type_name(), "-| ", module_name(req.dst_module_id()));
+
+						if (VERBOSE_MODULE_COMMUNICATION)
+							Genode::log(
+								module_name(id), ":", req.src_request_id_str(),
+								" --", req.type_name(), "-| ",
+								module_name(req.dst_module_id()));
+
 						return Module::REQUEST_NOT_HANDLED;
 					}
 					dst_module.submit_request(req);
-					//Genode::log(module_name(id), ":", req.src_request_id_str(), " --", req.type_name(), "--> ", module_name(req.dst_module_id()), ":", req.dst_request_id_str());
+
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(id), ":", req.src_request_id_str(),
+							" --", req.type_name(), "--> ",
+							module_name(req.dst_module_id()), ":",
+							req.dst_request_id_str());
+
 					progress = true;
 					return Module::REQUEST_HANDLED;
 				});
@@ -2389,7 +2206,13 @@ class Main : Vfs::Env::User, public Cbe::Module
 						class Bad_src_module { };
 						throw Bad_src_module { };
 					}
-					//Genode::log(module_name(req.src_module_id()), ":", req.src_request_id_str(), " <--", req.type_name(), "-- ", module_name(id), ":", req.dst_request_id_str());
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(req.src_module_id()), ":",
+							req.src_request_id_str(), " <--", req.type_name(),
+							"-- ", module_name(id), ":",
+							req.dst_request_id_str());
+
 					Module &src_module { *_module_ptrs[req.src_module_id()] };
 					src_module.generated_request_complete(req);
 					progress = true;
@@ -2410,7 +2233,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 					_cbe, _cbe_init, _cbe_dump, _cbe_check, _verbose_node,
 					_blk_buf, progress);
 
-				_execute_trust_anchor(progress);
 				_execute_cbe_check(progress);
 				_execute_cbe_dump(progress);
 				_modules_execute(progress);
@@ -2427,9 +2249,12 @@ class Main : Vfs::Env::User, public Cbe::Module
 		:
 			_env { env }
 		{
-			_module_ptrs[CRYPTO]      = &_crypto;
-			_module_ptrs[CBE_LIBRARA] = &_cbe_librara;
-			_module_ptrs[CLIENT_DATA] = this;
+			_modules_add(CRYPTO,            _crypto);
+			_modules_add(TRUST_ANCHOR,      _trust_anchor);
+			_modules_add(CBE_LIBRARA,       _cbe_librara);
+			_modules_add(CLIENT_DATA,      *this);
+			_modules_add(COMMAND_POOL,      _cmd_pool);
+			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
 			_execute();
 		}
 };
