@@ -292,4 +292,5 @@ void uplink_init(void)
 	pid = kernel_thread(user_task_function, NULL, CLONE_FS | CLONE_FILES);
 
 	uplink_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
+	lx_emul_task_priority(uplink_task_struct_ptr, 150);
 }

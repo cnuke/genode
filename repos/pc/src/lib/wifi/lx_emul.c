@@ -561,6 +561,7 @@ void rfkill_init(void)
 	pid = kernel_thread(rfkill_task_function, NULL, CLONE_FS | CLONE_FILES);
 
 	rfkill_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
+	lx_emul_task_priority(rfkill_task_struct_ptr, 150);
 }
 
 

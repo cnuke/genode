@@ -32,6 +32,7 @@ void socketcall_init(void)
 	                        NULL,
 	                        CLONE_FS | CLONE_FILES);
 	socketcall_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
+	lx_emul_task_priority(socketcall_task_struct_ptr, 150);
 }
 
 
