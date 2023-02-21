@@ -368,3 +368,11 @@ void pci_disable_device(struct pci_dev * dev)
 {
 	lx_emul_trace(__func__);
 }
+
+
+int pci_read_config_dword(const struct pci_dev * dev,int where,u32 * val)
+{
+	lx_emul_trace(__func__);
+	*val = 0;
+	return -ENOSYS;
+}
