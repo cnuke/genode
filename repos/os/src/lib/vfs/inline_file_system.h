@@ -28,56 +28,23 @@ class Vfs::Inline_file_system : public Single_file_system
 
 		Xml_node _node;
 
-		class Inline_vfs_handle : public Single_vfs_handle
+		class Handle : public Single_vfs_handle
 		{
 			private:
 
-				Const_byte_range_ptr const &_data_ptr;
-
-				/*
-				 * Noncopyable
-				 */
-				Inline_vfs_handle(Inline_vfs_handle const &);
-				Inline_vfs_handle &operator = (Inline_vfs_handle const &);
+				Inline_file_system const &_fs;
 
 			public:
 
-				Inline_vfs_handle(Directory_service       &ds,
-				               File_io_service            &fs,
-				               Genode::Allocator          &alloc,
-				               Const_byte_range_ptr const &data_ptr)
+				Handle(Directory_service        &ds,
+				       File_io_service          &fs,
+				       Allocator                &alloc,
+				       Inline_file_system const &inline_fs)
 				:
-					Single_vfs_handle(ds, fs, alloc, 0), _data_ptr(data_ptr)
+					Single_vfs_handle(ds, fs, alloc, 0), _fs(inline_fs)
 				{ }
 
-				Read_result read(Byte_range_ptr const &dst, size_t &out_count) override
-				{
-					/* file read limit is the size of the dataspace */
-					size_t const max_size = _data_ptr.num_bytes;
-
-					/* current read offset */
-					size_t const read_offset = size_t(seek());
-
-					/* maximum read offset, clamped to dataspace size */
-					size_t const end_offset = min(dst.num_bytes + read_offset, max_size);
-
-					/* source address within the dataspace */
-					char const *src = _data_ptr.start + read_offset;
-
-					/* check if end of file is reached */
-					if (read_offset >= end_offset) {
-						out_count = 0;
-						return READ_OK;
-					}
-
-					/* copy-out bytes from ROM dataspace */
-					size_t const num_bytes = (size_t)(end_offset - read_offset);
-
-					memcpy(dst.start, src, num_bytes);
-
-					out_count = num_bytes;
-					return READ_OK;
-				}
+				inline Read_result read(Byte_range_ptr const &, size_t &) override;
 
 				Write_result write(Const_byte_range_ptr const &,
 				                   size_t &out_count) override
@@ -120,24 +87,13 @@ class Vfs::Inline_file_system : public Single_file_system
 			if (!_single_file(path))
 				return OPEN_ERR_UNACCESSIBLE;
 
-			/* empty node */
-			if (_node.content_size() == 0) {
-				*out_handle = new (alloc)
-					Inline_vfs_handle(*this, *this, alloc,
-					                  Const_byte_range_ptr(nullptr, 0));
-				return OPEN_OK;
-			}
-
 			try {
-				_node.with_raw_content([&] (char const *base, size_t size) {
-					*out_handle = new (alloc)
-						Inline_vfs_handle(*this, *this, alloc,
-						                  Const_byte_range_ptr(base, size));
-				});
-				return OPEN_OK;
+				*out_handle = new (alloc) Handle(*this, *this, alloc, *this);
 			}
 			catch (Genode::Out_of_ram)  { return OPEN_ERR_OUT_OF_RAM; }
 			catch (Genode::Out_of_caps) { return OPEN_ERR_OUT_OF_CAPS; }
+
+			return OPEN_OK;
 		}
 
 		Stat_result stat(char const *path, Stat &out) override
@@ -150,5 +106,39 @@ class Vfs::Inline_file_system : public Single_file_system
 			return result;
 		}
 };
+
+
+Vfs::File_io_service::Read_result
+Vfs::Inline_file_system::Handle::read(Byte_range_ptr const &dst, size_t &out_count)
+{
+	_fs._node.with_raw_content([&] (char const *start, size_t const len) {
+
+		/* file read limit is the size of the XML-node content */
+		size_t const max_size = len;
+
+		/* current read offset */
+		size_t const read_offset = size_t(seek());
+
+		/* maximum read offset, clamped to dataspace size */
+		size_t const end_offset = min(dst.num_bytes + read_offset, max_size);
+
+		/* source address within the XML content */
+		char const * const src = start + read_offset;
+
+		/* check if end of file is reached */
+		if (read_offset >= end_offset) {
+			out_count = 0;
+			return;
+		}
+
+		/* copy-out bytes from ROM dataspace */
+		size_t const num_bytes = end_offset - read_offset;
+
+		memcpy(dst.start, src, num_bytes);
+		out_count = num_bytes;
+	});
+
+	return READ_OK;
+}
 
 #endif /* _INCLUDE__VFS__INLINE_FILE_SYSTEM_H_ */
