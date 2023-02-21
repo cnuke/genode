@@ -30,6 +30,9 @@
 /* local includes */
 #include "lx_user.h"
 
+
+extern "C" int lx_emul_inhibit_timer_task_unblock;
+
 using namespace Genode;
 
 
@@ -174,6 +177,8 @@ struct Wlan
 		genode_uplink_init(genode_env_ptr(_env),
 		                   genode_allocator_ptr(Lx_kit::env().heap),
 		                   genode_signal_handler_ptr(_signal_handler));
+
+		lx_emul_inhibit_timer_task_unblock = 0;
 
 		lx_emul_start_kernel(nullptr);
 	}
