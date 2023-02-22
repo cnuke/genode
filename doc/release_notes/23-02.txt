@@ -1,0 +1,1199 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 23.02
+              ===============================================
+
+                               Genode Labs
+
+
+
+;intro
+; @nfeske
+
+; road map
+; * Mobile version of Sculpt OS (PinePhone)
+;   * Ready-to-use system image for first field test
+;   * Quick switch between different system scenarios as presets
+;   * On-target system update
+;   * Boot optimization
+; * Goa support for porting 3rd-party libraries to Genode
+; * Improved I/O performance (Intel GPU buffer management, VFS I/O batching,
+;   TCP throughput)
+; * Custom IP block for DMA protection on Xilinx Zynq
+; * PC suspend/resume mechanism for the base-hw kernel
+; * Optimized base-hw multimedia support (kernel scheduling, latency)
+; * Completed driver support for MNT Reform 2 laptop (i.e., Wifi)
+; * Interactive graphical VMs on ARM
+
+
+First system image of mobile Sculpt OS (PinePhone)
+##################################################
+
+; @nfeske
+
+commit f1047277f41fd23110514e121c0605c8272f7d8c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 13 14:33:26 2022 +0100
+
+    sculpt/phone: audio volume and mic controls
+
+commit 6a1eaf67402f5af60185d3065d12d9c8b54ce5fd
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 13 15:42:33 2022 +0100
+
+    Load SCP firmware for PMIC by boot loader
+    
+    The patch moves the firmware commands needed for accessing the
+    power-management IC (PMIC) from the platform driver to the SCP
+    image. This speeds up the platform-driver initialization by half
+    a second.
+    
+    Note that u-boot must be rebuilt after applying this patch:
+    
+      make u-boot/pine BOARD=pinephone
+    
+    Issue #14
+
+commit b99a28780a031778cf3269156c5bf6acb3cd42fa
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 13 16:06:43 2022 +0100
+
+    u-boot/pine: speed up ATF initialization
+    
+    - Use release mode instead of debug mode
+    - Disable log output
+    - Reduce SCP handshake timeout from 100ms to 10us
+    
+    Issue #14
+
+commit 5f738d395effaaf21132a35fb996fd9145601c56
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jan 11 18:44:21 2023 +0100
+
+    phone_manager: presets tab
+    
+    Issue #4731
+
+commit 8aa773fb6845967c5f9343e82c05caac0d8cbbab
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jan 13 16:38:39 2023 +0100
+
+    phone_manager: reflect status in software section
+
+commit a820fb02e4f66e32f980118fd7dd7d8f04ed81f7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 24 17:27:14 2023 +0100
+
+    phone_manager: on-target system update
+    
+    This patch adds new "Update" tab to the software section of the GUI,
+    which allows the user to download and install different versions of
+    system images.
+    
+    Issue #4744
+
+commit 33efa3c3aa9e1555814b50155308d4aeb4c766b4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 14:17:56 2023 +0100
+
+    sculpt: preset for camera test
+
+commit d396f4f39b00c5889f9884d57294f78d36d71997
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 14:18:14 2023 +0100
+
+    sculpt: preset for GPU test
+
+commit 39116f13e75d231ce0aa4fa1edc4fd87c8080b41
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 14:18:33 2023 +0100
+
+    sculpt: preset for nano3d
+
+commit 8aedf88d6d4fb610cca80ab76b4c712fdf3a8ee9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 14:18:48 2023 +0100
+
+    sculpt: preset for system shell
+
+commit bf2276ed70b97cd16df638e89f6815251eff29a3
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 30 15:06:36 2023 +0100
+
+    sculpt: preset for empty runtime
+
+commit 2f115df5bc6e7c5ce14d397ca7664e763896f6ea
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 30 18:18:12 2023 +0100
+
+    sculpt: preset for osci
+
+commit 3299a96e20515b8da6b416dc8f5691cb900a74ec
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 13:52:15 2023 +0100
+
+    sculpt: preset for morph_browser
+
+commit 2c0b0d726920c5bc0412df0ee0d6c683c84cf950
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 31 14:09:12 2023 +0100
+
+    sculpt: launcher for screenshot
+
+
+Interactive graphical VMs on ARM
+################################
+
+; @skalk
+
+commit 1b6563a1369150c4ba8631b276eaf62828a5c9b3
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jan 11 14:36:13 2023 +0100
+
+    vmm: implement VirtIO GPU model
+    
+    Ref genodelabs/genode#4698
+
+commit 08e080b0121602d0b75073bf6a0f0ddfa53fe47a
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Dec 9 12:00:41 2022 +0100
+
+    vmm: implement VirtIO input model
+    
+    Fix genodelabs/genode#4698
+
+commit e137999bb4092b27ebcd0128f39c6dd00beed659
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jan 11 14:17:52 2023 +0100
+
+    vmm: make initramfs an optional feature
+    
+    Fix genodelabs/genode#4723
+
+
+Custom IP block for DMA protection on Xilinx Zynq
+#################################################
+
+; @jschlatow
+
+commit 6fb1e1e6bae488f2fa19d76a317c80c58f3d6205
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Dec 16 14:45:37 2022 +0100
+
+    tool: deal with xsa containing multiple hwh files
+
+commit 7b0b0811546975b33eba7cead455ba6f8fb83f90
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Nov 11 16:42:00 2022 +0100
+
+    add xilinx axidma driver library
+    
+    The library bases on the xilinx_embeddedsw port.
+
+commit c3933e12f3705be1e4ebd0e80dbb4317f3b97a51
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Jan 17 18:42:01 2023 +0100
+
+    dma_loopback test
+    
+    This adds a run script for testing the DMA throughput with the dma_loopback
+    bitstream. The bitstream comprises two DMA IP cores, one is connected
+    via AXI_HP and the other via AXI_ACP. The ACP allows using CACHED memory
+    as DMA buffers.
+
+commit 1764372c56579e99de78ffd21fbdd823ef476020
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Jan 19 16:45:21 2023 +0100
+
+    zynq_uboot_sdcard: move uImage to /boot/uImage
+    
+    This commit changes the default uboot env to expect bitstream files and
+    uEnv.txt inside the /boot/ directory.
+    
+    Issue genodelabs/genode#4730
+
+commit f83377e63e6e130b3588fa313fd8e7cfcceba05d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Feb 22 11:06:19 2023 +0100
+
+    platform_drv: add support for control devices
+
+commit 4cef6d42c7f6a9c8c87ffc28768e97677dafe0c6
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Jan 23 16:28:56 2023 +0100
+
+    platform_drv: remove hard-coded slcr device
+    
+    With the introduction of control devices in the generic platform driver,
+    we are able to use information from the devices ROM to create control
+    devices such as the slcr device.
+
+commit 43e2e85cc63b798bc841c63fed3178975044b3aa
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Dec 21 20:58:52 2022 +0100
+
+    platform_drv: add dma_guard control device
+
+commit 719157a1a6fc9426091d8f9c22ca2d151e797407
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Feb 22 14:28:18 2023 +0100
+
+    dma_guard test
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+VFS optimization and simplification
+===================================
+
+; @nfeske
+
+commit a15c8943854f3a21b663a0c431beb5f2ffe4ef59
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Dec 2 11:29:40 2022 +0100
+
+    file_system_session: increase TX_QUEUE_SIZE to 32
+    
+    The change of the queue size from 16 to 32 has negligible costs (4 KiB
+    instead of 2 KiB for the packet-stream queues) while facilitating the
+    batching of many small consecutive write operations.
+    
+    Issue #4697
+
+commit 6edede0db9faee6fbd280c10349064faee875e7b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Dec 2 15:54:44 2022 +0100
+
+    server/vfs: facilitate batching of requests
+    
+    By replacing the calls of 'acknowledge_packet' and 'get_packet' with
+    'try_ack_packet' and 'try_get_packet', we avoid the implicit triggering
+    of data-flow signals. Instead, the VFS server now relies on explicit
+    calls of the packet stream's 'wakeup' interface.
+    
+    Issue #4697
+
+commit 9421a449ab377bf95484294259ba87155cac2ce1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Dec 1 16:41:27 2022 +0100
+
+    test/libc_many_writes for examining write batching
+    
+    This test reveals the patters of the batching of consecutive write
+    operations on a file-system session. It issues 100 writes of one byte
+    each, which should ideally result in large batches of operations
+    submitted to the file-system session at once.
+    
+    The run script performs the write operations through a chain of two VFS
+    servers, thereby exercising the write batching of both the libc and the
+    intermediate VFS server.
+    
+    Issue #4697
+
+commit 7d8d4f4532545a63aa7609799e309919617152b3
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Dec 2 09:53:16 2022 +0100
+
+    vfs,libc: deferred wakeup of remote peers
+    
+    This patch facilitates the batching of I/O operations in the VFS library
+    by replacing the implicit wakeup of remote peer (via the traditional
+    packet-stream interface like 'submit_packet') by explicit wakeup
+    signalling.
+    
+    The wakeup signalling is triggered not before the VFS user settles down.
+    E.g., for libc-based applications, this is the case if the libc goes
+    idle, waiting for external I/O.
+    In the case of a busy writer to a non-blocking file descriptor or socket
+    (e.g., lighttpd), the remote peers are woken up once a write operation
+    yields an out-count of 0.
+    
+    The deferring of wakeup signals is accommodated by the new 'Remote_io'
+    mechanism (vfs/remote_io.h) that is designated to be used by all VFS
+    plugins that interact with asynchronous Genode services for I/O.
+    
+    Issue #4697
+
+commit e9541605ab856c3f4c65afb05414d4d5ae0e62df
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Dec 3 13:49:53 2022 +0100
+
+    ports: lighttpd_fetchurl.run script
+    
+    This networking scenario is useful for analysing and optimizing the
+    interplay of the VFS, libc, TCP/IP, and the NIC router. It downloads a
+    file via fetchurl from lighttpd, both of which are hosted on a virtual
+    network.
+    
+    Issue #4697
+
+commit 8a9974b6f9162d61a28b8bd629d63d55b01cd3af
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Dec 3 18:50:25 2022 +0100
+
+    vfs/lwip: deferred wakeup of NIC server
+    
+    This patch fosters the batching of network packets transferred by the
+    lwIP stack over the NIC connection. It replaces the eager submission of
+    the packet-stream's data-flow signals by explicit wakeup notifications.
+    
+    The commit also increases the NIC session's buffer size from 128 to 1024
+    packets.
+    
+    Issue #4697
+
+commit d9f5dda322291ea2286d5cd85cf24b225db1feea
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Dec 3 22:00:59 2022 +0100
+
+    lwip: increase TCP send buffer 32->80 packets
+    
+    Issue #4697
+
+commit 5ad98f2b7c7f9a9aaafe7b2aff68a5773f1726b8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Dec 7 14:06:35 2022 +0100
+
+    vfs,libc: introduce Vfs::Env::User interface
+    
+    The new interface is meant to replace the 'Vfs::Io_response_handler'.
+    In contrast to the 'Io_response_handler', which had to be called
+    on a 'Vfs_handle', the new interface does not require any specific
+    'Vfs_handle'. It is merely meant to prompt the VFS user (like the libc)
+    to re-attempt stalled I/O operations but it does not provide any
+    immediate hint, about which of the handles have become ready for
+    reading/writing.
+    
+    Issue #4697
+
+commit ff2176a586cc151209c5bc01977063158f67d927
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 6 19:11:44 2022 +0100
+
+    vfs,libc: support write fds in select
+    
+    By adding a 'write_ready' interface following the lines of the existing
+    'read_ready', VFS plugins become able to propagate the (de-)saturation
+    of I/O buffers to the VFS user. This information is important when using
+    a non-blocking file descriptor for writing into a TCP socket. Once the
+    application observes EAGAIN, it expects a subsequent 'select' call to
+    return as soon as new I/O buffer space becomes available.
+    
+    Before this patch, the select call would always return under this
+    condition, causing an unnecessarily busy write loop.
+    
+    Issue #4697
+
+commit bb904b9166075f2380e339251a90a37031631053
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Dec 21 14:51:48 2022 +0100
+
+    vfs: propagate I/O activity via 'wakeup_vfs_user'
+    
+    This commit supplements the various I/O signal handlers of the VFS
+    plugins with calls of the new 'Vfs::Env::User::wakeup_vfs_user'
+    interface, which will subsequently replace the old 'Io_progress_handler'
+    (issue #4697).
+    
+    Issue #4706
+
+commit ddeaccf7283bda90173e7e494c9da0eefdd1eb69
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jan 6 15:21:12 2023 +0100
+
+    vfs: documentation of Vfs::Env::User
+    
+    Issue #4706
+
+commit f2a762ff49f68af59c189ead0d293f536dd0603e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jan 27 20:06:02 2023 +0100
+
+    os/vfs.h: read loop in Readonly_file::read
+    
+    This patch improves the Readonly_file::read method such that the
+    capacity of the specified buffer is used as upper bound for the read
+    operation instead of VFS-internal I/O buffer sizes. This relieves the
+    caller from implementing a read loop in most cases.
+    
+    As a step away from C-ish use of the API, the patch deprecates the old
+    'read' method that takes the buffer as char *, size_t arguments.
+    
+    Fixes #4745
+
+commit 66c8d51b4844c715ed371ef3edcb3e2eadb744cd
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Jan 28 17:07:05 2023 +0100
+
+    Don't use deprecated Readonly_file::read variants
+    
+    Issue #4745
+
+commit 063fc80eee1bbc4c8c0d6bea4878a7eafa8c90dd
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Feb 9 15:07:24 2023 +0100
+
+    vfs: remove 'file_size' from read/write interfaces
+    
+    The 'file_size' type denotes the size of files on disk in bytes. On
+    32-bit architectures it is larger than the size_t, which refers to
+    in-memory object sizes.
+    
+    Whereas the use of 'file_size' is appropriate for ftruncate and seek, it
+    is not a suitable type for the parameters of read/write operations
+    because those operations refer to in-memory buffers.
+    
+    This patch replaces the use of 'file_size' by size_t. However, since it
+    affects all sites where the read/write interface is uses, it takes the
+    opportunity to replace the C-style (pointer, size) arguments by
+    'Byte_range_ptr' and 'Const_byte_range_ptr'.
+    
+    Issue #4706
+
+
+GPU performance optimizations
+=============================
+
+; @ssumpf, @cnuke
+
+commit 77ff380d937eeb9257cf91f81fe15b148258af3e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Dec 16 17:51:55 2022 +0100
+
+    gpu_session: VRAM interface
+    
+    Change the abstraction from buffers to video RAM (VRAM). The notion of
+    buffers can be provided at the client side (e.g., Mesa) and multiple
+    buffers can be there be associated to one VRAM area, thus saving
+    resources (meta data overhead) when allocating many buffers. A VRAM area
+    can also be mapped to one single buffer as before for clients or drivers
+    that do not take advantage of this feature.
+    
+    issue #4713
+
+commit 15300e53da6cb25e73d53aeb3e726725b3161667
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Dec 16 20:41:27 2022 +0100
+
+    libdrm/iris: remove unsused functions
+    
+    * 'map_buffer', GTT mappings are currently not used by Iris
+    * 'set_tiling', tiling is currently not used by Iris because there are
+      no GTT mappings
+    
+    issue #4713
+
+commit 1a9dd1d46c5b96ac4d6548ccc2d8d80e185b767d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Dec 18 16:49:28 2022 +0100
+
+    ibdrm/iris: add VRAM support
+    
+    Allocate 16MB or larger chunks and implement buffer abstraction for Iris
+    which possible share VRAM.
+    
+    issue #4713
+
+commit 4bbc04ab6cafac154499ea1a8afa1400668455c8
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Dec 18 18:19:08 2022 +0100
+
+    gpu/intel: add VRAM support
+    
+    Remove buffer abstraction and replace it by VRAM objects.
+    
+    issue #4713
+
+commit 098a0d5a8834082ff23630adcbef1f02ebc9d4bf
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Feb 9 15:13:07 2023 +0100
+
+    fixup "gpu/intel: add VRAM support"
+
+commit 51c2c9153e73902d0a22a8155fec66a6e7b7b295
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jan 3 10:26:58 2023 +0100
+
+    libdrm/lima+etnaviv: adjust to VRAM GPU session interface
+    
+    Keep buffer abstraction by mapping one buffer to one VRAM object.
+    
+    issue #4713
+
+commit 9d48c28f9bfacfe6a89d28073470b84c3eed7ddf
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Jan 20 18:56:16 2023 +0100
+
+    gpu_session: add notes to interface
+    
+    Describe differences for Intel and Lima (Mali) based GPUs.
+    
+    issue #4713
+
+commit 99370f2f40064df96096ce35cae7b4bc95b3c815
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Tue Dec 20 16:10:16 2022 +0000
+
+    libdrm/lima: refactor session and context handling
+    
+    Merge 'Gpu_session' and 'Gpu_context' and create the main session
+    as context.
+    
+    Issue #4760.
+
+commit 3a217e2460577f5fcc552b24a656e2f2cad4323b
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Tue Dec 20 16:16:14 2022 +0000
+
+    libdrm/lima: rename Syncobj_space
+    
+    Align the naming with the 'Gpu_context_space'.
+    
+    Issue #4760.
+
+commit 98d6111a8e4ecb8ba652ce22d335fd198fbd8d3d
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Tue Dec 20 17:35:47 2022 +0000
+
+    libdrm/lima: handle unknown buffer ids gracefully
+    
+    Issue #4760.
+
+commit e562c5e7459e98f965ee6ddecb7234806179b3ca
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Tue Dec 20 17:34:01 2022 +0000
+
+    libdrm/lima: check buffer id in WAIT
+    
+    Issue #4760.
+
+commit 1ff6d1a56335daebfcc5af5dc89f2c36c8a97196
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Jan 10 18:16:00 2023 +0100
+
+    libdrm/lima: introduce disjunct contexts
+    
+    Prior to this change the libdrm Lima implementation supported the
+    creation of multiple contexts where each context, however, was
+    treated as the same client like it was done in the Lima driver
+    itself.
+    
+    With this commit each context becomes its own client while the
+    main context always performs all buffer object related allocation
+    and the other context import each needed BO before submitting.
+    
+    Fixes #4760.
+
+commit 8584fbc37350c90a27a03cafc26b9f384ed1dde1
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jan 3 10:47:06 2023 +0100
+
+    gpu/lima: adjust to VRAM GPU session interface
+    
+    Map one buffer to one VRAM object.
+    
+    genodelabs/genode#4713
+
+commit db610dab3234e5ddafb5929b225ca73414dc4c5d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Jan 20 18:40:07 2023 +0100
+
+    gpu_session: rename Gpu::Virtual_address:va
+    
+    rename 'va' into 'value' to stay consistent with other types.
+    
+    issue #4713
+
+commit 41077afa73706edffe7250be27819ba310ef8ab3
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Feb 10 13:40:01 2023 +0100
+
+    gpu/lima: properly implement context handling
+    
+    The prior implementation already supported creating multiple contexts
+    but from the point of view of Linux they still where the same client
+    and furthermore there was only on Lx::Task handling the communication.
+    This prohibited the support of concurrently operating disjunct clients
+    as well as complicated the client-side processing in multi-threaded
+    components.
+    
+    This commit changes the implementation by modelling each Gpu::Session
+    as its own client whose requests are processed by its own Lx::Task.
+    Like with the Intel GPU multiplexer Vram objects are exported and
+    imported accordingly.
+    
+    Fixes #15.
+
+
+More flexible ACPI-event handling
+=================================
+
+; @chelmuth
+
+commit 0bc124aff980188e3b2d8977a0f112653c2366b1
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Tue Jan 31 16:33:13 2023 +0100
+
+    acpi_event: generalize config for any key
+    
+    Fixes #4748
+
+
+Base API changes
+================
+
+; @nfeske
+
+commit d5d2146034b13e01c1f0f1cafd2a58336a8787f9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Feb 9 11:26:57 2023 +0100
+
+    util/string.h: add 'Const_byte_range_ptr'
+    
+    The new 'Const_byte_range_ptr' type is suitable as argument type that
+    refers to a read-only byte buffer, e.g., the source buffer of a write
+    operation.
+
+commit 11dbfafbafdb485bd8a5ba9646e1cb0b27193c75
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Feb 21 14:15:08 2023 +0100
+
+    Remove base/debug.h
+    
+    Fixes #4765
+
+commit 7c398f4f2fca584748ed22e1db25af317a52e0f7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Feb 21 14:42:07 2023 +0100
+
+    util/misc_math.h: remove abs function
+    
+    Fixes #4766
+
+commit da896edd49409369eccf66fb5c56c99bd35a8a94
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Feb 21 15:33:12 2023 +0100
+
+    base: remove base/blocking.h
+    
+    This patch removes the obsolete exception type 'Blocking_canceled'.
+    
+    Issue #4768
+
+commit 29c8ebad2edddeb4502785f0fd1f6f7ce329be7e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Feb 21 16:35:23 2023 +0100
+
+    Remove base/lock_guard.h
+    
+    For Genode API users, the 'Mutex::Guard' is the way to go.
+    Special lock implementations can bring their own 'Guard' utilities.
+    
+    Fixes #4769
+
+
+Sculpt OS infrastructure
+########################
+
+; @nfeske
+
+On-target system-update mechanism
+=================================
+
+commit 80a08e562782aba573eaad1be330b0a3e2df342b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Jan 19 16:55:08 2023 +0100
+
+    sculpt: supplement build info as boot module
+    
+    This allows us to reflect the information about the running image to the
+    user.
+    
+    Issue #4744
+
+commit 585007eec19a81c54f9aaa5b29fa3bf2ac9d29cf
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 24 15:36:26 2023 +0100
+
+    sculpt_image.run script for creating system images
+    
+    Issue #4744
+
+commit 26c73773b90e0fbff3bc822dcc11ccc4f46a08d2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jan 20 10:14:43 2023 +0100
+
+    tool/depot/publish: support system images
+    
+    This patch equips the publish tool to handle system images.
+    
+    System images reside at <depot-user/image/. The directory contains an
+    index file that contains the meta information of the available images
+    in XML form, e.g.,
+    
+      <index>
+        <image name="sculpt-pinephone-2023-01-19" board="pinephone">
+           <info text="initial version"/>
+        </image>
+      </index>
+    
+    To publish a new version of the index:
+    
+      ./tool/depot/publish <depot-user>/image/index
+    
+    Each system image comes in two forms, a bootable disk image and an
+    archive of the boot directory. The bootable disk image can be used to
+    install a new system from scratch by copying the image directly ot a
+    block device. It contains raw block data. The archive of the boot
+    directory contains the content needed for an on-target system update to
+    this version. Within the depot, this archive a directory - named after
+    the image - that contains the designated content of the boot directory
+    on target. Depending on the board, it may contain only a single file
+    loaded by the boot loader (e.g., uImage), or several boot modules, or
+    even the boot-loader configuration.
+    
+    To publish both forms:
+    
+      ./tool/depot/publish <depot-user>/image/<image-name>
+    
+    This results in the following - accompanied by their respective .sig
+    files - in the public directory:
+    
+      <depot-user>/image/<image-name>.img.gz  (disk image)
+      <depot-user>/image/<image-name>.tar.xz  (boot archive)
+      <depot-user>/image/<image-name>.zip     (disk image)
+    
+    The .zip file contains the .img file. It is provided for users who
+    download the image on a system with no support for .gz.
+    
+    Fixes #4735
+    Issue #4744
+
+commit cc5ced58146385d12017935af6f51a5107f79a39
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 23 16:42:46 2023 +0100
+
+    depot_download,depot_query: support system images
+    
+    This patch enhances the depot_download subsystem with support for
+    downloading and querying system images.
+    
+    The installation ROM support the following two now download types:
+    
+      <image_index path="<user>/image/index"/>
+      <image       path="<user>/image/<name>"/>
+    
+    Internally, the depot-download subsystem employs the depot-query
+    component to determine the missing depot content. This component
+    accepts the following two new queries:
+    
+      <images      user="..."/>
+      <image_index user="..."/>
+    
+    If present in the query, depot_query generates reports labeled as
+    "images" and "image_index" respectively.
+    
+    The also tracks the completion of each job depending on the depot-
+    query results, so that the final report contains a result for each
+    installation item requested. Prior this patch, the inactivity of the
+    depot-download manager (indicated by an empty state report) was
+    interpreted as success. But that prevents the proper association of
+    results and requested installation items.
+    
+    Issue #4744
+
+Rapid switching between different deploy presets
+================================================
+
+commit 88becbe29d92424ed7edb0233af6cfce40a2ab0c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 10 13:42:47 2023 +0100
+
+    sculpt: integration of optional presets
+    
+    With the new 'presets:' tag, .sculpt files can now refer to deploy
+    configurations to be integrated in the presets/ subdirectory of the
+    config file system. Those files can thereby be used as preconfigured
+    system scenarios. Such a preconfigured scenario can be loaded at
+    runtime by copying the preset file to config/deploy.
+    
+    Issue #4731
+
+
+Device drivers
+##############
+
+NXP i.MX PCIe, networking, USB
+==============================
+
+; @skalk
+
+commit 5dccf99e485771088774b0cd7a546457c9f24338
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed May 11 14:56:28 2022 +0200
+
+    Adapt to changes of the generic platform_drv
+    
+    Especially address that the devices ROM consumed by the platform
+    driver is now separated from the configuration by default.
+    
+    Driver packages for:
+    * drivers_nic-imx53_qsb
+    * drivers_nic-imx6q_sabrelite
+    * drivers_nic-imx7d_sabre
+    were formerly part of the Genode's main repository but got moved
+    to the repository due to work of issue #4491.
+    
+    Ref genodelabs/genode#4386
+    Ref genodelabs/genode#4491
+    Ref genodelabs/genode#4496
+    Ref genodelabs/genode#4497
+    Ref genodelabs/genode#4502
+    Ref genodelabs/genode#4503
+    Ref genodelabs/genode#4504
+
+commit 58a8a2c13aad8a9c0c9902ddea6fae03619626cf
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Aug 2 15:41:01 2021 +0200
+
+    mnt_reform2: enable PCI-x IOMUXC settings
+
+commit 56cf717a080c6ad09f43fc4caf03a92ac81a38a9
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon May 16 16:04:01 2022 +0200
+
+    mnt_reform2: add Pcie host controller settings
+
+commit 05b2a5063546361bcc0f783c0d6a00f230407e96
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon May 16 16:07:03 2022 +0200
+
+    imx8mq: add Pcie host controller driver
+    
+    The driver configures all devices it gets assigned, and scans
+    the first device behind the Pcie controller. All devices it
+    finds are summarized in a platform driver compatible PCI device
+    report.
+
+commit be55ddb61fe42bedcbcb07ea5181f0f2b45a29fc
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 19 16:32:34 2022 +0200
+
+    imx8mq_*_drv: adapt to changed lx_emul pathes
+    
+    Ref genodelabs/genode#4510
+
+commit 5f3da641a580f2bf17c759373bf098a2b121e9fb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Oct 14 17:19:34 2022 +0200
+
+    sculpt imx8*: integrate nvme in sculpt
+    
+    * Provide imx8mq specific driver manager, which starts sd_card driver,
+      and NVME driver if available
+    * Introduce drivers_managed-* packages to reduce duplications in
+      Sculpt flavors
+    * Integrate PCI host driver and NVME driver in Sculpt for MNT Reform 2
+
+commit 815b2fcdcbf4b663b4adb85cefe2c0459a2087d9
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 14:50:43 2022 +0200
+
+    imx6q_platform_drv: introduce SoC specific version
+    
+    The new platform driver for i.MX 6Quad is derived from the generic
+    implementation. It adds rudimentary support for network clocks.
+    
+    Ref genodelabs/genode#4651
+
+commit c126dd02f618e68c65da0664a540870583e4081f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 14:52:44 2022 +0200
+
+    imx7d_platform_drv: introduce SoC specific version
+    
+    The new platform driver for i.MX 7Dual is derived from the generic
+    implementation. It adds rudimentary support for network clocks.
+    
+    Ref genodelabs/genode#4651
+
+commit a7bdd5cbdce98371e22fc3ff1330d6ac6b29ef88
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 26 17:16:05 2022 +0200
+
+    introduce fec_nic_driver on mnt_reform2_linux base
+    
+    Ref genodelabs/genode#4651
+
+commit 80c7f995a54db5e795a6d58daefc00ea0c70b7b7
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Nov 8 12:09:35 2022 +0100
+
+    imx8q_evk: enable host-controller driving USB-C
+    
+    Patch the vanilla i.MX8MQ EVK device-tree provided by Linux to
+    enable the first USB host controller in addition to the second one,
+    which is used to drive the USC-C connector of the EVK board.
+
+
+NVMe
+====
+
+; @cnuke
+
+commit 7e5af1b7a5a8565f8216a97221bc4e36f17369bd
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Mon Jan 2 20:39:17 2023 +0000
+
+    nvme_drv: move PRP list helper construction
+    
+    Since the 'Platform::Device' constructor will defer the creation until
+    the content of the devices ROM is valid performing the PRP list helper
+    creation afterwards should be done with valid IOMMU information.
+    
+    Issue #4715.
+
+commit 63ff0ee869d0369ef5bf30aa658fb82610ecea6f
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Thu Dec 22 13:59:59 2022 +0000
+
+    nvme_drv: allow for accessing admin cmd results
+    
+    Up to now it was only checked if an issued admin command was processed
+    in a timely fashion. Otherwise it has been treated as failed.
+    However, the completion-queue entry was not examined and the caller was
+    not able to access the entry itself. Depending on the command, checking
+    the completion-queue entry might be necessary, e.g. GET/SET_FEATURE.
+    
+    Issue #4715.
+
+commit 827aa9586e5a07229f37ef0918f2159b54f4787a
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Sun Nov 13 20:11:16 2022 +0000
+
+    nvme_drv: provide get/set feature command
+    
+    These admin commands are used to configure features of the NVMe device.
+    
+    Issue #4715.
+
+
+Realtek Wifi
+============
+
+; @cnuke
+
+commit d27bd158093aa9d069b4a19aaac53cfc843a9414
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Wed Jan 4 12:03:27 2023 +0000
+
+    wifi/pc: add rtlwifi driver
+    
+    Due to lacking hardware access the driver was test with one RTL8188EE
+    based device, namely [10ec:8179] (rev 01), only. As the access to the
+    PCI config space is restricted the driver loads the non power-saving
+    FW and the driver port is therefor only tested with that. The
+    accesses are documented should we choose to support them one way or
+    another later on.
+    
+    The 'wifi.run' run script as well as Sculpt served as testing ground
+    where the driver worked fine so far.
+    
+    Fixes #4714.
+
+commit d27bd158093aa9d069b4a19aaac53cfc843a9414
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Wed Jan 4 12:03:27 2023 +0000
+
+    wifi/pc: add rtlwifi driver
+    
+    Due to lacking hardware access the driver was test with one RTL8188EE
+    based device, namely [10ec:8179] (rev 01), only. As the access to the
+    PCI config space is restricted the driver loads the non power-saving
+    FW and the driver port is therefor only tested with that. The
+    accesses are documented should we choose to support them one way or
+    another later on.
+    
+    The 'wifi.run' run script as well as Sculpt served as testing ground
+    where the driver worked fine so far.
+    
+    Fixes #4714.
+
+
+Platforms
+#########
+
+Base-HW microkernel
+===================
+
+; @m-stein, @skalk
+
+commit e8f748cfed5901bc0deb00cba54db8bfd864dad6
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Dec 8 17:15:06 2021 +0100
+
+    base-hw: unprivileged cache maintenance on ARMv8
+    
+    Set 'Sctlr_el1::Uci' bit to allow for executing cache clean and
+    invalidate instruction from user space.
+    
+    Issue #4339.
+
+commit 66fd027b962d8f9288c083d50ecdd5944818a180
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Dec 13 15:32:21 2021 +0100
+
+    base-hw: introduce 'cache_line_size' call
+    
+    This call is used to query the cache line size of the underlying CPU.
+    For now it is only implemented and used by 'arm_v8' platforms.
+    
+    It does not distinguish between D-/I-cache sizes and always uses the
+    smallest size. Furthermore it does not account for any discrepancy
+    in 'big.little' CPUs.
+    
+    Issue #4339.
+
+commit 08c56e61e16e1b5f6dd12f3469140027e3c83e59
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Dec 19 11:17:43 2022 +0100
+
+    hw: avoid overhead for cache maintainance
+    
+    When running on x86, and riscv never enter the kernel for cache maintainance,
+    but use the dummy implementation of the generic base library instead.
+    
+    On ARMv8 it is not necessary to enter privileged mode for cache cleaning, and
+    unification of instruction/data cache, but only for invalidating cache lines
+    at all levels, which is necessary for the use cases, where this function it
+    needed (coherency of DMA memory).
+    
+    Fix genodelabs/genode#4339
+
+
+Scheduling improvements for interactive workloads
+-------------------------------------------------
+
+commit fc690f1c47ef316f46e0919b10715648c124a080
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Dec 16 11:53:27 2022 +0100
+
+    hw: re-work the ipc node's internal state machine
+    
+    * Split the internal state into incoming and outgoing message relations
+    * Avoid fragmenting of one state like formerly '_state' and '_help'
+    * Remove pointer to caller, use incoming FIFO instead
+    
+    This commit fixes at least two bugs that were triggered by tests that
+    destroy threads in many different states, like run/bomb:
+    
+    * The '_help' data member was not reset reliable in each situation where a
+      helping relationship came to an end. However, when we fixed this bug alone
+      in the old state model, the issues remained. The new state model fixes
+      this bug as well.
+    
+    * A thread sometimes referenced an already dead thread as receiver. This caused
+      the kernel IPC code to access the vtable of an object that didn't exist any
+      longer. Note that the two threads were not in direct IPC relationship while
+      the receiver was destroyed, so, there must have been an intermediate node
+      between them. Due to the complexity of this problem, we eventually gave up
+      pin-pointing the exact reason in the kernel IPC code. The issue disappeared
+      with the new state model.
+    
+    Fix genodelabs/genode#4704
+
+commit 0467b4aaf33be16f298a43481432731021bd97e9
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Dec 21 19:33:23 2022 +0100
+
+    base-hw scheduler: optimize quota depletion events
+    
+    This is an optimization for the case that a prioritized scheduling context
+    needs slightly more time during a round than granted via quota. If this is the
+    case, we move the scheduling context to the front of the unprioritized schedule
+    once its quota gets depleted and thereby at least ensure that it does not have
+    to wait for all unprioritized scheduling contexts as well before being
+    scheduled again.
+    
+    Note that this introduces the possibility of undeserved starvation of
+    unprioritized scheduling contexts to the scheduling scheme. If there are
+    enough prioritized contexts that deplete their quota during a round,
+    they may cover up also the rest of the round with their unprioritized time
+    slices. If this happens every round, contexts without a priority/quota may
+    never get a turn. In the previous scheduling scheme, this could not occur as
+    the unprioritized schedule was completely independent from prioritized
+    schedules and rounds.
+    
+    Ref #4151
+    Ref #4710
+
+
+NOVA microhypervisor
+====================
+
+; @alex-ab
+
+commit 377f2166a131835cbab90d4fc33998f83b3738e2
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Dec 1 11:38:03 2022 +0100
+
+    nova: support detection of Intel P & E CPUs
+    
+    Fixes #4694
+
+
+Build system and tools
+######################
+
+Building and packaging CMake-based shared libraries (via Goa)
+=============================================================
+
+; @nfeske
+
+
+New tool for querying metadata of ports
+=======================================
+
+; @chelmuth
+
+commit 07d02f8d4654956465c29594b55d7549a2d8b26b
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Jan 20 15:22:12 2023 +0100
+
+    tool/port: access to metadata of ports
+    
+    Fixes #4685
+
+
+Run-tool changes
+================
+
+; @nfeske
+
+commit ed9a8299b2c024b1e3c9611e919e1a09081ae8a2
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Dec 1 12:18:42 2022 +0100
+
+    run/image/uboot: merge with uboot_fit
+    
+    Both modules were quite similar except the the name of the FIT image
+    (image.itb) and the mkimage command line. FIT images are now produced by
+    the following RUN_OPT.
+    
+      RUN_OPT += --include image/uboot --image-uboot-fit
+    
+    Issue #4693
+
+commit a7a5c5ce5448d3833181e4618b26416dfa970ac6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jan 18 17:23:14 2023 +0100
+
+    run/image/uboot: move uImage to boot/
+    
+    This patch changes the 'run_image' function to replace a boot/image.elf
+    file by the corresponding boot/uImage file.
+    
+    Issue #4730
+
