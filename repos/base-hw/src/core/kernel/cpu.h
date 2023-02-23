@@ -120,7 +120,7 @@ class Kernel::Cpu : public Genode::Cpu, private Irq::Pool, private Timeout
 
 			void proceed(Kernel::Cpu &) override;
 
-			Kernel::Cpu_job* helping_destination() override { return nullptr; }
+			Kernel::Cpu_job* helping_destination() override { return this; }
 		} _halt_job { };
 
 		enum State { RUN, HALT, SUSPEND };
