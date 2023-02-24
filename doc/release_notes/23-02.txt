@@ -459,109 +459,137 @@ a write operation.
 On-target system-update and rollback mechanism
 ##############################################
 
-; @nfeske
+For the mobile version of Sculpt OS as covered in
+Section [First system image of mobile Sculpt OS (PinePhone)],
+we envisioned easy-to-use system updates that would enable us to quickly
+iterate based on the feedback of early field testers.
 
-commit 80a08e562782aba573eaad1be330b0a3e2df342b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Jan 19 16:55:08 2023 +0100
+This topic confronted us with a variety of concerns. Just to name a few,
+conventions for booting that would not require changes in the future,
+equipping (system) images with self-reflecting version information,
+tools for generating and publishing digitally signing images,
+on-target discovery of new image versions,
+secure downloading and cryptographic checking of new images,
+directing the machine's boot loader to use the new version, and
+possibly reverting to an earlier version.
 
-    sculpt: supplement build info as boot module
-    
-    This allows us to reflect the information about the running image to the
-    user.
-    
-    Issue #4744
+Fortunately, most of these concerns have a lot in common with the problems
+we had to address for Genode's
+[https://genode.org/documentation/release-notes/18.02#On-target_package_installation_and_deployment - package management].
+For example, the off-target and on-target tooling for digital signatures, or
+the notion a depot and software providers (depot users) is established
+and time-tested by now.
 
-commit 585007eec19a81c54f9aaa5b29fa3bf2ac9d29cf
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 24 15:36:26 2023 +0100
 
-    sculpt_image.run script for creating system images
-    
-    Issue #4744
+Self-reflecting version information
+-----------------------------------
 
-commit 26c73773b90e0fbff3bc822dcc11ccc4f46a08d2
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jan 20 10:14:43 2023 +0100
+To allow a running Sculpt system to know its own version, the sculpt.run
+script generates an artificial boot module named "build_info", which can
+be evaluated at runtime by the sculpt-manager component.
 
-    tool/depot/publish: support system images
-    
-    This patch equips the publish tool to handle system images.
-    
-    System images reside at <depot-user/image/. The directory contains an
-    index file that contains the meta information of the available images
-    in XML form, e.g.,
-    
-      <index>
-        <image name="sculpt-pinephone-2023-01-19" board="pinephone">
-           <info text="initial version"/>
-        </image>
-      </index>
-    
-    To publish a new version of the index:
-    
-      ./tool/depot/publish <depot-user>/image/index
-    
-    Each system image comes in two forms, a bootable disk image and an
-    archive of the boot directory. The bootable disk image can be used to
-    install a new system from scratch by copying the image directly ot a
-    block device. It contains raw block data. The archive of the boot
-    directory contains the content needed for an on-target system update to
-    this version. Within the depot, this archive a directory - named after
-    the image - that contains the designated content of the boot directory
-    on target. Depending on the board, it may contain only a single file
-    loaded by the boot loader (e.g., uImage), or several boot modules, or
-    even the boot-loader configuration.
-    
-    To publish both forms:
-    
-      ./tool/depot/publish <depot-user>/image/<image-name>
-    
-    This results in the following - accompanied by their respective .sig
-    files - in the public directory:
-    
-      <depot-user>/image/<image-name>.img.gz  (disk image)
-      <depot-user>/image/<image-name>.tar.xz  (boot archive)
-      <depot-user>/image/<image-name>.zip     (disk image)
-    
-    The .zip file contains the .img file. It is provided for users who
-    download the image on a system with no support for .gz.
-    
-    Fixes #4735
-    Issue #4744
+! <build_info genode_version="22.11-260-g89be3404c0d"
+!             date="2023-01-19" depot_user="nfeske" board="pinephone">
 
-commit cc5ced58146385d12017935af6f51a5107f79a39
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Jan 23 16:42:46 2023 +0100
 
-    depot_download,depot_query: support system images
-    
-    This patch enhances the depot_download subsystem with support for
-    downloading and querying system images.
-    
-    The installation ROM support the following two now download types:
-    
-      <image_index path="<user>/image/index"/>
-      <image       path="<user>/image/<name>"/>
-    
-    Internally, the depot-download subsystem employs the depot-query
-    component to determine the missing depot content. This component
-    accepts the following two new queries:
-    
-      <images      user="..."/>
-      <image_index user="..."/>
-    
-    If present in the query, depot_query generates reports labeled as
-    "images" and "image_index" respectively.
-    
-    The also tracks the completion of each job depending on the depot-
-    query results, so that the final report contains a result for each
-    installation item requested. Prior this patch, the inactivity of the
-    depot-download manager (indicated by an empty state report) was
-    interpreted as success. But that prevents the proper association of
-    results and requested installation items.
-    
-    Issue #4744
+Formalism for generating images and image metadata
+--------------------------------------------------
+
+To enable Sculpt system to easily detect new versions, system images must be
+accompanied by metadata discoverable at a known location. This information
+is provided by a so-called image-index file located at
+_depot/<user>/image/index_. The image index of a depot user lists the
+available images in XML form, e.g.,
+
+! <index>
+!   <image os="sculpt" board="pinephone" version="2023-01-19">
+!      <info text="initial version"/>
+!   </image>
+!   ...
+! </index>
+
+The 'os', 'board', and 'version' attributes can be used to infer the
+file name of the corresponding image file. The '<info>' nodes contains
+a summary of changes as information for the end user.
+
+The new _gems/run/sculpt_image.run_ Sculpt provides assistance with
+generating appropriately named images, placing them into the depot,
+and presenting a template for the manually curated image index.
+
+
+Signing and publishing
+----------------------
+
+For signing and publishing system images and image indices, we extended
+the existing _tool/depot/publish_ tool. To publish a new version of an
+image index:
+
+! ./tool/depot/publish <depot-user>/image/index
+
+Each system image comes in two forms, a bootable disk image and an archive of
+the boot directory. The bootable disk image can be used to install a new
+system from scratch by copying the image directly to a block device. It
+contains raw block data. The archive of the boot directory contains the
+content needed for an on-target system update to this version. Within the
+depot, this archive a directory - named after the image - that contains the
+designated content of the boot directory on target. Depending on the board, it
+may contain only a single file loaded by the boot loader (e.g., uImage), or
+several boot modules, or even the boot-loader configuration. The following
+command publishes both forms:
+
+! ./tool/depot/publish <depot-user>/image/<image-name>
+
+This results in the following - accompanied by their respective .sig
+files - in the public directory:
+
+! <depot-user>/image/<image-name>.img.xz  (disk image)
+! <depot-user>/image/<image-name>.tar.xz  (boot archive)
+! <depot-user>/image/<image-name>.zip     (disk image)
+
+The .zip file contains the .img file. It is provided for users who
+download the image on a system with no support for .xz.
+
+
+On-target image discovery, download, and verification
+-----------------------------------------------------
+
+To enable a running Sculpt system to fetch image index files and images, the
+existing depot-download component accepts the following two new download
+types:
+
+! <image_index path="<user>/image/index"/>
+! <image       path="<user>/image/<name>"/>
+
+Internally, the depot-download subsystem employs the depot-query
+component to determine the missing depot content. This component
+accepts the following two new queries:
+
+! <images      user="..."/>
+! <image_index user="..."/>
+
+If present in the query, depot_query generates reports labeled as
+"images" and "image_index" respectively. These reports are picked up by
+the depot-download component to track the completion of each job.
+The reported information is also used by the system updater to get hold of
+the images that are ready to install.
+
+
+On-target image installation and rollback
+-----------------------------------------
+
+Once downloaded into the local depot of a Sculpt system, the content
+of boot directory for a given image version is readily available, e.g.,
+
+! depot/nfeske/image/sculpt-pinephone-2023-02-02/uImage
+
+The installation comes down to copying this content to the _/boot/_ directory.
+On the next reboot, the new image is executed.
+
+When subsequently downloading new image versions, the old versions stay
+available in the depot is sibling directories. This allows for an easy
+rollback by copying the boot content of an old version to the _/boot/_
+directory.
+
 
 Device drivers
 ##############
