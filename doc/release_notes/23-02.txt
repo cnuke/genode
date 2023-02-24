@@ -30,130 +30,44 @@
 First system image of mobile Sculpt OS (PinePhone)
 ##################################################
 
-; @nfeske
+Just in time for our
+[https://fosdem.org/2023/schedule/event/genode_on_the_pinephone/ - public presentation]
+of Genode on the PinePhone at FOSDEM in the beginning of February,
+we published a first ready-to-use system image:
 
-commit f1047277f41fd23110514e121c0605c8272f7d8c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Dec 13 14:33:26 2022 +0100
+:First system image of mobile Sculpt OS:
 
-    sculpt/phone: audio volume and mic controls
+  [https://genodians.org/nfeske/2023-02-01-mobile-sculpt]
 
-commit 6a1eaf67402f5af60185d3065d12d9c8b54ce5fd
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Dec 13 15:42:33 2022 +0100
+It features a
+[https://genodians.org/nfeske/2023-01-05-mobile-user-interface - custom user interface],
+voice calls and mobile-data connectivity, on-target software installation and
+system update, device controls (battery, brightness, volume, mic, reset,
+shutdown), and a variety of installable software.
+Among the installable applications, there is the Chromium-based Morph web
+browser, an OpenGL demo using the GPU, tests for the camera and microphone, as
+well as a light-weight Unix-like system shell.
 
-    Load SCP firmware for PMIC by boot loader
-    
-    The patch moves the firmware commands needed for accessing the
-    power-management IC (PMIC) from the platform driver to the SCP
-    image. This speeds up the platform-driver initialization by half
-    a second.
-    
-    Note that u-boot must be rebuilt after applying this patch:
-    
-      make u-boot/pine BOARD=pinephone
-    
-    Issue #14
+The underpinnings of the Genode system image for the PinePhone are nearly
+identical to Sculpt OS on the PC. However, besides the new user interface
+specifically designed for the touch screen of the phone, two noteworthy
+differences set it apart from the regular version of Sculpt OS.
 
-commit b99a28780a031778cf3269156c5bf6acb3cd42fa
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Dec 13 16:06:43 2022 +0100
+First, the phone variant allows the user to rapidly switch between different
+runtime configurations, called presets. This way, the limited resources of the
+phone can be accounted and fully leveraged for each preset individually, while
+making the system extremely versatile. The loading of a preset can be imagined
+as the boot into a separate operating system. But it takes only a fraction of
+a second. The structure of the running system is made fully transparent to the
+user by the component graph known from Sculpt OS.
 
-    u-boot/pine: speed up ATF initialization
-    
-    - Use release mode instead of debug mode
-    - Disable log output
-    - Reduce SCP handshake timeout from 100ms to 10us
-    
-    Issue #14
-
-commit 5f738d395effaaf21132a35fb996fd9145601c56
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jan 11 18:44:21 2023 +0100
-
-    phone_manager: presets tab
-    
-    Issue #4731
-
-commit 8aa773fb6845967c5f9343e82c05caac0d8cbbab
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jan 13 16:38:39 2023 +0100
-
-    phone_manager: reflect status in software section
-
-commit a820fb02e4f66e32f980118fd7dd7d8f04ed81f7
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 24 17:27:14 2023 +0100
-
-    phone_manager: on-target system update
-    
-    This patch adds new "Update" tab to the software section of the GUI,
-    which allows the user to download and install different versions of
-    system images.
-    
-    Issue #4744
-
-commit 33efa3c3aa9e1555814b50155308d4aeb4c766b4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 14:17:56 2023 +0100
-
-    sculpt: preset for camera test
-
-commit d396f4f39b00c5889f9884d57294f78d36d71997
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 14:18:14 2023 +0100
-
-    sculpt: preset for GPU test
-
-commit 39116f13e75d231ce0aa4fa1edc4fd87c8080b41
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 14:18:33 2023 +0100
-
-    sculpt: preset for nano3d
-
-commit 8aedf88d6d4fb610cca80ab76b4c712fdf3a8ee9
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 14:18:48 2023 +0100
-
-    sculpt: preset for system shell
-
-commit bf2276ed70b97cd16df638e89f6815251eff29a3
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Jan 30 15:06:36 2023 +0100
-
-    sculpt: preset for empty runtime
-
-commit 2f115df5bc6e7c5ce14d397ca7664e763896f6ea
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Jan 30 18:18:12 2023 +0100
-
-    sculpt: preset for osci
-
-commit 3299a96e20515b8da6b416dc8f5691cb900a74ec
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 13:52:15 2023 +0100
-
-    sculpt: preset for morph_browser
-
-commit 2c0b0d726920c5bc0412df0ee0d6c683c84cf950
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 31 14:09:12 2023 +0100
-
-    sculpt: launcher for screenshot
-
-commit 88becbe29d92424ed7edb0233af6cfce40a2ab0c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 10 13:42:47 2023 +0100
-
-    sculpt: integration of optional presets
-    
-    With the new 'presets:' tag, .sculpt files can now refer to deploy
-    configurations to be integrated in the presets/ subdirectory of the
-    config file system. Those files can thereby be used as preconfigured
-    system scenarios. Such a preconfigured scenario can be loaded at
-    runtime by copying the preset file to config/deploy.
-    
-    Issue #4731
+Second, the system is equipped with an on-target system update mechanism that
+allows the user to install new versions of the system image when they become
+available. System updates are secured by cryptographic signatures. The
+mechanism does not only allow for updating the system but also for the
+rollback to any previously downloaded version. This way, the user can try
+out a new version while being able to fall back to the previous one in the
+case of a regression. This reinforces the end user's ultimate control.
 
 
 Interactive graphical VMs on ARM
