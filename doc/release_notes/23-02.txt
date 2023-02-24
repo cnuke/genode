@@ -176,209 +176,81 @@ Base framework and OS-level infrastructure
 VFS optimization and simplification
 ===================================
 
-; @nfeske
+For regular applications executed on Genode, input and output involves the
+virtual file system (VFS). In contrast to traditional monolithic operating
+systems (which host the VFS in the kernel) or traditional microkernel-based
+operating systems (which host the VFS in a dedicated server component),
+Genode's VFS has the form of a library, giving each component an individual
+virtual file system. The feature set of the VFS library is not fixed
+but extensible by so-called VFS plugins that come in the form of optional
+shared libraries. These plugins can implement new file-system types, but also
+expose other I/O facilities as pseudo files. For example, TCP/IP stacks like
+lwIP and lxIP (IP stack ported from Linux) have the form of VFS plugins.
+The extensibility of the VFS gives us extreme flexibility without compromising
+Genode's simplicity.
 
-commit a15c8943854f3a21b663a0c431beb5f2ffe4ef59
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Dec 2 11:29:40 2022 +0100
+On the other hand, the pervasiveness of the VFS - being embedded in
+Genode's C runtime - puts it on the performance-critical path whenever
+application I/O is involved.
+The ever growing sophistication of application workloads like running a
+Chromium-based web browser on the PinePhone puts merciless pressure on the
+VFS, which motivated the following I/O-throughput optimizations.
 
-    file_system_session: increase TX_QUEUE_SIZE to 32
-    
-    The change of the queue size from 16 to 32 has negligible costs (4 KiB
-    instead of 2 KiB for the packet-stream queues) while facilitating the
-    batching of many small consecutive write operations.
-    
-    Issue #4697
+Even though the VFS and various VFS plugins work asynchronously, the
+batching of I/O operation is not consistently effective across different
+kernels. It particularly depends on the kernel's scheduling decision upon the
+delivery of asynchronous notifications. Kernels that eagerly switch to the
+signal receiver may thereby prevent the batching of consecutive write
+operations. We could observe variances of more than an order of magnitude of
+TCP throughput, depending on the used kernel. In the worst case, when using
+a kernel that eagerly schedules the recipient of each asynchronous notification,
+the application performance is largely dominated by context-switching costs.
 
-commit 6edede0db9faee6fbd280c10349064faee875e7b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Dec 2 15:54:44 2022 +0100
+Based on these observations, we concluded that the influence of the kernel's
+scheduler should better be mitigated by scheduling asynchronous notifications
+less eagerly at the application level. By waking up a remote peer not before
+the application stalls for I/O, all scheduled operations would appear at the
+remote side as one batch.
 
-    server/vfs: facilitate batching of requests
-    
-    By replacing the calls of 'acknowledge_packet' and 'get_packet' with
-    'try_ack_packet' and 'try_get_packet', we avoid the implicit triggering
-    of data-flow signals. Instead, the VFS server now relies on explicit
-    calls of the packet stream's 'wakeup' interface.
-    
-    Issue #4697
+The implementation of this idea required a slight redesign of the VFS,
+replacing the former implicit wakeup of remote peers by explicit wakeup
+signalling. The wakeup signalling is triggered not before the VFS user settles
+down. E.g., for libc-based applications, this is the case if the libc goes
+idle, waiting for external I/O.
+In the case of a busy writer to a non-blocking file descriptor or socket
+(e.g., lighttpd), the remote peers are woken up once a write operation
+yields an out-count of 0.
+The deferring of wakeup signals is accommodated by the new 'Remote_io'
+mechanism (_vfs/remote_io.h_) that is designated to be used by all VFS
+plugins that interact with asynchronous Genode services for I/O.
 
-commit 9421a449ab377bf95484294259ba87155cac2ce1
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Dec 1 16:41:27 2022 +0100
+Combined with additional adjustments of I/O buffer sizes - like the request
+queue of the file-system session, the TCP send buffer of the lwIP stack, or the
+packet buffer of the NIC session - the VFS optimization almost eliminated
+the variance of the I/O throughput among the different kernels and generally
+improved the performance. On kernels that suffered most from the eager
+context switching, netperf
+[https://github.com/genodelabs/genode/issues/4697#issuecomment-1342542399 - shows a 10x]
+improvement. But even on kernels with more balanced scheduling, the effect is
+impressive.
 
-    test/libc_many_writes for examining write batching
-    
-    This test reveals the patters of the batching of consecutive write
-    operations on a file-system session. It issues 100 writes of one byte
-    each, which should ideally result in large batches of operations
-    submitted to the file-system session at once.
-    
-    The run script performs the write operations through a chain of two VFS
-    servers, thereby exercising the write batching of both the libc and the
-    intermediate VFS server.
-    
-    Issue #4697
+While we were at it, and since this structural change affected all VFS plugins
+and users anyway, we took the opportunity to simplify and modernize other
+aspects of the VFS-related code as well.
 
-commit 7d8d4f4532545a63aa7609799e309919617152b3
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Dec 2 09:53:16 2022 +0100
+In particular, the new interface 'Vfs::Env::User' replaces the former
+'Vfs::Io_response_handler'. In contrast to the 'Io_response_handler', which
+had to be called on a 'Vfs_handle', the new interface does not require any
+specific handle. It is merely meant to prompt the VFS user (like the libc) to
+re-attempt stalled I/O operations but it does not provide any immediate hint,
+about which of the handles have become ready for reading/writing. This change
+led to welcome simplifications of asynchronously working VFS plugins.
 
-    vfs,libc: deferred wakeup of remote peers
-    
-    This patch facilitates the batching of I/O operations in the VFS library
-    by replacing the implicit wakeup of remote peer (via the traditional
-    packet-stream interface like 'submit_packet') by explicit wakeup
-    signalling.
-    
-    The wakeup signalling is triggered not before the VFS user settles down.
-    E.g., for libc-based applications, this is the case if the libc goes
-    idle, waiting for external I/O.
-    In the case of a busy writer to a non-blocking file descriptor or socket
-    (e.g., lighttpd), the remote peers are woken up once a write operation
-    yields an out-count of 0.
-    
-    The deferring of wakeup signals is accommodated by the new 'Remote_io'
-    mechanism (vfs/remote_io.h) that is designated to be used by all VFS
-    plugins that interact with asynchronous Genode services for I/O.
-    
-    Issue #4697
-
-commit e9541605ab856c3f4c65afb05414d4d5ae0e62df
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Dec 3 13:49:53 2022 +0100
-
-    ports: lighttpd_fetchurl.run script
-    
-    This networking scenario is useful for analysing and optimizing the
-    interplay of the VFS, libc, TCP/IP, and the NIC router. It downloads a
-    file via fetchurl from lighttpd, both of which are hosted on a virtual
-    network.
-    
-    Issue #4697
-
-commit 8a9974b6f9162d61a28b8bd629d63d55b01cd3af
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Dec 3 18:50:25 2022 +0100
-
-    vfs/lwip: deferred wakeup of NIC server
-    
-    This patch fosters the batching of network packets transferred by the
-    lwIP stack over the NIC connection. It replaces the eager submission of
-    the packet-stream's data-flow signals by explicit wakeup notifications.
-    
-    The commit also increases the NIC session's buffer size from 128 to 1024
-    packets.
-    
-    Issue #4697
-
-commit d9f5dda322291ea2286d5cd85cf24b225db1feea
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Dec 3 22:00:59 2022 +0100
-
-    lwip: increase TCP send buffer 32->80 packets
-    
-    Issue #4697
-
-commit 5ad98f2b7c7f9a9aaafe7b2aff68a5773f1726b8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Dec 7 14:06:35 2022 +0100
-
-    vfs,libc: introduce Vfs::Env::User interface
-    
-    The new interface is meant to replace the 'Vfs::Io_response_handler'.
-    In contrast to the 'Io_response_handler', which had to be called
-    on a 'Vfs_handle', the new interface does not require any specific
-    'Vfs_handle'. It is merely meant to prompt the VFS user (like the libc)
-    to re-attempt stalled I/O operations but it does not provide any
-    immediate hint, about which of the handles have become ready for
-    reading/writing.
-    
-    Issue #4697
-
-commit ff2176a586cc151209c5bc01977063158f67d927
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Dec 6 19:11:44 2022 +0100
-
-    vfs,libc: support write fds in select
-    
-    By adding a 'write_ready' interface following the lines of the existing
-    'read_ready', VFS plugins become able to propagate the (de-)saturation
-    of I/O buffers to the VFS user. This information is important when using
-    a non-blocking file descriptor for writing into a TCP socket. Once the
-    application observes EAGAIN, it expects a subsequent 'select' call to
-    return as soon as new I/O buffer space becomes available.
-    
-    Before this patch, the select call would always return under this
-    condition, causing an unnecessarily busy write loop.
-    
-    Issue #4697
-
-commit bb904b9166075f2380e339251a90a37031631053
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Dec 21 14:51:48 2022 +0100
-
-    vfs: propagate I/O activity via 'wakeup_vfs_user'
-    
-    This commit supplements the various I/O signal handlers of the VFS
-    plugins with calls of the new 'Vfs::Env::User::wakeup_vfs_user'
-    interface, which will subsequently replace the old 'Io_progress_handler'
-    (issue #4697).
-    
-    Issue #4706
-
-commit ddeaccf7283bda90173e7e494c9da0eefdd1eb69
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jan 6 15:21:12 2023 +0100
-
-    vfs: documentation of Vfs::Env::User
-    
-    Issue #4706
-
-commit f2a762ff49f68af59c189ead0d293f536dd0603e
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jan 27 20:06:02 2023 +0100
-
-    os/vfs.h: read loop in Readonly_file::read
-    
-    This patch improves the Readonly_file::read method such that the
-    capacity of the specified buffer is used as upper bound for the read
-    operation instead of VFS-internal I/O buffer sizes. This relieves the
-    caller from implementing a read loop in most cases.
-    
-    As a step away from C-ish use of the API, the patch deprecates the old
-    'read' method that takes the buffer as char *, size_t arguments.
-    
-    Fixes #4745
-
-commit 66c8d51b4844c715ed371ef3edcb3e2eadb744cd
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Jan 28 17:07:05 2023 +0100
-
-    Don't use deprecated Readonly_file::read variants
-    
-    Issue #4745
-
-commit 063fc80eee1bbc4c8c0d6bea4878a7eafa8c90dd
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Feb 9 15:07:24 2023 +0100
-
-    vfs: remove 'file_size' from read/write interfaces
-    
-    The 'file_size' type denotes the size of files on disk in bytes. On
-    32-bit architectures it is larger than the size_t, which refers to
-    in-memory object sizes.
-    
-    Whereas the use of 'file_size' is appropriate for ftruncate and seek, it
-    is not a suitable type for the parameters of read/write operations
-    because those operations refer to in-memory buffers.
-    
-    This patch replaces the use of 'file_size' by size_t. However, since it
-    affects all sites where the read/write interface is uses, it takes the
-    opportunity to replace the C-style (pointer, size) arguments by
-    'Byte_range_ptr' and 'Const_byte_range_ptr'.
-    
-    Issue #4706
+Furthermore, we removed the 'file_size' type from read/write interfaces.
+The former C-style pair of (pointer, size) arguments to those operations have
+been replaced by 'Byte_range_ptr' and 'Const_byte_range_ptr' argument types,
+which make the code safer and easier to follow. Also the VFS utilities offered
+by _os/vfs.h_ benefit from this safety improvement.
 
 
 GPU performance optimizations
