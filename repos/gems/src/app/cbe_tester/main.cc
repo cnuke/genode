@@ -34,6 +34,7 @@
 #include <trust_anchor.h>
 #include <verbose_node.h>
 #include <client_data.h>
+#include <block_io.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -45,8 +46,9 @@ namespace Cbe {
 	{
 		switch (id) {
 		case CRYPTO: return "crypto";
-		case CBE_LIBRARA: return "cbe_librara";
-		case CBE_INIT_LIBRARA: return "cbe_init_librara";
+		case BLOCK_IO: return "block_io";
+		case CBE_LIBRARA: return "cbe";
+		case CBE_INIT_LIBRARA: return "cbe_init";
 		case CLIENT_DATA: return "client_data";
 		case TRUST_ANCHOR: return "trust_anchor";
 		case COMMAND_POOL: return "command_pool";
@@ -211,7 +213,6 @@ class Block_io : public Interface
 		                            Block_data         &data) = 0;
 
 		virtual void execute(Constructible<Cbe::Library> &cbe,
-		                     Cbe_init::Library           &cbe_init,
 		                     Cbe_dump::Library           &cbe_dump,
 		                     Cbe_check::Library          &cbe_check,
 		                     Verbose_node          const &verbose_node,
@@ -244,7 +245,6 @@ class Vfs_block_io_job
 
 		void
 		_mark_req_completed_at_module(Constructible<Cbe::Library> &cbe,
-		                              Cbe_init::Library           &cbe_init,
 		                              Cbe_dump::Library           &cbe_dump,
 		                              Cbe_check::Library          &cbe_check,
 		                              Verbose_node          const &verbose_node,
@@ -254,11 +254,6 @@ class Vfs_block_io_job
 				_cbe_req_io_buf_idx(_cbe_req) };
 
 			switch (tag_get_module_type(_cbe_req.tag())) {
-			case Module_type::CBE_INIT:
-
-				cbe_init.io_request_completed(data_index, _cbe_req.success());
-				break;
-
 			case Module_type::CBE:
 
 				cbe->io_request_completed(data_index, _cbe_req.success());
@@ -274,6 +269,7 @@ class Vfs_block_io_job
 				cbe_check.io_request_completed(data_index, _cbe_req.success());
 				break;
 
+			case Module_type::CBE_INIT:
 			case Module_type::CMD_POOL:
 
 				class Bad_module_type { };
@@ -288,7 +284,6 @@ class Vfs_block_io_job
 
 
 		void _execute_read(Constructible<Cbe::Library> &cbe,
-		                   Cbe_init::Library           &cbe_init,
 		                   Cbe_dump::Library           &cbe_dump,
 		                   Cbe_check::Library          &cbe_check,
 		                   Verbose_node          const &verbose_node,
@@ -341,7 +336,7 @@ class Vfs_block_io_job
 						_cbe_req.success(true);
 
 						_mark_req_completed_at_module(
-							cbe, cbe_init, cbe_dump, cbe_check,
+							cbe, cbe_dump, cbe_check,
 							verbose_node, progress);
 
 						progress = true;
@@ -361,7 +356,7 @@ class Vfs_block_io_job
 					_cbe_req.success(false);
 
 					_mark_req_completed_at_module(
-						cbe, cbe_init, cbe_dump, cbe_check,
+						cbe, cbe_dump, cbe_check,
 						verbose_node, progress);
 
 					progress = true;
@@ -378,7 +373,6 @@ class Vfs_block_io_job
 		}
 
 		void _execute_write(Constructible<Cbe::Library> &cbe,
-		                    Cbe_init::Library           &cbe_init,
 		                    Cbe_dump::Library           &cbe_dump,
 		                    Cbe_check::Library          &cbe_check,
 		                    Verbose_node          const &verbose_node,
@@ -426,7 +420,7 @@ class Vfs_block_io_job
 						_cbe_req.success(true);
 
 						_mark_req_completed_at_module(
-							cbe, cbe_init, cbe_dump, cbe_check,
+							cbe, cbe_dump, cbe_check,
 							verbose_node, progress);
 
 						progress = true;
@@ -446,7 +440,7 @@ class Vfs_block_io_job
 					_cbe_req.success(false);
 
 					_mark_req_completed_at_module(
-						cbe, cbe_init, cbe_dump, cbe_check,
+						cbe, cbe_dump, cbe_check,
 						verbose_node, progress);
 
 					progress = true;
@@ -464,7 +458,6 @@ class Vfs_block_io_job
 		}
 
 		void _execute_sync(Constructible<Cbe::Library> &cbe,
-		                   Cbe_init::Library           &cbe_init,
 		                   Cbe_dump::Library           &cbe_dump,
 		                   Cbe_check::Library          &cbe_check,
 		                   Verbose_node          const &verbose_node,
@@ -493,7 +486,7 @@ class Vfs_block_io_job
 
 					_cbe_req.success(false);
 					_mark_req_completed_at_module(
-						cbe, cbe_init, cbe_dump, cbe_check, verbose_node,
+						cbe, cbe_dump, cbe_check, verbose_node,
 						progress);
 
 					_state = State::COMPLETE;
@@ -504,7 +497,7 @@ class Vfs_block_io_job
 
 					_cbe_req.success(true);
 					_mark_req_completed_at_module(
-						cbe, cbe_init, cbe_dump, cbe_check, verbose_node,
+						cbe, cbe_dump, cbe_check, verbose_node,
 						progress);
 
 					_state = State::COMPLETE;
@@ -539,7 +532,6 @@ class Vfs_block_io_job
 		}
 
 		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_init::Library           &cbe_init,
 		             Cbe_dump::Library           &cbe_dump,
 		             Cbe_check::Library          &cbe_check,
 		             Verbose_node          const &verbose_node,
@@ -551,21 +543,21 @@ class Vfs_block_io_job
 			switch (_cbe_req.operation()) {
 			case Cbe_operation::READ:
 
-				_execute_read(cbe, cbe_init, cbe_dump, cbe_check, verbose_node,
+				_execute_read(cbe, cbe_dump, cbe_check, verbose_node,
 				              blk_buf, progress);
 
 				break;
 
 			case Cbe_operation::WRITE:
 
-				_execute_write(cbe, cbe_init, cbe_dump, cbe_check, verbose_node,
+				_execute_write(cbe, cbe_dump, cbe_check, verbose_node,
 				               blk_buf, progress);
 
 				break;
 
 			case Cbe_operation::SYNC:
 
-				_execute_sync(cbe, cbe_init, cbe_dump, cbe_check, verbose_node,
+				_execute_sync(cbe, cbe_dump, cbe_check, verbose_node,
 				              progress);
 
 				break;
@@ -638,7 +630,6 @@ class Vfs_block_io : public Block_io
 		}
 
 		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_init::Library           &cbe_init,
 		             Cbe_dump::Library           &cbe_dump,
 		             Cbe_check::Library          &cbe_check,
 		             Verbose_node          const &verbose_node,
@@ -649,7 +640,7 @@ class Vfs_block_io : public Block_io
 				return;
 			}
 			_job->execute(
-				cbe, cbe_init, cbe_dump, cbe_check, verbose_node, blk_buf,
+				cbe, cbe_dump, cbe_check, verbose_node, blk_buf,
 				progress);
 
 			if (_job->complete()) {
@@ -740,7 +731,6 @@ class Block_connection_block_io : public Block_io
 		}
 
 		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_init::Library           &cbe_init,
 		             Cbe_dump::Library           &cbe_dump,
 		             Cbe_check::Library          &cbe_check,
 		             Verbose_node          const &verbose_node,
@@ -763,12 +753,6 @@ class Block_connection_block_io : public Block_io
 							_blk.tx()->packet_content(packet));
 				}
 				switch (tag_get_module_type(packet.tag().value)) {
-				case Module_type::CBE_INIT:
-
-					cbe_init.io_request_completed(data_index,
-					                               packet.succeeded());
-					break;
-
 				case Module_type::CBE:
 
 					cbe->io_request_completed(data_index,
@@ -787,6 +771,7 @@ class Block_connection_block_io : public Block_io
 					                               packet.succeeded());
 					break;
 
+				case Module_type::CBE_INIT:
 				case Module_type::CMD_POOL:
 
 					class Bad_module_type { };
@@ -1680,7 +1665,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 6 };
+		enum { NR_OF_MODULES = 7 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1698,6 +1683,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Benchmark                    _benchmark                  { _env };
 		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
+		Block_ia                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
 		Cbe::Librara                 _cbe_librara                { _cbe, _blk_buf };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
@@ -1801,7 +1787,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 		void _execute_cbe_init(bool &progress)
 		{
-			_cbe_init.execute(_blk_buf);
+			_cbe_init.execute();
 			if (_cbe_init.execute_progress()) {
 				progress = true;
 			}
@@ -2212,7 +2198,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 							req.src_request_id_str(), " <--", req.type_name(),
 							"-- ", module_name(id), ":",
 							req.dst_request_id_str());
-
 					Module &src_module { *_module_ptrs[req.src_module_id()] };
 					src_module.generated_request_complete(req);
 					progress = true;
@@ -2230,7 +2215,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 				_execute_cbe_init(progress);
 
 				_blk_io.execute(
-					_cbe, _cbe_init, _cbe_dump, _cbe_check, _verbose_node,
+					_cbe, _cbe_dump, _cbe_check, _verbose_node,
 					_blk_buf, progress);
 
 				_execute_cbe_check(progress);
@@ -2255,6 +2240,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(CLIENT_DATA,      *this);
 			_modules_add(COMMAND_POOL,      _cmd_pool);
 			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
+			_modules_add(BLOCK_IO,          _block_io);
 			_execute();
 		}
 };

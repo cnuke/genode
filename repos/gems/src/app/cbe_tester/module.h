@@ -29,6 +29,7 @@ namespace Cbe {
 		TRUST_ANCHOR     = 3,
 		COMMAND_POOL     = 4,
 		CBE_INIT_LIBRARA = 5,
+		BLOCK_IO         = 6,
 	};
 
 	enum { HASH_SIZE = 32 };

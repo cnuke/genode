@@ -4,6 +4,7 @@ TARGET  := cbe_tester
 SRC_CC  += main.cc
 SRC_CC  += crypto.cc
 SRC_CC  += trust_anchor.cc
+SRC_CC  += block_io.cc
 SRC_CC  += vfs_utilities.cc
 SRC_CC  += module.cc
 SRC_CC  += cbe_librara.cc

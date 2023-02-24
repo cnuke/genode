@@ -126,6 +126,7 @@ struct Util::Block_io
 		if (write) {
 			if (data && len) {
 				void *p = addr<void*>();
+
 				Genode::memcpy(p, data, len);
 			} else {
 				Genode::error("invalid data for write");
