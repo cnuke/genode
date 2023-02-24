@@ -573,12 +573,16 @@ bool ::Root::_matches(Device & d, genode_usb_session & s)
 		genode_usb_class_num_t  cla     =
 			policy.attribute_value<genode_usb_class_num_t>("class", 0);
 
+		bool const ignore_device_label =
+			policy.attribute_value<bool>("ignore_device_label", false);
+
 		if (bus && dev)
 			return (bus == d.bus) && (dev == d.dev);
 		if (vendor && product)
 			return (vendor == d.vendor) && (product == d.product);
 		if (cla)
-			return (cla == d.cla) && (d.label() == s._label.last_element());
+			return (cla == d.cla)
+			    && (d.label() == s._label.last_element() || ignore_device_label);
 	} catch(Session_policy::No_policy_defined) {}
 
 	return false;

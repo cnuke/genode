@@ -85,7 +85,7 @@ install_config {
 # Define USB host controller config
 #
 set fd [open [run_dir]/genode/usb_host_drv.config w]
-puts $fd { <config> <default-policy class="0x8"/> </config> }
+puts $fd { <config> <default-policy class="0x8" ignore_device_label="true"/> </config> }
 close $fd
 build_boot_image { block_tester }
 
