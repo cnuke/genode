@@ -315,176 +315,20 @@ Measurements showed that almost an order of magnitude of capabilities can be
 saved at Mesa or the client side this way.
 
 
+Mali graphics
+-------------
 
-; @ssumpf, @cnuke
+The 22.08 release introduced a
+[https://genode.org/documentation/release-notes/22.08#GPU_and_Mesa_driver_for_Mali-400 - driver]
+for the GPU found in the PinePhone. Since it was merely a rapid prototype it
+was limited to one client at a time and was normally started and stopped
+together with its client.
+With this release we remedied these limitations and enabled support for multiple
+concurrent clients and also revised our libdrm back end for Mesa's Lima driver.
 
-commit 77ff380d937eeb9257cf91f81fe15b148258af3e
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Dec 16 17:51:55 2022 +0100
-
-    gpu_session: VRAM interface
-    
-    Change the abstraction from buffers to video RAM (VRAM). The notion of
-    buffers can be provided at the client side (e.g., Mesa) and multiple
-    buffers can be there be associated to one VRAM area, thus saving
-    resources (meta data overhead) when allocating many buffers. A VRAM area
-    can also be mapped to one single buffer as before for clients or drivers
-    that do not take advantage of this feature.
-    
-    issue #4713
-
-commit 15300e53da6cb25e73d53aeb3e726725b3161667
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Dec 16 20:41:27 2022 +0100
-
-    libdrm/iris: remove unsused functions
-    
-    * 'map_buffer', GTT mappings are currently not used by Iris
-    * 'set_tiling', tiling is currently not used by Iris because there are
-      no GTT mappings
-    
-    issue #4713
-
-commit 1a9dd1d46c5b96ac4d6548ccc2d8d80e185b767d
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Sun Dec 18 16:49:28 2022 +0100
-
-    ibdrm/iris: add VRAM support
-    
-    Allocate 16MB or larger chunks and implement buffer abstraction for Iris
-    which possible share VRAM.
-    
-    issue #4713
-
-commit 4bbc04ab6cafac154499ea1a8afa1400668455c8
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Sun Dec 18 18:19:08 2022 +0100
-
-    gpu/intel: add VRAM support
-    
-    Remove buffer abstraction and replace it by VRAM objects.
-    
-    issue #4713
-
-commit 098a0d5a8834082ff23630adcbef1f02ebc9d4bf
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Feb 9 15:13:07 2023 +0100
-
-    fixup "gpu/intel: add VRAM support"
-
-commit 51c2c9153e73902d0a22a8155fec66a6e7b7b295
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Jan 3 10:26:58 2023 +0100
-
-    libdrm/lima+etnaviv: adjust to VRAM GPU session interface
-    
-    Keep buffer abstraction by mapping one buffer to one VRAM object.
-    
-    issue #4713
-
-commit 9d48c28f9bfacfe6a89d28073470b84c3eed7ddf
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Jan 20 18:56:16 2023 +0100
-
-    gpu_session: add notes to interface
-    
-    Describe differences for Intel and Lima (Mali) based GPUs.
-    
-    issue #4713
-
-commit 99370f2f40064df96096ce35cae7b4bc95b3c815
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Tue Dec 20 16:10:16 2022 +0000
-
-    libdrm/lima: refactor session and context handling
-    
-    Merge 'Gpu_session' and 'Gpu_context' and create the main session
-    as context.
-    
-    Issue #4760.
-
-commit 3a217e2460577f5fcc552b24a656e2f2cad4323b
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Tue Dec 20 16:16:14 2022 +0000
-
-    libdrm/lima: rename Syncobj_space
-    
-    Align the naming with the 'Gpu_context_space'.
-    
-    Issue #4760.
-
-commit 98d6111a8e4ecb8ba652ce22d335fd198fbd8d3d
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Tue Dec 20 17:35:47 2022 +0000
-
-    libdrm/lima: handle unknown buffer ids gracefully
-    
-    Issue #4760.
-
-commit e562c5e7459e98f965ee6ddecb7234806179b3ca
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Tue Dec 20 17:34:01 2022 +0000
-
-    libdrm/lima: check buffer id in WAIT
-    
-    Issue #4760.
-
-commit 1ff6d1a56335daebfcc5af5dc89f2c36c8a97196
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Jan 10 18:16:00 2023 +0100
-
-    libdrm/lima: introduce disjunct contexts
-    
-    Prior to this change the libdrm Lima implementation supported the
-    creation of multiple contexts where each context, however, was
-    treated as the same client like it was done in the Lima driver
-    itself.
-    
-    With this commit each context becomes its own client while the
-    main context always performs all buffer object related allocation
-    and the other context import each needed BO before submitting.
-    
-    Fixes #4760.
-
-commit 8584fbc37350c90a27a03cafc26b9f384ed1dde1
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Jan 3 10:47:06 2023 +0100
-
-    gpu/lima: adjust to VRAM GPU session interface
-    
-    Map one buffer to one VRAM object.
-    
-    genodelabs/genode#4713
-
-commit db610dab3234e5ddafb5929b225ca73414dc4c5d
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Jan 20 18:40:07 2023 +0100
-
-    gpu_session: rename Gpu::Virtual_address:va
-    
-    rename 'va' into 'value' to stay consistent with other types.
-    
-    issue #4713
-
-commit 41077afa73706edffe7250be27819ba310ef8ab3
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Feb 10 13:40:01 2023 +0100
-
-    gpu/lima: properly implement context handling
-    
-    The prior implementation already supported creating multiple contexts
-    but from the point of view of Linux they still where the same client
-    and furthermore there was only on Lx::Task handling the communication.
-    This prohibited the support of concurrently operating disjunct clients
-    as well as complicated the client-side processing in multi-threaded
-    components.
-    
-    This commit changes the implementation by modelling each Gpu::Session
-    as its own client whose requests are processed by its own Lx::Task.
-    Like with the Intel GPU multiplexer Vram objects are exported and
-    imported accordingly.
-    
-    Fixes #15.
+We have not yet explored applying the same VRAM optimizations that are employed
+by our Intel graphics-stack one VRAM allocation still correlates to one
+buffer-object.
 
 
 More flexible ACPI-event handling
@@ -731,88 +575,23 @@ i.MX53 related platform driver got extended to support these clocks.
 The USB host-controller driver for the i.MX 8MQ EVK is now able to drive the
 USB-C connector of this board too.
 
-NVMe
-====
-
-; @cnuke
-
-commit 7e5af1b7a5a8565f8216a97221bc4e36f17369bd
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Mon Jan 2 20:39:17 2023 +0000
-
-    nvme_drv: move PRP list helper construction
-    
-    Since the 'Platform::Device' constructor will defer the creation until
-    the content of the devices ROM is valid performing the PRP list helper
-    creation afterwards should be done with valid IOMMU information.
-    
-    Issue #4715.
-
-commit 63ff0ee869d0369ef5bf30aa658fb82610ecea6f
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Thu Dec 22 13:59:59 2022 +0000
-
-    nvme_drv: allow for accessing admin cmd results
-    
-    Up to now it was only checked if an issued admin command was processed
-    in a timely fashion. Otherwise it has been treated as failed.
-    However, the completion-queue entry was not examined and the caller was
-    not able to access the entry itself. Depending on the command, checking
-    the completion-queue entry might be necessary, e.g. GET/SET_FEATURE.
-    
-    Issue #4715.
-
-commit 827aa9586e5a07229f37ef0918f2159b54f4787a
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Sun Nov 13 20:11:16 2022 +0000
-
-    nvme_drv: provide get/set feature command
-    
-    These admin commands are used to configure features of the NVMe device.
-    
-    Issue #4715.
-
-
 Realtek Wifi
 ============
 
-; @cnuke
+A welcoming side-effect of switching to the new DDE Linux approach is enabling
+other drivers that are part of the same subsystem has become less involved.
+In the past we mostly focused on getting wireless devices supported by the
+iwlwifi driver to work as those are the devices predominantly found in the
+systems we use on a daily basis. That being said, every now and then, one
+comes across a different vendor and especially with the shifting focus on
+ARM-based systems covering those as well becomes necessary.
 
-commit d27bd158093aa9d069b4a19aaac53cfc843a9414
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Wed Jan 4 12:03:27 2023 +0000
-
-    wifi/pc: add rtlwifi driver
-    
-    Due to lacking hardware access the driver was test with one RTL8188EE
-    based device, namely [10ec:8179] (rev 01), only. As the access to the
-    PCI config space is restricted the driver loads the non power-saving
-    FW and the driver port is therefor only tested with that. The
-    accesses are documented should we choose to support them one way or
-    another later on.
-    
-    The 'wifi.run' run script as well as Sculpt served as testing ground
-    where the driver worked fine so far.
-    
-    Fixes #4714.
-
-commit d27bd158093aa9d069b4a19aaac53cfc843a9414
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Wed Jan 4 12:03:27 2023 +0000
-
-    wifi/pc: add rtlwifi driver
-    
-    Due to lacking hardware access the driver was test with one RTL8188EE
-    based device, namely [10ec:8179] (rev 01), only. As the access to the
-    PCI config space is restricted the driver loads the non power-saving
-    FW and the driver port is therefor only tested with that. The
-    accesses are documented should we choose to support them one way or
-    another later on.
-    
-    The 'wifi.run' run script as well as Sculpt served as testing ground
-    where the driver worked fine so far.
-    
-    Fixes #4714.
+As a first experiment we enabled the rtlwifi driver that provides support
+for Realtek-based wireless devices. Due to lacking access to other hardware
+the driver was so far tested only with a specific RTL8188EE based device
+([10ec:8179] rev 01). Of course, some trade-offs were made as power-management
+is currently not available but getting it to work, nevertheless, took barely
+half a day of work, which is promising.
 
 
 Platforms
