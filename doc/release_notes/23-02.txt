@@ -1150,7 +1150,40 @@ Build system and tools
 Building and packaging CMake-based shared libraries (via Goa)
 =============================================================
 
-; @nfeske
+The [https://github.com/nfeske/goa - Goa] tool it streamlines the work of
+cross-developing, testing, and publishing Genode application software
+using commodity build tools like CMake. The tool is particularly suited for
+porting existing 3rd-party software to Sculpt OS.
+
+Until recently, Goa was solely focused on applications whereas the porting of
+3rd-party libraries required the use of the traditional approach of hand
+crafting build rules for Genode's build system. This limitation of Goa got
+lifted now.
+
+In the new version, a Goa project can host an _api_ file indicating that
+the project is a library project. The file contains the list of headers that
+comprise the library's public interface. The build artifact of a library
+is declared in the _artifacts_ file and is expected to have the form
+_<library-name>.lib.so_. The ABI symbols of such a library must be listed
+in the file _symbols/<library-name>_. With these bits of information supplied
+to Goa, the tool is able build and publish both the library and the API as
+depot archives - ready to use by Genode applications linking to the library.
+The way how all those little pieces work together is best illustrated by the
+accompanied
+[https://github.com/nfeske/goa/tree/master/examples/cmake_library - example].
+For further details, please consult Goa's builtin documentation via 'goa help'
+(overview of Goa's sub commands and files) and 'goa help api' (specifics of
+the _api_ declaration file).
+
+When porting a library to Genode, one manual step remains, which is the
+declaration of the ABI symbols exported by the library. The new sub command
+'goa extract-abi-symbols' eases this manual step. It automatically generates a
+template for the _symbols/<library-name>_ file from the library's built shared
+object. Note, however, that the generated symbols file is expected to be
+manually reviewed and tidied up, e.g., by removing library-internal symbols.
+
+_Thanks to Pirmin Duss for having contributed the welcome new feature, which_
+_makes Goa much more versatile!_
 
 
 New tool for querying metadata of ports
