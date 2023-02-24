@@ -73,31 +73,41 @@ case of a regression. This reinforces the end user's ultimate control.
 Interactive graphical VMs on ARM
 ################################
 
-; @skalk
+The virtual-machine monitor (VMM) using hardware-assisted virtualization on ARM
+started as a case study eight years ago for Samsung's Exynos 5250 SoC.
+Originally, it supported virtualization of CPU, timer, interrupt-controller, and
+an UART-device only. Since then it received several extensions. Support for
+64-bit ARMv8 systems, VirtIO devices for network, console, and block access.
+With release 22.11 the VMM was made configurable to not necessarily provide
+each-and-every I/O access, and to define RAM consumption and CPU count.
 
-commit 1b6563a1369150c4ba8631b276eaf62828a5c9b3
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jan 11 14:36:13 2023 +0100
+With this release we enhance the VMM for ARM devices again, to be more than a
+proof-of-concept example. But to provide all means to be a useful virtualization
+solution for interactive scenarios.
 
-    vmm: implement VirtIO GPU model
-    
-    Ref genodelabs/genode#4698
+Two more VirtIO device models are available now: a GPU model and one for input.
+Both models are mapped to Genode's Gui service in the background. You can extend
+the configuration of the VMM accordingly:
 
-commit 08e080b0121602d0b75073bf6a0f0ddfa53fe47a
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Dec 9 12:00:41 2022 +0100
+! <config ...>
+!  <virtio_device name="fb0"    type="gpu"/>
+!  <virtio_device name="event0" type="input"/>
+!  ...
+! </config>
 
-    vmm: implement VirtIO input model
-    
-    Fix genodelabs/genode#4698
+By now, it is possible to declare only one GPU and one input device. Both get
+mapped to the very same Gui service, according to the service routing of the
+VMM.
 
-commit e137999bb4092b27ebcd0128f39c6dd00beed659
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jan 11 14:17:52 2023 +0100
+Caution: the GPU and input model are still in an experimental state, and there
+are known corner cases, e.g., when the graphical window size of the VMM gets
+changed dynamically.
 
-    vmm: make initramfs an optional feature
-    
-    Fix genodelabs/genode#4723
+Formerly, the VMM always expected an initial RAM filesystem to be provided as
+ROM dataspace, which got loaded together with the Linux kernel into the
+VM's memory. Now, it is possible to omit the "initrd_rom" configuration option.
+If you leave it out, no default ROM name will be used anymore, but no initrd is
+provided to the Linux guest.
 
 
 Custom IP block for DMA protection on Xilinx Zynq
@@ -655,118 +665,21 @@ directory.
 Device drivers
 ##############
 
-NXP i.MX PCIe, networking, USB
-==============================
+NXP i.MX Ethernet & USB
+=======================
 
-; @skalk
+The Ethernet driver for i.MX53, i.MX6, and i.MX7 got updated to use a more
+recent Linux kernel version (5.11). These drivers got aligned with the source
+code base originally ported for the i.MX8 SoC.
 
-commit 5dccf99e485771088774b0cd7a546457c9f24338
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed May 11 14:56:28 2022 +0200
+Using the recent approach to port Linux device drivers, trying to preserve the
+original semantic, it is necessary to provide the correct related clock rates to
+the driver. Therefore, specific platform drivers for i.MX6 and i.MX7 were
+created that enable the network related clocks and export their rate values. The
+i.MX53 related platform driver got extended to support these clocks.
 
-    Adapt to changes of the generic platform_drv
-    
-    Especially address that the devices ROM consumed by the platform
-    driver is now separated from the configuration by default.
-    
-    Driver packages for:
-    * drivers_nic-imx53_qsb
-    * drivers_nic-imx6q_sabrelite
-    * drivers_nic-imx7d_sabre
-    were formerly part of the Genode's main repository but got moved
-    to the repository due to work of issue #4491.
-    
-    Ref genodelabs/genode#4386
-    Ref genodelabs/genode#4491
-    Ref genodelabs/genode#4496
-    Ref genodelabs/genode#4497
-    Ref genodelabs/genode#4502
-    Ref genodelabs/genode#4503
-    Ref genodelabs/genode#4504
-
-commit 58a8a2c13aad8a9c0c9902ddea6fae03619626cf
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Aug 2 15:41:01 2021 +0200
-
-    mnt_reform2: enable PCI-x IOMUXC settings
-
-commit 56cf717a080c6ad09f43fc4caf03a92ac81a38a9
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon May 16 16:04:01 2022 +0200
-
-    mnt_reform2: add Pcie host controller settings
-
-commit 05b2a5063546361bcc0f783c0d6a00f230407e96
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon May 16 16:07:03 2022 +0200
-
-    imx8mq: add Pcie host controller driver
-    
-    The driver configures all devices it gets assigned, and scans
-    the first device behind the Pcie controller. All devices it
-    finds are summarized in a platform driver compatible PCI device
-    report.
-
-commit be55ddb61fe42bedcbcb07ea5181f0f2b45a29fc
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu May 19 16:32:34 2022 +0200
-
-    imx8mq_*_drv: adapt to changed lx_emul pathes
-    
-    Ref genodelabs/genode#4510
-
-commit 5f3da641a580f2bf17c759373bf098a2b121e9fb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Fri Oct 14 17:19:34 2022 +0200
-
-    sculpt imx8*: integrate nvme in sculpt
-    
-    * Provide imx8mq specific driver manager, which starts sd_card driver,
-      and NVME driver if available
-    * Introduce drivers_managed-* packages to reduce duplications in
-      Sculpt flavors
-    * Integrate PCI host driver and NVME driver in Sculpt for MNT Reform 2
-
-commit 815b2fcdcbf4b663b4adb85cefe2c0459a2087d9
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 14:50:43 2022 +0200
-
-    imx6q_platform_drv: introduce SoC specific version
-    
-    The new platform driver for i.MX 6Quad is derived from the generic
-    implementation. It adds rudimentary support for network clocks.
-    
-    Ref genodelabs/genode#4651
-
-commit c126dd02f618e68c65da0664a540870583e4081f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 14:52:44 2022 +0200
-
-    imx7d_platform_drv: introduce SoC specific version
-    
-    The new platform driver for i.MX 7Dual is derived from the generic
-    implementation. It adds rudimentary support for network clocks.
-    
-    Ref genodelabs/genode#4651
-
-commit a7bdd5cbdce98371e22fc3ff1330d6ac6b29ef88
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Oct 26 17:16:05 2022 +0200
-
-    introduce fec_nic_driver on mnt_reform2_linux base
-    
-    Ref genodelabs/genode#4651
-
-commit 80c7f995a54db5e795a6d58daefc00ea0c70b7b7
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Nov 8 12:09:35 2022 +0100
-
-    imx8q_evk: enable host-controller driving USB-C
-    
-    Patch the vanilla i.MX8MQ EVK device-tree provided by Linux to
-    enable the first USB host controller in addition to the second one,
-    which is used to drive the USC-C connector of the EVK board.
-
+The USB host-controller driver for the i.MX 8MQ EVK is now able to drive the
+USB-C connector of this board too.
 
 NVMe
 ====
@@ -858,53 +771,31 @@ Platforms
 Base-HW microkernel
 ===================
 
-; @m-stein, @skalk
+Cache maintainance optimization
+-------------------------------
 
-commit e8f748cfed5901bc0deb00cba54db8bfd864dad6
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Dec 8 17:15:06 2021 +0100
+On ARM systems the memory view on instructions, and data of the CPU, as well as
+in between CPU and other devices is not necessarily consistent. When dealing
+with DMA transfers of devices, developers of related drivers need to ensure that
+corresponding cache lines are cleaned before a DMA tranfer gets acknowledged.
+When dealing with just-in-time compilation, where instructions a generated on
+demand, the data and instruction caches have to be aligned too.
 
-    base-hw: unprivileged cache maintenance on ARMv8
-    
-    Set 'Sctlr_el1::Uci' bit to allow for executing cache clean and
-    invalidate instruction from user space.
-    
-    Issue #4339.
+Until now, the base APIs functions for such cache maintainance functions was
+mapped to kernel system-calls specific to base-hw. Only the kernel was allowed
+to execute cache maintainance related instructions. On ARMv8 however, it is
+possible to allow unprivileged components to execute most of these instructions.
 
-commit 66fd027b962d8f9288c083d50ecdd5944818a180
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Dec 13 15:32:21 2021 +0100
-
-    base-hw: introduce 'cache_line_size' call
-    
-    This call is used to query the cache line size of the underlying CPU.
-    For now it is only implemented and used by 'arm_v8' platforms.
-    
-    It does not distinguish between D-/I-cache sizes and always uses the
-    smallest size. Furthermore it does not account for any discrepancy
-    in 'big.little' CPUs.
-    
-    Issue #4339.
-
-commit 08c56e61e16e1b5f6dd12f3469140027e3c83e59
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Dec 19 11:17:43 2022 +0100
-
-    hw: avoid overhead for cache maintainance
-    
-    When running on x86, and riscv never enter the kernel for cache maintainance,
-    but use the dummy implementation of the generic base library instead.
-    
-    On ARMv8 it is not necessary to enter privileged mode for cache cleaning, and
-    unification of instruction/data cache, but only for invalidating cache lines
-    at all levels, which is necessary for the use cases, where this function it
-    needed (coherency of DMA memory).
-    
-    Fix genodelabs/genode#4339
-
+With this release, we have implemented the cache maintainance functions outside
+the kernel on ARMv8 if possible. Thereby, several device drivers with a lot of
+DMA transactions, e.g. the GPU driver, benefit from this optimization
+enormously. The Javascript engine used in the Morph and Falkon browser can be
+executed faster too.
 
 Scheduling improvements for interactive workloads
 -------------------------------------------------
+
+; @m-stein
 
 commit fc690f1c47ef316f46e0919b10715648c124a080
 Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
