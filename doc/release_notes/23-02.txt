@@ -791,6 +791,19 @@ DMA transactions, e.g. the GPU driver, benefit from this optimization
 enormously. The Javascript engine used in the Morph and Falkon browser can be
 executed faster too.
 
+In the last release we started to support the low-level
+[https://genode.org/documentation/release-notes/22.11#Low-level_mechanism_for_suspend_resume_on_PC_platforms - ACPI suspend and resume]
+mechanism with Genode for the NOVA kernel. With this release we
+added the required low level support to Genode's base-hw kernel for x86 64bit
+platforms. Similar to the base-nova version, on base-hw the 'Pd::managing_system'
+RPC function of Genode's core roottask is used to transfer the required ACPI
+values representing the S3 sleep state to the kernel. The kernel then takes
+care to halt all CPUs and flush its state to memory, before finally suspending
+the PC using the ACPI mechanism. On resume, the kernel will re-initialize
+necessary hardware used by the kernel, e.g. all CPUs, interrupt controller,
+timer device and serial device. With the introduced run/acpi_suspend test
+scenario of the former release one can test-drive the new feature.
+
 Scheduling improvements for interactive workloads
 -------------------------------------------------
 
