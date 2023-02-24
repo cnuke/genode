@@ -1155,33 +1155,37 @@ Date:   Fri Jan 20 15:22:12 2023 +0100
     Fixes #4685
 
 
-Run-tool changes
-================
+Harmonization of the boot concepts across ARM and PC platforms
+==============================================================
 
-; @nfeske
+To make the system-update functionality covered in
+Section [On-target system-update and rollback mechanism] equally usable across
+PC and ARM platforms, the conventions of booting the platforms had to be
+unified.
 
-commit ed9a8299b2c024b1e3c9611e919e1a09081ae8a2
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Dec 1 12:18:42 2022 +0100
+Traditionally, a bootable disk image for the PC contains a _boot/_ directory.
+E.g., when using NOVA it contains the GRUB boot-loader config + the
+hypervisor + the bender pre-boot loader + the banner image + the Genode system
+image. This structure corresponds 1:1 to the _boot/_ directory as found on the
+3rd partition of the Sculpt system, which is very nice. A manual system update
+of Sculpt comes down to replacing these files.
+However, on ARM platforms, SD-card images used to host an _uImage_ file and
+a U-Boot environment configuration file the root directory. The distinction of
+these differences complicate both the build-time tooling and the on-target
+handling of system updates.
 
-    run/image/uboot: merge with uboot_fit
-    
-    Both modules were quite similar except the the name of the FIT image
-    (image.itb) and the mkimage command line. FIT images are now produced by
-    the following RUN_OPT.
-    
-      RUN_OPT += --include image/uboot --image-uboot-fit
-    
-    Issue #4693
+The current release unifies the boot convention by hosting a _boot/_ directory
+on all platforms and reinforces the consistent naming of files. On ARM,
+the _uImage_ and _uboot.env_ files now always reside under _boot/_.
+Thanks to this uniform convention, Genode's new system update mechanism can
+now equally expect that a system update corresponds to the mere replacement of
+the content of the _boot/_ directory.
 
-commit a7a5c5ce5448d3833181e4618b26416dfa970ac6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jan 18 17:23:14 2023 +0100
 
-    run/image/uboot: move uImage to boot/
-    
-    This patch changes the 'run_image' function to replace a boot/image.elf
-    file by the corresponding boot/uImage file.
-    
-    Issue #4730
+Minor run-tool changes
+======================
+
+The functionality of the _image/uboot_fit_ plugin has been integrated into the
+regular _image/uboot_ plugin as both plugins were quite similar.
+FIT images can now be produced by adding the run option '--image-uboot-fit'.
 
