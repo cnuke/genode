@@ -141,6 +141,20 @@ Date:   Tue Jan 31 14:09:12 2023 +0100
 
     sculpt: launcher for screenshot
 
+commit 88becbe29d92424ed7edb0233af6cfce40a2ab0c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 10 13:42:47 2023 +0100
+
+    sculpt: integration of optional presets
+    
+    With the new 'presets:' tag, .sculpt files can now refer to deploy
+    configurations to be integrated in the presets/ subdirectory of the
+    config file system. Those files can thereby be used as preconfigured
+    system scenarios. Such a preconfigured scenario can be loaded at
+    runtime by copying the preset file to config/deploy.
+    
+    Issue #4731
+
 
 Interactive graphical VMs on ARM
 ################################
@@ -644,63 +658,22 @@ Date:   Tue Jan 31 16:33:13 2023 +0100
 Base API changes
 ================
 
-; @nfeske
+As part of our continuous motive to streamline and simplify the framework's
+base API as much as possible, the current release removes
+the interfaces _base/blocking.h_, _base/debug.h_, and _base/lock_guard.h_
+as those headers contained parts of the API that have become obsolete by now.
+As a further minor change, the 'abs' function of _util/misc_math.h_ got removed.
 
-commit d5d2146034b13e01c1f0f1cafd2a58336a8787f9
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Feb 9 11:26:57 2023 +0100
-
-    util/string.h: add 'Const_byte_range_ptr'
-    
-    The new 'Const_byte_range_ptr' type is suitable as argument type that
-    refers to a read-only byte buffer, e.g., the source buffer of a write
-    operation.
-
-commit 11dbfafbafdb485bd8a5ba9646e1cb0b27193c75
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Feb 21 14:15:08 2023 +0100
-
-    Remove base/debug.h
-    
-    Fixes #4765
-
-commit 7c398f4f2fca584748ed22e1db25af317a52e0f7
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Feb 21 14:42:07 2023 +0100
-
-    util/misc_math.h: remove abs function
-    
-    Fixes #4766
-
-commit da896edd49409369eccf66fb5c56c99bd35a8a94
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Feb 21 15:33:12 2023 +0100
-
-    base: remove base/blocking.h
-    
-    This patch removes the obsolete exception type 'Blocking_canceled'.
-    
-    Issue #4768
-
-commit 29c8ebad2edddeb4502785f0fd1f6f7ce329be7e
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Feb 21 16:35:23 2023 +0100
-
-    Remove base/lock_guard.h
-    
-    For Genode API users, the 'Mutex::Guard' is the way to go.
-    Special lock implementations can bring their own 'Guard' utilities.
-    
-    Fixes #4769
+The string utilities _util/string.h_ received the new 'Const_byte_range_ptr'
+type complementing the existing 'Byte_range_ptr'. Both types are designated
+for passing arguments that refers to a byte buffer, e.g., the source buffer of
+a write operation.
 
 
-Sculpt OS infrastructure
-########################
+On-target system-update and rollback mechanism
+##############################################
 
 ; @nfeske
-
-On-target system-update mechanism
-=================================
 
 commit 80a08e562782aba573eaad1be330b0a3e2df342b
 Author: Norman Feske <norman.feske@genode-labs.com>
@@ -803,24 +776,6 @@ Date:   Mon Jan 23 16:42:46 2023 +0100
     results and requested installation items.
     
     Issue #4744
-
-Rapid switching between different deploy presets
-================================================
-
-commit 88becbe29d92424ed7edb0233af6cfce40a2ab0c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jan 10 13:42:47 2023 +0100
-
-    sculpt: integration of optional presets
-    
-    With the new 'presets:' tag, .sculpt files can now refer to deploy
-    configurations to be integrated in the presets/ subdirectory of the
-    config file system. Those files can thereby be used as preconfigured
-    system scenarios. Such a preconfigured scenario can be loaded at
-    runtime by copying the preset file to config/deploy.
-    
-    Issue #4731
-
 
 Device drivers
 ##############
