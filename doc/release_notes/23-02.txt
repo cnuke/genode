@@ -53,6 +53,8 @@ identical to Sculpt OS on the PC. However, besides the new user interface
 specifically designed for the touch screen of the phone, two noteworthy
 differences set it apart from the regular version of Sculpt OS.
 
+[image pinephone_presets]
+
 First, the phone variant allows the user to rapidly switch between different
 runtime configurations, called presets. This way, the limited resources of the
 phone can be accounted and fully leveraged for each preset individually, while
@@ -61,6 +63,10 @@ as the boot into a separate operating system. But it takes only a fraction of
 a second. The structure of the running system is made fully transparent to the
 user by the component graph known from Sculpt OS.
 
+[image pinephone_scenarios]
+  The variety of presets includes the Morph browser, GLMark2, a system shell,
+  a simple oscilloscope, and camera test.
+
 Second, the system is equipped with an on-target system update mechanism that
 allows the user to install new versions of the system image when they become
 available. System updates are secured by cryptographic signatures. The
@@ -68,6 +74,8 @@ mechanism does not only allow for updating the system but also for the
 rollback to any previously downloaded version. This way, the user can try
 out a new version while being able to fall back to the previous one in the
 case of a regression. This reinforces the end user's ultimate control.
+
+[image pinephone_update]
 
 
 Interactive graphical VMs on ARM
