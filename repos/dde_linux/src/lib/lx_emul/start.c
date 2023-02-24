@@ -71,32 +71,13 @@ static int kernel_init(void * args)
 
 static void timer_loop(void)
 {
-	unsigned long long const jiffy_us  = jiffies_to_usecs(1);
-	unsigned long long       last_time = 0;
-
 	for (;;) {
 		tick_nohz_idle_enter();
 
 		if (!lx_emul_task_another_runnable())
 			tick_nohz_idle_stop_tick();
 
-		/*
-		 * Prevent handling the time more often than necessary
-		 * as the task will be unblocked on every Lx::scheduler
-		 * scheduling round.
-		 */
-		for (;;) {
-			unsigned long long const time_diff =
-				lx_emul_time_counter() - last_time;
-
-			if (time_diff < jiffy_us) {
-				lx_emul_task_schedule(true);
-			} else {
-				last_time = lx_emul_time_counter();
-				break;
-			}
-		}
-
+		lx_emul_task_schedule(true);
 		lx_emul_time_handle();
 
 		/* check restarting ticking */
@@ -150,12 +131,6 @@ int lx_emul_init_task_function(void * dtb)
 	system_state = SYSTEM_SCHEDULING;
 
 	complete(&kthreadd_done);
-
-	/*
-	 * We increase the priority to make sure the task will
-	 * always be scheduled first.
-	 */
-	lx_emul_task_priority(current, 50);
 
 	lx_emul_task_schedule(false);
 
