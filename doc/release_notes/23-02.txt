@@ -872,35 +872,35 @@ ACPI suspend & resume
 
 As extension to the principal [https://genode.org/documentation/release-notes/22.11#Low-level_mechanism_for_suspend_resume_on_PC_platforms - ACPI suspend and resume]
 support introduced with the Genode 22.10 release, the NOVA kernel
-now supports also to re-enable the IOMMU after ACPI resume. The IOMMU is
+now supports also the re-enabling of the IOMMU after ACPI resume. The IOMMU is
 a hardware feature supported since [https://genode.org/documentation/release-notes/13.02#DMA_protection_via_IOMMU - 13.02 release]
 and extended in [https://genode.org/documentation/release-notes/20.11#NOVA_microhypervisor - 20.11 release], which
-sandbox device hardware and (malicious/faulty) drivers to avoid arbitrary DMA transactions.
+sandboxed device hardware and (malicious/faulty) drivers to avoid arbitrary DMA transactions.
 
 Intel P/E cores
 ---------------
 
 With the start of the [https://en.wikipedia.org/wiki/Intel_Core#12th_generation - 12th Intel CPU generation],
 Intel introduced CPUs with heterogeneous cores, similar to
-[https://en.wikipedia.org/wiki/ARM_big.LITTLE - ARM big/little] concept.
+[https://en.wikipedia.org/wiki/ARM_big.LITTLE - ARM's big/LITTLE] concept.
 The new CPUs have a number of so called P-cores (performance) and E-cores
-(efficient), which differ in their performance and power usage. The CPU cores
-are
-([https://en.wikipedia.org/wiki/Alder_Lake#CPUID_incoherence - mostly/should be used]) instruction
+(efficient), which differ in their performance and power characteristics.
+The CPU cores are
+([https://en.wikipedia.org/wiki/Alder_Lake#CPUID_incoherence - mostly/should be]) instruction
 compatible and are reported identical via's x86 CPUID instruction nowadays.
-However, an operating system as Genode must be able to differentiate the
-core's in order to support informed decisions about placement or scheduling
+However, an operating system such as Genode must be able to differentiate the
+cores in order to take informed decisions about placement or scheduling
 of Genode components.
 
-With this release we added support to the NOVA kernel to propagate the
-information about P/E cores to Genode's 'core' roottask. In Genode's core
-the information are used to group them into Genode's
-[https://genode.org/documentation/release-notes/13.08#Management_of_CPU_affinities - affinity-space].
+With the current release, we added support to the NOVA kernel to propagate the
+information about P/E cores to Genode's 'core' roottask. In Genode's core,
+this information is used to group the CPU cores into Genode's
+[https://genode.org/documentation/release-notes/13.08#Management_of_CPU_affinities - affinity space].
 With
-[https://genode.org/documentation/release-notes/20.05#NOVA_microhypervisor - release 20.05]
+[https://genode.org/documentation/release-notes/20.05#NOVA_microhypervisor - release 20.05],
 we introduced the grouping of hyperthreads on the y-axis, which we kept if the
-P-cores have the feature enabled. After the P-cores and hyperthreads all remaining
-E-cores are placed in the affinity-space.
+P-cores have the feature enabled. Following the P-cores and hyperthreads,
+all remaining E-cores are placed in the affinity space.
 
 The following examples showcases the grouping in the affinity-space on x/y axis:
 
@@ -963,6 +963,7 @@ log output and are reported in the 'platform_info' ROM, e.g.
 !   ...
 ! <cpus>
 ! ...
+
 
 Build system and tools
 ######################
