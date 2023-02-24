@@ -320,14 +320,14 @@ Mali graphics
 
 The 22.08 release introduced a
 [https://genode.org/documentation/release-notes/22.08#GPU_and_Mesa_driver_for_Mali-400 - driver]
-for the GPU found in the PinePhone. Since it was merely a rapid prototype it
+for the GPU found in the PinePhone. Since it was merely a rapid prototype, it
 was limited to one client at a time and was normally started and stopped
 together with its client.
-With this release we remedied these limitations and enabled support for multiple
+With this release, we remedied these limitations and enabled support for multiple
 concurrent clients and also revised our libdrm back end for Mesa's Lima driver.
 
 We have not yet explored applying the same VRAM optimizations that are employed
-by our Intel graphics-stack one VRAM allocation still correlates to one
+by our Intel graphics stack. One VRAM allocation still correlates to one
 buffer-object.
 
 
@@ -575,22 +575,23 @@ i.MX53 related platform driver got extended to support these clocks.
 The USB host-controller driver for the i.MX 8MQ EVK is now able to drive the
 USB-C connector of this board too.
 
+
 Realtek Wifi
 ============
 
-A welcoming side-effect of switching to the new DDE Linux approach is enabling
-other drivers that are part of the same subsystem has become less involved.
-In the past we mostly focused on getting wireless devices supported by the
-iwlwifi driver to work as those are the devices predominantly found in the
-systems we use on a daily basis. That being said, every now and then, one
+As a welcoming side-effect of switching to the new DDE-Linux approach,
+enabling other drivers that are part of the same subsystem has become less involved.
+In the past, we mostly focused on getting wireless devices supported by the
+iwlwifi driver to work as those are the devices predominantly found in
+commodity laptops. That being said, every now and then, one
 comes across a different vendor and especially with the shifting focus on
 ARM-based systems covering those as well becomes necessary.
 
-As a first experiment we enabled the rtlwifi driver that provides support
-for Realtek-based wireless devices. Due to lacking access to other hardware
+As a first experiment, we enabled the rtlwifi driver that provides support
+for Realtek-based wireless devices. Due to lacking access to other hardware,
 the driver was so far tested only with a specific RTL8188EE based device
 ([10ec:8179] rev 01). Of course, some trade-offs were made as power-management
-is currently not available but getting it to work, nevertheless, took barely
+is currently not available. But getting it to work, nevertheless, took barely
 half a day of work, which is promising.
 
 
