@@ -277,18 +277,18 @@ Session interface changes
 -------------------------
 
 The GPU session interface was originally developed along the first version of
-our Intel-based GPU multiplexer. For this reason the interface contained Intel
+our Intel-based GPU multiplexer. For this reason, the interface contained Intel
 specific nomenclature, like GTT and PPGTT for memory map and unmap operations.
 With the introduction of new GPU drivers with different architectures (e.g.,
 Mali and Vivante), the Intel specifics should have gone away. With the current
-Genode release we streamlined the map and unmap functions to semantically be
+Genode release, we streamlined the map and unmap functions to semantically be
 more correct on all supported hardware. There are two map functions now: First,
-_map_cpu_ which maps GPU graphics memory to be accessed by the CPU. And seconds,
+_map_cpu_ which maps GPU graphics memory to be accessed by the CPU. And second,
 _map_gpu_ which establishes a mapping of graphics memory within the GPU.
 
 Additionally, we removed the concept of buffers (as used by Mesa and Linux
 drivers) to manage graphics memory and replaced it by the notion of video memory
-(VRAM), where VRAM stands for the actual graphics memory used by a GPU - may it
+(VRAM) where VRAM stands for the actual graphics memory used by a GPU - may it
 be dedicated on-card memory or system RAM. The change makes it possible to
 separate the graphics-memory management from the buffer management as required
 by the Mesa library.
@@ -301,14 +301,14 @@ When porting 3D applications using Mesa's OpenGL, we found that Mesa allocates
 and frees a lot if small GPU buffer objects (data in GPU memory) during
 operation. This is sub optimal for component-based systems because the Mesa
 library has to perform an RPC to the GPU multiplexer for each buffer allocation
-and for each buffer mapping. As described in Section [Session interface changes]
+and for each buffer mapping. As mentioned above,
 we changed the session semantics from buffer object to video memory and
-implemented this feature within Intel's GPU multiplexer which now only hands out
+implemented this feature within Intel's GPU multiplexer, which now only hands out
 VRAM. This made it possible to move the buffer handling completely to the Mesa
 client side (libdrm). Mesa now allocates large chunks of video memory (i.e.,
 16MB) and hands out memory for buffer objects from this pool. This gives two
-advantages: First, the client side VRAM pool acts a cache which reduces the
-numbers of RPCs required for memory management significantly. Second, because of
+advantages: First, the client-side VRAM pool acts a cache, which reduces the
+number of RPCs required for memory management significantly. Second, because of
 the larger VRAM allocations (compared to many 4K or 16K allocations before)
 fewer capabilities for the actual dataspaces that back the memory are required.
 Measurements showed that almost an order of magnitude of capabilities can be
