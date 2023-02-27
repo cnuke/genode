@@ -89,7 +89,7 @@ an UART-device only. Since then, it received several extensions. Support for
 With release 22.11 the VMM was made configurable to not necessarily provide
 each-and-every I/O access, and to define RAM consumption and CPU count.
 
-With this release, we further enhance the VMM for ARM devices
+We also further enhanced the VMM for ARM devices
 to provide all the means necessary to become a useful virtualization
 solution for interactive scenarios.
 
@@ -103,7 +103,7 @@ the configuration of the VMM accordingly:
 !  ...
 ! </config>
 
-By now, it is possible to declare only one GPU and one input device. Both get
+For now, it is possible to declare only one GPU and one input device. Both get
 mapped to the very same GUI service, according to the service routing of the
 VMM.
 
@@ -242,7 +242,7 @@ Session interface changes
 -------------------------
 
 The GPU session interface was originally developed along the first version of
-our Intel-based GPU multiplexer. For this reason, the interface contained Intel
+our GPU multiplexer for Intel devices. For this reason, the interface contained Intel
 specific nomenclature, like GTT and PPGTT for memory map and unmap operations.
 With the introduction of new GPU drivers with different architectures (e.g.,
 Mali and Vivante), the Intel specifics should have gone away. With the current
@@ -270,7 +270,7 @@ and for each buffer mapping. As mentioned above,
 we changed the session semantics from buffer object to video memory and
 implemented this feature within Intel's GPU multiplexer, which now only hands out
 VRAM. This made it possible to move the buffer handling completely to the Mesa
-client side (libdrm). Mesa now allocates large chunks of video memory (i.e.,
+client side (libdrm). Libdrm now allocates large chunks of video memory (i.e.,
 16MB) and hands out memory for buffer objects from this pool. This gives two
 advantages: First, the client-side VRAM pool acts a cache, which reduces the
 number of RPCs required for memory management significantly. Second, because of
@@ -339,7 +339,7 @@ illustrates the feature.
 !</start>
 
 One such ACPI monitor component is _acpi_event_ that maps ACPI events to key
-events of a requested Event session based on configuration. So, ACPI state
+events of a requested Event session based on the configuration. So, ACPI state
 changes can be processed like ordinary key press-release events via, for
 example, the _event_filter_. The following configuration illustrates how to
 map the ACPI event types to key events.
@@ -425,7 +425,7 @@ be evaluated at runtime by the sculpt-manager component.
 Formalism for generating images and image metadata
 --------------------------------------------------
 
-To enable Sculpt system to easily detect new versions, system images must be
+To enable a Sculpt system to easily detect new versions, system images must be
 accompanied by metadata discoverable at a known location. This information
 is provided by a so-called image-index file located at
 _depot/<user>/image/index_. The image index of a depot user lists the
@@ -461,7 +461,7 @@ the boot directory. The bootable disk image can be used to install a new
 system from scratch by copying the image directly to a block device. It
 contains raw block data. The archive of the boot directory contains the
 content needed for an on-target system update to this version. Within the
-depot, this archive is a directory - named after the image - that contains the
+depot, this archive has the form of a directory - named after the image - that contains the
 designated content of the boot directory on target. Depending on the board, it
 may contain only a single file loaded by the boot loader (e.g., uImage), or
 several boot modules, or even the boot-loader configuration. The following
@@ -658,7 +658,7 @@ ACPI suspend & resume
 ---------------------
 
 As extension to the principal [https://genode.org/documentation/release-notes/22.11#Low-level_mechanism_for_suspend_resume_on_PC_platforms - ACPI suspend and resume]
-support introduced with the Genode 22.10 release, the NOVA kernel
+support introduced with the Genode 22.11 release, the NOVA kernel
 now supports also the re-enabling of the IOMMU after ACPI resume. The IOMMU is
 a hardware feature supported since [https://genode.org/documentation/release-notes/13.02#DMA_protection_via_IOMMU - release 13.02]
 and extended in [https://genode.org/documentation/release-notes/20.11#NOVA_microhypervisor - release 20.11], which
@@ -803,7 +803,7 @@ preparation for use with our build system. Ports are managed by tools
 residing in the _tool/ports_ directory. For example,
 _tool/ports/prepare_port_ is used to execute all required preparation steps.
 
-Currently, the base Genode sources support 90 ports (you may try
+Currently, the base Genode sources feature 90 ports (you may try
 _tool/ports/list_ yourself) and, thus, it's not trivial to keep track of all
 the ports in the repo directories. Therefore, we introduce the
 _tool/ports/metadata_ tool to extract information about license, upstream
