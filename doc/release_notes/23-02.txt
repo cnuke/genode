@@ -84,7 +84,7 @@ Interactive graphical VMs on ARM
 The virtual-machine monitor (VMM) using hardware-assisted virtualization on ARM
 started as a case study eight years ago for Samsung's Exynos 5250 SoC.
 Originally, it supported virtualization of CPU, timer, interrupt-controller, and
-an UART-device only. Since then it received several extensions. Support for
+an UART-device only. Since then, it received several extensions. Support for
 64-bit ARMv8 systems, VirtIO devices for network, console, and block access.
 With release 22.11 the VMM was made configurable to not necessarily provide
 each-and-every I/O access, and to define RAM consumption and CPU count.
@@ -173,7 +173,7 @@ Genode's simplicity.
 On the other hand, the pervasiveness of the VFS - being embedded in
 Genode's C runtime - puts it on the performance-critical path whenever
 application I/O is involved.
-The ever growing sophistication of application workloads like running a
+The ever-growing sophistication of application workloads like running a
 Chromium-based web browser on the PinePhone puts merciless pressure on the
 VFS, which motivated the following I/O-throughput optimizations.
 
@@ -230,7 +230,7 @@ led to welcome simplifications of asynchronously working VFS plugins.
 Furthermore, we removed the 'file_size' type from read/write interfaces.
 The former C-style pair of (pointer, size) arguments to those operations have
 been replaced by 'Byte_range_ptr' and 'Const_byte_range_ptr' argument types,
-which make the code safer and easier to follow. Also the VFS utilities offered
+which make the code safer and easier to follow. Also, the VFS utilities offered
 by _os/vfs.h_ benefit from this safety improvement.
 
 
@@ -263,7 +263,7 @@ Intel graphics
 
 When porting 3D applications using Mesa's OpenGL, we found that Mesa allocates
 and frees a lot if small GPU buffer objects (data in GPU memory) during
-operation. This is sub optimal for component-based systems because the Mesa
+operation. This is suboptimal for component-based systems because the Mesa
 library has to perform an RPC to the GPU multiplexer for each buffer allocation
 and for each buffer mapping. As mentioned above,
 we changed the session semantics from buffer object to video memory and
@@ -381,7 +381,7 @@ As a further minor change, the 'abs' function of _util/misc_math.h_ got removed.
 
 The string utilities _util/string.h_ received the new 'Const_byte_range_ptr'
 type complementing the existing 'Byte_range_ptr'. Both types are designated
-for passing arguments that refers to a byte buffer, e.g., the source buffer of
+for passing arguments that refer to a byte buffer, e.g., the source buffer of
 a write operation.
 
 
@@ -496,7 +496,7 @@ accepts the following two new queries:
 ! <images      user="..."/>
 ! <image_index user="..."/>
 
-If present in the query, depot_query generates reports labeled as
+If present in the query, depot_query generates reports labelled as
 "images" and "image_index" respectively. These reports are picked up by
 the depot-download component to track the completion of each job.
 The reported information is also used by the system updater to get hold of
@@ -543,7 +543,7 @@ USB-C connector of this board too.
 Realtek Wifi
 ============
 
-As a welcoming side-effect of switching to the new DDE-Linux approach,
+As a welcoming side effect of switching to the new DDE-Linux approach,
 enabling other drivers that are part of the same subsystem has become less involved.
 In the past, we mostly focused on getting wireless devices supported by the
 iwlwifi driver to work as those are the devices predominantly found in
@@ -697,7 +697,7 @@ we introduced the grouping of hyperthreads on the y-axis, which we kept if the
 P-cores have the feature enabled. Following the P-cores and hyperthreads,
 all remaining E-cores are placed in the affinity space.
 
-The following examples showcases the grouping in the affinity-space on x/y axis:
+The following examples showcase the grouping in the affinity-space on x/y axis:
 
 Core i7 1270P - 4 P-cores (hyperthreading enabled) and 8 E-cores:
 
@@ -782,7 +782,7 @@ comprise the library's public interface. The build artifact of a library
 is declared in the _artifacts_ file and is expected to have the form
 _<library-name>.lib.so_. The ABI symbols of such a library must be listed
 in the file _symbols/<library-name>_. With these bits of information supplied
-to Goa, the tool is able build and publish both the library and the API as
+to Goa, the tool is able to build and publish both the library and the API as
 depot archives - ready to use by Genode applications linking to the library.
 The way how all those little pieces work together is best illustrated by the
 accompanied
