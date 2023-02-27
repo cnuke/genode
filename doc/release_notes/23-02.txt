@@ -117,74 +117,38 @@ VM's memory. Now, it is possible to omit the "initrd_rom" configuration option.
 If left out, no initrd is provided to the Linux guest.
 
 
-Custom IP block for DMA protection on Xilinx Zynq
-#################################################
+Custom IP block for DMA protection on AMD/Xilinx Zynq
+#####################################################
 
-; @jschlatow
+As a continuation of the hardware-software co-design efforts presented in the
+previous release, we turned towards enabling bulk-data transfer between the
+Zynq's CPU and its FPGA. In a first step, we built a custom hardware design
+that implements a DMA loopback device based on Xilinx' AXI DMA IP. Since we
+were particularly interested in testing out the Zynq's accelerator coherency
+port (ACP), we implemented two loopback devices: one attached to the ACP and
+one to the high-performance (HP) AXI port of the Zynq. In order to test the
+design in Genode, we added a port of Xilinx' embeddedsw repository that hosts
+standalone driver code for the Xilinx IP cores. Based on this port, we
+implemented the xilinx_axidma library as a Genode wrapper in order to simplify
+development of custom drivers using Xilinx' AXI DMA IP. A newly written test
+component takes throughput measurements for varying transfer sizes. A more
+detailed account of this story is published in an
+[https://www.hackster.io/johannes-schlatow/using-axi-dma-on-genode-6482d2 - article on hackster.io].
 
-commit 6fb1e1e6bae488f2fa19d76a317c80c58f3d6205
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Dec 16 14:45:37 2022 +0100
+Knowing that DMA bypasses any memory protection on the Zynq as it does not
+feature an IOMMU, we further spent some development efforts on implementing a
+custom IP block, called DMA Guard, for protecting against unintended DMA
+transfers from/to the FPGA. The DMA Guard is configured with a limited set of
+address ranges for which DMA transfers will be granted. Any out-of-range
+transfer will be denied. The configuration of the DMA Guard is conducted by the
+Zynq's platform driver based on the allocated DMA buffers. For the time being,
+we applied several changes to the platform driver. For the meantime, these
+modifications are hosted in the genode-zynq repository but are going to find
+their way into the generic platform driver for the next release.
 
-    tool: deal with xsa containing multiple hwh files
-
-commit 7b0b0811546975b33eba7cead455ba6f8fb83f90
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Nov 11 16:42:00 2022 +0100
-
-    add xilinx axidma driver library
-    
-    The library bases on the xilinx_embeddedsw port.
-
-commit c3933e12f3705be1e4ebd0e80dbb4317f3b97a51
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Tue Jan 17 18:42:01 2023 +0100
-
-    dma_loopback test
-    
-    This adds a run script for testing the DMA throughput with the dma_loopback
-    bitstream. The bitstream comprises two DMA IP cores, one is connected
-    via AXI_HP and the other via AXI_ACP. The ACP allows using CACHED memory
-    as DMA buffers.
-
-commit 1764372c56579e99de78ffd21fbdd823ef476020
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Thu Jan 19 16:45:21 2023 +0100
-
-    zynq_uboot_sdcard: move uImage to /boot/uImage
-    
-    This commit changes the default uboot env to expect bitstream files and
-    uEnv.txt inside the /boot/ directory.
-    
-    Issue genodelabs/genode#4730
-
-commit f83377e63e6e130b3588fa313fd8e7cfcceba05d
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Wed Feb 22 11:06:19 2023 +0100
-
-    platform_drv: add support for control devices
-
-commit 4cef6d42c7f6a9c8c87ffc28768e97677dafe0c6
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Mon Jan 23 16:28:56 2023 +0100
-
-    platform_drv: remove hard-coded slcr device
-    
-    With the introduction of control devices in the generic platform driver,
-    we are able to use information from the devices ROM to create control
-    devices such as the slcr device.
-
-commit 43e2e85cc63b798bc841c63fed3178975044b3aa
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Wed Dec 21 20:58:52 2022 +0100
-
-    platform_drv: add dma_guard control device
-
-commit 719157a1a6fc9426091d8f9c22ca2d151e797407
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Wed Feb 22 14:28:18 2023 +0100
-
-    dma_guard test
+If you are interested in more details about the DMA Guard's development, keep
+watching our [https://www.hackster.io/genode - hackster.io channel] where we
+will put out a new article concerning this matter very soon.
 
 
 Base framework and OS-level infrastructure
