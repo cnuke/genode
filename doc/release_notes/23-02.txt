@@ -607,9 +607,9 @@ Scheduling improvements for interactive workloads
 As Genode conquers the PinePhone, the base-hw kernel, for the first time, has
 to perform real-life multimedia on a daily basis given a resource-limited
 mobile target. One particularly important and ambitious use case has become
-video conferencing in the morph browser. A combination of an already
+video conferencing in the Morph browser. A combination of an already
 demanding browser engine with an application that not only streams video and
-audio in both directions over network but also handles video and audio IO at
+audio in both directions over network but also handles video and audio I/O at
 the device, and all that fluently and at the same time.
 
 A lot of thinking went into how to optimize this scenario on each level of
@@ -627,20 +627,20 @@ present.
 So, this "zero" band below all the priority bands temporarily accommodates all
 subjects that have a priority but that are out of quota. It contains, however,
 also subjects that have no priority in general. These might be tasks like a GCC
-compilation or a Bitcoin miner. While prioritized tasks would be user input
+compilation or a ray tracer. While prioritized tasks would be user input
 handlers or the display driver. Now, one difficult problem that arises with
 this scheduling scheme is that system integration has to decide how much quota
 is required by a prioritized task. The perfect value can't be determined as it
 depends on many factors including the target platform. Therefore, we have to
-consider that an important task like the audio driver in the videoconf
+consider that an important task like the audio driver in the video-conference
 scenario runs out of quota shortly before finishing its work.
 
 This is already bad as is as the audio driver now has to share the CPU with
 many unimportant tasks until the next super period. But it became even worse
 because, in the past implementation, subjects always entered the zero band at
 the tail position. It meant that, e.g., the remaining audio handling had to
-wait at least until all the unprioritized tasks (e.g. GCC and Bitcoins) had
-used up their zero-band time slice. In order to mitigate this situation, we
+wait at least until all the unprioritized tasks (e.g. long-taking computations)
+had used up their zero-band time slice. In order to mitigate this situation, we
 decided that prioritized tasks when depleting their quota become head of the
 zero-band, so, they will be scheduled first whenever the higher bands become
 idle.
@@ -649,6 +649,7 @@ This change relaxes the consequences of quota-depletion events for
 time-critical tasks in a typical system with many unprioritized tasks. At the
 same time, it should not have a significant impact on the overall schedule
 because depletion events are rare and zero-band time-slices short.
+
 
 NOVA microhypervisor
 ====================
