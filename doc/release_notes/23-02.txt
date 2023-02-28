@@ -121,7 +121,8 @@ Custom IP block for DMA protection on AMD/Xilinx Zynq
 #####################################################
 
 As a continuation of the hardware-software co-design efforts presented in the
-previous release, we turned towards enabling bulk-data transfer between the
+[https://genode.org/documentation/release-notes/22.11#Hardware-software_co-design_with_Genode_on_Xilinx_Zynq - previous release],
+we turned towards enabling bulk-data transfer between the
 Zynq's CPU and its FPGA. In a first step, we built a custom hardware design
 that implements a DMA loopback device based on Xilinx' AXI DMA IP. Since we
 were particularly interested in testing out the Zynq's accelerator coherency
@@ -142,8 +143,8 @@ transfers from/to the FPGA. The DMA Guard is configured with a limited set of
 address ranges for which DMA transfers will be granted. Any out-of-range
 transfer will be denied. The configuration of the DMA Guard is conducted by the
 Zynq's platform driver based on the allocated DMA buffers. For the time being,
-we applied several changes to the platform driver. For the meantime, these
-modifications are hosted in the genode-zynq repository but are going to find
+we applied several changes to the platform driver. These modifications are
+currently hosted in the genode-zynq repository but are going to find
 their way into the generic platform driver for the next release.
 
 If you are interested in more details about the DMA Guard's development, keep
