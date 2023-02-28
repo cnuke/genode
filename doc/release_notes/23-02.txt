@@ -225,8 +225,8 @@ In particular, the new interface 'Vfs::Env::User' replaces the former
 had to be called on a 'Vfs_handle', the new interface does not require any
 specific handle. It is merely meant to prompt the VFS user (like the libc) to
 re-attempt stalled I/O operations but it does not provide any immediate hint
-about which of the handles have become ready for reading/writing. This change
-led to welcome simplifications of asynchronously working VFS plugins.
+about which of the handles have become ready for reading/writing. This
+decoupling led to welcome simplifications of asynchronously working VFS plugins.
 
 Furthermore, we removed the 'file_size' type from read/write interfaces.
 The former C-style pair of (pointer, size) arguments to those operations have
