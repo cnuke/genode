@@ -54,36 +54,16 @@ struct Cbe_init::Library : Cbe::Spark_object<60960>
 
 	bool execute_progress() const;
 
-	void io_request_completed(Cbe::Io_buffer::Index const &,
-	                          bool)
-	{
-		class Exception_1 { };
-		throw Exception_1 { };
-	}
+	bool librara__peek_generated_request(Genode::uint8_t *buf_ptr,
+	                                     Genode::size_t   buf_size);
 
-	void has_io_request(Cbe::Request &req, Cbe::Io_buffer::Index &) const
-	{
-		req = Cbe::Request { };
-		return;
-	}
-
-	void io_request_in_progress(Cbe::Io_buffer::Index const &)
-	{
-		class Exception_1 { };
-		throw Exception_1 { };
-	}
+	void librara__drop_generated_request(void *prim_ptr);
 
 
-		bool librara__peek_generated_request(Genode::uint8_t *buf_ptr,
-		                                     Genode::size_t   buf_size);
-
-		void librara__drop_generated_request(void *prim_ptr);
-
-
-		void librara__generated_request_complete(void *prim_ptr,
-		                                         void *key_plain_ptr,
-		                                         void *key_cipher_ptr,
-		                                         bool  success);
+	void librara__generated_request_complete(void *prim_ptr,
+	                                         void *key_plain_ptr,
+	                                         void *key_cipher_ptr,
+	                                         bool  success);
 };
 
 #endif /* _CBE__INIT__LIBRARY_H_ */

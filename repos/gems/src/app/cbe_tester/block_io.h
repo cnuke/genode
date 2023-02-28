@@ -23,7 +23,7 @@
 
 namespace Cbe
 {
-	class Block_ia;
+	class Block_io;
 	class Block_io_request;
 	class Block_io_channel;
 }
@@ -38,7 +38,7 @@ class Cbe::Block_io_request : public Module_request
 
 	private:
 
-		friend class Block_ia;
+		friend class Block_io;
 		friend class Block_io_channel;
 
 		Type             _type                { INVALID };
@@ -97,7 +97,7 @@ class Cbe::Block_io_channel
 {
 	private:
 
-		friend class Block_ia;
+		friend class Block_io;
 
 		enum State {
 			INACTIVE, SUBMITTED, PENDING, IN_PROGRESS, COMPLETE,
@@ -117,7 +117,7 @@ class Cbe::Block_io_channel
 		bool             _generated_req_success    { false };
 };
 
-class Cbe::Block_ia : public Module
+class Cbe::Block_io : public Module
 {
 	private:
 
@@ -182,7 +182,7 @@ class Cbe::Block_ia : public Module
 
 	public:
 
-		Block_ia(Vfs::Env               &vfs_env,
+		Block_io(Vfs::Env               &vfs_env,
 		         Genode::Xml_node const &xml_node);
 
 

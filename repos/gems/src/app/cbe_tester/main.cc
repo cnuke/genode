@@ -22,8 +22,6 @@
 /* CBE includes */
 #include <cbe/library.h>
 #include <cbe/init/library.h>
-#include <cbe/check/library.h>
-#include <cbe/dump/library.h>
 #include <cbe/dump/configuration.h>
 #include <cbe/init/configuration.h>
 
@@ -56,87 +54,6 @@ namespace Cbe {
 		}
 		return "?";
 	}
-}
-
-
-enum class Module_type : uint8_t
-{
-	CBE_INIT,
-	CBE_DUMP,
-	CBE_CHECK,
-	CBE,
-	CMD_POOL,
-};
-
-
-static Module_type module_type_from_uint32(uint32_t uint32)
-{
-	class Bad_tag { };
-	switch (uint32) {
-	case 1: return Module_type::CBE_INIT;
-	case 2: return Module_type::CBE;
-	case 3: return Module_type::CBE_DUMP;
-	case 4: return Module_type::CBE_CHECK;
-	case 5: return Module_type::CMD_POOL;
-	default: throw Bad_tag { };
-	}
-}
-
-
-static uint32_t module_type_to_uint32(Module_type type)
-{
-	class Bad_type { };
-	switch (type) {
-	case Module_type::CBE_INIT : return 1;
-	case Module_type::CBE      : return 2;
-	case Module_type::CBE_DUMP : return 3;
-	case Module_type::CBE_CHECK: return 4;
-	case Module_type::CMD_POOL : return 5;
-	}
-	throw Bad_type { };
-}
-
-
-static Module_type tag_get_module_type(uint32_t tag)
-{
-	return module_type_from_uint32((tag >> 24) & 0xff);
-}
-
-
-static uint32_t tag_set_module_type(uint32_t    tag,
-                                    Module_type type)
-{
-	if (tag >> 24) {
-
-		class Bad_tag { };
-		throw Bad_tag { };
-	}
-	return tag | (module_type_to_uint32(type) << 24);
-}
-
-
-static char const *blk_pkt_op_to_string(Block::Packet_descriptor::Opcode op)
-{
-	switch (op) {
-	case Block::Packet_descriptor::READ: return "read";
-	case Block::Packet_descriptor::WRITE: return "write";
-	case Block::Packet_descriptor::SYNC: return "sync";
-	case Block::Packet_descriptor::TRIM: return "trim";
-	case Block::Packet_descriptor::END: return "end";
-	};
-	return "?";
-}
-
-
-static String<128> blk_pkt_to_string(Block::Packet_descriptor const &packet)
-{
-	return
-		String<128>(
-			"op=", blk_pkt_op_to_string(packet.operation()),
-			" vba=", packet.block_number(),
-			" cnt=", packet.block_count(),
-			" succ=", packet.succeeded(),
-			" tag=", Hex(packet.tag().value));
 }
 
 
@@ -201,592 +118,6 @@ static void print_blk_data(Block_data const &blk_data)
 			Hex(blk_data.values[idx + 31], Hex::OMIT_PREFIX, Hex::PAD));
 	}
 }
-
-
-class Block_io : public Interface
-{
-	public:
-
-		virtual bool request_acceptable() = 0;
-
-		virtual void submit_request(Cbe::Request const &cbe_req,
-		                            Block_data         &data) = 0;
-
-		virtual void execute(Constructible<Cbe::Library> &cbe,
-		                     Cbe_dump::Library           &cbe_dump,
-		                     Cbe_check::Library          &cbe_check,
-		                     Verbose_node          const &verbose_node,
-		                     Io_buffer                   &blk_buf,
-		                     bool                        &progress) = 0;
-};
-
-
-class Vfs_block_io_job
-{
-	private:
-
-		using file_size = Vfs::file_size;
-		using file_offset = Vfs::file_offset;
-
-		enum State { PENDING, IN_PROGRESS, COMPLETE };
-
-		Vfs::Vfs_handle &_handle;
-		Cbe::Request     _cbe_req;
-		State            _state;
-		file_offset      _nr_of_processed_bytes;
-		file_size        _nr_of_remaining_bytes;
-
-		Cbe::Io_buffer::Index _cbe_req_io_buf_idx(Cbe::Request const &cbe_req)
-		{
-			return
-				Cbe::Io_buffer::Index {
-					(uint32_t)cbe_req.tag() & 0xffffff };
-		}
-
-		void
-		_mark_req_completed_at_module(Constructible<Cbe::Library> &cbe,
-		                              Cbe_dump::Library           &cbe_dump,
-		                              Cbe_check::Library          &cbe_check,
-		                              Verbose_node          const &verbose_node,
-		                              bool                        &progress)
-		{
-			Cbe::Io_buffer::Index const data_index {
-				_cbe_req_io_buf_idx(_cbe_req) };
-
-			switch (tag_get_module_type(_cbe_req.tag())) {
-			case Module_type::CBE:
-
-				cbe->io_request_completed(data_index, _cbe_req.success());
-				break;
-
-			case Module_type::CBE_DUMP:
-
-				cbe_dump.io_request_completed(data_index, _cbe_req.success());
-				break;
-
-			case Module_type::CBE_CHECK:
-
-				cbe_check.io_request_completed(data_index, _cbe_req.success());
-				break;
-
-			case Module_type::CBE_INIT:
-			case Module_type::CMD_POOL:
-
-				class Bad_module_type { };
-				throw Bad_module_type { };
-			}
-			progress = true;
-
-			if (verbose_node.blk_io_req_completed()) {
-				log("blk req completed: ", _cbe_req);
-			}
-		}
-
-
-		void _execute_read(Constructible<Cbe::Library> &cbe,
-		                   Cbe_dump::Library           &cbe_dump,
-		                   Cbe_check::Library          &cbe_check,
-		                   Verbose_node          const &verbose_node,
-		                   Io_buffer                   &io_data,
-		                   bool                        &progress)
-		{
-			using Result = Vfs::File_io_service::Read_result;
-
-			switch (_state) {
-			case State::PENDING:
-
-				_handle.seek(_cbe_req.block_number() * Cbe::BLOCK_SIZE +
-				             _nr_of_processed_bytes);
-
-				if (!_handle.fs().queue_read(&_handle, _nr_of_remaining_bytes)) {
-					return;
-				}
-				_state = State::IN_PROGRESS;
-				progress = true;
-				return;
-
-			case State::IN_PROGRESS:
-			{
-				file_size nr_of_read_bytes { 0 };
-
-				char *const data {
-					reinterpret_cast<char *>(
-						&io_data.item(_cbe_req_io_buf_idx(_cbe_req))) };
-
-				Result const result {
-					_handle.fs().complete_read(&_handle,
-					                           data + _nr_of_processed_bytes,
-					                           _nr_of_remaining_bytes,
-					                           nr_of_read_bytes) };
-
-				switch (result) {
-				case Result::READ_QUEUED:
-				case Result::READ_ERR_WOULD_BLOCK:
-
-					return;
-
-				case Result::READ_OK:
-
-					_nr_of_processed_bytes += nr_of_read_bytes;
-					_nr_of_remaining_bytes -= nr_of_read_bytes;
-
-					if (_nr_of_remaining_bytes == 0) {
-
-						_state = State::COMPLETE;
-						_cbe_req.success(true);
-
-						_mark_req_completed_at_module(
-							cbe, cbe_dump, cbe_check,
-							verbose_node, progress);
-
-						progress = true;
-						return;
-
-					} else {
-
-						_state = State::PENDING;
-						progress = true;
-						return;
-					}
-
-				case Result::READ_ERR_IO:
-				case Result::READ_ERR_INVALID:
-
-					_state = State::COMPLETE;
-					_cbe_req.success(false);
-
-					_mark_req_completed_at_module(
-						cbe, cbe_dump, cbe_check,
-						verbose_node, progress);
-
-					progress = true;
-					return;
-
-				default:
-
-					class Bad_complete_read_result { };
-					throw Bad_complete_read_result { };
-				}
-			}
-			default: return;
-			}
-		}
-
-		void _execute_write(Constructible<Cbe::Library> &cbe,
-		                    Cbe_dump::Library           &cbe_dump,
-		                    Cbe_check::Library          &cbe_check,
-		                    Verbose_node          const &verbose_node,
-		                    Io_buffer                   &io_data,
-		                    bool                        &progress)
-		{
-			using Result = Vfs::File_io_service::Write_result;
-
-			switch (_state) {
-			case State::PENDING:
-
-				_handle.seek(_cbe_req.block_number() * Cbe::BLOCK_SIZE +
-				             _nr_of_processed_bytes);
-
-				_state = State::IN_PROGRESS;
-				progress = true;
-				break;
-
-			case State::IN_PROGRESS:
-			{
-				file_size nr_of_written_bytes { 0 };
-
-				char const *const data {
-					reinterpret_cast<char *>(
-						&io_data.item(_cbe_req_io_buf_idx(_cbe_req))) };
-
-				Result const result =
-					_handle.fs().write(&_handle,
-					                   data + _nr_of_processed_bytes,
-					                   _nr_of_remaining_bytes,
-					                   nr_of_written_bytes);
-
-				switch (result) {
-				case Result::WRITE_ERR_WOULD_BLOCK:
-					return;
-
-				case Result::WRITE_OK:
-
-					_nr_of_processed_bytes += nr_of_written_bytes;
-					_nr_of_remaining_bytes -= nr_of_written_bytes;
-
-					if (_nr_of_remaining_bytes == 0) {
-
-						_state = State::COMPLETE;
-						_cbe_req.success(true);
-
-						_mark_req_completed_at_module(
-							cbe, cbe_dump, cbe_check,
-							verbose_node, progress);
-
-						progress = true;
-						return;
-
-					} else {
-
-						_state = State::PENDING;
-						progress = true;
-						return;
-					}
-
-				case Result::WRITE_ERR_IO:
-				case Result::WRITE_ERR_INVALID:
-
-					_state = State::COMPLETE;
-					_cbe_req.success(false);
-
-					_mark_req_completed_at_module(
-						cbe, cbe_dump, cbe_check,
-						verbose_node, progress);
-
-					progress = true;
-					return;
-
-				default:
-
-					class Bad_write_result { };
-					throw Bad_write_result { };
-				}
-
-			}
-			default: return;
-			}
-		}
-
-		void _execute_sync(Constructible<Cbe::Library> &cbe,
-		                   Cbe_dump::Library           &cbe_dump,
-		                   Cbe_check::Library          &cbe_check,
-		                   Verbose_node          const &verbose_node,
-		                   bool                        &progress)
-		{
-			using Result = Vfs::File_io_service::Sync_result;
-
-			switch (_state) {
-			case State::PENDING:
-
-				if (!_handle.fs().queue_sync(&_handle)) {
-					return;
-				}
-				_state = State::IN_PROGRESS;
-				progress = true;
-				break;;
-
-			case State::IN_PROGRESS:
-
-				switch (_handle.fs().complete_sync(&_handle)) {
-				case Result::SYNC_QUEUED:
-
-					return;
-
-				case Result::SYNC_ERR_INVALID:
-
-					_cbe_req.success(false);
-					_mark_req_completed_at_module(
-						cbe, cbe_dump, cbe_check, verbose_node,
-						progress);
-
-					_state = State::COMPLETE;
-					progress = true;
-					return;
-
-				case Result::SYNC_OK:
-
-					_cbe_req.success(true);
-					_mark_req_completed_at_module(
-						cbe, cbe_dump, cbe_check, verbose_node,
-						progress);
-
-					_state = State::COMPLETE;
-					progress = true;
-					return;
-
-				default:
-
-					class Bad_sync_result { };
-					throw Bad_sync_result { };
-				}
-
-			default: return;
-			}
-		}
-
-	public:
-
-		Vfs_block_io_job(Vfs::Vfs_handle &handle,
-		                 Cbe::Request     cbe_req)
-		:
-			_handle                { handle },
-			_cbe_req               { cbe_req },
-			_state                 { State::PENDING },
-			_nr_of_processed_bytes { 0 },
-			_nr_of_remaining_bytes { _cbe_req.count() * Cbe::BLOCK_SIZE }
-		{ }
-
-		bool complete() const
-		{
-			return _state == COMPLETE;
-		}
-
-		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_dump::Library           &cbe_dump,
-		             Cbe_check::Library          &cbe_check,
-		             Verbose_node          const &verbose_node,
-		             Io_buffer                   &blk_buf,
-		             bool                        &progress)
-		{
-			using Cbe_operation = Cbe::Request::Operation;
-
-			switch (_cbe_req.operation()) {
-			case Cbe_operation::READ:
-
-				_execute_read(cbe, cbe_dump, cbe_check, verbose_node,
-				              blk_buf, progress);
-
-				break;
-
-			case Cbe_operation::WRITE:
-
-				_execute_write(cbe, cbe_dump, cbe_check, verbose_node,
-				               blk_buf, progress);
-
-				break;
-
-			case Cbe_operation::SYNC:
-
-				_execute_sync(cbe, cbe_dump, cbe_check, verbose_node,
-				              progress);
-
-				break;
-
-			default:
-
-				class Bad_cbe_operation { };
-				throw Bad_cbe_operation { };
-			}
-		}
-};
-
-
-class Vfs_block_io : public Block_io
-{
-	private:
-
-		String<32>                const  _path;
-		Vfs::Env                        &_vfs_env;
-		Vfs::Vfs_handle                 &_vfs_handle { *_init_vfs_handle(_vfs_env, _path) };
-		Constructible<Vfs_block_io_job>  _job        { };
-
-		Vfs_block_io(const Vfs_block_io&);
-
-		const Vfs_block_io& operator=(const Vfs_block_io&);
-
-		static Vfs::Vfs_handle *_init_vfs_handle(Vfs::Env         &vfs_env,
-		                                         String<32> const &path)
-		{
-			using Result = Vfs::Directory_service::Open_result;
-
-			Vfs::Vfs_handle *vfs_handle { nullptr };
-			Result const result {
-				vfs_env.root_dir().open(
-					path.string(), Vfs::Directory_service::OPEN_MODE_RDWR,
-					&vfs_handle, vfs_env.alloc()) };
-
-			if (result != Result::OPEN_OK) {
-
-				class Open_failed { };
-				throw Open_failed { };
-			}
-			return vfs_handle;
-		}
-
-	public:
-
-		Vfs_block_io(Vfs::Env       &vfs_env,
-		             Xml_node const &block_io)
-		:
-			_path { block_io.attribute_value(
-			           "path", String<32> { "" } ) },
-			_vfs_env { vfs_env }
-		{ }
-
-
-		/**************
-		 ** Block_io **
-		 **************/
-
-		bool request_acceptable() override
-		{
-			return !_job.constructed();
-		}
-
-		void submit_request(Cbe::Request const &cbe_req,
-		                    Block_data         &) override
-		{
-			_job.construct(_vfs_handle, cbe_req);
-		}
-
-		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_dump::Library           &cbe_dump,
-		             Cbe_check::Library          &cbe_check,
-		             Verbose_node          const &verbose_node,
-		             Io_buffer                   &blk_buf,
-		             bool                        &progress) override
-		{
-			if (!_job.constructed()) {
-				return;
-			}
-			_job->execute(
-				cbe, cbe_dump, cbe_check, verbose_node, blk_buf,
-				progress);
-
-			if (_job->complete()) {
-				_job.destruct();
-			}
-		}
-};
-
-
-class Block_connection_block_io : public Block_io
-{
-	private:
-
-		enum { TX_BUF_SIZE = Block::Session::TX_QUEUE_SIZE * BLOCK_SIZE, };
-
-		Genode::Env         &_env;
-		Heap                &_heap;
-		Allocator_avl        _blk_alloc { &_heap };
-		Block::Connection<>  _blk       { _env, &_blk_alloc, TX_BUF_SIZE };
-
-		Cbe::Io_buffer::Index _packet_io_buf_idx(Block::Packet_descriptor const & pkt)
-		{
-			return
-				Cbe::Io_buffer::Index {
-					(uint32_t)pkt.tag().value & 0xffffff };
-		}
-
-		static Block::Packet_descriptor::Opcode
-		_cbe_op_to_block_op(Cbe::Request::Operation cbe_op)
-		{
-			switch (cbe_op) {
-			case Cbe::Request::Operation::READ:  return Block::Packet_descriptor::READ;
-			case Cbe::Request::Operation::WRITE: return Block::Packet_descriptor::WRITE;
-			case Cbe::Request::Operation::SYNC:  return Block::Packet_descriptor::SYNC;
-			default:
-				class Bad_cbe_op { };
-				throw Bad_cbe_op { };
-			}
-		}
-
-	public:
-
-		Block_connection_block_io(Genode::Env               &env,
-		                          Heap                      &heap,
-		                          Signal_context_capability  sigh)
-		:
-			_env  { env },
-			_heap { heap }
-		{
-			_blk.tx_channel()->sigh_ack_avail(sigh);
-			_blk.tx_channel()->sigh_ready_to_submit(sigh);
-		}
-
-		~Block_connection_block_io()
-		{
-			_blk.tx_channel()->sigh_ack_avail(Signal_context_capability());
-			_blk.tx_channel()->sigh_ready_to_submit(Signal_context_capability());
-		}
-
-
-		/**************
-		 ** Block_io **
-		 **************/
-
-		bool request_acceptable() override
-		{
-			return _blk.tx()->ready_to_submit();
-		}
-
-		void submit_request(Cbe::Request const &cbe_req,
-		                    Block_data         &data) override
-		{
-			Block::Packet_descriptor::Opcode const blk_op {
-				_cbe_op_to_block_op(cbe_req.operation()) };
-
-			Block::Packet_descriptor const packet {
-				_blk.alloc_packet(Cbe::BLOCK_SIZE),
-				blk_op,
-				cbe_req.block_number(),
-				cbe_req.count(),
-				Block::Packet_descriptor::Tag { cbe_req.tag() } };
-			if (cbe_req.operation() == Cbe::Request::Operation::WRITE) {
-
-				*reinterpret_cast<Cbe::Block_data*>(
-					_blk.tx()->packet_content(packet)) = data;
-			}
-			_blk.tx()->try_submit_packet(packet);
-		}
-
-		void execute(Constructible<Cbe::Library> &cbe,
-		             Cbe_dump::Library           &cbe_dump,
-		             Cbe_check::Library          &cbe_check,
-		             Verbose_node          const &verbose_node,
-		             Io_buffer                   &blk_buf,
-		             bool                        &progress) override
-		{
-			while (_blk.tx()->ack_avail()) {
-
-				Block::Packet_descriptor packet {
-					_blk.tx()->try_get_acked_packet() };
-
-				Cbe::Io_buffer::Index const data_index {
-					_packet_io_buf_idx(packet) };
-
-				if (packet.operation() == Block::Packet_descriptor::READ &&
-					packet.succeeded())
-				{
-					blk_buf.item(data_index) =
-						*reinterpret_cast<Cbe::Block_data*>(
-							_blk.tx()->packet_content(packet));
-				}
-				switch (tag_get_module_type(packet.tag().value)) {
-				case Module_type::CBE:
-
-					cbe->io_request_completed(data_index,
-					                          packet.succeeded());
-					break;
-
-				case Module_type::CBE_DUMP:
-
-					cbe_dump.io_request_completed(data_index,
-					                               packet.succeeded());
-					break;
-
-				case Module_type::CBE_CHECK:
-
-					cbe_check.io_request_completed(data_index,
-					                               packet.succeeded());
-					break;
-
-				case Module_type::CBE_INIT:
-				case Module_type::CMD_POOL:
-
-					class Bad_module_type { };
-					throw Bad_module_type { };
-				}
-				_blk.tx()->release_packet(packet);
-				progress = true;
-
-				if (verbose_node.blk_io_req_completed()) {
-					log("blk pkt completed: ", blk_pkt_to_string(packet));
-				}
-			}
-			_blk.tx()->wakeup();
-		}
-};
 
 
 class Log_node
@@ -1673,17 +1004,13 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Heap                         _heap                       { _env.ram(), _env.rm() };
 		Vfs::Simple_env              _vfs_env                    { _env, _heap, _config_rom.xml().sub_node("vfs"), *this };
 		Signal_handler<Main>         _sigh                       { _env.ep(), *this, &Main::_execute };
-		Block_io                    &_blk_io                     { _init_blk_io(_config_rom.xml(), _heap, _env, _vfs_env, _sigh) };
-		Io_buffer                    _blk_buf                    { };
 		Command_pool                 _cmd_pool                   { _heap, _config_rom.xml(), _verbose_node };
 		Constructible<Cbe::Library>  _cbe                        { };
-		Cbe_check::Library           _cbe_check                  { };
-		Cbe_dump::Library            _cbe_dump                   { };
 		Cbe_init::Library            _cbe_init                   { };
 		Benchmark                    _benchmark                  { _env };
 		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
-		Block_ia                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
+		Block_io                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
 		Cbe::Librara                 _cbe_librara                { _cbe, };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
@@ -1696,62 +1023,10 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Main(Main const &) = delete;
 		Main &operator = (Main const &) = delete;
 
-		Block_io &_init_blk_io(Xml_node            const &config,
-		                       Heap                      &heap,
-		                       Genode::Env               &env,
-		                       Vfs::Env                  &vfs_env,
-		                       Signal_context_capability  sigh)
-		{
-			Xml_node const &block_io { config.sub_node("block-io") };
-			if (block_io.attribute("type").has_value("block_connection")) {
-				return *new (heap)
-					Block_connection_block_io { env, heap, sigh };
-			}
-			if (block_io.attribute("type").has_value("vfs")) {
-				return *new (heap)
-					Vfs_block_io { vfs_env, block_io };
-			}
-			class Malformed_attribute { };
-			throw Malformed_attribute { };
-		}
-
 		/**
 		 * Vfs::Env::User interface
 		 */
 		void wakeup_vfs_user() override { _sigh.local_submit(); }
-
-		template <typename MODULE>
-		void _handle_pending_blk_io_requests_of_module(MODULE      &module,
-		                                               Module_type  module_type,
-		                                               bool        &progress)
-		{
-			while (true) {
-
-				if (!_blk_io.request_acceptable()) {
-					break;
-				}
-				Cbe::Io_buffer::Index data_index { 0 };
-				Cbe::Request cbe_req { };
-				module.has_io_request(cbe_req, data_index);
-				if (!cbe_req.valid()) {
-					break;
-				}
-				if (data_index.value & 0xff000000) {
-					class Bad_data_index { };
-					throw Bad_data_index { };
-				}
-				cbe_req.tag(
-					tag_set_module_type(data_index.value, module_type));
-
-				_blk_io.submit_request(cbe_req, _blk_buf.item(data_index));
-
-				if (_verbose_node.blk_io_req_in_progress()) {
-					log("blk req in progress: ", cbe_req);
-				}
-				module.io_request_in_progress(data_index);
-				progress = true;
-			}
-		}
 
 		template <typename MODULE>
 		void _handle_completed_client_requests_of_module(MODULE &module,
@@ -1773,27 +1048,12 @@ class Main : Vfs::Env::User, public Cbe::Module
 			}
 		}
 
-		void _execute_cbe_dump (bool &progress)
-		{
-			_cbe_dump.execute(_blk_buf);
-			if (_cbe_dump.execute_progress()) {
-				progress = true;
-			}
-			_handle_pending_blk_io_requests_of_module(
-				_cbe_dump, Module_type::CBE_DUMP, progress);
-
-			_handle_completed_client_requests_of_module(_cbe_dump, progress);
-		}
-
 		void _execute_cbe_init(bool &progress)
 		{
 			_cbe_init.execute();
 			if (_cbe_init.execute_progress()) {
 				progress = true;
 			}
-			_handle_pending_blk_io_requests_of_module(
-				_cbe_init, Module_type::CBE_INIT, progress);
-
 			_handle_completed_client_requests_of_module(_cbe_init, progress);
 		}
 
@@ -1883,9 +1143,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 			if (_cbe->execute_progress()) {
 				progress = true;
 			}
-			_handle_pending_blk_io_requests_of_module(
-				*_cbe, Module_type::CBE, progress);
-
 			_handle_completed_client_requests_of_module(*_cbe, progress);
 		}
 
@@ -1922,31 +1179,16 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 		void _cmd_pool_handle_pending_check_cmds(bool &progress)
 		{
-			while (true) {
+			Command const cmd {
+				_cmd_pool.peek_pending_command(Command::CHECK) };
 
-				if (!_cbe_check.client_request_acceptable()) {
-					break;
-				}
-				Command const cmd {
-					_cmd_pool.peek_pending_command(Command::CHECK) };
-
-				if (cmd.type() == Command::INVALID) {
-					break;
-				}
-				_cbe_check.submit_client_request(
-					Cbe::Request {
-						Cbe::Request::Operation::READ,
-						false,
-						0,
-						0,
-						0,
-						0,
-						cmd.id()
-					}
-				);
-				_cmd_pool.mark_command_in_progress(cmd.id());
-				progress = true;
+			if (cmd.type() == Command::INVALID) {
+				return;
 			}
+			warning("skip <check/> command because it is temporarily not supported");
+			_cmd_pool.mark_command_in_progress(cmd.id());
+			_cmd_pool.mark_command_completed(cmd.id(), true);
+			progress = true;
 		}
 
 		void _cmd_pool_handle_pending_cbe_cmds(bool &progress)
@@ -1980,27 +1222,16 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 		void _cmd_pool_handle_pending_dump_cmds(bool &progress)
 		{
-			while (true) {
+			Command const cmd {
+				_cmd_pool.peek_pending_command(Command::DUMP) };
 
-				if (!_cbe_dump.client_request_acceptable()) {
-					break;
-				}
-				Command const cmd {
-					_cmd_pool.peek_pending_command(Command::DUMP) };
-
-				if (cmd.type() == Command::INVALID) {
-					break;
-				}
-				Cbe_dump::Configuration const &cfg { cmd.dump() };
-				_cbe_dump.submit_client_request(
-					Cbe::Request(
-						Cbe::Request::Operation::READ,
-						false, 0, 0, 0, 0, cmd.id()),
-					cfg);
-
-				_cmd_pool.mark_command_in_progress(cmd.id());
-				progress = true;
+			if (cmd.type() == Command::INVALID) {
+				return;
 			}
+			warning("skip <dump/> command because it is temporarily not supported");
+			_cmd_pool.mark_command_in_progress(cmd.id());
+			_cmd_pool.mark_command_completed(cmd.id(), true);
+			progress = true;
 		}
 
 		void _cmd_pool_handle_pending_construct_cmds(bool &progress)
@@ -2099,18 +1330,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				_cmd_pool.mark_command_completed(cmd.id(), true);
 				progress = true;
 			}
-		}
-
-		void _execute_cbe_check (bool &progress)
-		{
-			_cbe_check.execute(_blk_buf);
-			if (_cbe_check.execute_progress()) {
-				progress = true;
-			}
-			_handle_pending_blk_io_requests_of_module(
-				_cbe_check, Module_type::CBE_CHECK, progress);
-
-			_handle_completed_client_requests_of_module(_cbe_check, progress);
 		}
 
 		void _execute_command_pool(bool &progress)
@@ -2213,13 +1432,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				progress = false;
 				_execute_command_pool(progress);
 				_execute_cbe_init(progress);
-
-				_blk_io.execute(
-					_cbe, _cbe_dump, _cbe_check, _verbose_node,
-					_blk_buf, progress);
-
-				_execute_cbe_check(progress);
-				_execute_cbe_dump(progress);
 				_modules_execute(progress);
 				if (_cbe.constructed()) {
 					_execute_cbe(progress);
@@ -2254,12 +1466,6 @@ void Component::construct(Genode::Env &env)
 
 	Cbe::assert_valid_object_size<Cbe_init::Library>();
 	cbe_init_cxx_init();
-
-	Cbe::assert_valid_object_size<Cbe_check::Library>();
-	cbe_check_cxx_init();
-
-	Cbe::assert_valid_object_size<Cbe_dump::Library>();
-	cbe_dump_cxx_init();
 
 	static Main main(env);
 }

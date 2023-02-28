@@ -20,10 +20,6 @@ LIBS += cbe_cxx
 LIBS += cbe_cxx_common
 LIBS += cbe_init
 LIBS += cbe_init_cxx
-LIBS += cbe_check
-LIBS += cbe_check_cxx
-LIBS += cbe_dump
-LIBS += cbe_dump_cxx
 LIBS += libsparkcrypto
 LIBS += spark
 

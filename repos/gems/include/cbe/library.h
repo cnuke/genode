@@ -54,130 +54,74 @@ class Cbe::Library : public Cbe::Spark_object<353944>
 
 	public:
 
-	Library();
+		Library();
 
-	/**
-	 * Get highest virtual-block-address useable by the current active snapshot
-	 *
-	 * \return  highest addressable virtual-block-address
-	 */
-	Virtual_block_address max_vba() const;
+		/**
+		 * Get highest virtual-block-address useable by the current active snapshot
+		 *
+		 * \return  highest addressable virtual-block-address
+		 */
+		Virtual_block_address max_vba() const;
 
-	/**
-	 * Get information about the CBE
-	 *
-	 * \return  information structure
-	 */
-	Info info() const
-	{
-		Info inf { };
-		_info(inf);
-		return inf;
-	}
+		/**
+		 * Get information about the CBE
+		 *
+		 * \return  information structure
+		 */
+		Info info() const
+		{
+			Info inf { };
+			_info(inf);
+			return inf;
+		}
 
-	void execute();
+		void execute();
 
-	/**
-	 * Return whether the last call to 'execute' has made progress or not
-	 */
-	bool execute_progress() const;
+		/**
+		 * Return whether the last call to 'execute' has made progress or not
+		 */
+		bool execute_progress() const;
 
-	/**
-	 * Check if the CBE can accept a new requeust
-	 *
-	 * \return true if a request can be accepted, otherwise false
-	 */
-	bool client_request_acceptable() const;
+		/**
+		 * Check if the CBE can accept a new requeust
+		 *
+		 * \return true if a request can be accepted, otherwise false
+		 */
+		bool client_request_acceptable() const;
 
-	/**
-	 * Submit a new request
-	 *
-	 * This method must only be called after executing 'request_acceptable'
-	 * returned true.
-	 *
-	 * \param request  block request
-	 */
-	void submit_client_request(Request const &request, uint32_t id);
+		/**
+		 * Submit a new request
+		 *
+		 * This method must only be called after executing 'request_acceptable'
+		 * returned true.
+		 *
+		 * \param request  block request
+		 */
+		void submit_client_request(Request const &request, uint32_t id);
 
-	/**
-	 * Check for any completed request
-	 *
-	 * \return a valid block request will be returned if there is an
-	 *         completed request, otherwise an invalid one
-	 */
-	Request peek_completed_client_request() const;
+		/**
+		 * Check for any completed request
+		 *
+		 * \return a valid block request will be returned if there is an
+		 *         completed request, otherwise an invalid one
+		 */
+		Request peek_completed_client_request() const;
 
-	/**
-	 * Drops the completed request
-	 *
-	 * This method must only be called after executing
-	 * 'peek_completed_request' returned a valid request.
-	 *
-	 */
-	void drop_completed_client_request(Request const &req);
+		/**
+		 * Drops the completed request
+		 *
+		 * This method must only be called after executing
+		 * 'peek_completed_request' returned a valid request.
+		 *
+		 */
+		void drop_completed_client_request(Request const &req);
 
-	/*
-	 * Backend block I/O
-	 */
-
-	/**
-	 * Submit read request data from the backend block session to the CBE
-	 *
-	 * The given data will be transfered to the CBE.
-	 *
-	 * \param  request  reference to the request from the CBE
-	 * \param  data     reference to the data associated with the
-	 *                  request
-	 *
-	 * \return  true if the CBE acknowledged the request
-	 */
-	void io_request_completed(Io_buffer::Index const &,
-	                          bool             const  )
-	{
-		class Exception_1 { };
-		throw Exception_1 { };
-	}
-
-	/**
-	 * Return a write request for the backend block session
-	 *
-	 * \param result  valid request in case the is one pending that
-	 *                needs data, otherwise an invalid one is returned
-	 */
-	Request has_io_request(Io_buffer::Index &) const
-	{
-		Request result { };
-		return result;
-	}
-	void has_io_request(Request &req, Io_buffer::Index &) const
-	{
-		req = Request { };
-	}
-
-	/**
-	 * Obtain data for write request for the backend block session
-	 *
-	 * The CBE will transfer the payload to the given data.
-	 *
-	 * \param  request  reference to the Block::Request processed
-	 *                  by the CBE
-	 * \param  data     reference to the data associated with the
-	 *                  Request
-	 *
-	 * \return  true if the CBE could process the request
-	 */
-	void io_request_in_progress(Io_buffer::Index const &)
-	{
-		class Exception_1 { };
-		throw Exception_1 { };
-	}
-
-	/**
-	 * Query list of active snapshots
-	 *
-	 * \param  ids  reference to destination buffer
-	 */
-	void active_snapshot_ids(Active_snapshot_ids &ids) const;
+		/**
+		 * Query list of active snapshots
+		 *
+		 * \param  ids  reference to destination buffer
+		 */
+		void active_snapshot_ids(Active_snapshot_ids &ids) const;
 
 		bool librara__peek_generated_request(Genode::uint8_t *buf_ptr,
 		                                     Genode::size_t   buf_size);

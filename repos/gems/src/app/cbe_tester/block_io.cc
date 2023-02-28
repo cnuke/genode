@@ -93,7 +93,7 @@ char const *Block_io_request::type_to_string(Type type)
  ** Block_io **
  **************/
 
-bool Block_ia::_peek_generated_request(uint8_t *buf_ptr,
+bool Block_io::_peek_generated_request(uint8_t *buf_ptr,
                                        size_t   buf_size)
 {
 	for (uint32_t id { 0 }; id < NR_OF_CHANNELS; id++) {
@@ -122,7 +122,7 @@ bool Block_ia::_peek_generated_request(uint8_t *buf_ptr,
 }
 
 
-void Block_ia::_drop_generated_request(Module_request &req)
+void Block_io::_drop_generated_request(Module_request &req)
 {
 	unsigned long const id { req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
@@ -143,7 +143,7 @@ void Block_ia::_drop_generated_request(Module_request &req)
 }
 
 
-void Block_ia::generated_request_complete(Module_request &req)
+void Block_io::generated_request_complete(Module_request &req)
 {
 	unsigned long const id { req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
@@ -168,7 +168,7 @@ void Block_ia::generated_request_complete(Module_request &req)
 }
 
 
-void Block_ia::_mark_req_failed(Channel    &channel,
+void Block_io::_mark_req_failed(Channel    &channel,
                                 bool       &progress,
                                 char const *str)
 {
@@ -179,7 +179,7 @@ void Block_ia::_mark_req_failed(Channel    &channel,
 }
 
 
-void Block_ia::_mark_req_successful(Channel &channel,
+void Block_io::_mark_req_successful(Channel &channel,
                                     bool    &progress)
 {
 	channel._request._success = true;
@@ -188,7 +188,7 @@ void Block_ia::_mark_req_successful(Channel &channel,
 }
 
 
-void Block_ia::_execute_read(Channel &channel,
+void Block_io::_execute_read(Channel &channel,
                              bool    &progress)
 {
 	using Result = Vfs::File_io_service::Read_result;
@@ -261,7 +261,7 @@ void Block_ia::_execute_read(Channel &channel,
 }
 
 
-void Block_ia::_execute_read_client_data(Channel &channel,
+void Block_io::_execute_read_client_data(Channel &channel,
                                          bool    &progress)
 {
 	using Result = Vfs::File_io_service::Read_result;
@@ -342,7 +342,7 @@ void Block_ia::_execute_read_client_data(Channel &channel,
 }
 
 
-void Block_ia::_execute_write_client_data(Channel &channel,
+void Block_io::_execute_write_client_data(Channel &channel,
                                           bool    &progress)
 {
 	using Result = Vfs::File_io_service::Write_result;
@@ -422,7 +422,7 @@ void Block_ia::_execute_write_client_data(Channel &channel,
 }
 
 
-void Block_ia::_execute_write(Channel &channel,
+void Block_io::_execute_write(Channel &channel,
                               bool    &progress)
 {
 	using Result = Vfs::File_io_service::Write_result;
@@ -490,7 +490,7 @@ void Block_ia::_execute_write(Channel &channel,
 	}
 }
 
-void Block_ia::_execute_sync(Channel &channel,
+void Block_io::_execute_sync(Channel &channel,
                              bool    &progress)
 {
 	using Result = Vfs::File_io_service::Sync_result;
@@ -537,7 +537,7 @@ void Block_ia::_execute_sync(Channel &channel,
 	}
 }
 
-void Block_ia::execute(bool &progress)
+void Block_io::execute(bool &progress)
 {
 	for (Channel &channel : _channels) {
 
@@ -564,7 +564,7 @@ void Block_ia::execute(bool &progress)
 }
 
 
-Block_ia::Block_ia(Vfs::Env       &vfs_env,
+Block_io::Block_io(Vfs::Env       &vfs_env,
                    Xml_node const &xml_node)
 :
 	_path    { xml_node.attribute_value("path", String<32> { "" } ) },
@@ -572,7 +572,7 @@ Block_ia::Block_ia(Vfs::Env       &vfs_env,
 { }
 
 
-bool Block_ia::_peek_completed_request(uint8_t *buf_ptr,
+bool Block_io::_peek_completed_request(uint8_t *buf_ptr,
                                        size_t   buf_size)
 {
 	for (Channel &channel : _channels) {
@@ -589,7 +589,7 @@ bool Block_ia::_peek_completed_request(uint8_t *buf_ptr,
 }
 
 
-void Block_ia::_drop_completed_request(Module_request &req)
+void Block_io::_drop_completed_request(Module_request &req)
 {
 	unsigned long id { 0 };
 	id = req.dst_request_id();
@@ -605,7 +605,7 @@ void Block_ia::_drop_completed_request(Module_request &req)
 }
 
 
-bool Block_ia::ready_to_submit_request()
+bool Block_io::ready_to_submit_request()
 {
 	for (Channel &channel : _channels) {
 		if (channel._state == Channel::INACTIVE)
@@ -614,7 +614,7 @@ bool Block_ia::ready_to_submit_request()
 	return false;
 }
 
-void Block_ia::submit_request(Module_request &req)
+void Block_io::submit_request(Module_request &req)
 {
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._state == Channel::INACTIVE) {
