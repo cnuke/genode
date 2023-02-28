@@ -8,23 +8,43 @@
 
 
 
-;intro
-; @nfeske
+With Genode's February release, almost everything goes
+[https://genode.org/about/road-map - according to plan].
+As envisioned on our road map, it features the first ready-to-install
+system image of Sculpt OS for the PinePhone, which is not merely a re-targeted
+version of the PC version but comes with a novel user interface, a new
+mechanism for rapidly switching between different application scenarios, and
+system-update functionality.
+Section [First system image of mobile Sculpt OS (PinePhone)] gives an
+overview and further links about running Genode on your PinePhone.
 
-; road map
-; * Mobile version of Sculpt OS (PinePhone)
-;   * Ready-to-use system image for first field test
-;   * Quick switch between different system scenarios as presets
-;   * On-target system update
-;   * Boot optimization
-; * Goa support for porting 3rd-party libraries to Genode
-; * Improved I/O performance (Intel GPU buffer management, VFS I/O batching,
-;   TCP throughput)
-; * Custom IP block for DMA protection on Xilinx Zynq
-; * PC suspend/resume mechanism for the base-hw kernel
-; * Optimized base-hw multimedia support (kernel scheduling, latency)
-; * Completed driver support for MNT Reform 2 laptop (i.e., Wifi)
-; * Interactive graphical VMs on ARM
+While enabling substantial application workloads on devices as constrained as
+the PinePhone, we engaged in holistic performance optimizations, ranging from
+kernel scheduling [Base-HW microkernel], over the framework's VFS
+infrastructure (Section [VFS optimization and simplification]), to the
+interfacing of GPU drivers (Section [GPU performance optimizations]).
+
+For stationary ARM-based platforms like the MNT-Reform laptop,
+interactive graphical virtual machines have become available now, which
+brings us close to mirror the experience of the PC version of Sculpt OS on
+such devices (Section [Interactive graphical VMs on ARM]). This development
+is accompanied by several device-driver improvements for NXP's i.MX family.
+
+For embedded devices based on Xilinx Zynq, the release introduces custom
+FPGA fabric for implementing DMA protection that is normally not covered by
+Zynq SoCs. This line of work - as outlined in
+Section [Custom IP block for DMA protection on AMD/Xilinx Zynq] - exemplifies
+how well Genode and reconfigurable hardware can go hand in hand.
+
+Also, PC platforms got their share of attention, benefiting from the
+new distinction between Intel's P&E cores, or the principle support of
+suspend/resume on both NOVA and Genode's custom base-hw microkernel.
+
+When it comes to running applications on top of Genode, the release brings
+good news as well. Our custom Goa tool for streamlining
+application-development work flows received the ability to largely automate
+the porting and packaging of 3rd-party libraries using CMake
+(Section [Build system and tools]).
 
 
 First system image of mobile Sculpt OS (PinePhone)
