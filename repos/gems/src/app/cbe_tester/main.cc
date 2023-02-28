@@ -1204,6 +1204,41 @@ class Main : Vfs::Env::User, public Cbe::Module
 				if (cmd.type() == Command::INVALID) {
 					break;
 				}
+				if (cmd.request_node().op() == Cbe::Request::Operation::REKEY) {
+					warning("skip <request op=\"rekey\"/> command because it is temporarily not supported");
+					_cmd_pool.mark_command_in_progress(cmd.id());
+					_cmd_pool.mark_command_completed(cmd.id(), true);
+					progress = true;
+					continue;
+				}
+				if (cmd.request_node().op() == Cbe::Request::Operation::EXTEND_FT) {
+					warning("skip <request op=\"extend_ft\"/> command because it is temporarily not supported");
+					_cmd_pool.mark_command_in_progress(cmd.id());
+					_cmd_pool.mark_command_completed(cmd.id(), true);
+					progress = true;
+					continue;
+				}
+				if (cmd.request_node().op() == Cbe::Request::Operation::EXTEND_VBD) {
+					warning("skip <request op=\"extend_vbd\"/> command because it is temporarily not supported");
+					_cmd_pool.mark_command_in_progress(cmd.id());
+					_cmd_pool.mark_command_completed(cmd.id(), true);
+					progress = true;
+					continue;
+				}
+				if (cmd.request_node().op() == Cbe::Request::Operation::CREATE_SNAPSHOT) {
+					warning("skip <request op=\"create_snapshot\"/> command because it is temporarily not supported");
+					_cmd_pool.mark_command_in_progress(cmd.id());
+					_cmd_pool.mark_command_completed(cmd.id(), true);
+					progress = true;
+					continue;
+				}
+				if (cmd.request_node().op() == Cbe::Request::Operation::DISCARD_SNAPSHOT) {
+					warning("skip <request op=\"discard_snapshot\"/> command because it is temporarily not supported");
+					_cmd_pool.mark_command_in_progress(cmd.id());
+					_cmd_pool.mark_command_completed(cmd.id(), true);
+					progress = true;
+					continue;
+				}
 				Request_node const &req_node { cmd.request_node() };
 				Cbe::Request const &cbe_req {
 					cmd.request_node().op(),
