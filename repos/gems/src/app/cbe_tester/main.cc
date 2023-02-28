@@ -35,6 +35,7 @@
 #include <verbose_node.h>
 #include <client_data.h>
 #include <block_io.h>
+#include <block_allocator.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -56,6 +57,10 @@ namespace Cbe {
 		}
 		return "?";
 	}
+
+	enum {
+		NR_OF_SUPERBLOCKS = 8, // XXX keep in sync with library
+	};
 }
 
 
@@ -1661,11 +1666,36 @@ class Command_pool : public Module {
 };
 
 
+static Block_allocator *_block_allocator_ptr;
+
+
+Genode::uint64_t block_allocator_first_block()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->first_block();
+}
+
+
+Genode::uint64_t block_allocator_nr_of_blks()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->nr_of_blks();
+}
+
+
 class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 7 };
+		enum { NR_OF_MODULES = 8 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1684,6 +1714,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
 		Block_ia                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
+		Block_allocator              _block_allocator            { NR_OF_SUPERBLOCKS };
 		Cbe::Librara                 _cbe_librara                { _cbe, };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
@@ -2241,6 +2272,10 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(COMMAND_POOL,      _cmd_pool);
 			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
 			_modules_add(BLOCK_IO,          _block_io);
+			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
+
+			_block_allocator_ptr = &_block_allocator;
+
 			_execute();
 		}
 };
@@ -2262,6 +2297,9 @@ void Component::construct(Genode::Env &env)
 	cbe_dump_cxx_init();
 
 	static Main main(env);
+
+	(void)block_allocator_first_block();
+	(void)block_allocator_nr_of_blks();
 }
 
 extern "C" int memcmp(const void *p0, const void *p1, Genode::size_t size)

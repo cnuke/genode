@@ -30,6 +30,7 @@ namespace Cbe {
 		COMMAND_POOL     = 4,
 		CBE_INIT_LIBRARA = 5,
 		BLOCK_IO         = 6,
+		BLOCK_ALLOCATOR  = 7,
 	};
 
 	enum { HASH_SIZE = 32 };

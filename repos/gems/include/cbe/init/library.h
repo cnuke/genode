@@ -83,6 +83,7 @@ struct Cbe_init::Library : Cbe::Spark_object<60960>
 		void librara__generated_request_complete(void *prim_ptr,
 		                                         void *key_plain_ptr,
 		                                         void *key_cipher_ptr,
+		                                         Genode::uint64_t block_number,
 		                                         bool  success);
 };
 
