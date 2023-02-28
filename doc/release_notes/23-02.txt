@@ -647,14 +647,14 @@ prioritized subjects from starving lower ones. There is the notion of a super
 period and each subject owns only a fraction of that super period as quota
 together with its priority. Once a subject has depleted its quota, it can't use
 its priority until the end of the current super period where its quota will be
-re-filled. However, during that time, the subject is not blocked - It can
+re-filled. However, during that time, the subject is not blocked - it can
 become active whenever there is no subject with priority and remaining quota
 present.
 
-So, this "zero" band below all the priority bands temporarily accommodates all
+This "zero" band below all the priority bands temporarily accommodates all
 subjects that have a priority but that are out of quota. It contains, however,
 also subjects that have no priority in general. These might be tasks like a GCC
-compilation or a ray tracer. While prioritized tasks would be user input
+compilation or a ray tracer while prioritized tasks would be user input
 handlers or the display driver. Now, one difficult problem that arises with
 this scheduling scheme is that system integration has to decide how much quota
 is required by a prioritized task. The perfect value can't be determined as it
@@ -662,14 +662,14 @@ depends on many factors including the target platform. Therefore, we have to
 consider that an important task like the audio driver in the video-conference
 scenario runs out of quota shortly before finishing its work.
 
-This is already bad as is as the audio driver now has to share the CPU with
+This is already bad as the audio driver now has to share the CPU with
 many unimportant tasks until the next super period. But it became even worse
-because, in the past implementation, subjects always entered the zero band at
+because, in the past implementation, subjects always entered the zero-band at
 the tail position. It meant that, e.g., the remaining audio handling had to
 wait at least until all the unprioritized tasks (e.g. long-taking computations)
 had used up their zero-band time slice. In order to mitigate this situation, we
 decided that prioritized tasks when depleting their quota become head of the
-zero-band, so, they will be scheduled first whenever the higher bands become
+zero-band. They will be scheduled first whenever the higher bands become
 idle.
 
 This change relaxes the consequences of quota-depletion events for
