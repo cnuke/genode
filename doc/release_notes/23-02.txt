@@ -272,7 +272,7 @@ implemented this feature within Intel's GPU multiplexer, which now only hands ou
 VRAM. This made it possible to move the buffer handling completely to the Mesa
 client side (libdrm). Libdrm now allocates large chunks of video memory (i.e.,
 16MB) and hands out memory for buffer objects from this pool. This brings two
-advantages: First, the client-side VRAM pool acts a cache, which reduces the
+advantages: First, the client-side VRAM pool acts as cache, which reduces the
 number of RPCs required for memory management significantly. Second, because of
 the larger VRAM allocations (compared to many 4K or 16K allocations before)
 fewer capabilities for the actual dataspaces that back the memory are required.
@@ -720,30 +720,30 @@ log output and is reported in the 'platform_info' ROM, e.g.
 
 ! kernel:
 !
-!￼[ 0] CORE:00:00:0 6:9a:3:7 [415] P 12th Gen Intel(R) Core(TM) i7-1270P
+! [ 0] CORE:00:00:0 6:9a:3:7 [415] P 12th Gen Intel(R) Core(TM) i7-1270P
 ! ...
-!￼[15] CORE:00:17:0 6:9a:3:7 [415] E 12th Gen Intel(R) Core(TM) i7-1270P
+! [15] CORE:00:17:0 6:9a:3:7 [415] E 12th Gen Intel(R) Core(TM) i7-1270P
 ! ...
 
 ! Genode's core:
 !
 ! mapping: affinity space -> kernel cpu id - package:core:thread
-! ￼ remap (0x0) ->  0 - 0: 0:0 P boot cpu
-! ￼ remap (0x1) ->  1 - 0: 0:1 P
-! ￼ remap (1x0) ->  2 - 0: 4:0 P
-! ￼ remap (1x1) ->  3 - 0: 4:1 P
-! ￼ remap (2x0) ->  4 - 0: 8:0 P
-! ￼ remap (2x1) ->  5 - 0: 8:1 P
-! ￼ remap (3x0) ->  6 - 0:12:0 P
-! ￼ remap (3x1) ->  7 - 0:12:1 P
-! ￼ remap (4x0) ->  8 - 0:16:0 E
-! ￼ remap (4x1) ->  9 - 0:17:0 E
-! ￼ remap (5x0) -> 10 - 0:18:0 E
-! ￼ remap (5x1) -> 11 - 0:19:0 E
-! ￼ remap (6x0) -> 12 - 0:20:0 E
-! ￼ remap (6x1) -> 13 - 0:21:0 E
-! ￼ remap (7x0) -> 14 - 0:22:0 E
-! ￼ remap (7x1) -> 15 - 0:23:0 E
+!  remap (0x0) ->  0 - 0: 0:0 P boot cpu
+!  remap (0x1) ->  1 - 0: 0:1 P
+!  remap (1x0) ->  2 - 0: 4:0 P
+!  remap (1x1) ->  3 - 0: 4:1 P
+!  remap (2x0) ->  4 - 0: 8:0 P
+!  remap (2x1) ->  5 - 0: 8:1 P
+!  remap (3x0) ->  6 - 0:12:0 P
+!  remap (3x1) ->  7 - 0:12:1 P
+!  remap (4x0) ->  8 - 0:16:0 E
+!  remap (4x1) ->  9 - 0:17:0 E
+!  remap (5x0) -> 10 - 0:18:0 E
+!  remap (5x1) -> 11 - 0:19:0 E
+!  remap (6x0) -> 12 - 0:20:0 E
+!  remap (6x1) -> 13 - 0:21:0 E
+!  remap (7x0) -> 14 - 0:22:0 E
+!  remap (7x1) -> 15 - 0:23:0 E
 ! ...
 
 ! platform_info ROM:
@@ -841,7 +841,7 @@ image. This structure corresponds 1:1 to the _boot/_ directory as found on the
 of Sculpt comes down to replacing these files.
 However, on ARM platforms, SD-card images used to host an _uImage_ file and
 a U-Boot environment configuration file in the root directory. The distinction of
-these differences complicate both the build-time tooling and the on-target
+these differences complicates both the build-time tooling and the on-target
 handling of system updates.
 
 The current release unifies the boot convention by hosting a _boot/_ directory
