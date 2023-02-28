@@ -84,7 +84,7 @@ Interactive graphical VMs on ARM
 The virtual-machine monitor (VMM) using hardware-assisted virtualization on ARM
 started as a case study eight years ago for Samsung's Exynos 5250 SoC.
 Originally, it supported virtualization of CPU, timer, interrupt-controller, and
-an UART-device only. Since then, it received several extensions like support for
+a UART-device only. Since then, it received several extensions like support for
 64-bit ARMv8 systems, VirtIO devices for network, console, and block access.
 With release 22.11, the VMM's I/O device access, RAM consumption, and CPU count
 have come configurable.
@@ -197,7 +197,7 @@ remote side as one batch.
 The implementation of this idea required a slight redesign of the VFS,
 replacing the former implicit wakeup of remote peers by explicit wakeup
 signalling. The wakeup signalling is triggered not before the VFS user settles
-down. E.g., for libc-based applications, this is the case if when the libc goes
+down. E.g., for libc-based applications, this is the case when the libc goes
 idle, waiting for external I/O.
 In the case of a busy writer to a non-blocking file descriptor or socket
 (e.g., lighttpd), the remote peers are woken up once a write operation
@@ -406,9 +406,9 @@ possibly reverting to an earlier version.
 Fortunately, most of these concerns have a lot in common with the problems
 we had to address for Genode's
 [https://genode.org/documentation/release-notes/18.02#On-target_package_installation_and_deployment - package management].
-For example, the off-target and on-target tooling for digital signatures, or
-the notion a depot and software providers (depot users) is established
-and time-tested by now.
+For example, the off-target and on-target tooling for digital signatures,
+the notion of a depot, and the concept of federated software providers
+(depot users) are established and time-tested by now.
 
 
 Self-reflecting version information
@@ -439,10 +439,10 @@ available images in XML form, e.g.,
 ! </index>
 
 The 'os', 'board', and 'version' attributes can be used to infer the
-file name of the corresponding image file. The '<info>' nodes contains
+file name of the corresponding image file. The '<info>' nodes contain
 a summary of changes as information for the end user.
 
-The new _gems/run/sculpt_image.run_ Sculpt provides assistance with
+The new _gems/run/sculpt_image.run_ script provides assistance with
 generating appropriately named images, placing them into the depot,
 and presenting a template for the manually curated image index.
 
@@ -584,7 +584,7 @@ possible to allow unprivileged components to execute most of these instructions.
 With this release, we have implemented the cache maintenance functions outside
 the kernel on ARMv8 where possible. Thereby, several device drivers with a lot of
 DMA transactions, e.g. the GPU driver, benefit from this optimization
-enormously. The Javascript engine used in the Morph and Falkon browsers profit
+enormously. The JavaScript engine used in the Morph and Falkon browsers profits
 as well.
 
 
@@ -839,7 +839,7 @@ hypervisor + the bender pre-boot loader + the banner image + the Genode system
 image. This structure corresponds 1:1 to the _boot/_ directory as found on the
 3rd partition of the Sculpt system, which is very nice. A manual system update
 of Sculpt comes down to replacing these files.
-However, on ARM platforms, SD-card images used to host an _uImage_ file and
+However, on ARM platforms, SD-card images used to host a _uImage_ file and
 a U-Boot environment configuration file in the root directory. The distinction of
 these differences complicates both the build-time tooling and the on-target
 handling of system updates.
