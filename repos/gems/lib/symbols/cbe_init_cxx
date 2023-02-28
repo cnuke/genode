@@ -11,3 +11,5 @@ _ZNK8Cbe_init7Library25client_request_acceptableEv T
 _ZNK8Cbe_init7Library29peek_completed_client_requestEv T
 cbe_init_cxx_final T
 cbe_init_cxx_init T
+_Z26block_allocator_nr_of_blksv T
+_Z27block_allocator_first_blockv T

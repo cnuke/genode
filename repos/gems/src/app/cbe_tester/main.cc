@@ -35,6 +35,7 @@
 #include <block_io.h>
 #include <meta_tree.h>
 #include <free_tree.h>
+#include <block_allocator.h>
 #include <virtual_block_device.h>
 #include <superblock_control.h>
 
@@ -1000,11 +1001,36 @@ class Command_pool : public Module {
 };
 
 
+static Block_allocator *_block_allocator_ptr;
+
+
+Genode::uint64_t block_allocator_first_block()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->first_block();
+}
+
+
+Genode::uint64_t block_allocator_nr_of_blks()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->nr_of_blks();
+}
+
+
 class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 12 };
+		enum { NR_OF_MODULES = 13 };
 
 		Genode::Env                        &_env;
 		Attached_rom_dataspace              _config_rom                 { _env, "config" };
@@ -1024,6 +1050,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Trust_anchor                        _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                              _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
 		Block_io                            _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
+		Block_allocator                     _block_allocator            { NR_OF_SUPERBLOCK_SLOTS };
 		Cbe_init::Librara                   _cbe_init_librara           { _cbe_init };
 		Client_data_request                 _client_data_request        { };
 
@@ -1554,6 +1581,10 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(COMMAND_POOL,      _cmd_pool);
 			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
 			_modules_add(BLOCK_IO,          _block_io);
+			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
+
+			_block_allocator_ptr = &_block_allocator;
+
 			_execute();
 		}
 };
@@ -1569,6 +1600,9 @@ void Component::construct(Genode::Env &env)
 	cbe_init_cxx_init();
 
 	static Main main(env);
+
+	(void)block_allocator_first_block();
+	(void)block_allocator_nr_of_blks();
 }
 
 extern "C" int memcmp(const void *p0, const void *p1, Genode::size_t size)

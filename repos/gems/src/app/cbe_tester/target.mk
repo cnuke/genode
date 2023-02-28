@@ -14,6 +14,7 @@ SRC_CC  += vfs_utilities.cc
 SRC_CC  += module.cc
 SRC_CC  += cbe_librara.cc
 SRC_CC  += cbe_init_librara.cc
+SRC_CC  += block_allocator.cc
 
 INC_DIR := $(PRG_DIR)
 
