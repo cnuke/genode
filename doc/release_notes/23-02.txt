@@ -93,6 +93,9 @@ With the current release, we further enhance the VMM for ARM devices
 to provide all the means necessary to become a useful virtualization
 solution for interactive scenarios.
 
+[image mnt_interactive_debian_vm]
+  Sculpt OS running Debian in a virtual machine on the MNT Reform laptop
+
 Two additional VirtIO device models are available now: A GPU model and one for input.
 Both models are mapped to Genode's GUI service under the hood. One can extend
 the configuration of the VMM accordingly:
