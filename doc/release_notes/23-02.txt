@@ -89,7 +89,7 @@ an UART-device only. Since then, it received several extensions. Support for
 With release 22.11 the VMM was made configurable to not necessarily provide
 each-and-every I/O access, and to define RAM consumption and CPU count.
 
-We also further enhanced the VMM for ARM devices
+With the current release, we further enhance the VMM for ARM devices
 to provide all the means necessary to become a useful virtualization
 solution for interactive scenarios.
 
@@ -103,7 +103,7 @@ the configuration of the VMM accordingly:
 !  ...
 ! </config>
 
-For now, it is possible to declare only one GPU and one input device. Both get
+By now, it is possible to declare only one GPU and one input device. Both get
 mapped to the very same GUI service, according to the service routing of the
 VMM.
 
@@ -803,7 +803,7 @@ preparation for use with our build system. Ports are managed by tools
 residing in the _tool/ports_ directory. For example,
 _tool/ports/prepare_port_ is used to execute all required preparation steps.
 
-Currently, the base Genode sources feature 90 ports (you may try
+Currently, the base Genode sources support 90 ports (you may try
 _tool/ports/list_ yourself) and, thus, it's not trivial to keep track of all
 the ports in the repo directories. Therefore, we introduce the
 _tool/ports/metadata_ tool to extract information about license, upstream
