@@ -1,5 +1,5 @@
 /*
- * \brief  Module for encrypting/decrypting single data blocks
+ * \brief  Module for accessing the systems trust anchor
  * \author Martin Stein
  * \date   2023-02-13
  */

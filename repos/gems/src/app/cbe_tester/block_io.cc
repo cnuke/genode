@@ -1,5 +1,5 @@
 /*
- * \brief  Module for encrypting/decrypting single data blocks
+ * \brief  Module for accessing the back-end block device
  * \author Martin Stein
  * \date   2023-02-13
  */

@@ -1,5 +1,5 @@
 /*
- * \brief  Module for accessing the systems trust anchor
+ * \brief  Module for accessing the back-end block device
  * \author Martin Stein
  * \date   2023-02-13
  */
