@@ -6,9 +6,6 @@ INC_DIR += $(CBE_DIR)/src/lib/cbe
 
 SRC_ADB += cbe-library.adb
 SRC_ADB += cbe-request_pool.adb
-SRC_ADB += cbe-tree_helper.adb
-SRC_ADB += cbe-translation.adb
-SRC_ADB += cbe-cache.adb
 SRC_ADB += cbe-new_free_tree.adb
 SRC_ADB += cbe-meta_tree.adb
 SRC_ADB += cbe-generic_index_queue.adb
