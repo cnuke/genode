@@ -31,9 +31,9 @@ namespace Cbe {
 		CBE_INIT_LIBRARA = 5,
 		BLOCK_IO         = 6,
 		CACHE            = 7,
+		META_TREE        = 8,
 	};
 
-	enum { HASH_SIZE = 32 };
 	enum { KEY_SIZE = 32 };
 	enum { PRIM_BUF_SIZE = 128 };
 
