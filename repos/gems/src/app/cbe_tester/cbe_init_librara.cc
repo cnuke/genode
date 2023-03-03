@@ -16,6 +16,7 @@
 #include <trust_anchor.h>
 #include <block_io.h>
 #include <block_allocator.h>
+#include <vbd_initializer.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -48,6 +49,14 @@ void Cbe_init::Librara::_drop_generated_request(Module_request &mod_req)
 		_lib.librara__drop_generated_request(req.prim_ptr());
 		break;
 	}
+	case VBD_INITIALIZER:
+	{
+		Vbd_initializer_request &req {
+			*dynamic_cast<Vbd_initializer_request *>(&mod_req) };
+
+		_lib.librara__drop_generated_request(req.prim_ptr());
+		break;
+	}
 	default:
 		class Exception_1 { };
 		throw Exception_1 { };
@@ -65,7 +74,7 @@ void Cbe_init::Librara::generated_request_complete(Module_request &mod_req)
 
 		_lib.librara__generated_request_complete(
 			req.prim_ptr(), req.key_plaintext_ptr(), req.key_ciphertext_ptr(),
-			0, req.success());
+			0, nullptr, req.success());
 
 		break;
 	}
@@ -75,7 +84,7 @@ void Cbe_init::Librara::generated_request_complete(Module_request &mod_req)
 			*dynamic_cast<Block_io_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
-			req.prim_ptr(), nullptr, nullptr, 0, req.success());
+			req.prim_ptr(), nullptr, nullptr, 0, nullptr, req.success());
 
 		break;
 	}
@@ -85,7 +94,17 @@ void Cbe_init::Librara::generated_request_complete(Module_request &mod_req)
 			*dynamic_cast<Block_allocator_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
-			req.prim_ptr(), nullptr, nullptr, req.blk_nr(), req.success());
+			req.prim_ptr(), nullptr, nullptr, req.blk_nr(), nullptr, req.success());
+
+		break;
+	}
+	case VBD_INITIALIZER:
+	{
+		Vbd_initializer_request &req {
+			*dynamic_cast<Vbd_initializer_request *>(&mod_req) };
+
+		_lib.librara__generated_request_complete(
+			req.prim_ptr(), nullptr, nullptr, 0, req.root_node(), req.success());
 
 		break;
 	}

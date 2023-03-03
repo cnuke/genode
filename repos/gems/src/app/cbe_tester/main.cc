@@ -36,6 +36,7 @@
 #include <client_data.h>
 #include <block_io.h>
 #include <block_allocator.h>
+#include <vbd_initializer.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -53,6 +54,8 @@ namespace Cbe {
 		case CLIENT_DATA: return "client_data";
 		case TRUST_ANCHOR: return "trust_anchor";
 		case COMMAND_POOL: return "command_pool";
+		case BLOCK_ALLOCATOR: return "block_allocator";
+		case VBD_INITIALIZER: return "vbd_initializer";
 		default: break;
 		}
 		return "?";
@@ -1695,7 +1698,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 8 };
+		enum { NR_OF_MODULES = 9 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1715,6 +1718,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
 		Block_ia                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
 		Block_allocator              _block_allocator            { NR_OF_SUPERBLOCKS };
+		Vbd_initializer              _vbd_initializer            { };
 		Cbe::Librara                 _cbe_librara                { _cbe, };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
@@ -2273,6 +2277,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
 			_modules_add(BLOCK_IO,          _block_io);
 			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
+			_modules_add(VBD_INITIALIZER,   _vbd_initializer);
 
 			_block_allocator_ptr = &_block_allocator;
 
