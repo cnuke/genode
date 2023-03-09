@@ -32,6 +32,7 @@ namespace Cbe {
 		BLOCK_IO         = 6,
 		BLOCK_ALLOCATOR  = 7,
 		VBD_INITIALIZER  = 8,
+		FT_INITIALIZER   = 9,
 	};
 
 	enum { HASH_SIZE = 32 };

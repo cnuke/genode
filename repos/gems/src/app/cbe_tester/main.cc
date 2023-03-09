@@ -37,6 +37,7 @@
 #include <block_io.h>
 #include <block_allocator.h>
 #include <vbd_initializer.h>
+#include <ft_initializer.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -1698,7 +1699,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 9 };
+		enum { NR_OF_MODULES = 10 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1719,6 +1720,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Block_ia                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
 		Block_allocator              _block_allocator            { NR_OF_SUPERBLOCKS };
 		Vbd_initializer              _vbd_initializer            { };
+		Ft_initializer               _ft_initializer             { };
 		Cbe::Librara                 _cbe_librara                { _cbe, };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
@@ -2278,6 +2280,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(BLOCK_IO,          _block_io);
 			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
 			_modules_add(VBD_INITIALIZER,   _vbd_initializer);
+			_modules_add(FT_INITIALIZER,    _ft_initializer);
 
 			_block_allocator_ptr = &_block_allocator;
 

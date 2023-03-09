@@ -63,16 +63,35 @@ namespace Cbe {
 	static_assert(sizeof(Type_1_node_block) ==
 		(TYPE_1_NODE_STORAGE_SIZE * NR_OF_TYPE_1_NODES_PER_BLK));
 
-	struct Type_2_Node_Type
+	struct Type_2_node
 	{
-		Genode::uint64_t pba         { 0 };
-		Genode::uint64_t last_vba    { 0 };
-		Genode::uint64_t alloc_gen   { 0 };
-		Genode::uint64_t free_gen    { 0 };
-		Genode::uint32_t last_key_id { 0 };
-		Genode::uint8_t  reserved    { 0 };
-	}
-	__attribute__((packed));
+		Genode::uint64_t pba          { 0 };
+		Genode::uint64_t last_vba     { 0 };
+		Genode::uint64_t alloc_gen    { 0 };
+		Genode::uint64_t free_gen     { 0 };
+		Genode::uint32_t last_key_id  { 0 };
+		Genode::uint8_t  reserved[28] { 0 };
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+
+			Genode::print(out, "pba: ",         pba, " "
+			                   "last_vba: ",    last_vba, " "
+			                   "alloc_gen: ",   alloc_gen, " "
+			                   "free_gen: ",    free_gen, " "
+			                   "last_key_id: ", last_key_id);
+		}
+
+	} __attribute__((packed));
+	static_assert(sizeof(Type_2_node) == TYPE_2_NODE_STORAGE_SIZE);
+
+	struct Type_2_node_block
+	{
+		Type_2_node value[NR_OF_TYPE_2_NODES_PER_BLK] { };
+	} __attribute__((packed));
+	static_assert(sizeof(Type_2_node_block) ==
+		(TYPE_2_NODE_STORAGE_SIZE * NR_OF_TYPE_2_NODES_PER_BLK));
 }
 
 #endif /* _LOCAL_CBE_TYPES_H_ */
