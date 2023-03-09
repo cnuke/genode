@@ -37,6 +37,7 @@ namespace Cbe {
 		SUPERBLOCK_CONTROL   = 11,
 		BLOCK_ALLOCATOR      = 12,
 		VBD_INITIALIZER      = 13,
+		FT_INITIALIZER       = 14,
 	};
 
 	char const *module_name(unsigned long module_id);

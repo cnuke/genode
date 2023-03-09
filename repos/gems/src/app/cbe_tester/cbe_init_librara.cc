@@ -17,6 +17,7 @@
 #include <block_io.h>
 #include <block_allocator.h>
 #include <vbd_initializer.h>
+#include <ft_initializer.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -53,6 +54,14 @@ void Cbe_init::Librara::_drop_generated_request(Module_request &mod_req)
 	{
 		Vbd_initializer_request &req {
 			*dynamic_cast<Vbd_initializer_request *>(&mod_req) };
+
+		_lib.librara__drop_generated_request(req.prim_ptr());
+		break;
+	}
+	case FT_INITIALIZER:
+	{
+		Ft_initializer_request &req {
+			*dynamic_cast<Ft_initializer_request *>(&mod_req) };
 
 		_lib.librara__drop_generated_request(req.prim_ptr());
 		break;
@@ -102,6 +111,16 @@ void Cbe_init::Librara::generated_request_complete(Module_request &mod_req)
 	{
 		Vbd_initializer_request &req {
 			*dynamic_cast<Vbd_initializer_request *>(&mod_req) };
+
+		_lib.librara__generated_request_complete(
+			req.prim_ptr(), nullptr, nullptr, 0, req.root_node(), req.success());
+
+		break;
+	}
+	case FT_INITIALIZER:
+	{
+		Ft_initializer_request &req {
+			*dynamic_cast<Ft_initializer_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
 			req.prim_ptr(), nullptr, nullptr, 0, req.root_node(), req.success());
