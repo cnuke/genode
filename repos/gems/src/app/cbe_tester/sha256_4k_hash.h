@@ -16,7 +16,12 @@
 
 namespace Cbe {
 
-	void sha256_4k_hash(void *data_ptr, void *hash_ptr);
+	void calc_sha256_4k_hash(void const *data_ptr,
+	                         void       *hash_ptr);
+
+
+	bool check_sha256_4k_hash(void const *data_ptr,
+	                          void const *exp_hash_ptr);
 }
 
 #endif /* _SHAE256_4K_HASH_ */

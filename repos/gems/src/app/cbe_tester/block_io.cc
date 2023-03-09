@@ -199,6 +199,15 @@ void Block_io::_execute_read(Channel &channel,
 	switch (channel._state) {
 	case Channel::PENDING:
 
+		enum : uint64_t { MAX_FILE_OFFSET = 0x7fffffffffffffff };
+		if (req._pba > MAX_FILE_OFFSET / BLOCK_SIZE) {
+
+			error("request failed: failed to seek file offset, pba: ", req._pba);
+			channel._state = Channel::COMPLETE;
+			req._success = false;
+			progress = true;
+			return;
+		}
 		_vfs_handle.seek(req._pba * Cbe::BLOCK_SIZE +
 		                 channel._nr_of_processed_bytes);
 
@@ -227,6 +236,14 @@ void Block_io::_execute_read(Channel &channel,
 
 		case Result::READ_OK:
 
+			if (nr_of_read_bytes == 0) {
+
+				error("request failed: number of read bytes is 0");
+				channel._state = Channel::COMPLETE;
+				req._success = false;
+				progress = true;
+				return;
+			}
 			channel._nr_of_processed_bytes += nr_of_read_bytes;
 			channel._nr_of_remaining_bytes -= nr_of_read_bytes;
 
@@ -247,6 +264,7 @@ void Block_io::_execute_read(Channel &channel,
 		case Result::READ_ERR_IO:
 		case Result::READ_ERR_INVALID:
 
+			error("request failed: failed to read from file");
 			channel._state = Channel::COMPLETE;
 			req._success = false;
 			progress = true;
@@ -363,7 +381,7 @@ void Block_io::_execute_write_client_data(Channel &channel,
 			_mark_req_failed(channel, progress, "encrypt client data");
 			return;
 		}
-		sha256_4k_hash((void *)channel._blk_buf, (void *)req._hash);
+		calc_sha256_4k_hash((void *)channel._blk_buf, (void *)req._hash);
 		_vfs_handle.seek(req._pba * Cbe::BLOCK_SIZE +
 		                 channel._nr_of_processed_bytes);
 
@@ -593,10 +611,10 @@ bool Block_io::_peek_completed_request(uint8_t *buf_ptr,
 				case Request::WRITE:
 				{
 					uint8_t hash[HASH_SIZE];
-					sha256_4k_hash((void *)req._blk_ptr, (void *)hash);
+					calc_sha256_4k_hash((void *)req._blk_ptr, (void *)hash);
 					uint64_t *blk_ptr { (uint64_t *)req._blk_ptr };
 					uint64_t *hash_ptr { (uint64_t *)hash };
-					log(req.type_name(), " pba ", req._pba);
+					log("block_io: ", req.type_name(), " pba ", req._pba);
 					log("  got hash: ",
 						Hex(hash_ptr[0], Hex::OMIT_PREFIX, Hex::PAD), " ",
 						Hex(hash_ptr[1], Hex::OMIT_PREFIX, Hex::PAD), " ",

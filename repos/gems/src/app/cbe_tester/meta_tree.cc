@@ -1,38 +1,15 @@
 /*
-      --
-      --  Meta Tree -> Cache
-      --
-      declare
-         Prim : constant Primitive.Object_Type :=
-            Meta_Tree.Peek_Generated_Cache_Primitive (Obj.Meta_Tree_Obj);
-         Req_Type : CXX_Object_Size_Type := CXX_Object_Size_Type'Last;
-      begin
-         if Primitive.Valid (Prim) then
-            case Primitive.Operation (Prim) is
-            when Read  => Req_Type := 1;
-            when Write => Req_Type := 2;
-            when Sync  => Req_Type := 3;
-            end case;
-            Create_Block_IO_Req (
-               Buf_Ptr        => Buf_Ptr,
-               Buf_Size       => Buf_Size,
-               Src_Module_Id  => 1,
-               Src_Request_Id => CXX_UInt64_Type'Last,
-               Req_Type       => Req_Type,
-               CBE_Req_Offset => 0,
-               CBE_Req_Tag    => 0,
-               Prim_Ptr       => Prim'Address,
-               Prim_Size      => Prim'Size / 8,
-               Key_ID         => 0,
-               PBA            => CXX_UInt64_Type (Primitive.Block_Number (Prim)),
-               VBA            => 0,
-               Blk_Count      => 1,
-               Blk_Ptr        => Meta_Tree.Peek_Generated_Cache_Data_Ptr (Obj.Meta_Tree_Obj, Prim)
-            );
-            return 1;
-         end if;
-      end;
-*/
+ * \brief  Module for operating on the meta tree
+ * \author Martin Stein
+ * \date   2023-02-13
+ */
+
+/*
+ * Copyright (C) 2023 Genode Labs GmbH
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU Affero General Public License version 3.
+ */
 
 /* cbe tester includes */
 #include <meta_tree.h>
@@ -51,15 +28,6 @@ static bool check_level_0_usable(Generation   gen,
                                  Type_2_node &node)
 {
 	return node.alloc_gen != gen;
-}
-
-
-static bool check_node_hash(uint8_t *blk_ptr,
-                            uint8_t *exp_hash_ptr)
-{
-	uint8_t got_hash[HASH_SIZE];
-	sha256_4k_hash((void *)blk_ptr, (void *)got_hash);
-	return !memcmp(got_hash, exp_hash_ptr, HASH_SIZE);
 }
 
 
@@ -110,7 +78,7 @@ void Meta_tree_request::create(void     *buf_ptr,
 
 
 Meta_tree_request::Meta_tree_request(unsigned long src_module_id,
-                             unsigned long src_request_id)
+                                     unsigned long src_request_id)
 :
 	Module_request { src_module_id, src_request_id, META_TREE }
 { }
@@ -146,16 +114,19 @@ bool Meta_tree::_peek_generated_request(uint8_t *buf_ptr,
 				                   Block_io_request::WRITE :
 				                   Block_io_request::INVALID };
 
-			if (blk_io_req_type != Block_io_request::INVALID) {
-
-				memcpy((void *)channel._blk_io_data, (void *)channel._cache_request.block_data, BLOCK_SIZE);
-				Block_io_request::create(
-					buf_ptr, buf_size, META_TREE, id, blk_io_req_type,
-					0, 0, nullptr, 0, 0, local_req.pba, 0, 1,
-					(void *)channel._blk_io_data);
-
-				return true;
+			if (blk_io_req_type == Block_io_request::INVALID) {
+				class Exception_1 { };
+				throw Exception_1 { };
 			}
+			if (blk_io_req_type == Block_io_request::WRITE)
+				memcpy((void *)channel._blk_io_data, (void *)channel._cache_request.block_data, BLOCK_SIZE);
+
+			Block_io_request::create(
+				buf_ptr, buf_size, META_TREE, id, blk_io_req_type,
+				0, 0, nullptr, 0, 0, local_req.pba, 0, 1,
+				(void *)channel._blk_io_data);
+
+			return true;
 		}
 	}
 	return false;
@@ -213,7 +184,7 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 
 		if (local_req.level > T2_NODE_LVL) {
 
-			if (!check_node_hash(channel._blk_io_data, t1_info.node.hash)) {
+			if (!check_sha256_4k_hash(&channel._blk_io_data, &t1_info.node.hash)) {
 
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
@@ -225,7 +196,7 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 			}
 		} else if (local_req.level == T2_NODE_LVL) {
 
-			if (!check_node_hash(channel._blk_io_data, t2_info.node.hash)) {
+			if (!check_sha256_4k_hash(&channel._blk_io_data, &t2_info.node.hash)) {
 
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
@@ -289,7 +260,7 @@ void Meta_tree::_update_parent(Type_1_node   &node,
                                uint64_t       gen,
                                uint64_t       pba)
 {
-	sha256_4k_hash((void *)blk_ptr, (void *)node.hash);
+	calc_sha256_4k_hash(blk_ptr, node.hash);
 	node.gen = gen;
 	node.pba = pba;
 }
@@ -514,7 +485,7 @@ Meta_tree::Meta_tree() { }
 
 
 bool Meta_tree::_peek_completed_request(uint8_t *buf_ptr,
-                                       size_t   buf_size)
+                                        size_t   buf_size)
 {
 	for (Channel &channel : _channels) {
 		if (channel._state == Channel::COMPLETE) {
@@ -556,8 +527,8 @@ bool Meta_tree::ready_to_submit_request()
 }
 
 
-bool Meta_tree::_node_volatile(Type_1_node node,
-                               uint64_t    gen)
+bool Meta_tree::_node_volatile(Type_1_node const &node,
+                               uint64_t           gen)
 {
    return node.gen == 0 || node.gen != gen;
 }

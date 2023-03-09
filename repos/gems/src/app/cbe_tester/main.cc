@@ -34,6 +34,7 @@
 #include <client_data.h>
 #include <block_io.h>
 #include <meta_tree.h>
+#include <free_tree.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -50,6 +51,7 @@ namespace Cbe {
 		case CBE_INIT_LIBRARA: return "cbe_init";
 		case CACHE: return "cache";
 		case META_TREE: return "meta_tree";
+		case FREE_TREE: return "free_tree";
 		case CLIENT_DATA: return "client_data";
 		case TRUST_ANCHOR: return "trust_anchor";
 		case COMMAND_POOL: return "command_pool";
@@ -374,7 +376,7 @@ class Request_node
 
 		Operation             const _op;
 		Virtual_block_address const _vba;
-		Number_of_blocks      const _count;
+		Number_of_blocks_old  const _count;
 		bool                  const _sync;
 		bool                  const _salt_avail;
 		uint64_t              const _salt;
@@ -431,7 +433,7 @@ class Request_node
 
 		Operation               op()         const { return _op; }
 		Virtual_block_address   vba()        const { return _vba; }
-		Number_of_blocks        count()      const { return _count; }
+		Number_of_blocks_old    count()      const { return _count; }
 		bool                    sync()       const { return _sync; }
 		bool                    salt_avail() const { return _salt_avail; }
 		uint64_t                salt()       const { return _salt; }
@@ -999,7 +1001,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 9 };
+		enum { NR_OF_MODULES = 10 };
 
 		Genode::Env                 &_env;
 		Attached_rom_dataspace       _config_rom                 { _env, "config" };
@@ -1009,13 +1011,14 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Signal_handler<Main>         _sigh                       { _env.ep(), *this, &Main::_execute };
 		Command_pool                 _cmd_pool                   { _heap, _config_rom.xml(), _verbose_node };
 		Constructible<Cbe::Library>  _cbe                        { };
+		Constructible<Free_tree>     _free_tree                  { };
+		Constructible<Cbe::Librara>  _cbe_librara                { };
 		Cbe_init::Library            _cbe_init                   { };
 		Benchmark                    _benchmark                  { _env };
 		Meta_tree                    _meta_tree                  { };
 		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
 		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
 		Block_io                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
-		Cbe::Librara                 _cbe_librara                { _cbe, };
 		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
 		Client_data_request          _client_data_request        { };
 
@@ -1026,6 +1029,28 @@ class Main : Vfs::Env::User, public Cbe::Module
 		 */
 		Main(Main const &) = delete;
 		Main &operator = (Main const &) = delete;
+
+		void _construct_cbe()
+		{
+			_cbe.construct();
+
+			_free_tree.construct();
+			_modules_add(FREE_TREE, *_free_tree);
+
+			_cbe_librara.construct(*_cbe);
+			_modules_add(CBE_LIBRARA, *_cbe_librara);
+		}
+
+		void _destruct_cbe()
+		{
+			_modules_remove(CBE_LIBRARA);
+			_cbe_librara.destruct();
+
+			_modules_remove(FREE_TREE);
+			_free_tree.destruct();
+
+			_cbe.destruct();
+		}
 
 		/**
 		 * Vfs::Env::User interface
@@ -1283,7 +1308,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 				if (cmd.type() == Command::INVALID) {
 					break;
 				}
-				_cbe.construct();
+				_construct_cbe();
 				_cmd_pool.mark_command_in_progress(cmd.id());
 				_cmd_pool.mark_command_completed(cmd.id(), true);
 				progress = true;
@@ -1300,7 +1325,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 				if (cmd.type() == Command::INVALID) {
 					break;
 				}
-				_cbe.destruct();
+				_destruct_cbe();
 				_cmd_pool.mark_command_in_progress(cmd.id());
 				_cmd_pool.mark_command_completed(cmd.id(), true);
 				progress = true;
@@ -1415,6 +1440,19 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_module_ptrs[module_id] = &module;
 		}
 
+		void _modules_remove(unsigned long  module_id)
+		{
+			if (module_id >= NR_OF_MODULES) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			if (_module_ptrs[module_id] == nullptr) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			_module_ptrs[module_id] = nullptr;
+		}
+
 		void _modules_execute(bool &progress)
 		{
 			for (unsigned long id { 0 }; id < NR_OF_MODULES; id++) {
@@ -1495,7 +1533,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(META_TREE,         _meta_tree);
 			_modules_add(CRYPTO,            _crypto);
 			_modules_add(TRUST_ANCHOR,      _trust_anchor);
-			_modules_add(CBE_LIBRARA,       _cbe_librara);
 			_modules_add(CLIENT_DATA,      *this);
 			_modules_add(COMMAND_POOL,      _cmd_pool);
 			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);

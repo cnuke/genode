@@ -14,8 +14,8 @@
 #ifndef _META_TREE_H_
 #define _META_TREE_H_
 
-/* cbe tester includes */
-#include <cbe_types.h>
+/* gems includes */
+#include <cbe/types.h>
 
 /* cbe tester includes */
 #include <module.h>
@@ -107,6 +107,31 @@ class Cbe::Meta_tree_channel
 			TREE_HASH_MISMATCH
 		};
 
+		struct Type_1_info
+		{
+			enum State {
+				INVALID, READ, READ_COMPLETE, WRITE, WRITE_COMPLETE, COMPLETE };
+
+			State             state   { INVALID };
+			Type_1_node       node    { };
+			Type_1_node_block entries { };
+			Genode::uint8_t   index   { INVALID_NODE_INDEX };
+			bool              dirty   { false };
+			bool              volatil { false };
+		};
+
+		struct Type_2_info
+		{
+			enum State {
+				INVALID, READ, READ_COMPLETE, WRITE, WRITE_COMPLETE, COMPLETE };
+
+			State             state   { INVALID };
+			Type_1_node       node    { };
+			Type_2_node_block entries { };
+			Genode::uint8_t   index   { INVALID_NODE_INDEX };
+			bool              volatil { false };
+		};
+
 		struct Local_cache_request
 		{
 			enum State { INVALID, PENDING, IN_PROGRESS };
@@ -145,7 +170,7 @@ class Cbe::Meta_tree_channel
 		Local_cache_request _cache_request                        { };
 		Genode::uint8_t     _blk_io_data[BLOCK_SIZE]              { 0 };
 		Type_2_info         _level_1_node                         { };
-		Type_1_info         _level_n_nodes[TREE_MAX_NR_OF_LEVELS] { };
+		Type_1_info         _level_n_nodes[TREE_MAX_NR_OF_LEVELS] { }; /* index starts at 2 */
 		bool                _finished                             { false };
 		bool                _root_dirty                           { false };
 };
@@ -157,6 +182,8 @@ class Cbe::Meta_tree : public Module
 		using Request = Meta_tree_request;
 		using Channel = Meta_tree_channel;
 		using Local_cache_request = Channel::Local_cache_request;
+		using Type_1_info = Channel::Type_1_info;
+		using Type_2_info = Channel::Type_2_info;
 
 		enum { NR_OF_CHANNELS = 1 };
 
@@ -179,8 +206,8 @@ class Cbe::Meta_tree : public Module
 		                               Type_2_node &t2_entry,
 		                               bool        &exchanged);
 
-		bool _node_volatile(Type_1_node      t1_node,
-		                    Genode::uint64_t gen);
+		bool _node_volatile(Type_1_node const &node,
+		                    Genode::uint64_t   gen);
 
 		void _handle_level_0_nodes(Channel &channel,
 		                           bool    &handled);

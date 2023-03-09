@@ -14,9 +14,11 @@
 #ifndef _BLOCK_IO_H_
 #define _BLOCK_IO_H_
 
+/* gems includes */
+#include <cbe/types.h>
+
 /* cbe tester includes */
 #include <module.h>
-#include <cbe_types.h>
 #include <vfs_utilities.h>
 
 namespace Cbe

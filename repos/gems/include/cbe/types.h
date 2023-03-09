@@ -34,7 +34,7 @@ namespace Cbe {
 	using Height                 = uint32_t;
 	using Number_of_leaves       = uint64_t;
 	using Number_of_leafs        = uint64_t;
-	using Number_of_blocks       = uint64_t;
+	using Number_of_blocks_old   = uint64_t;
 	using Degree                 = uint32_t;
 
 	static constexpr uint32_t BLOCK_SIZE = 4096;
@@ -62,23 +62,23 @@ namespace Cbe {
 
 		private:
 
-			Operation        _operation;
-			bool             _success;
-			uint64_t         _block_number;
-			uint64_t         _offset;
-			Number_of_blocks _count;
-			uint32_t         _key_id;
-			uint32_t         _tag;
+			Operation            _operation;
+			bool                 _success;
+			uint64_t             _block_number;
+			uint64_t             _offset;
+			Number_of_blocks_old _count;
+			uint32_t             _key_id;
+			uint32_t             _tag;
 
 		public:
 
-			Request(Operation        operation,
-			        bool             success,
-			        uint64_t         block_number,
-			        uint64_t         offset,
-			        Number_of_blocks count,
-			        uint32_t         key_id,
-			        uint32_t         tag)
+			Request(Operation            operation,
+			        bool                 success,
+			        uint64_t             block_number,
+			        uint64_t             offset,
+			        Number_of_blocks_old count,
+			        uint32_t             key_id,
+			        uint32_t             tag)
 			:
 				_operation    { operation    },
 				_success      { success      },
@@ -124,13 +124,13 @@ namespace Cbe {
 			bool deinitialize()     const { return _operation == Operation::DEINITIALIZE; }
 			bool initialize()       const { return _operation == Operation::INITIALIZE; }
 
-			Operation        operation()    const { return _operation; }
-			bool             success()      const { return _success; }
-			uint64_t         block_number() const { return _block_number; }
-			uint64_t         offset()       const { return _offset; }
-			Number_of_blocks count()        const { return _count; }
-			uint32_t         key_id()       const { return _key_id; }
-			uint32_t         tag()          const { return _tag; }
+			Operation            operation()    const { return _operation; }
+			bool                 success()      const { return _success; }
+			uint64_t             block_number() const { return _block_number; }
+			uint64_t             offset()       const { return _offset; }
+			Number_of_blocks_old count()        const { return _count; }
+			uint32_t             key_id()       const { return _key_id; }
+			uint32_t             tag()          const { return _tag; }
 
 			void success(bool arg) { _success = arg; }
 			void tag(uint32_t arg)    { _tag = arg; }
@@ -154,7 +154,7 @@ namespace Cbe {
 	/*
 	 * The Hash contains the hash of a node.
 	 */
-	struct Hash
+	struct Hash_old
 	{
 		enum { MAX_LENGTH = 32, };
 		char values[MAX_LENGTH];
@@ -203,7 +203,7 @@ namespace Cbe {
 	 * (For now it is not used but the ID field is already referenced
 	 *  by type 2 nodes.)
 	 */
-	struct Key
+	struct Key_old
 	{
 		enum { KEY_SIZE = 32 };
 		char value[KEY_SIZE];
@@ -238,6 +238,209 @@ namespace Cbe {
 		bool extending_vbd;
 		bool extending_ft;
 	} __attribute__((packed));
+
+
+	using Number_of_blocks_new   = Genode::uint32_t;
+	using Tree_level_index       = Genode::uint32_t;
+	using Tree_degree            = Genode::uint32_t;
+	using Tree_degree_log_2      = Genode::uint32_t;
+	using Tree_number_of_leaves  = Genode::uint64_t;
+	using Key_id                 = Genode::uint32_t;
+	using Snapshot_id            = Genode::uint32_t;
+	using Snapshots_index        = Genode::uint32_t;
+	using Node_index             = Genode::uint8_t;
+
+	enum {
+		PRIM_BUF_SIZE = 128,
+		INVALID_PBA = 0xffff'ffff'ffff'ffff,
+		INVALID_VBA = 0xffff'ffff'ffff'ffff,
+		INVALID_NODE_INDEX = 0xff,
+		HASH_SIZE = 32,
+		TYPE_1_NODE_STORAGE_SIZE = 64,
+		TYPE_2_NODE_STORAGE_SIZE = 64,
+		NR_OF_TYPE_2_NODES_PER_BLK =
+			BLOCK_SIZE / TYPE_2_NODE_STORAGE_SIZE,
+
+		NR_OF_TYPE_1_NODES_PER_BLK =
+			BLOCK_SIZE / TYPE_1_NODE_STORAGE_SIZE,
+
+		TREE_MAX_DEGREE_LOG_2 = 6,
+		TREE_MAX_DEGREE = 1 << TREE_MAX_DEGREE_LOG_2,
+		TREE_MAX_LEVEL = 6,
+		TREE_MAX_NR_OF_LEVELS = TREE_MAX_LEVEL + 1,
+		T2_NODE_LVL = 1,
+		LOWEST_T1_NODE_LVL = 2,
+		HIGHEST_T1_NODE_LVL = TREE_MAX_LEVEL,
+		KEY_SIZE = 32,
+		MAX_NR_OF_SNAPSHOTS_PER_SB = 48,
+	};
+
+
+	struct Key_new
+	{
+		Genode::uint8_t value[KEY_SIZE];
+		Key_id          id;
+	}
+	__attribute__((packed));
+
+
+	struct Hash_new
+	{
+		Genode::uint8_t bytes[HASH_SIZE] { };
+	}
+	__attribute__((packed));
+
+	struct Type_1_node_unpadded
+	{
+		Genode::uint64_t pba             { 0 };
+		Genode::uint64_t gen             { 0 };
+		Genode::uint8_t  hash[HASH_SIZE] { 0 };
+	}
+	__attribute__((packed));
+
+	struct Type_1_node
+	{
+		Genode::uint64_t pba             { 0 };
+		Genode::uint64_t gen             { 0 };
+		Genode::uint8_t  hash[HASH_SIZE] { 0 };
+		Genode::uint8_t  padding[16]     { 0 };
+
+		bool valid() const
+		{
+			Type_1_node node { };
+			return Genode::memcmp(this, &node, sizeof(node)) != 0;
+		}
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+
+			Genode::print(out, "pba: ", pba, " gen: ", gen, " hash: ");
+			for (uint8_t const byte : hash)
+				Genode::print(out, Hex(byte, Hex::OMIT_PREFIX, Hex::PAD));
+		}
+	}
+	__attribute__((packed));
+
+	static_assert(sizeof(Type_1_node) == TYPE_1_NODE_STORAGE_SIZE);
+
+
+	struct Type_1_node_block
+	{
+		Type_1_node nodes[NR_OF_TYPE_1_NODES_PER_BLK] { };
+	}
+	__attribute__((packed));
+
+	static_assert(sizeof(Type_1_node_block) == BLOCK_SIZE);
+
+
+	struct Type_2_node
+	{
+		Genode::uint64_t pba         { 0 };
+		Genode::uint64_t last_vba    { 0 };
+		Genode::uint64_t alloc_gen   { 0 };
+		Genode::uint64_t free_gen    { 0 };
+		Genode::uint32_t last_key_id { 0 };
+		Genode::uint8_t  reserved    { 0 };
+		Genode::uint8_t  padding[27] { 0 };
+
+		bool valid() const
+		{
+			Type_2_node node { };
+			return Genode::memcmp(this, &node, sizeof(node)) != 0;
+		}
+	}
+	__attribute__((packed));
+
+	static_assert(sizeof(Type_2_node) == TYPE_2_NODE_STORAGE_SIZE);
+
+
+	struct Type_2_node_block
+	{
+		Type_2_node nodes[NR_OF_TYPE_2_NODES_PER_BLK] { };
+	}
+	__attribute__((packed));
+
+	static_assert(sizeof(Type_2_node_block) == BLOCK_SIZE);
+
+
+	struct Block
+	{
+		Genode::uint8_t bytes[BLOCK_SIZE] { };
+	}
+	__attribute__((packed));
+
+
+	struct Snapshot
+	{
+		Hash_new               hash;
+		Physical_block_address pba;
+		Generation             gen;
+		Tree_number_of_leaves  nr_of_leaves;
+		Tree_level_index       max_level;
+		bool                   valid;
+		Snapshot_id            id;
+		bool                   keep;
+	}
+	__attribute__((packed));
+
+
+	struct Snapshots
+	{
+		Snapshot items[MAX_NR_OF_SNAPSHOTS_PER_SB];
+	}
+	__attribute__((packed));
+
+
+	enum Superblock_state
+	{
+		INVALID       = 0,
+		NORMAL        = 1,
+		REKEYING      = 2,
+		EXTENDING_VBD = 3,
+		EXTENDING_FT  = 4,
+	};
+
+	struct Superblock
+	{
+		Superblock_state       state;
+		Virtual_block_address  rekeying_vba;
+		Number_of_blocks_new   resizing_nr_of_pbas;
+		Tree_number_of_leaves  resizing_nr_of_leaves;
+		Key_new                previous_key;
+		Key_new                current_key;
+		Snapshots              snapshots;
+		Generation             last_secured_generation;
+		Snapshots_index        curr_snap;
+		Tree_degree            degree;
+		Physical_block_address first_pba;
+		Number_of_blocks_new   nr_of_pbas;
+		Generation             free_gen;
+		Physical_block_address free_number;
+		Hash_new               free_hash;
+		Tree_level_index       free_max_level;
+		Tree_degree            free_degree;
+		Tree_number_of_leaves  free_leaves;
+		Generation             meta_gen;
+		Physical_block_address meta_number;
+		Hash_new               meta_hash;
+		Tree_level_index       meta_max_level;
+		Tree_degree            meta_degree;
+		Tree_number_of_leaves  meta_leaves;
+	}
+	__attribute__((packed));
+
+	struct Type_1_node_walk
+	{
+		Type_1_node_unpadded nodes[TREE_MAX_NR_OF_LEVELS];
+	}
+	__attribute__((packed));
+
+	struct Tree_walk_pbas
+	{
+		Physical_block_address pbas[TREE_MAX_NR_OF_LEVELS];
+	}
+	__attribute__((packed));
 }
 
 

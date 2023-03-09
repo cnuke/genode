@@ -14,9 +14,6 @@
 #ifndef _CBE_LIBRARA_H_
 #define _CBE_LIBRARA_H_
 
-/* base includes */
-#include <util/reconstructible.h>
-
 /* gems includes */
 #include <cbe/library.h>
 
@@ -33,7 +30,7 @@ class Cbe::Librara : public Module
 {
 	private:
 
-		Genode::Constructible<Library> &_lib;
+		Library &_lib;
 
 
 		/************
@@ -43,17 +40,14 @@ class Cbe::Librara : public Module
 		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
 		                             Genode::size_t   buf_size) override
 		{
-			if (!_lib.constructed())
-				return false;
-
-			return _lib->librara__peek_generated_request(buf_ptr, buf_size);
+			return _lib.librara__peek_generated_request(buf_ptr, buf_size);
 		}
 
 		void _drop_generated_request(Module_request &mod_req) override;
 
 	public:
 
-		Librara(Genode::Constructible<Library> &lib)
+		Librara(Library &lib)
 		:
 			_lib { lib }
 		{ }

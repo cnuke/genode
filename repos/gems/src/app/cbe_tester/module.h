@@ -32,10 +32,8 @@ namespace Cbe {
 		BLOCK_IO         = 6,
 		CACHE            = 7,
 		META_TREE        = 8,
+		FREE_TREE        = 9,
 	};
-
-	enum { KEY_SIZE = 32 };
-	enum { PRIM_BUF_SIZE = 128 };
 
 	char const *module_name(unsigned long module_id);
 
@@ -126,7 +124,7 @@ class Cbe::Module
 		template <typename FUNC>
 		void for_each_generated_request(FUNC && handle_request)
 		{
-			Genode::uint8_t buf[300];
+			Genode::uint8_t buf[4000];
 			while (_peek_generated_request(buf, sizeof(buf))) {
 
 				Module_request &req = *(Module_request *)buf;
@@ -152,7 +150,7 @@ class Cbe::Module
 		template <typename FUNC>
 		void for_each_completed_request(FUNC && handle_request)
 		{
-			Genode::uint8_t buf[300];
+			Genode::uint8_t buf[4000];
 			while (_peek_completed_request(buf, sizeof(buf))) {
 
 				Module_request &req = *(Module_request *)buf;
