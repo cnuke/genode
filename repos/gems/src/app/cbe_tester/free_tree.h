@@ -99,7 +99,7 @@ class Cbe::Free_tree_request : public Module_request
 		                   Genode::uint64_t  mt_max_level,
 		                   Genode::uint64_t  mt_degree,
 		                   Genode::uint64_t  mt_leaves,
-		                   Snapshots        *snapshots,
+		                   Snapshots const  *snapshots,
 		                   Generation        last_secured_generation,
 		                   Genode::uint64_t  current_gen,
 		                   Genode::uint64_t  free_gen,

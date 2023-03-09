@@ -23,16 +23,17 @@ namespace Cbe {
 	enum Module_id : unsigned long
 	{
 		/* Warning: don't change the numeric values, they are used in Ada */
-		CRYPTO           = 0,
-		CBE_LIBRARA      = 1,
-		CLIENT_DATA      = 2,
-		TRUST_ANCHOR     = 3,
-		COMMAND_POOL     = 4,
-		CBE_INIT_LIBRARA = 5,
-		BLOCK_IO         = 6,
-		CACHE            = 7,
-		META_TREE        = 8,
-		FREE_TREE        = 9,
+		CRYPTO               = 0,
+		CBE_LIBRARA          = 1,
+		CLIENT_DATA          = 2,
+		TRUST_ANCHOR         = 3,
+		COMMAND_POOL         = 4,
+		CBE_INIT_LIBRARA     = 5,
+		BLOCK_IO             = 6,
+		CACHE                = 7,
+		META_TREE            = 8,
+		FREE_TREE            = 9,
+		VIRTUAL_BLOCK_DEVICE = 10
 	};
 
 	char const *module_name(unsigned long module_id);

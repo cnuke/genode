@@ -144,12 +144,13 @@ namespace Cbe {
 		void print(Genode::Output &out) const
 		{
 			using namespace Genode;
-			for (char const c : values) {
-				Genode::print(out, Hex(c, Hex::OMIT_PREFIX, Hex::PAD), " ");
-			}
-			Genode::print(out, "\n");
+			for (unsigned idx { 0 }; idx < 16; idx++)
+				Genode::print(
+					out, idx && !(idx % 4) ? " " : "",
+					Hex(values[idx], Hex::OMIT_PREFIX, Hex::PAD));
 		}
-	} __attribute__((packed));
+	}
+	__attribute__((packed));
 
 	/*
 	 * The Hash contains the hash of a node.
@@ -240,7 +241,7 @@ namespace Cbe {
 	} __attribute__((packed));
 
 
-	using Number_of_blocks_new   = Genode::uint32_t;
+	using Number_of_blocks_new   = Genode::uint64_t;
 	using Tree_level_index       = Genode::uint32_t;
 	using Tree_degree            = Genode::uint32_t;
 	using Tree_degree_log_2      = Genode::uint32_t;
@@ -249,6 +250,7 @@ namespace Cbe {
 	using Snapshot_id            = Genode::uint32_t;
 	using Snapshots_index        = Genode::uint32_t;
 	using Node_index             = Genode::uint8_t;
+	using Superblock_index       = Genode::uint8_t;
 
 	enum {
 		PRIM_BUF_SIZE = 128,
@@ -273,13 +275,20 @@ namespace Cbe {
 		HIGHEST_T1_NODE_LVL = TREE_MAX_LEVEL,
 		KEY_SIZE = 32,
 		MAX_NR_OF_SNAPSHOTS_PER_SB = 48,
+		MAX_NR_OF_SUPERBLOCKS = 8,
+		SNAPSHOT_STORAGE_SIZE = 72,
 	};
 
+	struct Key_value
+	{
+		Genode::uint8_t bytes[KEY_SIZE];
+	}
+	__attribute__((packed));
 
 	struct Key_new
 	{
-		Genode::uint8_t value[KEY_SIZE];
-		Key_id          id;
+		Key_value value;
+		Key_id    id;
 	}
 	__attribute__((packed));
 
@@ -287,6 +296,15 @@ namespace Cbe {
 	struct Hash_new
 	{
 		Genode::uint8_t bytes[HASH_SIZE] { };
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+			for (unsigned idx { 0 }; idx < 8; idx++)
+				Genode::print(
+					out, idx && !(idx % 4) ? " " : "",
+					Hex(bytes[idx], Hex::OMIT_PREFIX, Hex::PAD));
+		}
 	}
 	__attribute__((packed));
 
@@ -349,6 +367,18 @@ namespace Cbe {
 			Type_2_node node { };
 			return Genode::memcmp(this, &node, sizeof(node)) != 0;
 		}
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+
+			Genode::print(out, "pba: ",         pba, " "
+			                   "last_vba: ",    last_vba, " "
+			                   "alloc_gen: ",   alloc_gen, " "
+			                   "free_gen: ",    free_gen, " "
+			                   "last_key_id: ", last_key_id);
+		}
+
 	}
 	__attribute__((packed));
 
@@ -381,8 +411,30 @@ namespace Cbe {
 		bool                   valid;
 		Snapshot_id            id;
 		bool                   keep;
+
+		Genode::uint8_t        unused[6] { };
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+
+			Genode::print(out, "hash: ");
+			for (uint8_t const byte : hash.bytes)
+				Genode::print(out, Hex(byte, Hex::OMIT_PREFIX, Hex::PAD));
+
+			Genode::print(out, " "
+			                   "pba: ", pba, " "
+			                   "gen: ", gen, " "
+			                   "nr_of_leaves: ", nr_of_leaves, " "
+			                   "max_level: ", max_level, " "
+			                   "valid: ", valid, " "
+			                   "id: ", id, " "
+			                   "keep: ", keep);
+		}
 	}
 	__attribute__((packed));
+
+	static_assert(sizeof(Snapshot) == SNAPSHOT_STORAGE_SIZE);
 
 
 	struct Snapshots
@@ -392,7 +444,7 @@ namespace Cbe {
 	__attribute__((packed));
 
 
-	enum Superblock_state
+	enum Superblock_state : uint8_t
 	{
 		INVALID       = 0,
 		NORMAL        = 1,
@@ -427,6 +479,53 @@ namespace Cbe {
 		Tree_level_index       meta_max_level;
 		Tree_degree            meta_degree;
 		Tree_number_of_leaves  meta_leaves;
+
+		void initialize_invalid()
+		{
+			memset(this, 0, sizeof(*this));
+
+			state                   = Superblock_state::INVALID;
+			rekeying_vba            = 0;
+			resizing_nr_of_pbas     = 0;
+			resizing_nr_of_leaves   = 0;
+			// previous_key;
+			// current_key;
+			// snapshots;
+			last_secured_generation = 0;
+			curr_snap               = 0;
+			degree                  = 1;
+			first_pba               = 0;
+			nr_of_pbas              = 0;
+			free_gen                = 0;
+			free_number             = 0;
+			// free_hash;
+			free_max_level          = 0;
+			free_degree             = 1;
+			free_leaves             = 0;
+			meta_gen                = 0;
+			meta_number             = 0;
+			// meta_hash;
+			meta_max_level          = 0;
+			meta_degree             = 1;
+			meta_leaves             = 0;
+		}
+
+		void print(Genode::Output &out) const
+		{
+			using namespace Genode;
+
+			Genode::print(out, "state:", (unsigned)state, " "
+			                   "last_secured_generation: ", last_secured_generation, " ",
+			                   "curr_snap: ", curr_snap, " ",
+			                   "degree: ", degree, " ",
+			                   "first_pba: ", first_pba, " "
+			                   "nr_of_pbas: ", nr_of_pbas, " ");
+
+			Genode::print(out, "snapshots:\n");
+			for (auto const snap : snapshots.items)
+				if (snap.valid)
+					Genode::print(out, snap, "\n");
+		}
 	}
 	__attribute__((packed));
 

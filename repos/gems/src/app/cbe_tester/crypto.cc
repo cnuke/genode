@@ -21,6 +21,8 @@
 using namespace Genode;
 using namespace Cbe;
 
+enum { VERBOSE_CRYPTO = 0 };
+
 
 /*************************
  ** Crypto_request **
@@ -663,6 +665,25 @@ bool Crypto::_peek_completed_request(uint8_t *buf_ptr,
 				throw Exception_1 { };
 			}
 			memcpy(buf_ptr, &channel._request, sizeof(channel._request));
+
+			if (VERBOSE_CRYPTO) {
+
+				Request &req { channel._request };
+				switch (req._type) {
+				case Request::DECRYPT_CLIENT_DATA:
+				case Request::ENCRYPT_CLIENT_DATA:
+				{
+					log("crypto: ", req.type_name(), " pba ", req._pba,
+					    " vba ", req._vba,
+					    " plain ", *(Block_data *)channel._blk_buf,
+					    " cipher ", *(Block_data *)req._ciphertext_blk_ptr);
+
+					break;
+				}
+				default:
+					break;
+				}
+			}
 			return true;
 		}
 	}

@@ -35,6 +35,7 @@
 #include <block_io.h>
 #include <meta_tree.h>
 #include <free_tree.h>
+#include <virtual_block_device.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -52,6 +53,7 @@ namespace Cbe {
 		case CACHE: return "cache";
 		case META_TREE: return "meta_tree";
 		case FREE_TREE: return "free_tree";
+		case VIRTUAL_BLOCK_DEVICE: return "vbd";
 		case CLIENT_DATA: return "client_data";
 		case TRUST_ANCHOR: return "trust_anchor";
 		case COMMAND_POOL: return "command_pool";
@@ -667,7 +669,6 @@ class Command : public Fifo<Command>::Element
 		void state         (State state)        { _state = state; }
 		void success       (bool success)       { _success = success; }
 		void data_mismatch (bool data_mismatch) { _data_mismatch = data_mismatch; }
-
 };
 
 
@@ -1001,26 +1002,27 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 10 };
+		enum { NR_OF_MODULES = 11 };
 
-		Genode::Env                 &_env;
-		Attached_rom_dataspace       _config_rom                 { _env, "config" };
-		Verbose_node                 _verbose_node               { _config_rom.xml() };
-		Heap                         _heap                       { _env.ram(), _env.rm() };
-		Vfs::Simple_env              _vfs_env                    { _env, _heap, _config_rom.xml().sub_node("vfs"), *this };
-		Signal_handler<Main>         _sigh                       { _env.ep(), *this, &Main::_execute };
-		Command_pool                 _cmd_pool                   { _heap, _config_rom.xml(), _verbose_node };
-		Constructible<Cbe::Library>  _cbe                        { };
-		Constructible<Free_tree>     _free_tree                  { };
-		Constructible<Cbe::Librara>  _cbe_librara                { };
-		Cbe_init::Library            _cbe_init                   { };
-		Benchmark                    _benchmark                  { _env };
-		Meta_tree                    _meta_tree                  { };
-		Trust_anchor                 _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
-		Crypto                       _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
-		Block_io                     _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
-		Cbe_init::Librara            _cbe_init_librara           { _cbe_init };
-		Client_data_request          _client_data_request        { };
+		Genode::Env                        &_env;
+		Attached_rom_dataspace              _config_rom                 { _env, "config" };
+		Verbose_node                        _verbose_node               { _config_rom.xml() };
+		Heap                                _heap                       { _env.ram(), _env.rm() };
+		Vfs::Simple_env                     _vfs_env                    { _env, _heap, _config_rom.xml().sub_node("vfs"), *this };
+		Signal_handler<Main>                _sigh                       { _env.ep(), *this, &Main::_execute };
+		Command_pool                        _cmd_pool                   { _heap, _config_rom.xml(), _verbose_node };
+		Constructible<Cbe::Library>         _cbe                        { };
+		Constructible<Free_tree>            _free_tree                  { };
+		Constructible<Virtual_block_device> _vbd                        { };
+		Constructible<Cbe::Librara>         _cbe_librara                { };
+		Cbe_init::Library                   _cbe_init                   { };
+		Benchmark                           _benchmark                  { _env };
+		Meta_tree                           _meta_tree                  { };
+		Trust_anchor                        _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
+		Crypto                              _crypto                     { _vfs_env, _config_rom.xml().sub_node("crypto") };
+		Block_io                            _block_io                   { _vfs_env, _config_rom.xml().sub_node("block-io") };
+		Cbe_init::Librara                   _cbe_init_librara           { _cbe_init };
+		Client_data_request                 _client_data_request        { };
 
 		Module *_module_ptrs[NR_OF_MODULES] { };
 
@@ -1037,6 +1039,9 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_free_tree.construct();
 			_modules_add(FREE_TREE, *_free_tree);
 
+			_vbd.construct();
+			_modules_add(VIRTUAL_BLOCK_DEVICE, *_vbd);
+
 			_cbe_librara.construct(*_cbe);
 			_modules_add(CBE_LIBRARA, *_cbe_librara);
 		}
@@ -1045,6 +1050,9 @@ class Main : Vfs::Env::User, public Cbe::Module
 		{
 			_modules_remove(CBE_LIBRARA);
 			_cbe_librara.destruct();
+
+			_modules_remove(VIRTUAL_BLOCK_DEVICE);
+			_vbd.destruct();
 
 			_modules_remove(FREE_TREE);
 			_free_tree.destruct();

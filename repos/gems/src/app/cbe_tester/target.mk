@@ -7,6 +7,7 @@ SRC_CC  += sha256_4k_hash.cc
 SRC_CC  += trust_anchor.cc
 SRC_CC  += block_io.cc
 SRC_CC  += meta_tree.cc
+SRC_CC  += virtual_block_device.cc
 SRC_CC  += free_tree.cc
 SRC_CC  += vfs_utilities.cc
 SRC_CC  += module.cc

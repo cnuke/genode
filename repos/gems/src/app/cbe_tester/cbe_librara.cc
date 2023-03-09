@@ -17,6 +17,7 @@
 #include <block_io.h>
 #include <meta_tree.h>
 #include <free_tree.h>
+#include <virtual_block_device.h>
 #include <cbe_librara.h>
 
 
@@ -63,6 +64,14 @@ void Cbe::Librara::_drop_generated_request(Module_request &mod_req)
 		_lib.librara__drop_generated_request(req.prim_ptr());
 		break;
 	}
+	case VIRTUAL_BLOCK_DEVICE:
+	{
+		Virtual_block_device_request &req {
+			*dynamic_cast<Virtual_block_device_request *>(&mod_req) };
+
+		_lib.librara__drop_generated_request(req.prim_ptr());
+		break;
+	}
 	default:
 		class Exception_1 { };
 		throw Exception_1 { };
@@ -80,7 +89,7 @@ void Cbe::Librara::generated_request_complete(Module_request &mod_req)
 
 		_lib.librara__generated_request_complete(
 			req.prim_ptr(), req.result_blk_ptr(), nullptr, nullptr, nullptr,
-			0, req.success());
+			nullptr, 0, req.success());
 
 		break;
 	}
@@ -91,7 +100,7 @@ void Cbe::Librara::generated_request_complete(Module_request &mod_req)
 
 		_lib.librara__generated_request_complete(
 			req.prim_ptr(), nullptr, req.key_plaintext_ptr(),
-			req.key_ciphertext_ptr(), req.hash_ptr(),
+			req.key_ciphertext_ptr(), req.hash_ptr(), nullptr,
 			0, req.success());
 
 		break;
@@ -102,7 +111,7 @@ void Cbe::Librara::generated_request_complete(Module_request &mod_req)
 			*dynamic_cast<Block_io_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
-			req.prim_ptr(), nullptr, nullptr, nullptr, req.hash_ptr(),
+			req.prim_ptr(), nullptr, nullptr, nullptr, req.hash_ptr(), nullptr,
 			0, req.success());
 
 		break;
@@ -113,7 +122,7 @@ void Cbe::Librara::generated_request_complete(Module_request &mod_req)
 			*dynamic_cast<Meta_tree_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
-			req.prim_ptr(), nullptr, nullptr, nullptr, nullptr,
+			req.prim_ptr(), nullptr, nullptr, nullptr, nullptr, nullptr,
 			req.new_pba(), req.success());
 
 		break;
@@ -124,8 +133,19 @@ void Cbe::Librara::generated_request_complete(Module_request &mod_req)
 			*dynamic_cast<Free_tree_request *>(&mod_req) };
 
 		_lib.librara__generated_request_complete(
-			req.prim_ptr(), nullptr, nullptr, nullptr, nullptr, 0,
+			req.prim_ptr(), nullptr, nullptr, nullptr, nullptr, nullptr, 0,
 			req.success());
+
+		break;
+	}
+	case VIRTUAL_BLOCK_DEVICE:
+	{
+		Virtual_block_device_request &req {
+			*dynamic_cast<Virtual_block_device_request *>(&mod_req) };
+
+		_lib.librara__generated_request_complete(
+			req.prim_ptr(), nullptr, nullptr, nullptr, nullptr,
+			req.snapshot_ptr(), 0, req.success());
 
 		break;
 	}

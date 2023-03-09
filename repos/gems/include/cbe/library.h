@@ -133,6 +133,7 @@ class Cbe::Library : public Cbe::Spark_object<353944>
 		                                         void             *key_plain_ptr,
 		                                         void             *key_cipher_ptr,
 		                                         void             *hash_ptr,
+		                                         void             *snap_ptr,
 		                                         Genode::uint64_t  new_pba,
 		                                         bool              success);
 };

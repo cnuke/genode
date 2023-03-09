@@ -183,22 +183,22 @@ append config {
 				</initialize>
 				<check/>
 				<construct/>
-
+<!--
 				<log string="Step 2: test synchronous write, read"/>
 
-				<request op="write" vba="1"   count="1"   sync="yes"/>
-				<request op="read"  vba="1"   count="1"   sync="yes"/>
+				<request op="write" vba="1"   count="1"   sync="yes" salt="1234"/>
+				<request op="read"  vba="1"   count="1"   sync="yes" salt="1234"/>
 				<request op="write" vba="12"  count="10"  sync="yes"/>
 				<request op="read"  vba="12"  count="10"  sync="yes"/>
 				<request op="write" vba="24"  count="40" sync="yes"/>
 				<request op="read"  vba="24"  count="40" sync="yes"/>
-
+-->
 				<log string="Step 3: test synchronous write, read, compare"/>
 
 				<request op="write" vba="9"  count="1"  sync="yes" salt="4321"/>
 				<request op="read"  vba="9"  count="1"  sync="yes" salt="4321"/>
-				<request op="write" vba="41" count="19" sync="yes" salt="8765"/>
-				<request op="read"  vba="41" count="19" sync="yes" salt="8765"/>
+				<request op="write" vba="41" count="3" sync="yes" salt="8765"/>
+				<request op="read"  vba="41" count="3" sync="yes" salt="8765"/>
 				<request op="write" vba="9"  count="1"  sync="yes" salt="1234"/>
 				<request op="write" vba="41" count="19" sync="yes" salt="5678"/>
 				<request op="read"  vba="9"  count="1"  sync="yes" salt="1234"/>

@@ -610,23 +610,22 @@ bool Block_io::_peek_completed_request(uint8_t *buf_ptr,
 				case Request::READ:
 				case Request::WRITE:
 				{
-					uint8_t hash[HASH_SIZE];
-					calc_sha256_4k_hash((void *)req._blk_ptr, (void *)hash);
-					uint64_t *blk_ptr { (uint64_t *)req._blk_ptr };
-					uint64_t *hash_ptr { (uint64_t *)hash };
-					log("block_io: ", req.type_name(), " pba ", req._pba);
-					log("  got hash: ",
-						Hex(hash_ptr[0], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(hash_ptr[1], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(hash_ptr[2], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(hash_ptr[3], Hex::OMIT_PREFIX, Hex::PAD));
-					log("  data: ",
-						Hex(blk_ptr[0], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(blk_ptr[1], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(blk_ptr[2], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(blk_ptr[3], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(blk_ptr[4], Hex::OMIT_PREFIX, Hex::PAD), " ",
-						Hex(blk_ptr[5], Hex::OMIT_PREFIX, Hex::PAD));
+					Hash_new hash;
+					calc_sha256_4k_hash((void *)req._blk_ptr, &hash);
+					log("block_io: ", req.type_name(), " pba ", req._pba,
+					    " data ", *(Block_data *)req._blk_ptr, " hash ", hash);
+
+					break;
+				}
+				case Request::READ_CLIENT_DATA:
+				case Request::WRITE_CLIENT_DATA:
+				{
+					Hash_new hash;
+					calc_sha256_4k_hash((void *)channel._blk_buf, &hash);
+					log("block_io: ", req.type_name(), " pba ", req._pba,
+					    " data ", *(Block_data *)channel._blk_buf,
+					    " hash ", hash);
+
 					break;
 				}
 				default:
