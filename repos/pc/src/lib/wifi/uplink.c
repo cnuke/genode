@@ -227,6 +227,25 @@ static int uplink_netdev_event(struct notifier_block *this,
 }
 
 
+static int new_device_netdev_event(struct notifier_block *this,
+                                   unsigned long event, void *ptr)
+{
+	if (event == NETDEV_REGISTER)
+		if (uplink_task_struct_ptr)
+			lx_emul_task_unblock(uplink_task_struct_ptr);
+
+	return NOTIFY_DONE;
+}
+
+
+static struct notifier_block new_device_netdev_notifier = {
+    .notifier_call = new_device_netdev_event,
+};
+
+
+extern void wakeup_wpa(void);
+
+
 static int user_task_function(void *arg)
 {
 	struct netdev_event_notification events;
@@ -234,6 +253,10 @@ static int user_task_function(void *arg)
 
 	events.nb.notifier_call = uplink_netdev_event;
 	events.registered       = false;
+
+	if (register_netdevice_notifier(&new_device_netdev_notifier))
+		printk("%s:%d: warning: could not register notififer for "
+		       "new devices\n", __func__, __LINE__);
 
 	for (;;) {
 
@@ -246,7 +269,8 @@ static int user_task_function(void *arg)
 				continue;
 
 			/* enable link sensing, repeated calls are handled by testing IFF_UP */
-			dev_open(dev, 0);
+			if (dev_open(dev, 0) == 0)
+				wakeup_wpa();
 
 			/* install rx handler once */
 			if (!netdev_is_rx_handler_busy(dev))
