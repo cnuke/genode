@@ -482,6 +482,17 @@ extern Blockade *wpa_blockade;
 void _wifi_report_mac_address(Net::Mac_address const &mac_address);
 
 
+extern "C" void wakeup_wpa()
+{
+	static bool called_once = false;
+	if (called_once)
+		return;
+
+	wpa_blockade->wakeup();
+	called_once = true;
+}
+
+
 extern "C" int socketcall_task_function(void *)
 {
 	static Lx::Socket inst(Lx_kit::env().env.ep());
@@ -489,7 +500,7 @@ extern "C" int socketcall_task_function(void *)
 
 	void const *mac_addr = nullptr;
 
-	wpa_blockade->wakeup();
+	// wpa_blockade->wakeup();
 
 	while (true) {
 
