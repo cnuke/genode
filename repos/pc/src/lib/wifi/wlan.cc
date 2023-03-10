@@ -155,6 +155,18 @@ struct Wlan
 	Io_signal_handler<Wlan> _signal_handler { _env.ep(), *this,
 	                                          &Wlan::_handle_signal };
 
+	Attached_rom_dataspace  _config_rom { _env, "config" };
+
+	using Dtb_name = Genode::String<64>;
+	/*
+	 * Dtb_name fallback is empty, platforms requiring a valid dtb
+	 * MUST specify one.
+	 */
+	Dtb_name _dtb_name {
+		_config_rom.xml().attribute_value("dtb", Dtb_name()) };
+
+	Constructible<Attached_rom_dataspace> _dtb_rom { };
+
 	void _handle_signal()
 	{
 		if (uplink_task_struct_ptr) {
@@ -175,7 +187,13 @@ struct Wlan
 		                   genode_allocator_ptr(Lx_kit::env().heap),
 		                   genode_signal_handler_ptr(_signal_handler));
 
-		lx_emul_start_kernel(nullptr);
+		if (_dtb_name.valid())
+			_dtb_rom.construct(_env, _dtb_name.string());
+
+		void *dtb = _dtb_rom.constructed() ? _dtb_rom->local_addr<void>()
+		                                   : nullptr;
+
+		lx_emul_start_kernel(dtb);
 	}
 };
 
