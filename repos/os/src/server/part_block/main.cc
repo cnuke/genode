@@ -213,7 +213,6 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 		Attached_rom_dataspace _config { _env, "config" };
 
 		Heap                              _heap     { _env.ram(), _env.rm() };
-		Constructible<Expanding_reporter> _reporter { };
 
 		Number_of_bytes const _io_buffer_size =
 			_config.xml().attribute_value("io_buffer",
@@ -222,8 +221,8 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 		Allocator_avl           _block_alloc { &_heap };
 		Block_connection        _block    { _env, &_block_alloc, _io_buffer_size };
 		Io_signal_handler<Main> _io_sigh  { _env.ep(), *this, &Main::_handle_io };
-		Mbr_partition_table     _mbr      { _env, _block, _heap, _reporter };
-		Gpt                     _gpt      { _env, _block, _heap, _reporter };
+		Mbr_partition_table     _mbr      { _env, _block, _heap };
+		Gpt                     _gpt      { _env, _block, _heap };
 		Partition_table        &_partition_table { _table() };
 
 		enum { MAX_SESSIONS = 128 };
@@ -494,12 +493,17 @@ Block::Partition_table & Block::Main::_table()
 		throw Invalid_config();
 	}
 
+	Constructible<Expanding_reporter> reporter { };
+
 	try {
 		report = _config.xml().sub_node("report").attribute_value
                          ("partitions", false);
 		if (report)
-			_reporter.construct(_env, "partitions", "partitions");
-	} catch(...) {}
+			reporter.construct(_env, "partitions", "partitions");
+	} catch (...) {
+		error("cannot construct partitions reporter: abort");
+		throw;
+	}
 
 	/*
 	 * Try to parse MBR as well as GPT first if not instructued
@@ -541,8 +545,17 @@ Block::Partition_table & Block::Main::_table()
 	 * Return the appropriate table or abort if none is found.
 	 */
 
-	if (valid_gpt) return _gpt;
-	if (valid_mbr) return _mbr;
+	if (valid_gpt) {
+		if (reporter.constructed())
+			_gpt.generate_report(*reporter);
+		return _gpt;
+	}
+
+	if (valid_mbr) {
+		if (reporter.constructed())
+			_mbr.generate_report(*reporter);
+		return _mbr;
+	}
 
 	error("Aborting: no partition table found.");
 	throw No_partition_table();
