@@ -38,6 +38,7 @@
 #include <block_allocator.h>
 #include <vbd_initializer.h>
 #include <ft_initializer.h>
+#include <sb_initializer.h>
 #include <virtual_block_device.h>
 #include <superblock_control.h>
 
@@ -64,6 +65,8 @@ namespace Cbe {
 		case COMMAND_POOL: return "command_pool";
 		case BLOCK_ALLOCATOR: return "block_allocator";
 		case VBD_INITIALIZER: return "vbd_initializer";
+		case FT_INITIALIZER: return "ft_initializer";
+		case SB_INITIALIZER: return "sb_initializer";
 		default: break;
 		}
 		return "?";
@@ -730,61 +733,130 @@ class Command_pool : public Module {
 		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
 		                             Genode::size_t   buf_size) override
 		{
-			Command const cmd {
-				peek_pending_command(Command::TRUST_ANCHOR) };
+			/* TRUST_ANCHOR */ {
+				Command const cmd {
+					peek_pending_command(Command::TRUST_ANCHOR) };
 
-			if (cmd.type() == Command::INVALID)
-				return false;
+				if (cmd.type() != Command::INVALID) {
 
-			Trust_anchor_node const &node { cmd.trust_anchor_node() };
-			switch (node.op()) {
-			case Trust_anchor_request::INITIALIZE:
+					Trust_anchor_node const &node { cmd.trust_anchor_node() };
+					switch (node.op()) {
+					case Trust_anchor_request::INITIALIZE:
 
-				Trust_anchor_request::create(
-					buf_ptr, buf_size, COMMAND_POOL, cmd.id(),
-					(unsigned long)Trust_anchor_request::INITIALIZE,
-					nullptr, 0, nullptr, nullptr, node.passphrase().string(),
-					nullptr);
+						Trust_anchor_request::create(
+							buf_ptr, buf_size, COMMAND_POOL, cmd.id(),
+							(unsigned long)Trust_anchor_request::INITIALIZE,
+							nullptr, 0, nullptr, nullptr, node.passphrase().string(),
+							nullptr);
 
-				return true;
+						return true;
 
-			default: break;
+					default: break;
+					}
+					class Exception_1 { };
+					throw Exception_1 { };
+				}
 			}
-			class Exception_1 { };
-			throw Exception_1 { };
+
+			/* INITIALIZE */ {
+				Command const cmd {
+					peek_pending_command(Command::INITIALIZE) };
+
+				if (cmd.type() != Command::INVALID) {
+
+					Cbe_init::Configuration const &cfg { cmd.initialize() };
+
+					Sb_initializer_request::create(
+						buf_ptr, buf_size, COMMAND_POOL, cmd.id(),
+						(unsigned long)Sb_initializer_request::INIT,
+						nullptr, 0,
+						cfg.vbd_nr_of_lvls() - 1,
+						cfg.vbd_nr_of_children(),
+						cfg.vbd_nr_of_leafs(),
+						cfg.ft_nr_of_lvls() - 1,
+						cfg.ft_nr_of_children(),
+						cfg.ft_nr_of_leafs(),
+						cfg.ft_nr_of_lvls() - 1,
+						cfg.ft_nr_of_children(),
+						cfg.ft_nr_of_leafs());
+
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		void _drop_generated_request(Module_request &mod_req) override
 		{
-			if (mod_req.dst_module_id() != TRUST_ANCHOR) {
+			switch (mod_req.dst_module_id()) {
+			case TRUST_ANCHOR:
+			{
+				Trust_anchor_request const &ta_req {
+					*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+
+				if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
+					class Exception_2 { };
+					throw Exception_2 { };
+				}
+				mark_command_in_progress(ta_req.src_request_id());
+				break;
+			}
+			case SB_INITIALIZER:
+			{
+				Sb_initializer_request const &sb_req {
+					*dynamic_cast<Sb_initializer_request *>(&mod_req)};
+
+				if (sb_req.type() != Sb_initializer_request::INIT) {
+					class Exception_2 { };
+					throw Exception_2 { };
+				}
+				mark_command_in_progress(sb_req.src_request_id());
+				break;
+			}
+			default:
+			{
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
-			Trust_anchor_request const &ta_req {
-				*dynamic_cast<Trust_anchor_request *>(&mod_req)};
-
-			if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
-				class Exception_2 { };
-				throw Exception_2 { };
 			}
-			mark_command_in_progress(ta_req.src_request_id());
 		}
 
 		void generated_request_complete(Module_request &mod_req) override
 		{
-			if (mod_req.dst_module_id() != TRUST_ANCHOR) {
+			switch (mod_req.dst_module_id()) {
+			case TRUST_ANCHOR:
+			{
+				Trust_anchor_request const &ta_req {
+					*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+
+				if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
+					class Exception_2 { };
+					throw Exception_2 { };
+				}
+				mark_command_completed(
+					ta_req.src_request_id(), ta_req.success());
+				break;
+			}
+			case SB_INITIALIZER:
+			{
+				Sb_initializer_request const &sb_req {
+					*dynamic_cast<Sb_initializer_request *>(&mod_req)};
+
+				if (sb_req.type() != Sb_initializer_request::INIT) {
+					class Exception_2 { };
+					throw Exception_2 { };
+				}
+				mark_command_completed(
+					sb_req.src_request_id(), sb_req.success());
+				break;
+			}
+			default:
+			{
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
-			Trust_anchor_request const &ta_req {
-				*dynamic_cast<Trust_anchor_request *>(&mod_req)};
-
-			if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
-				class Exception_2 { };
-				throw Exception_2 { };
 			}
-			mark_command_completed(
-				ta_req.src_request_id(), ta_req.success());
 		}
 
 	public:
@@ -1034,7 +1106,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 15 };
+		enum { NR_OF_MODULES = 16 };
 
 		Genode::Env                        &_env;
 		Attached_rom_dataspace              _config_rom                 { _env, "config" };
@@ -1048,7 +1120,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Constructible<Virtual_block_device> _vbd                        { };
 		Constructible<Cbe::Librara>         _cbe_librara                { };
 		Constructible<Superblock_control>   _sb_control                 { };
-		Cbe_init::Library                   _cbe_init                   { };
 		Benchmark                           _benchmark                  { _env };
 		Meta_tree                           _meta_tree                  { };
 		Trust_anchor                        _trust_anchor               { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
@@ -1057,7 +1128,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Block_allocator                     _block_allocator            { NR_OF_SUPERBLOCK_SLOTS };
 		Vbd_initializer                     _vbd_initializer            { };
 		Ft_initializer                      _ft_initializer             { };
-		Cbe_init::Librara                   _cbe_init_librara           { _cbe_init };
+		Sb_initializer                      _sb_initializer             { };
 		Client_data_request                 _client_data_request        { };
 
 		Module *_module_ptrs[NR_OF_MODULES] { };
@@ -1125,15 +1196,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				module.drop_completed_client_request(cbe_req);
 				progress = true;
 			}
-		}
-
-		void _execute_cbe_init(bool &progress)
-		{
-			_cbe_init.execute();
-			if (_cbe_init.execute_progress()) {
-				progress = true;
-			}
-			_handle_completed_client_requests_of_module(_cbe_init, progress);
 		}
 
 		bool ready_to_submit_request() override
@@ -1223,37 +1285,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				progress = true;
 			}
 			_handle_completed_client_requests_of_module(*_cbe, progress);
-		}
-
-		void _cmd_pool_handle_pending_cbe_init_cmds(bool &progress)
-		{
-			while (true) {
-
-				if (!_cbe_init.client_request_acceptable()) {
-					break;
-				}
-				Command const cmd {
-					_cmd_pool.peek_pending_command(Command::INITIALIZE) };
-
-				if (cmd.type() == Command::INVALID) {
-					break;
-				}
-				Cbe_init::Configuration const &cfg { cmd.initialize() };
-
-				_cbe_init.submit_client_request(
-					Cbe::Request(
-						Cbe::Request::Operation::READ,
-						false, 0, 0, 0, 0, cmd.id()),
-					cfg.vbd_nr_of_lvls() - 1,
-					cfg.vbd_nr_of_children(),
-					cfg.vbd_nr_of_leafs(),
-					cfg.ft_nr_of_lvls() - 1,
-					cfg.ft_nr_of_children(),
-					cfg.ft_nr_of_leafs());
-
-				_cmd_pool.mark_command_in_progress(cmd.id());
-				progress = true;
-			}
 		}
 
 		void _cmd_pool_handle_pending_check_cmds(bool &progress)
@@ -1453,7 +1484,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 				_cmd_pool_handle_pending_list_snapshots_cmds(progress);
 			}
 			_cmd_pool_handle_pending_log_cmds(progress);
-			_cmd_pool_handle_pending_cbe_init_cmds(progress);
 			_cmd_pool_handle_pending_benchmark_cmds(progress);
 			_cmd_pool_handle_pending_construct_cmds(progress);
 			_cmd_pool_handle_pending_destruct_cmds(progress);
@@ -1565,7 +1595,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 				progress = false;
 				_execute_command_pool(progress);
-				_execute_cbe_init(progress);
 				_modules_execute(progress);
 				if (_cbe.constructed()) {
 					_execute_cbe(progress);
@@ -1585,11 +1614,11 @@ class Main : Vfs::Env::User, public Cbe::Module
 			_modules_add(TRUST_ANCHOR,      _trust_anchor);
 			_modules_add(CLIENT_DATA,      *this);
 			_modules_add(COMMAND_POOL,      _cmd_pool);
-			_modules_add(CBE_INIT_LIBRARA,  _cbe_init_librara);
 			_modules_add(BLOCK_IO,          _block_io);
 			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
 			_modules_add(VBD_INITIALIZER,   _vbd_initializer);
 			_modules_add(FT_INITIALIZER,    _ft_initializer);
+			_modules_add(SB_INITIALIZER,    _sb_initializer);
 
 			_block_allocator_ptr = &_block_allocator;
 
@@ -1603,9 +1632,6 @@ void Component::construct(Genode::Env &env)
 
 	Cbe::assert_valid_object_size<Cbe::Library>();
 	cbe_cxx_init();
-
-	Cbe::assert_valid_object_size<Cbe_init::Library>();
-	cbe_init_cxx_init();
 
 	static Main main(env);
 

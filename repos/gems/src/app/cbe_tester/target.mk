@@ -17,6 +17,7 @@ SRC_CC  += cbe_init_librara.cc
 SRC_CC  += block_allocator.cc
 SRC_CC  += vbd_initializer.cc
 SRC_CC  += ft_initializer.cc
+SRC_CC  += sb_initializer.cc
 
 INC_DIR := $(PRG_DIR)
 
@@ -26,8 +27,6 @@ LIBS += cbe
 LIBS += cbe_common
 LIBS += cbe_cxx
 LIBS += cbe_cxx_common
-LIBS += cbe_init
-LIBS += cbe_init_cxx
 LIBS += libsparkcrypto
 LIBS += spark
 

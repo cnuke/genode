@@ -38,6 +38,7 @@ namespace Cbe {
 		BLOCK_ALLOCATOR      = 12,
 		VBD_INITIALIZER      = 13,
 		FT_INITIALIZER       = 14,
+		SB_INITIALIZER       = 15,
 	};
 
 	char const *module_name(unsigned long module_id);
