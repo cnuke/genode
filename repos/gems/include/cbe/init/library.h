@@ -63,6 +63,7 @@ struct Cbe_init::Library : Cbe::Spark_object<60960>
 	                                         void *key_plain_ptr,
 	                                         void *key_cipher_ptr,
 	                                         Genode::uint64_t block_number,
+	                                         void *root_node_ptr,
 	                                         bool  success);
 };
 

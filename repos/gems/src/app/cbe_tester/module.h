@@ -36,6 +36,7 @@ namespace Cbe {
 		VIRTUAL_BLOCK_DEVICE = 10,
 		SUPERBLOCK_CONTROL   = 11,
 		BLOCK_ALLOCATOR      = 12,
+		VBD_INITIALIZER      = 13,
 	};
 
 	char const *module_name(unsigned long module_id);
