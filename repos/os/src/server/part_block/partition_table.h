@@ -203,7 +203,7 @@ struct Block::Partition_table : Interface
 
 		virtual bool parse() = 0;
 
-		virtual void generate_report(Expanding_reporter &reporter) = 0;
+		virtual void generate_report(Expanding_reporter &reporter) const = 0;
 };
 
 #endif /* _PART_BLOCK__PARTITION_TABLE_H_ */

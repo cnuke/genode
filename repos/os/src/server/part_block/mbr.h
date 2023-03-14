@@ -239,7 +239,7 @@ struct Block::Mbr_partition_table : public Block::Partition_table
 			return any_partition_valid;
 		}
 
-		void generate_report(Expanding_reporter &reporter) override
+		void generate_report(Expanding_reporter &reporter) const override
 		{
 			auto gen_partition_attr = [&] (Xml_generator &xml, unsigned i)
 			{

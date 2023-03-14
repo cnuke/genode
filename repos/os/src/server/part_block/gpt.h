@@ -265,7 +265,7 @@ class Block::Gpt : public Block::Partition_table
 		 * \return the number of free blocks to the next logical entry
 		 */
 		uint64_t _calculate_gap(uint32_t entry,
-		                        uint64_t total_blocks)
+		                        uint64_t total_blocks) const
 		{
 			Partition const &current = *_part_list[entry];
 
@@ -408,7 +408,7 @@ class Block::Gpt : public Block::Partition_table
 			return false;
 		}
 
-		void generate_report(Expanding_reporter &reporter) override
+		void generate_report(Expanding_reporter &reporter) const override
 		{
 			reporter.generate([&] (Xml_generator &xml) {
 				xml.attribute("type", "gpt");
