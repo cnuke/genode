@@ -779,6 +779,8 @@ handle_urb_request(struct genode_usb_request_urb req,
 		mod_timer(&context->timeo, jiffies + msecs_to_jiffies(ctrl->timeout));
 	}
 
+	if (ctrl && ctrl->timeout)
+	printk("%s:%d ------------------------> pew pew\n", __func__, __LINE__);
 	return;
 
  free_urb:

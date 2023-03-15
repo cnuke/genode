@@ -34,6 +34,12 @@ void inline Genode::backtrace()
 
 		while (fp && *(fp + 1)) {
 			Genode::log(Hex(*(fp + 1)));
+
+			Genode::addr_t v = *(fp + 1);
+			if (v < (addr_t)0x30000 || v > (addr_t)0x20000000) {
+				Genode::log("invalid address, break");
+				break;
+			}
 			fp = (Genode::addr_t*)*fp;
 		}
 }

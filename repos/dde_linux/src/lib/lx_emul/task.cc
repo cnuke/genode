@@ -21,6 +21,7 @@ extern "C" struct task_struct * lx_emul_task_get_current(void)
 		Lx_kit::env().scheduler.current().lx_task();
 }
 
+extern "C" void lx_emul_backtrace();
 
 extern "C"
 void lx_emul_task_create(struct task_struct * task,
@@ -29,11 +30,13 @@ void lx_emul_task_create(struct task_struct * task,
                          int               (* threadfn)(void * data),
                          void               * data)
 {
-	new (Lx_kit::env().heap) Lx_kit::Task(threadfn,
+	Lx_kit::Task *t = new (Lx_kit::env().heap) Lx_kit::Task(threadfn,
 	                                      data,
 	                                      (void*)task, pid, name,
 	                                      Lx_kit::env().scheduler,
 	                                      Lx_kit::Task::NORMAL);
+	Genode::error(__func__, ":", __LINE__, ": t: ", t, " name: ", name);
+	lx_emul_backtrace();
 }
 
 

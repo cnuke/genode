@@ -100,6 +100,7 @@ Task & Scheduler::task(void * lx_task)
 	sleep_forever();
 }
 
+bool __scheduler_backtrace__ = false;
 
 void Scheduler::schedule()
 {
@@ -113,8 +114,18 @@ void Scheduler::schedule()
 		Genode::backtrace();
 		Genode::sleep_forever();
 	}
+	if (__scheduler_backtrace__) {
+		Genode::error(__func__, ":", __LINE__, ": ", thread->name(), " ",
+		              Genode::Hex(thread->mystack().base), "-",
+		              Genode::Hex(thread->mystack().top), " S");
+		Genode::backtrace();
+		Genode::error(__func__, ":", __LINE__, ": E");
+	}
 
 	_idle_pre_post_process();
+	if (__scheduler_backtrace__) {
+		Genode::error(__func__, ":", __LINE__, ": ", thread->name(), " after _idle_pre_post_process");
+	}
 
 	/*
 	 * Iterate over all tasks and run first runnable.
@@ -141,13 +152,25 @@ void Scheduler::schedule()
 
 		for (Task * t = _present_list.first(); t; t = t->next()) {
 
+			if (__scheduler_backtrace__ && t->runnable())
+				Genode::warning(__func__, ":", __LINE__, " ", t->name(), " runnable");
+		}
+
+		for (Task * t = _present_list.first(); t; t = t->next()) {
+
 			if (!t->runnable())
 				continue;
+
+			if (__scheduler_backtrace__ && t->runnable())
+				Genode::warning(__func__, ":", __LINE__, " ", t->name(), " ", t, " run");
 
 			/* update current before running task */
 			_current = t;
 			t->run();
 			at_least_one = true;
+
+			if (__scheduler_backtrace__)
+				Genode::warning(__func__, ":", __LINE__, " ", t->name(), " ", t, " was run");
 
 			if (!t->runnable())
 				break;
@@ -156,8 +179,15 @@ void Scheduler::schedule()
 		if (!at_least_one)
 			break;
 	}
+	if (__scheduler_backtrace__) {
+		Genode::error(__func__, ":", __LINE__, ": ", thread->name(), " before second _idle_pre_post_process");
+	}
 
 	_idle_pre_post_process();
+
+	if (__scheduler_backtrace__) {
+		Genode::error(__func__, ":", __LINE__, ": ", thread->name(), " after second _idle_pre_post_process");
+	}
 
 	/* clear current as no task is running */
 	_current = nullptr;

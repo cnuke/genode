@@ -79,7 +79,11 @@ class Usb::Packet_handler
 		void wait_for_packet()
 		{
 			if (packet_avail()) { _packet_handler(); }
-			else                { _ep.wait_and_dispatch_one_io_signal(); }
+			else                {
+				Genode::error(__func__, ":", __LINE__);
+				_ep.wait_and_dispatch_one_io_signal();
+				Genode::error(__func__, ":", __LINE__);
+			}
 		}
 
 		Packet_descriptor alloc(size_t size)
@@ -103,15 +107,22 @@ class Usb::Packet_handler
 			}
 		}
 
+		bool ready_to_submit() const
+		{
+			return _connection.source()->ready_to_submit();
+		}
+
 		void submit(Packet_descriptor &p)
 		{
 			/* check if submit queue is full */
 			if (!_connection.source()->ready_to_submit()) {
 				_ready_submit = false;
 
+				Genode::error(__func__, ":", __LINE__);
 				/* wait for ready_to_submit signal */
 				while (!_ready_submit)
 					_ep.wait_and_dispatch_one_io_signal();
+				Genode::error(__func__, ":", __LINE__);
 			}
 
 			_connection.source()->submit_packet(p);

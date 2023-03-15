@@ -27,8 +27,16 @@ void Lx_kit::Timeout::stop()
 
 void Lx_kit::Timeout::_handle(Genode::Duration)
 {
+	// static bool called = false;
+	// if (called)
+	// 	return;
+
+	// called = true;
 	_scheduler.unblock_time_handler();
+	Genode::warning(__func__, ":", __LINE__, ": before schedule()");
 	_scheduler.schedule();
+	Genode::warning(__func__, ":", __LINE__, ": after schedule()");
+	// called = false;
 }
 
 

@@ -70,8 +70,10 @@ class Usb::Sync_completion : Completion
 
 			handler.submit(p);
 
+			Genode::error(__func__, ":", __LINE__);
 			while (!_completed)
 				handler.wait_for_packet();
+			Genode::error(__func__, ":", __LINE__);
 
 			if (c)
 				c->complete(p);
@@ -236,6 +238,11 @@ class Usb::Interface : public Meta_data
 		Packet_descriptor alloc(size_t size)
 		{
 			return _handler.alloc(size);
+		}
+
+		bool ready_to_submit() const
+		{
+			return _handler.ready_to_submit();
 		}
 
 		void submit(Packet_descriptor &p)

@@ -45,6 +45,7 @@ bool Device::Io_port::match(uint16_t addr)
 void Device::Irq::_handle()
 {
 	handle();
+	Genode::warning(__func__, ":", __LINE__, ": before schedule()");
 	env().scheduler.schedule();
 }
 

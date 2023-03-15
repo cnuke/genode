@@ -205,7 +205,7 @@ struct Usb::Session : public Genode::Session
 	 ** Packet stream **
 	 *******************/
 
-	enum { TX_QUEUE_SIZE = 64 };
+	enum { TX_QUEUE_SIZE = 128 };
 
 	typedef Packet_stream_policy<Usb::Packet_descriptor,
 	                             TX_QUEUE_SIZE, TX_QUEUE_SIZE,
