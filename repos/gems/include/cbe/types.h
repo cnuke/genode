@@ -250,7 +250,7 @@ namespace Cbe {
 	using Snapshot_id            = Genode::uint32_t;
 	using Snapshots_index        = Genode::uint32_t;
 	using Node_index             = Genode::uint8_t;
-	using Superblock_index       = Genode::uint8_t;
+	using Superblocks_index      = Genode::uint8_t;
 
 	enum {
 		PRIM_BUF_SIZE = 128,
@@ -275,8 +275,10 @@ namespace Cbe {
 		HIGHEST_T1_NODE_LVL = TREE_MAX_LEVEL,
 		KEY_SIZE = 32,
 		MAX_NR_OF_SNAPSHOTS_PER_SB = 48,
-		MAX_NR_OF_SUPERBLOCKS = 8,
 		SNAPSHOT_STORAGE_SIZE = 72,
+		NR_OF_SUPERBLOCK_SLOTS = 8,
+		MAX_SUPERBLOCK_INDEX = NR_OF_SUPERBLOCK_SLOTS - 1,
+		FREE_TREE_MIN_MAX_LEVEL = 2,
 	};
 
 	struct Key_value
@@ -540,6 +542,64 @@ namespace Cbe {
 		Physical_block_address pbas[TREE_MAX_NR_OF_LEVELS];
 	}
 	__attribute__((packed));
+
+	inline Snapshots_index newest_snapshot_idx(Snapshots const &snapshots)
+	{
+		Snapshots_index newest_snap_idx       = 0;
+		bool            newest_snap_idx_valid = false;
+
+		for (unsigned snap_idx = 0; snap_idx < MAX_NR_OF_SNAPSHOTS_PER_SB; snap_idx ++)
+		{
+			auto &snapshot = snapshots.items[snap_idx];
+
+			if (snapshot.valid and (not newest_snap_idx_valid or
+			                        snapshot.gen > snapshots.items[newest_snap_idx].gen))
+			{
+				newest_snap_idx       = snap_idx;
+				newest_snap_idx_valid = true;
+			}
+		}
+
+		if (newest_snap_idx_valid)
+			return newest_snap_idx;
+
+		class Newest_snapshot_idx_error { };
+		throw Newest_snapshot_idx_error { };
+	}
+
+	inline Snapshots_index idx_of_invalid_or_lowest_gen_evictable_snap(Snapshots const &snapshots,
+	                                                                   Generation const curr_gen,
+	                                                                   Generation const last_secured_gen)
+	{
+		Snapshots_index evictable_snap_idx   = 0;
+		bool            evictable_snap_found = false;
+
+		for (unsigned idx = 0; idx < MAX_NR_OF_SNAPSHOTS_PER_SB; idx ++)
+		{
+			auto &snapshot = snapshots.items[idx];
+
+			if (not snapshot.valid)
+				return idx;
+			else
+			if (not snapshot.keep and
+			    snapshot.gen != curr_gen and
+			    snapshot.gen != last_secured_gen)
+			{
+				if (not evictable_snap_found) {
+					evictable_snap_found = true;
+					evictable_snap_idx   = idx;
+				} else
+				if (snapshot.gen < snapshots.items[evictable_snap_idx].gen)
+					evictable_snap_idx = idx;
+			}
+		}
+
+		if (evictable_snap_found)
+			return evictable_snap_idx;
+
+		class Idx_of_invalid_or_lowest_gen_evictable_snap_error { };
+		throw Idx_of_invalid_or_lowest_gen_evictable_snap_error { };
+	}
 }
 
 
