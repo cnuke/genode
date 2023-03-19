@@ -24,9 +24,9 @@ using namespace Cbe;
 enum { VERBOSE_CRYPTO = 0 };
 
 
-/*************************
+/********************
  ** Crypto_request **
- *************************/
+ ********************/
 
 void Crypto_request::create(void     *buf_ptr,
                             size_t    buf_size,
@@ -49,7 +49,6 @@ void Crypto_request::create(void     *buf_ptr,
 	req._client_req_offset = client_req_offset;
 	req._client_req_tag = client_req_tag;
 	if (prim_size > sizeof(req._prim)) {
-		error(prim_size, " ", sizeof(req._prim));
 		class Bad_size_1 { };
 		throw Bad_size_1 { };
 	}
@@ -111,9 +110,9 @@ char const *Crypto_request::type_name()
 }
 
 
-/*****************
+/************
  ** Crypto **
- *****************/
+ ************/
 
 bool Crypto::_peek_generated_request(uint8_t *buf_ptr,
                                      size_t   buf_size)
@@ -527,6 +526,10 @@ void Crypto::_execute_decrypt_client_data(Channel &channel,
 	case Channel::SUBMITTED:
 	{
 		channel._vfs_handle = _lookup_key_dir(req._key_id).decrypt_handle;
+		if (channel._vfs_handle == nullptr) {
+			_mark_req_failed(channel, progress, "lookup key dir");
+			return;
+		}
 		channel._vfs_handle->seek(req._pba * BLOCK_SIZE);
 
 		Vfs::file_size nr_of_written_bytes { 0 };
