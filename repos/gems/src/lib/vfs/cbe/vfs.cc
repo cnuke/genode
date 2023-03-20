@@ -19,17 +19,23 @@
 #include <util/xml_generator.h>
 #include <trace/timestamp.h>
 
-/* CBE includes */
-#include <cbe/library.h>
-#include <cbe/vfs/trust_anchor_vfs.h>
-
-/* local includes */
-#include <io_job.h>
+/* CBE tester includes */
+#include <block_io.h>
+#include <client_data.h>
+#include <crypto.h>
+#include <free_tree.h>
+#include <meta_tree.h>
+#include <request_pool.h>
+#include <superblock_control.h>
+#include <trust_anchor.h>
+#include <verbose_node.h>
+#include <virtual_block_device.h>
 
 
 namespace Vfs_cbe {
 	using namespace Vfs;
 	using namespace Genode;
+	using namespace Cbe;
 
 	class Data_file_system;
 
@@ -51,7 +57,6 @@ namespace Vfs_cbe {
 	struct Local_factory;
 	class  File_system;
 
-	class Backend_file;
 	class Wrapper;
 
 	template <typename T>
@@ -82,68 +87,203 @@ namespace Vfs_cbe {
 }
 
 
+namespace Cbe {
+
+	char const *module_name(unsigned long id)
+	{
+		switch (id) {
+		case CRYPTO: return "crypto";
+		case BLOCK_IO: return "block_io";
+		case CBE_LIBRARA: return "cbe";
+		case CBE_INIT_LIBRARA: return "cbe_init";
+		case CACHE: return "cache";
+		case META_TREE: return "meta_tree";
+		case FREE_TREE: return "free_tree";
+		case VIRTUAL_BLOCK_DEVICE: return "vbd";
+		case SUPERBLOCK_CONTROL: return "sb_control";
+		case CLIENT_DATA: return "client_data";
+		case TRUST_ANCHOR: return "trust_anchor";
+		case COMMAND_POOL: return "command_pool";
+		case BLOCK_ALLOCATOR: return "block_allocator";
+		case VBD_INITIALIZER: return "vbd_initializer";
+		case FT_INITIALIZER: return "ft_initializer";
+		case SB_INITIALIZER: return "sb_initializer";
+		default: break;
+		}
+		return "?";
+	}
+}
+
+
 extern "C" void adainit();
 
 
 extern "C" void print_u8(unsigned char const u) { Genode::log(u); }
 
 
-class Vfs_cbe::Wrapper
+class Vfs_cbe::Wrapper : public Cbe::Module
 {
 	private:
 
-		Vfs::Env &_env;
+		Vfs::Env &_vfs_env;
 
-		Vfs_handle            *_backend_handle { nullptr };
-		Constructible<Io_job>  _backend_job { };
+		Constructible<Request_pool>         _request_pool { };
+		Constructible<Cbe::Free_tree>       _free_tree    { };
+		Constructible<Virtual_block_device> _vbd          { };
+		Constructible<Superblock_control>   _sb_control   { };
+		Cbe::Meta_tree                      _meta_tree    { };
+		Constructible<Cbe::Trust_anchor>    _trust_anchor { };
+		Constructible<Cbe::Crypto>          _crypto       { };
+		Constructible<Cbe::Block_io>        _block_io     { };
 
-		Vfs_handle *_add_key_handle         { nullptr };
-		Vfs_handle *_remove_key_handle      { nullptr };
+		Client_data_request _client_data_request { };
 
-		struct Crypto_file
-		{
-			Vfs_handle *encrypt_handle;
-			Vfs_handle *decrypt_handle;
-			uint32_t key_id;
-		};
-
-		enum { NUM_CRYPTO_FILES = 2, };
-
-		Crypto_file _crypto_file[NUM_CRYPTO_FILES] {
-			{ .encrypt_handle = nullptr, .decrypt_handle = nullptr, .key_id = 0 },
-			{ .encrypt_handle = nullptr, .decrypt_handle = nullptr, .key_id = 0 } };
-
-		Crypto_file *_get_unused_crypto_file()
-		{
-			for (Crypto_file &file : _crypto_file) {
-				if (file.key_id == 0) {
-					return &file;
-				}
-			}
-			struct No_unused_crypt_file_left { };
-			throw No_unused_crypt_file_left();
-		}
-
-		Crypto_file *_lookup_crypto_file(uint32_t key_id)
-		{
-			for (Crypto_file &file : _crypto_file) {
-				if (file.key_id == key_id) {
-					return &file;
-				}
-			}
-			struct Crypt_file_not_found { };
-			throw Crypt_file_not_found();
-		}
-
-		Cbe::Io_buffer            _io_data { };
-		Cbe::Crypto_cipher_buffer _cipher_data { };
-		Cbe::Crypto_plain_buffer  _plain_data { };
-
-		Constructible<Util::Trust_anchor_vfs> _trust_anchor { };
-
-		Constructible<Cbe::Library> _cbe;
+		Cbe::Module *_module_ptrs[MAX_MODULE_ID+1] { };
 
 	public:
+
+		/********************************
+		 ** Module API for Client_data **
+		 ********************************/
+
+		bool ready_to_submit_request() override
+		{
+			return _client_data_request._type == Client_data_request::INVALID;
+		}
+
+		void submit_request(Module_request &req) override
+		{
+			if (_client_data_request._type != Client_data_request::INVALID) {
+
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			req.dst_request_id(0);
+			_client_data_request = *dynamic_cast<Client_data_request *>(&req);
+			switch (_client_data_request._type) {
+			case Client_data_request::OBTAIN_PLAINTEXT_BLK:
+			{
+				void const *src =
+					_lookup_write_buffer(_client_data_request._client_req_tag,
+					                     _client_data_request._vba);
+				if (src == nullptr) {
+					_client_data_request._success = false;
+					break;
+				}
+
+				(void)memcpy((void*)_client_data_request._plaintext_blk_ptr,
+				             src, sizeof(Cbe::Block_data));
+
+				// if (_verbose_node.client_data_transferred())
+				// 	log("client data: vba=", _client_data_request._vba,
+				// 	    " req_tag=", _client_data_request._client_req_tag);
+
+				_client_data_request._success = true;
+				break;
+			}
+			case Client_data_request::SUPPLY_PLAINTEXT_BLK:
+			{
+				void *dst =
+					_lookup_read_buffer(_client_data_request._client_req_tag,
+					                    _client_data_request._vba);
+				if (dst == nullptr) {
+					_client_data_request._success = false;
+					break;
+				}
+
+				(void)memcpy(dst, (void const*)_client_data_request._plaintext_blk_ptr,
+				             sizeof(Cbe::Block_data));
+
+				// if (_verbose_node.client_data_transferred())
+				// 	log("client data: vba=", _client_data_request._vba,
+				// 	    " req_tag=", _client_data_request._client_req_tag);
+
+				_client_data_request._success = true;
+				break;
+			}
+			case Client_data_request::INVALID:
+
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+		}
+
+		void execute(bool &progress) override
+		{
+			if (_helper_read_request.pending()) {
+				if (_request_pool->ready_to_submit_request()) {
+					_helper_read_request.cbe_request.snap_id(
+						_frontend_request.cbe_request.snap_id());
+					_request_pool->submit_request(_helper_read_request.cbe_request);
+					_helper_read_request.state = Helper_request::State::IN_PROGRESS;
+				}
+			}
+
+			if (_helper_write_request.pending()) {
+				if (_request_pool->ready_to_submit_request()) {
+					_helper_write_request.cbe_request.snap_id(
+						_frontend_request.cbe_request.snap_id());
+					_request_pool->submit_request(_helper_write_request.cbe_request);
+					_helper_write_request.state = Helper_request::State::IN_PROGRESS;
+				}
+			}
+
+			if (_frontend_request.pending()) {
+
+				using ST = Frontend_request::State;
+
+				Cbe::Request &request = _frontend_request.cbe_request;
+				Cbe::Virtual_block_address const vba = request.block_number();
+
+				if (vba > _sb_control->max_vba()) {
+					warning("reject request with out-of-range virtual block start address ", vba);
+					_frontend_request.state = ST::ERROR_EOF;
+					return;
+				}
+
+				if (vba + request.count() < vba) {
+					warning("reject wraping request", vba);
+					_frontend_request.state = ST::ERROR_EOF;
+					return;
+				}
+
+				if (vba + request.count() > (_sb_control->max_vba() + 1)) {
+					warning("reject invalid request ", vba, " ", request.count());
+					_frontend_request.state = ST::ERROR_EOF;
+					return;
+				}
+
+				if (_request_pool->ready_to_submit_request()) {
+					_request_pool->submit_request(request);
+					_frontend_request.state = ST::IN_PROGRESS;
+					progress = true;
+				}
+			}
+		}
+
+		bool _peek_completed_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override
+		{
+			if (_client_data_request._type != Client_data_request::INVALID) {
+				if (sizeof(_client_data_request) > buf_size) {
+					class Exception_1 { };
+					throw Exception_1 { };
+				}
+				Genode::memcpy(buf_ptr, &_client_data_request,
+				               sizeof(_client_data_request));;
+				return true;
+			}
+			return false;
+		}
+
+		void _drop_completed_request(Module_request &) override
+		{
+			if (_client_data_request._type == Client_data_request::INVALID) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			_client_data_request._type = Client_data_request::INVALID;
+		}
 
 		struct Rekeying
 		{
@@ -246,25 +386,10 @@ class Vfs_cbe::Wrapper
 		bool _verbose       { false };
 		bool _debug         { false };
 
-		using Backend_device_path = Genode::String<32>;
-		Backend_device_path _block_device { "/dev/block" };
-
-		using Crypto_device_path = Genode::String<32>;
-		Crypto_device_path _crypto_device { "/dev/cbe_crypto" };
-
-		using Trust_anchor_device_path = Genode::String<64>;
-		Trust_anchor_device_path _trust_anchor_device { "/dev/cbe_trust_anchor" };
-
 		void _read_config(Xml_node config)
 		{
 			_verbose      = config.attribute_value("verbose", _verbose);
 			_debug        = config.attribute_value("debug",   _debug);
-			_block_device = config.attribute_value("block",   _block_device);
-
-			_crypto_device = config.attribute_value("crypto", _crypto_device);
-
-			_trust_anchor_device =
-				config.attribute_value("trust_anchor", _trust_anchor_device);
 		}
 
 		struct Could_not_open_block_backend : Genode::Exception { };
@@ -272,53 +397,308 @@ class Vfs_cbe::Wrapper
 
 		void _initialize_cbe()
 		{
-			using Result = Vfs::Directory_service::Open_result;
+			_free_tree.construct();
+			_modules_add(FREE_TREE, *_free_tree);
 
-			Result res = _env.root_dir().open(_block_device.string(),
-			                                  Vfs::Directory_service::OPEN_MODE_RDWR,
-			                                  (Vfs::Vfs_handle **)&_backend_handle,
-			                                  _env.alloc());
-			if (res != Result::OPEN_OK) {
-				error("cbe_fs: Could not open back end block device: '", _block_device, "'");
-				throw Could_not_open_block_backend();
-			}
+			_vbd.construct();
+			_modules_add(VIRTUAL_BLOCK_DEVICE, *_vbd);
 
-			{
-				Genode::String<128> crypto_add_key_file {
-				_crypto_device.string(), "/add_key" };
+			_sb_control.construct();
+			_modules_add(SUPERBLOCK_CONTROL, *_sb_control);
 
-				res = _env.root_dir().open(crypto_add_key_file.string(),
-				                           Vfs::Directory_service::OPEN_MODE_WRONLY,
-				                           (Vfs::Vfs_handle **)&_add_key_handle,
-				                           _env.alloc());
-				if (res != Result::OPEN_OK) {
-					error("cbe_fs: Could not open '", crypto_add_key_file, "' file");
-					throw Could_not_open_block_backend();
-				}
-			}
-
-			{
-				Genode::String<128> crypto_remove_key_file {
-				_crypto_device.string(), "/remove_key" };
-
-				res = _env.root_dir().open(crypto_remove_key_file.string(),
-				                           Vfs::Directory_service::OPEN_MODE_WRONLY,
-				                           (Vfs::Vfs_handle **)&_remove_key_handle,
-				                           _env.alloc());
-				if (res != Result::OPEN_OK) {
-					error("cbe_fs: Could not open '", crypto_remove_key_file, "' file");
-					throw Could_not_open_block_backend();
-				}
-			}
-
-			_trust_anchor.construct(_env.root_dir(), _env.alloc(),
-			                        _trust_anchor_device.string());
-
-			_cbe.construct();
+			_request_pool.construct();
+			_modules_add(REQUEST_POOL, *_request_pool);
 		}
 
+		/************************
+		 ** Module composition **
+		 ************************/
+
+		enum { VERBOSE_MODULE_COMMUNICATION = 0 };
+
+		void _modules_add(unsigned long  module_id,
+		                  Module        &module)
+		{
+			if (module_id > MAX_MODULE_ID) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			if (_module_ptrs[module_id] != nullptr) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			_module_ptrs[module_id] = &module;
+		}
+
+		void _modules_remove(unsigned long  module_id)
+		{
+			if (module_id > MAX_MODULE_ID) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			if (_module_ptrs[module_id] == nullptr) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			_module_ptrs[module_id] = nullptr;
+		}
+
+		void _modules_execute(bool &progress)
+		{
+			for (unsigned long id { 0 }; id <= MAX_MODULE_ID; id++) {
+
+				if (_module_ptrs[id] == nullptr)
+					continue;
+
+				Module *module_ptr { _module_ptrs[id] };
+				module_ptr->execute(progress);
+				module_ptr->for_each_generated_request([&] (Module_request &req) {
+					if (req.dst_module_id() > MAX_MODULE_ID) {
+						class Bad_dst_module { };
+						throw Bad_dst_module { };
+					}
+					Module &dst_module { *_module_ptrs[req.dst_module_id()] };
+					if (!dst_module.ready_to_submit_request()) {
+
+						if (VERBOSE_MODULE_COMMUNICATION)
+							Genode::log(
+								module_name(id), ":", req.src_request_id_str(),
+								" --", req.type_name(), "-| ",
+								module_name(req.dst_module_id()));
+
+						return Module::REQUEST_NOT_HANDLED;
+					}
+					dst_module.submit_request(req);
+
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(id), ":", req.src_request_id_str(),
+							" --", req.type_name(), "--> ",
+							module_name(req.dst_module_id()), ":",
+							req.dst_request_id_str());
+
+					progress = true;
+					return Module::REQUEST_HANDLED;
+				});
+				module_ptr->for_each_completed_request([&] (Module_request &req) {
+					if (req.src_module_id() > MAX_MODULE_ID) {
+						class Bad_src_module { };
+						throw Bad_src_module { };
+					}
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(req.src_module_id()), ":",
+							req.src_request_id_str(), " <--", req.type_name(),
+							"-- ", module_name(id), ":",
+							req.dst_request_id_str());
+					Module &src_module { *_module_ptrs[req.src_module_id()] };
+					src_module.generated_request_complete(req);
+					progress = true;
+				});
+			}
+		}
+
+		/*****************************
+		 ** COMMAND_POOL Module API **
+		 *****************************/
+
+		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override
+		{
+			return false;
+		}
+
+		void _drop_generated_request(Module_request &mod_req) override { }
 
 	public:
+
+		void generated_request_complete(Module_request &mod_req) override
+		{
+			using ST = Frontend_request::State;
+
+			switch (mod_req.dst_module_id()) {
+			case REQUEST_POOL:
+			{
+				Request const &cbe_request {
+					*static_cast<Request *>(&mod_req)};
+
+				if (cbe_request.operation() == Cbe::Request::Operation::REKEY) {
+					bool const req_sucess = cbe_request.success();
+					if (_verbose) {
+						log("Complete request: backend request (", cbe_request, ")");
+					}
+					_rekey_obj.state = Rekeying::State::IDLE;
+					_rekey_obj.last_result = req_sucess ? Rekeying::Result::SUCCESS
+					                                    : Rekeying::Result::FAILED;
+
+					_rekey_fs_trigger_watch_response();
+					break;
+				}
+
+				if (cbe_request.operation() == Cbe::Request::Operation::DEINITIALIZE) {
+					bool const req_sucess = cbe_request.success();
+					if (_verbose) {
+						log("Complete request: backend request (", cbe_request, ")");
+					}
+					_deinit_obj.state = Deinitialize::State::IDLE;
+					_deinit_obj.last_result = req_sucess ? Deinitialize::Result::SUCCESS
+					                                     : Deinitialize::Result::FAILED;
+
+					_deinit_fs_trigger_watch_response();
+					break;
+				}
+
+				if (cbe_request.operation() == Cbe::Request::Operation::EXTEND_VBD) {
+					bool const req_sucess = cbe_request.success();
+					if (_verbose) {
+						log("Complete request: backend request (", cbe_request, ")");
+					}
+					_extend_obj.state = Extending::State::IDLE;
+					_extend_obj.last_result =
+						req_sucess ? Extending::Result::SUCCESS
+						           : Extending::Result::FAILED;
+
+					_extend_fs_trigger_watch_response();
+					break;
+				}
+
+				if (cbe_request.operation() == Cbe::Request::Operation::EXTEND_FT) {
+					bool const req_sucess = cbe_request.success();
+					if (_verbose) {
+						log("Complete request: backend request (", cbe_request, ")");
+					}
+					_extend_obj.state = Extending::State::IDLE;
+					_extend_obj.last_result =
+						req_sucess ? Extending::Result::SUCCESS
+						           : Extending::Result::FAILED;
+
+					_extend_fs_trigger_watch_response();
+					break;
+				}
+
+				if (cbe_request.operation() == Cbe::Request::Operation::CREATE_SNAPSHOT) {
+					if (_verbose) {
+						log("Complete request: (", cbe_request, ")");
+					}
+					_create_snapshot_request.cbe_request = Cbe::Request();
+					_snapshots_fs_update_snapshot_registry();
+					break;
+				}
+
+				if (cbe_request.operation() == Cbe::Request::Operation::DISCARD_SNAPSHOT) {
+					if (_verbose) {
+						log("Complete request: (", cbe_request, ")");
+					}
+					_discard_snapshot_request.cbe_request = Cbe::Request();
+					_snapshots_fs_update_snapshot_registry();
+					break;
+				}
+
+				if (!cbe_request.success()) {
+					_helper_read_request.state  = Helper_request::State::NONE;
+					_helper_write_request.state = Helper_request::State::NONE;
+
+					_frontend_request.state = ST::COMPLETE;
+					_frontend_request.cbe_request.success(cbe_request.success());
+					break;
+				}
+
+				if (_helper_read_request.in_progress()) {
+					_helper_read_request.state = Helper_request::State::COMPLETE;
+					_helper_read_request.cbe_request.success(
+						cbe_request.success());
+				} else if (_helper_write_request.in_progress()) {
+					_helper_write_request.state = Helper_request::State::COMPLETE;
+					_helper_write_request.cbe_request.success(
+						cbe_request.success());
+				} else {
+					_frontend_request.state = ST::COMPLETE;
+					_frontend_request.cbe_request.success(cbe_request.success());
+					if (_verbose) {
+						Genode::log("Complete request: ",
+						            " (frontend request: ", _frontend_request.cbe_request,
+						            " count: ", _frontend_request.count, ")");
+					}
+				}
+
+				if (_helper_read_request.complete()) {
+					if (_frontend_request.cbe_request.read()) {
+						char       * dst = reinterpret_cast<char*>
+							(_frontend_request.cbe_request.offset());
+						char const * src = reinterpret_cast<char const*>
+							(&_helper_read_request.block_data) + _frontend_request.helper_offset;
+
+						Genode::memcpy(dst, src, _frontend_request.count);
+
+						_helper_read_request.state = Helper_request::State::NONE;
+						_frontend_request.state = ST::COMPLETE;
+						_frontend_request.cbe_request.success(
+							_helper_read_request.cbe_request.success());
+
+						if (_verbose) {
+							Genode::log("Complete unaligned READ request: ",
+										" (frontend request: ", _frontend_request.cbe_request,
+										" (helper request: ", _helper_read_request.cbe_request,
+										" offset: ", _frontend_request.helper_offset,
+										" count: ", _frontend_request.count, ")");
+						}
+					}
+
+					if (_frontend_request.cbe_request.write()) {
+						/* copy whole block first */
+						{
+							char       * dst = reinterpret_cast<char*>
+								(&_helper_write_request.block_data);
+							char const * src = reinterpret_cast<char const*>
+								(&_helper_read_request.block_data);
+							Genode::memcpy(dst, src, sizeof (Cbe::Block_data));
+						}
+
+						/* and than actual request data */
+						{
+							char       * dst = reinterpret_cast<char*>
+								(&_helper_write_request.block_data) + _frontend_request.helper_offset;
+							char const * src = reinterpret_cast<char const*>
+								(_frontend_request.cbe_request.offset());
+							Genode::memcpy(dst, src, _frontend_request.count);
+						}
+
+						/* re-use request */
+						_helper_write_request.cbe_request = Cbe::Request(
+							Cbe::Request::Operation::WRITE,
+							false,
+							_helper_read_request.cbe_request.block_number(),
+							(uint64_t) &_helper_write_request.block_data,
+							_helper_read_request.cbe_request.count(),
+							_helper_read_request.cbe_request.key_id(),
+							_helper_read_request.cbe_request.tag(),
+							_helper_read_request.cbe_request.snap_id(),
+							COMMAND_POOL, 0);
+
+						_helper_write_request.state = Helper_request::State::PENDING;
+						_helper_read_request.state  = Helper_request::State::NONE;
+					}
+				}
+
+				if (_helper_write_request.complete()) {
+					if (_verbose) {
+						Genode::log("Complete unaligned WRITE request: ",
+									" (frontend request: ", _frontend_request.cbe_request,
+									" (helper request: ", _helper_read_request.cbe_request,
+									" offset: ", _frontend_request.helper_offset,
+									" count: ", _frontend_request.count, ")");
+					}
+
+					_helper_write_request.state = Helper_request::State::NONE;
+					_frontend_request.state = ST::COMPLETE;
+				}
+				break;
+			}
+			default:
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+		}
 
 		void manage_snapshots_file_system(Snapshots_file_system &snapshots_fs)
 		{
@@ -432,20 +812,73 @@ class Vfs_cbe::Wrapper
 			}
 		}
 
-		Wrapper(Vfs::Env &env, Xml_node config) : _env(env)
+		template <typename FN>
+		void with_node(char const *name, char const *path, FN const &fn)
+		{
+			char xml_buffer[128] { };
+
+			Genode::Xml_generator xml {
+				xml_buffer, sizeof(xml_buffer), name,
+				[&] { xml.attribute("path", path); }
+			};
+
+			Genode::Xml_node node { xml_buffer, sizeof(xml_buffer) };
+			fn(node);
+		}
+
+		Wrapper(Vfs::Env &vfs_env, Xml_node config) : _vfs_env { vfs_env }
 		{
 			_read_config(config);
+
+			using S = Genode::String<32>;
+
+			S const block_path =
+				config.attribute_value("block", S());
+			if (block_path.valid())
+				with_node("block_io", block_path.string(),
+					[&] (Xml_node const &node) {
+						_block_io.construct(vfs_env, node);
+					});
+
+			S const trust_anchor_path =
+				config.attribute_value("trust_anchor", S());
+			if (trust_anchor_path.valid())
+				with_node("trust_anchor", trust_anchor_path.string(),
+					[&] (Xml_node const &node) {
+						_trust_anchor.construct(vfs_env, node);
+					});
+
+			S const crypto_path =
+				config.attribute_value("crypto", S());
+			if (crypto_path.valid())
+				with_node("crypto", crypto_path.string(),
+					[&] (Xml_node const &node) {
+						_crypto.construct(vfs_env, node);
+					});
+
+			_modules_add(COMMAND_POOL,  *this);
+			_modules_add(META_TREE,     _meta_tree);
+			_modules_add(CRYPTO,        *_crypto);
+			_modules_add(TRUST_ANCHOR,  *_trust_anchor);
+			_modules_add(CLIENT_DATA,  *this);
+			_modules_add(BLOCK_IO,      *_block_io);
+
 			_initialize_cbe();
 		}
 
-		Cbe::Library &cbe()
+		Cbe::Request_pool &cbe()
 		{
-			if (!_cbe.constructed()) {
+			if (!_request_pool.constructed()) {
 				struct Cbe_Not_Initialized { };
 				throw Cbe_Not_Initialized();
 			}
 
-			return *_cbe;
+			return *_request_pool;
+		}
+
+		Genode::uint64_t max_vba()
+		{
+			return _sb_control->max_vba();
 		}
 
 		struct Invalid_Request : Genode::Exception { };
@@ -478,7 +911,8 @@ class Vfs_cbe::Wrapper
 			State        state       { NONE };
 			file_size    count       { 0 };
 			Cbe::Request cbe_request { };
-			uint32_t     snap_id     { 0 };
+
+			void *data { nullptr };
 
 			uint64_t offset { 0 };
 			uint64_t helper_offset { 0 };
@@ -500,6 +934,32 @@ class Vfs_cbe::Wrapper
 				return "<unknown>";
 			}
 		};
+
+		uint64_t _next_client_request_tag()
+		{
+			static uint64_t _client_request_tag { 0 };
+			return _client_request_tag++;
+		}
+
+		void const *_lookup_write_buffer(Genode::uint64_t tag, Genode::uint64_t vba)
+		{
+			if (_helper_write_request.in_progress())
+				return (void const*)&_helper_write_request.block_data;
+			if (_frontend_request.in_progress())
+				return (void const*)_frontend_request.data;
+
+			return nullptr;
+		}
+
+		void *_lookup_read_buffer(Genode::uint64_t tag, Genode::uint64_t vba)
+		{
+			if (_helper_read_request.in_progress())
+				return (void *)&_helper_write_request.block_data;
+			if (_frontend_request.in_progress())
+				return (void *)_frontend_request.data;
+
+			return nullptr;
+		}
 
 		Frontend_request _frontend_request { };
 
@@ -525,6 +985,8 @@ class Vfs_cbe::Wrapper
 				return false;
 			}
 
+			uint64_t const tag = _next_client_request_tag();
+
 			/* short-cut for SYNC requests */
 			if (op == Cbe::Request::Operation::SYNC) {
 				_frontend_request.cbe_request = Cbe::Request(
@@ -534,9 +996,10 @@ class Vfs_cbe::Wrapper
 					0,
 					1,
 					0,
-					0);
+					tag,
+					0,
+					COMMAND_POOL, 0);
 				_frontend_request.count   = 0;
-				_frontend_request.snap_id = 0;
 				_frontend_request.state   = Frontend_request::State::PENDING;
 				if (_verbose) {
 					Genode::log("Req: (front req: ",
@@ -566,7 +1029,9 @@ class Vfs_cbe::Wrapper
 					(uint64_t)&_helper_read_request.block_data,
 					1,
 					0,
-					0);
+					tag,
+					0,
+					COMMAND_POOL, 0);
 				_helper_read_request.state = Helper_request::State::PENDING;
 
 				_frontend_request.helper_offset = (offset % Cbe::BLOCK_SIZE);
@@ -584,6 +1049,7 @@ class Vfs_cbe::Wrapper
 				_frontend_request.state = Frontend_request::State::PENDING;
 			}
 
+			_frontend_request.data   = data;
 			_frontend_request.offset = offset;
 			_frontend_request.cbe_request = Cbe::Request(
 				op,
@@ -592,7 +1058,9 @@ class Vfs_cbe::Wrapper
 				(uint64_t)data,
 				(uint32_t)(count / Cbe::BLOCK_SIZE),
 				0,
-				0);
+				tag,
+				snap_id,
+				COMMAND_POOL, 0);
 
 			if (_verbose) {
 				if (unaligned_request) {
@@ -609,37 +1077,7 @@ class Vfs_cbe::Wrapper
 				}
 			}
 
-			_frontend_request.snap_id = snap_id;
 			return true;
-		}
-
-		bool _handle_cbe_backend(Cbe::Library &cbe, Cbe::Io_buffer &io_data)
-		{
-			Cbe::Io_buffer::Index data_index { 0 };
-			Cbe::Request cbe_request = cbe.has_io_request(data_index);
-
-			if (cbe_request.valid() && !_backend_job.constructed()) {
-
-				file_offset const base_offset = cbe_request.block_number()
-				                              * Cbe::BLOCK_SIZE;
-				file_size const count = cbe_request.count()
-				                      * Cbe::BLOCK_SIZE;
-
-				_backend_job.construct(*_backend_handle, cbe_request.operation(),
-				                       data_index, base_offset, count);
-			}
-
-			if (!_backend_job.constructed()) {
-				return false;
-			}
-
-			bool progress = _backend_job->execute(cbe, io_data);
-
-			if (_backend_job->completed()) {
-				_backend_job.destruct();
-			}
-
-			return progress;
 		}
 
 		void _snapshots_fs_update_snapshot_registry();
@@ -650,913 +1088,17 @@ class Vfs_cbe::Wrapper
 
 		void _deinit_fs_trigger_watch_response();
 
-		bool _handle_cbe_frontend(Cbe::Library &cbe, Frontend_request &frontend_request)
-		{
-			if (_helper_read_request.pending()) {
-				if (_cbe->client_request_acceptable()) {
-					_cbe->submit_client_request(_helper_read_request.cbe_request,
-					                            frontend_request.snap_id);
-					_helper_read_request.state = Helper_request::State::IN_PROGRESS;
-				}
-			}
-
-			if (_helper_write_request.pending()) {
-				if (_cbe->client_request_acceptable()) {
-					_cbe->submit_client_request(_helper_write_request.cbe_request,
-					                            frontend_request.snap_id);
-					_helper_write_request.state = Helper_request::State::IN_PROGRESS;
-				}
-			}
-
-			if (frontend_request.pending()) {
-
-				using ST = Frontend_request::State;
-
-				Cbe::Request const &request = frontend_request.cbe_request;
-				Cbe::Virtual_block_address const vba = request.block_number();
-				uint32_t const snap_id = frontend_request.snap_id;
-
-				if (vba > cbe.max_vba()) {
-					warning("reject request with out-of-range virtual block start address ", vba);
-					_frontend_request.state = ST::ERROR_EOF;
-					return false;
-				}
-
-				if (vba + request.count() < vba) {
-					warning("reject wraping request", vba);
-					_frontend_request.state = ST::ERROR_EOF;
-					return false;
-				}
-
-				if (vba + request.count() > (cbe.max_vba() + 1)) {
-					warning("reject invalid request ", vba, " ", request.count());
-					_frontend_request.state = ST::ERROR_EOF;
-					return false;
-				}
-
-				if (cbe.client_request_acceptable()) {
-					cbe.submit_client_request(request, snap_id);
-					frontend_request.state = ST::IN_PROGRESS;
-				}
-			}
-
-			cbe.execute(_io_data, _plain_data, _cipher_data);
-			bool progress = cbe.execute_progress();
-
-			using ST = Frontend_request::State;
-
-			while (true) {
-				Cbe::Request const cbe_request = cbe.peek_completed_client_request();
-				if (!cbe_request.valid()) { break; }
-
-				cbe.drop_completed_client_request(cbe_request);
-				progress = true;
-
-				if (cbe_request.operation() == Cbe::Request::Operation::REKEY) {
-					bool const req_sucess = cbe_request.success();
-					if (_verbose) {
-						log("Complete request: backend request (", cbe_request, ")");
-					}
-					_rekey_obj.state = Rekeying::State::IDLE;
-					_rekey_obj.last_result = req_sucess ? Rekeying::Result::SUCCESS
-					                                    : Rekeying::Result::FAILED;
-
-					_rekey_fs_trigger_watch_response();
-					continue;
-				}
-
-				if (cbe_request.operation() == Cbe::Request::Operation::DEINITIALIZE) {
-					bool const req_sucess = cbe_request.success();
-					if (_verbose) {
-						log("Complete request: backend request (", cbe_request, ")");
-					}
-					_deinit_obj.state = Deinitialize::State::IDLE;
-					_deinit_obj.last_result = req_sucess ? Deinitialize::Result::SUCCESS
-					                                     : Deinitialize::Result::FAILED;
-
-					_deinit_fs_trigger_watch_response();
-					continue;
-				}
-
-				if (cbe_request.operation() == Cbe::Request::Operation::EXTEND_VBD) {
-					bool const req_sucess = cbe_request.success();
-					if (_verbose) {
-						log("Complete request: backend request (", cbe_request, ")");
-					}
-					_extend_obj.state = Extending::State::IDLE;
-					_extend_obj.last_result =
-						req_sucess ? Extending::Result::SUCCESS
-						           : Extending::Result::FAILED;
-
-					_extend_fs_trigger_watch_response();
-					continue;
-				}
-
-				if (cbe_request.operation() == Cbe::Request::Operation::EXTEND_FT) {
-					bool const req_sucess = cbe_request.success();
-					if (_verbose) {
-						log("Complete request: backend request (", cbe_request, ")");
-					}
-					_extend_obj.state = Extending::State::IDLE;
-					_extend_obj.last_result =
-						req_sucess ? Extending::Result::SUCCESS
-						           : Extending::Result::FAILED;
-
-					_extend_fs_trigger_watch_response();
-					continue;
-				}
-
-				if (cbe_request.operation() == Cbe::Request::Operation::CREATE_SNAPSHOT) {
-					if (_verbose) {
-						log("Complete request: (", cbe_request, ")");
-					}
-					_create_snapshot_request.cbe_request = Cbe::Request();
-					_snapshots_fs_update_snapshot_registry();
-					continue;
-				}
-
-				if (cbe_request.operation() == Cbe::Request::Operation::DISCARD_SNAPSHOT) {
-					if (_verbose) {
-						log("Complete request: (", cbe_request, ")");
-					}
-					_discard_snapshot_request.cbe_request = Cbe::Request();
-					_snapshots_fs_update_snapshot_registry();
-					continue;
-				}
-
-				if (!cbe_request.success()) {
-					_helper_read_request.state  = Helper_request::State::NONE;
-					_helper_write_request.state = Helper_request::State::NONE;
-
-					frontend_request.state = ST::COMPLETE;
-					frontend_request.cbe_request.success(cbe_request.success());
-					break;
-				}
-
-				if (_helper_read_request.in_progress()) {
-					_helper_read_request.state = Helper_request::State::COMPLETE;
-					_helper_read_request.cbe_request.success(
-						cbe_request.success());
-				} else if (_helper_write_request.in_progress()) {
-					_helper_write_request.state = Helper_request::State::COMPLETE;
-					_helper_write_request.cbe_request.success(
-						cbe_request.success());
-				} else {
-					frontend_request.state = ST::COMPLETE;
-					frontend_request.cbe_request.success(cbe_request.success());
-					if (_verbose) {
-						Genode::log("Complete request: ",
-						            " (frontend request: ", _frontend_request.cbe_request,
-						            " count: ", _frontend_request.count, ")");
-					}
-				}
-			}
-
-			if (_helper_read_request.complete()) {
-				if (frontend_request.cbe_request.read()) {
-					char       * dst = reinterpret_cast<char*>
-						(frontend_request.cbe_request.offset());
-					char const * src = reinterpret_cast<char const*>
-						(&_helper_read_request.block_data) + frontend_request.helper_offset;
-
-					Genode::memcpy(dst, src, _frontend_request.count);
-
-					_helper_read_request.state = Helper_request::State::NONE;
-					frontend_request.state = ST::COMPLETE;
-					frontend_request.cbe_request.success(
-						_helper_read_request.cbe_request.success());
-
-					if (_verbose) {
-						Genode::log("Complete unaligned READ request: ",
-						            " (frontend request: ", _frontend_request.cbe_request,
-						            " (helper request: ", _helper_read_request.cbe_request,
-						            " offset: ", _frontend_request.helper_offset,
-						            " count: ", _frontend_request.count, ")");
-					}
-				}
-
-				if (frontend_request.cbe_request.write()) {
-					/* copy whole block first */
-					{
-						char       * dst = reinterpret_cast<char*>
-							(&_helper_write_request.block_data);
-						char const * src = reinterpret_cast<char const*>
-							(&_helper_read_request.block_data);
-						Genode::memcpy(dst, src, sizeof (Cbe::Block_data));
-					}
-
-					/* and than actual request data */
-					{
-						char       * dst = reinterpret_cast<char*>
-							(&_helper_write_request.block_data) + frontend_request.helper_offset;
-						char const * src = reinterpret_cast<char const*>
-							(frontend_request.cbe_request.offset());
-						Genode::memcpy(dst, src, _frontend_request.count);
-					}
-
-					/* re-use request */
-					_helper_write_request.cbe_request = Cbe::Request(
-						Cbe::Request::Operation::WRITE,
-						false,
-						_helper_read_request.cbe_request.block_number(),
-						(uint64_t) &_helper_write_request.block_data,
-						_helper_read_request.cbe_request.count(),
-						_helper_read_request.cbe_request.key_id(),
-						_helper_read_request.cbe_request.tag());
-
-					_helper_write_request.state = Helper_request::State::PENDING;
-					_helper_read_request.state  = Helper_request::State::NONE;
-				}
-				progress = true;
-			}
-
-			if (_helper_write_request.complete()) {
-				if (_verbose) {
-					Genode::log("Complete unaligned WRITE request: ",
-					            " (frontend request: ", _frontend_request.cbe_request,
-					            " (helper request: ", _helper_read_request.cbe_request,
-					            " offset: ", _frontend_request.helper_offset,
-					            " count: ", _frontend_request.count, ")");
-				}
-
-				_helper_write_request.state = Helper_request::State::NONE;
-				frontend_request.state = ST::COMPLETE;
-				progress = true;
-			}
-
-			/* read */
-			{
-				struct Read_data_pointer_is_null : Genode::Exception { };
-				struct Front_end_read_request_should_be_in_progress :
-					Genode::Exception { };
-
-				Cbe::Request cbe_req { };
-				uint64_t vba { 0 };
-				Cbe::Crypto_plain_buffer::Index plain_buf_idx { 0 };
-
-				_cbe->client_transfer_read_data_required(
-					cbe_req, vba, plain_buf_idx);
-
-				if (cbe_req.valid()) {
-
-					Cbe::Block_data *data { nullptr };
-
-					if (_helper_read_request.in_progress()) {
-						data = reinterpret_cast<Cbe::Block_data*>(
-							&_helper_read_request.block_data);
-					} else {
-
-						if (_frontend_request.in_progress()) {
-							// XXX check after helper request because it will be IN_PROGRESS
-							//     in case helper request is used
-
-							uint64_t buf_base { cbe_req.offset() };
-							uint64_t blk_off { vba - cbe_req.block_number() };
-							data = reinterpret_cast<Cbe::Block_data*>(
-								buf_base + (blk_off * Cbe::BLOCK_SIZE));
-
-						} else {
-							throw Front_end_read_request_should_be_in_progress();
-						}
-					}
-					if (data == nullptr) {
-						throw Read_data_pointer_is_null();
-					}
-					Genode::memcpy(
-						data,
-						&_plain_data.item(plain_buf_idx),
-						sizeof (Cbe::Block_data));
-
-					_cbe->client_transfer_read_data_in_progress(
-						plain_buf_idx);
-
-					_cbe->client_transfer_read_data_completed(
-						plain_buf_idx, true);
-
-					progress = true;
-				}
-			}
-
-			/* write */
-			{
-				struct Write_data_pointer_is_null : Genode::Exception { };
-				struct Front_end_write_request_should_be_in_progress :
-					Genode::Exception { };
-
-				Cbe::Request cbe_req { };
-				uint64_t vba { 0 };
-				Cbe::Crypto_plain_buffer::Index plain_buf_idx { 0 };
-
-				_cbe->client_transfer_write_data_required(
-					cbe_req, vba, plain_buf_idx);
-
-				if (cbe_req.valid()) {
-
-					Cbe::Block_data *data { nullptr };
-
-					if (_helper_write_request.in_progress()) {
-						data = reinterpret_cast<Cbe::Block_data*>(
-							&_helper_write_request.block_data);
-					} else {
-
-						if (_frontend_request.in_progress()) {
-							// XXX check after helper request because it will be IN_PROGRESS
-							//     in case helper request is used
-
-							uint64_t buf_base { cbe_req.offset() };
-							uint64_t blk_off { vba - cbe_req.block_number() };
-							data = reinterpret_cast<Cbe::Block_data*>(
-								buf_base + (blk_off * Cbe::BLOCK_SIZE));
-						} else {
-							throw Front_end_write_request_should_be_in_progress();
-						}
-					}
-					if (data == nullptr) {
-						throw Write_data_pointer_is_null();
-					}
-					Genode::memcpy(
-						&_plain_data.item(plain_buf_idx),
-						data,
-						sizeof (Cbe::Block_data));
-
-					_cbe->client_transfer_write_data_in_progress(
-						plain_buf_idx);
-
-					_cbe->client_transfer_write_data_completed(
-						plain_buf_idx, true);
-
-					progress = true;
-				}
-			}
-
-			return progress;
-		}
-
-		bool _handle_ta(Cbe::Library &cbe)
-		{
-			bool progress = false;
-
-			Util::Trust_anchor_vfs &ta = *_trust_anchor;
-
-			progress |= ta.execute();
-
-			using Op = Cbe::Trust_anchor_request::Operation;
-
-			while (true) {
-
-				Cbe::Trust_anchor_request const request =
-					_cbe->peek_generated_ta_request();
-
-				if (!request.valid()) { break; }
-				if (!ta.request_acceptable()) { break; }
-
-				switch (request.operation()) {
-				case Op::CREATE_KEY:
-					ta.submit_create_key_request(request);
-					break;
-				case Op::SECURE_SUPERBLOCK:
-				{
-					Cbe::Hash const sb_hash = _cbe->peek_generated_ta_sb_hash(request);
-					ta.submit_secure_superblock_request(request, sb_hash);
-					break;
-				}
-				case Op::ENCRYPT_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						_cbe->peek_generated_ta_key_value_plaintext(request);
-
-					ta.submit_encrypt_key_request(request, pk);
-					break;
-				}
-				case Op::DECRYPT_KEY:
-				{
-					Cbe::Key_ciphertext_value const ck =
-						_cbe->peek_generated_ta_key_value_ciphertext(request);
-
-					ta.submit_decrypt_key_request(request, ck);
-					break;
-				}
-				case Op::LAST_SB_HASH:
-					ta.submit_superblock_hash_request(request);
-					break;
-				case Op::INITIALIZE:
-					class Bad_operation { };
-					throw Bad_operation { };
-				case Op::INVALID:
-					/* never reached */
-					break;
-				}
-				_cbe->drop_generated_ta_request(request);
-				progress |= true;
-			}
-
-			while (true) {
-
-				Cbe::Trust_anchor_request const request =
-					ta.peek_completed_request();
-
-				if (!request.valid()) { break; }
-
-				switch (request.operation()) {
-				case Op::CREATE_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						ta.peek_completed_key_value_plaintext(request);
-
-					_cbe->mark_generated_ta_create_key_request_complete(request, pk);
-					break;
-				}
-				case Op::SECURE_SUPERBLOCK:
-				{
-					_cbe->mark_generated_ta_secure_sb_request_complete(request);
-					break;
-				}
-				case Op::ENCRYPT_KEY:
-				{
-					Cbe::Key_ciphertext_value const ck =
-						ta.peek_completed_key_value_ciphertext(request);
-
-					_cbe->mark_generated_ta_encrypt_key_request_complete(request, ck);
-					break;
-				}
-				case Op::DECRYPT_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						ta.peek_completed_key_value_plaintext(request);
-
-					_cbe->mark_generated_ta_decrypt_key_request_complete(request, pk);
-					break;
-				}
-				case Op::LAST_SB_HASH:
-				{
-					Cbe::Hash const hash =
-						ta.peek_completed_superblock_hash(request);
-
-					_cbe->mark_generated_ta_last_sb_hash_request_complete(request, hash);
-					break;
-				}
-				case Op::INITIALIZE:
-					class Bad_operation { };
-					throw Bad_operation { };
-				case Op::INVALID:
-					/* never reached */
-					break;
-				}
-				ta.drop_completed_request(request);
-				progress |= true;
-			}
-
-			return progress;
-		}
-
-		bool _handle_crypto_add_key()
-		{
-			bool progress = false;
-
-			do {
-				Cbe::Key key { };
-				Cbe::Request request = _cbe->crypto_add_key_required(key);
-				if (!request.valid()) {
-					break;
-				}
-
-				char buffer[sizeof (key.value) + sizeof (key.id.value)] { };
-
-				memcpy(buffer, &key.id.value, sizeof (key.id.value));
-				memcpy(buffer + sizeof (key.id.value), key.value, sizeof (key.value));
-
-				file_size written = 0;
-				_add_key_handle->seek(0);
-
-				using Write_result = Vfs::File_io_service::Write_result;
-
-				Write_result const result =
-					_add_key_handle->fs().write(_add_key_handle,
-					                            buffer, sizeof (buffer), written);
-
-				if (result == Write_result::WRITE_ERR_WOULD_BLOCK)
-					break; /* try again later */
-
-				/*
-				 * Instead of acknowledge the CBE's request before we write
-				 * the key above do it afterwards. That allows us to perform the
-				 * request multiple times in case the above exception is thrown.
-				 */
-				_cbe->crypto_add_key_requested(request);
-
-				uint32_t const key_id_value = key.id.value;
-
-				Crypto_file *cf = nullptr;
-				try {
-					cf = _get_unused_crypto_file();
-				} catch (...) {
-					error("cannot manage key id: ", key_id_value);
-					request.success(false);
-					_cbe->crypto_add_key_completed(request);
-					continue;
-				}
-
-				using Encrypt_file = Genode::String<128>;
-				Encrypt_file encrypt_file {
-					_crypto_device.string(), "/keys/", key_id_value, "/encrypt" };
-
-				using Result = Vfs::Directory_service::Open_result;
-				Result res = _env.root_dir().open(encrypt_file.string(),
-				                                  Vfs::Directory_service::OPEN_MODE_RDWR,
-				                                  (Vfs::Vfs_handle **)&cf->encrypt_handle,
-				                                  _env.alloc());
-
-				request.success(res == Result::OPEN_OK);
-				if (!request.success()) {
-					error("could not open encrypt '", encrypt_file, "' file for key id: ", key_id_value);
-
-					request.success(false);
-					_cbe->crypto_add_key_completed(request);
-					continue;
-				}
-
-				using Decrypt_file = Genode::String<128>;
-				Decrypt_file decrypt_file {
-					_crypto_device.string(), "/keys/", key_id_value, "/decrypt" };
-
-				res = _env.root_dir().open(decrypt_file.string(),
-				                                  Vfs::Directory_service::OPEN_MODE_RDWR,
-				                                  (Vfs::Vfs_handle **)&cf->decrypt_handle,
-				                                  _env.alloc());
-
-				request.success(res == Result::OPEN_OK);
-				if (!request.success()) {
-					_env.root_dir().close(cf->encrypt_handle);
-
-					error("could not open decrypt '", decrypt_file, "' file for key id: ", key_id_value);
-
-					request.success(false);
-					_cbe->crypto_add_key_completed(request);
-					continue;
-				}
-
-				/* set key id to make file valid */
-				cf->key_id = key_id_value;
-
-				request.success(true);
-				_cbe->crypto_add_key_completed(request);
-				progress |= true;
-			} while (false);
-
-			return progress;
-		}
-
-		bool _handle_crypto_remove_key()
-		{
-			bool progress = false;
-
-			do {
-				Cbe::Key::Id key_id { };
-				Cbe::Request request = _cbe->crypto_remove_key_required(key_id);
-				if (!request.valid()) {
-					break;
-				}
-
-				file_size written = 0;
-				_remove_key_handle->seek(0);
-
-				using Write_result = Vfs::File_io_service::Write_result;
-
-				Write_result const result =
-					_remove_key_handle->fs().write(_remove_key_handle,
-					                               (char const*)&key_id.value,
-					                               sizeof (key_id.value),
-					                               written);
-
-				if (result == Write_result::WRITE_ERR_WOULD_BLOCK)
-					break; /* try again later */
-
-				Crypto_file *cf = nullptr;
-				try {
-					cf = _lookup_crypto_file(key_id.value);
-
-					_env.root_dir().close(cf->encrypt_handle);
-					cf->encrypt_handle = nullptr;
-					_env.root_dir().close(cf->decrypt_handle);
-					cf->decrypt_handle = nullptr;
-					cf->key_id = 0;
-				} catch (...) {
-					uint32_t const key_id_value = key_id.value;
-					Genode::warning("could not look up handles for key id: ",
-					                key_id_value);
-				}
-
-				/*
-				 * Instead of acknowledge the CBE's request before we write
-				 * the key do it afterwards. That allows us to perform the
-				 * request multiple times in case the above exception is thrown.
-				 */
-				_cbe->crypto_remove_key_requested(request);
-				request.success(true);
-				_cbe->crypto_remove_key_completed(request);
-				progress |= true;
-			} while (false);
-
-			return progress;
-		}
-
-		struct Crypto_job
-		{
-			struct Invalid_operation : Genode::Exception { };
-
-			enum State { IDLE, SUBMITTED, PENDING, IN_PROGRESS, COMPLETE };
-			enum Operation { INVALID, DECRYPT, ENCRYPT };
-
-			Crypto_file *file;
-			Vfs_handle *_handle;
-
-			State       state;
-			Operation   op;
-			uint32_t    data_index;
-			file_offset offset;
-
-			Cbe::Crypto_cipher_buffer::Index cipher_index;
-			Cbe::Crypto_plain_buffer::Index  plain_index;
-
-			static bool _read_queued(Vfs::File_io_service::Read_result r)
-			{
-				using Result = Vfs::File_io_service::Read_result;
-				switch (r) {
-					case Result::READ_QUEUED:          [[fallthrough]];
-					case Result::READ_ERR_WOULD_BLOCK: return true;
-					default: break;
-				}
-				return false;
-			}
-
-			struct Result
-			{
-				bool progress;
-				bool complete;
-				bool success;
-			};
-
-			bool request_acceptable() const
-			{
-				return state == State::IDLE;
-			}
-
-			template <Crypto_job::Operation OP>
-			void submit_request(Crypto_file *cf, uint32_t data_index, file_offset offset)
-			{
-				file       = cf;
-				state      = Crypto_job::State::SUBMITTED;
-				op         = OP;
-				data_index = data_index;
-				offset     = offset;
-
-				/* store both in regardless of operation */
-				cipher_index.value = data_index;
-				plain_index.value  = data_index;
-
-				switch (op) {
-				case Crypto_job::Operation::ENCRYPT:
-					_handle = cf->encrypt_handle; break;
-				case Crypto_job::Operation::DECRYPT:
-					_handle = cf->decrypt_handle; break;
-				case Crypto_job::Operation::INVALID:
-					throw Invalid_operation();
-					break;
-				}
-			}
-
-			Result execute(Cbe::Library              &cbe,
-			               Cbe::Crypto_cipher_buffer &cipher,
-			               Cbe::Crypto_plain_buffer  &plain)
-			{
-				Result result { false, false, false };
-
-				switch (state) {
-				case Crypto_job::State::IDLE:
-					break;
-				case Crypto_job::State::SUBMITTED:
-					{
-						char const *data = nullptr;
-
-						if (op == Crypto_job::Operation::ENCRYPT) {
-							data = reinterpret_cast<char const*>(&plain.item(plain_index));
-						}
-						else if (op == Crypto_job::Operation::DECRYPT) {
-							data = reinterpret_cast<char const*>(&cipher.item(cipher_index));
-						}
-
-						file_size out = 0;
-						_handle->seek(offset);
-						_handle->fs().write(_handle, data,
-						                    file_size(sizeof (Cbe::Block_data)), out);
-
-						if (op == Crypto_job::Operation::ENCRYPT) {
-							cbe.crypto_cipher_data_requested(plain_index);
-						}
-						else if (op == Crypto_job::Operation::DECRYPT) {
-							cbe.crypto_plain_data_requested(cipher_index);
-						}
-
-						state = Crypto_job::State::PENDING;
-						result.progress |= true;
-					}
-					[[fallthrough]];
-
-				case Crypto_job::State::PENDING:
-
-					_handle->seek(offset);
-					if (!_handle->fs().queue_read(_handle, sizeof (Cbe::Block_data))) {
-						break;
-					}
-
-					state = Crypto_job::State::IN_PROGRESS;
-					result.progress |= true;
-					[[fallthrough]];
-
-				case Crypto_job::State::IN_PROGRESS:
-				{
-					using Result = Vfs::File_io_service::Read_result;
-
-					file_size out = 0;
-					char *data = nullptr;
-
-					if (op == Crypto_job::Operation::ENCRYPT) {
-						data = reinterpret_cast<char *>(&cipher.item(cipher_index));
-					} else
-
-					if (op == Crypto_job::Operation::DECRYPT) {
-						data = reinterpret_cast<char *>(&plain.item(plain_index));
-					}
-
-					Result const res =
-						_handle->fs().complete_read(_handle, data,
-						                            sizeof (Cbe::Block_data), out);
-					if (_read_queued(res)) {
-						break;
-					}
-
-					result.success = res == Result::READ_OK;
-
-					state = Crypto_job::State::COMPLETE;
-					result.progress |= true;
-					[[fallthrough]];
-				}
-				case Crypto_job::State::COMPLETE:
-
-					if (op == Crypto_job::Operation::ENCRYPT) {
-						if (!result.success) {
-							error("encryption request failed"); // XXX be more informative
-						}
-
-						cbe.supply_crypto_cipher_data(cipher_index, result.success);
-					} else
-
-					if (op == Crypto_job::Operation::DECRYPT) {
-						if (!result.success) {
-							error("decryption request failed"); // XXX be more informative
-						}
-
-						cbe.supply_crypto_plain_data(plain_index, result.success);
-					}
-
-					state = Crypto_job::State::IDLE;
-					result.complete |= true;
-					result.progress |= true;
-					break;
-				}
-
-				return result;
-			}
-		};
-
-		Crypto_job _crypto_job { nullptr, nullptr, Crypto_job::State::IDLE,
-		                         Crypto_job::Operation::INVALID,
-		                         0 , 0,
-		                         Cbe::Crypto_cipher_buffer::Index { 0 },
-		                         Cbe::Crypto_plain_buffer::Index  { 0 } }; // XXX make that more than 1 job
-
-		bool _handle_crypto_request(Cbe::Library              &cbe,
-		                            Cbe::Crypto_cipher_buffer &cipher,
-		                            Cbe::Crypto_plain_buffer  &plain)
-		{
-			bool progress = false;
-
-			/* encrypt */
-			while (true) {
-
-				Cbe::Crypto_plain_buffer::Index data_index { 0 };
-				Cbe::Request request = cbe.crypto_cipher_data_required(data_index);
-				if (!request.valid() || !_crypto_job.request_acceptable()) {
-					break;
-				}
-
-				Crypto_file *cf = nullptr;
-				try {
-					cf = _lookup_crypto_file(request.key_id());
-				} catch (...) {
-					cbe.crypto_cipher_data_requested(data_index);
-
-					Cbe::Crypto_cipher_buffer::Index const index { data_index.value };
-					cbe.supply_crypto_cipher_data(index, false);
-					continue;
-				}
-
-				using Op = Crypto_job::Operation;
-				file_offset const offset = request.block_number() * Cbe::BLOCK_SIZE;
-				_crypto_job.submit_request<Op::ENCRYPT>(cf, data_index.value, offset);
-				progress |= true;
-			}
-
-			/* decrypt */
-			while (true) {
-
-				Cbe::Crypto_cipher_buffer::Index data_index { 0 };
-				Cbe::Request request = cbe.crypto_plain_data_required(data_index);
-				if (!request.valid() || !_crypto_job.request_acceptable()) {
-					break;
-				}
-
-				Crypto_file *cf = nullptr;
-				try {
-					cf = _lookup_crypto_file(request.key_id());
-				} catch (...) {
-					cbe.crypto_plain_data_requested(data_index);
-					Cbe::Crypto_plain_buffer::Index const index { data_index.value };
-					cbe.supply_crypto_plain_data(index, false);
-					continue;
-				}
-
-				using Op = Crypto_job::Operation;
-				file_offset const offset = request.block_number() * Cbe::BLOCK_SIZE;
-				_crypto_job.submit_request<Op::DECRYPT>(cf, data_index.value, offset);
-				progress |= true;
-			}
-
-			Crypto_job::Result const result = _crypto_job.execute(cbe, cipher, plain);
-			progress |= result.progress;
-
-			return progress;
-		}
-
-		bool _handle_crypto()
-		{
-			bool progress = false;
-
-			bool const add_key_progress = _handle_crypto_add_key();
-			progress |= add_key_progress;
-
-			bool const remove_key_progress = _handle_crypto_remove_key();
-			progress |= remove_key_progress;
-
-			bool const request_progress = _handle_crypto_request(*_cbe, _cipher_data, _plain_data);
-			progress |= request_progress;
-
-			return progress;
-		}
-
-		void _dump_state()
-		{
-			if (_debug) {
-				static uint64_t cnt = 0;
-				log("FE: ", Frontend_request::state_to_string(_frontend_request.state),
-				     " (", _frontend_request.cbe_request, ") ",
-				    "BE: ", *_backend_job, " ", ++cnt);
-			}
-		}
-
 		void handle_frontend_request()
 		{
-			while (true) {
+			bool progress { true };
+			while (progress) {
 
-				bool progress = false;
-
-				bool const frontend_progress =
-					_handle_cbe_frontend(*_cbe, _frontend_request);
-				progress |= frontend_progress;
-
-				bool const backend_progress = _handle_cbe_backend(*_cbe, _io_data);
-				progress |= backend_progress;
-
-				bool const crypto_progress = _handle_crypto();
-				progress |= crypto_progress;
-
-				bool const ta_progress = _handle_ta(*_cbe);
-				progress |= ta_progress;
-
-				if (!progress) {
-					_dump_state();
-				}
-
-				if (_debug) {
-					log("frontend_progress: ", frontend_progress,
-					    " backend_progress: ", backend_progress,
-					    " crypto_progress: ", crypto_progress);
-				}
-
-				if (!progress) { break; }
+				progress = false;
+				_modules_execute(progress);
 			}
+			_vfs_env.io().commit();
 
-			Cbe::Info const info = _cbe->info();
+			Cbe::Info const info = _sb_control->info();
 
 			using ES = Extending::State;
 			if (_extend_obj.state == ES::UNKNOWN && info.valid) {
@@ -1589,14 +1131,14 @@ class Vfs_cbe::Wrapper
 			}
 		}
 
-		bool client_request_acceptable() const
+		bool client_request_acceptable()
 		{
-			return _cbe->client_request_acceptable();
+			return _request_pool->ready_to_submit_request();
 		}
 
 		bool start_rekeying()
 		{
-			if (!_cbe->client_request_acceptable()) {
+			if (!_request_pool->ready_to_submit_request()) {
 				return false;
 			}
 
@@ -1605,13 +1147,14 @@ class Vfs_cbe::Wrapper
 				false,
 				0, 0, 0,
 				_rekey_obj.key_id,
-				0);
+				0, 0,
+				COMMAND_POOL, 0);
 
 			if (_verbose) {
 				Genode::log("Req: (background req: ", req, ")");
 			}
 
-			_cbe->submit_client_request(req, 0);
+			_request_pool->submit_request(req);
 			_rekey_obj.state       = Rekeying::State::IN_PROGRESS;
 			_rekey_obj.last_result = Rekeying::Rekeying::FAILED;
 			_rekey_fs_trigger_watch_response();
@@ -1628,7 +1171,7 @@ class Vfs_cbe::Wrapper
 
 		bool start_deinitialize()
 		{
-			if (!_cbe->client_request_acceptable()) {
+			if (!_request_pool->ready_to_submit_request()) {
 				return false;
 			}
 
@@ -1637,13 +1180,14 @@ class Vfs_cbe::Wrapper
 				false,
 				0, 0, 0,
 				0,
-				0);
+				0, 0,
+				COMMAND_POOL, 0);
 
 			if (_verbose) {
 				Genode::log("Req: (background req: ", req, ")");
 			}
 
-			_cbe->submit_client_request(req, 0);
+			_request_pool->submit_request(req);
 			_deinit_obj.state       = Deinitialize::State::IN_PROGRESS;
 			_deinit_obj.last_result = Deinitialize::Deinitialize::FAILED;
 			_deinit_fs_trigger_watch_response();
@@ -1659,10 +1203,10 @@ class Vfs_cbe::Wrapper
 		}
 
 
-		bool start_extending(Extending::Type       type,
-		                     Cbe::Number_of_blocks blocks)
+		bool start_extending(Extending::Type           type,
+		                     Cbe::Number_of_blocks_new blocks)
 		{
-			if (!_cbe->client_request_acceptable()) {
+			if (!_request_pool->ready_to_submit_request()) {
 				return false;
 			}
 
@@ -1681,13 +1225,14 @@ class Vfs_cbe::Wrapper
 			}
 
 			Cbe::Request req(op, false,
-			                 0, 0, blocks, 0, 0);
+			                 0, 0, blocks, 0, 0, 0,
+			                 COMMAND_POOL, 0);
 
 			if (_verbose) {
 				Genode::log("Req: (background req: ", req, ")");
 			}
 
-			_cbe->submit_client_request(req, 0);
+			_request_pool->submit_request(req);
 			_extend_obj.type        = type;
 			_extend_obj.state       = Extending::State::IN_PROGRESS;
 			_extend_obj.last_result = Extending::Result::NONE;
@@ -1705,10 +1250,10 @@ class Vfs_cbe::Wrapper
 
 		void active_snapshot_ids(Cbe::Active_snapshot_ids &ids)
 		{
-			if (!_cbe.constructed()) {
+			if (!_request_pool.constructed()) {
 				_initialize_cbe();
 			}
-			_cbe->active_snapshot_ids(ids);
+			_sb_control->active_snapshot_ids(ids);
 			handle_frontend_request();
 		}
 
@@ -1717,11 +1262,11 @@ class Vfs_cbe::Wrapper
 
 		bool create_snapshot()
 		{
-			if (!_cbe.constructed()) {
+			if (!_request_pool.constructed()) {
 				_initialize_cbe();
 			}
 
-			if (!_cbe->client_request_acceptable()) {
+			if (!_request_pool->ready_to_submit_request()) {
 				return false;
 			}
 
@@ -1733,13 +1278,14 @@ class Vfs_cbe::Wrapper
 				Cbe::Request::Operation::CREATE_SNAPSHOT;
 
 			_create_snapshot_request.cbe_request =
-				Cbe::Request(op, false, 0, 0, 1, 0, 0);
+				Cbe::Request(op, false, 0, 0, 1, 0, 0, 0,
+				             COMMAND_POOL, 0);
 
 			if (_verbose) {
 				Genode::log("Req: (req: ", _create_snapshot_request.cbe_request, ")");
 			}
 
-			_cbe->submit_client_request(_create_snapshot_request.cbe_request, 0);
+			_request_pool->submit_request(_create_snapshot_request.cbe_request);
 
 			_create_snapshot_request.state =
 				Frontend_request::State::IN_PROGRESS;
@@ -1753,11 +1299,11 @@ class Vfs_cbe::Wrapper
 
 		bool discard_snapshot(Cbe::Generation id)
 		{
-			if (!_cbe.constructed()) {
+			if (!_request_pool.constructed()) {
 				_initialize_cbe();
 			}
 
-			if (!_cbe->client_request_acceptable()) {
+			if (!_request_pool->ready_to_submit_request()) {
 				return false;
 			}
 
@@ -1769,13 +1315,14 @@ class Vfs_cbe::Wrapper
 				Cbe::Request::Operation::DISCARD_SNAPSHOT;
 
 			_discard_snapshot_request.cbe_request =
-				Cbe::Request(op, false, 0, 0, 1, 0, 0);
+				Cbe::Request(op, false, 0, 0, 1, 0, 0, (uint32_t)id,
+				             COMMAND_POOL, 0);
 
 			if (_verbose) {
 				Genode::log("Req: (req: ", _discard_snapshot_request.cbe_request, ")");
 			}
 
-			_cbe->submit_client_request(_discard_snapshot_request.cbe_request, id);
+			_request_pool->submit_request(_discard_snapshot_request.cbe_request);
 
 			_discard_snapshot_request.state =
 				Frontend_request::State::IN_PROGRESS;
@@ -1984,7 +1531,7 @@ class Vfs_cbe::Data_file_system : public Single_file_system
 			Stat_result result = Single_file_system::stat(path, out);
 
 			/* max_vba range is from 0 ... N - 1 */
-			out.size = (_w.cbe().max_vba() + 1) * Cbe::BLOCK_SIZE;
+			out.size = (_w.max_vba() + 1) * Cbe::BLOCK_SIZE;
 			return result;
 		}
 
@@ -3598,26 +3145,8 @@ extern "C" Vfs::File_system_factory *vfs_file_system_factory(void)
 		}
 	};
 
-	/* the CBE library requires a stack larger than the default */
-	Genode::Thread::myself()->stack_size(64*1024);
-
-	Cbe::assert_valid_object_size<Cbe::Library>();
-
-	cbe_cxx_init();
-
 	static Factory factory;
 	return &factory;
-}
-
-
-/*
- * The SPARK compiler might generate a call to memcmp when it wants to
- * compare objects. For the time being we implement here and hopefully
- * any other memcmp symbol has at least the same semantics.
- */
-extern "C" int memcmp(const void *s1, const void *s2, Genode::size_t n)
-{
-	return Genode::memcmp(s1, s2, n);
 }
 
 
