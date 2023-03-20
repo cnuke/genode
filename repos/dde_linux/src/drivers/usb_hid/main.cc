@@ -241,6 +241,11 @@ void Driver::scan_report()
 			dev_node.attribute("class").value(c);
 			if (c != USB_CLASS_HID) return;
 
+			if (dev_node.attribute_value("vendor_id", Genode::String<32>("unknown")) == "0xb0e") {
+				Genode::warning("ignoring Jabra device");
+				return;
+			}
+
 			Label label;
 			dev_node.attribute("label").value(label);
 
