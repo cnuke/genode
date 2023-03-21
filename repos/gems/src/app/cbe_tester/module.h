@@ -45,6 +45,7 @@ namespace Cbe {
 		FT_INITIALIZER       = 14,
 		SB_INITIALIZER       = 15,
 		REQUEST_POOL         = 16,
+		MAX_MODULE_ID        = 16,
 	};
 
 	char const *module_name(unsigned long module_id);

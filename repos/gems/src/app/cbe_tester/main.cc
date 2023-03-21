@@ -1113,8 +1113,6 @@ class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { NR_OF_MODULES = 17 };
-
 		Genode::Env                        &_env;
 		Attached_rom_dataspace              _config_rom                 { _env, "config" };
 		Verbose_node                        _verbose_node               { _config_rom.xml() };
@@ -1137,7 +1135,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		Sb_initializer                      _sb_initializer             { };
 		Client_data_request                 _client_data_request        { };
 
-		Module *_module_ptrs[NR_OF_MODULES] { };
+		Module *_module_ptrs[MAX_MODULE_ID + 1] { };
 
 		/*
 		 * Noncopyable
@@ -1509,7 +1507,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 		void _modules_add(unsigned long  module_id,
 		                  Module        &module)
 		{
-			if (module_id >= NR_OF_MODULES) {
+			if (module_id > MAX_MODULE_ID) {
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
@@ -1522,7 +1520,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 		void _modules_remove(unsigned long  module_id)
 		{
-			if (module_id >= NR_OF_MODULES) {
+			if (module_id > MAX_MODULE_ID) {
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
@@ -1535,7 +1533,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 
 		void _modules_execute(bool &progress)
 		{
-			for (unsigned long id { 0 }; id < NR_OF_MODULES; id++) {
+			for (unsigned long id { 0 }; id <= MAX_MODULE_ID; id++) {
 
 				if (_module_ptrs[id] == nullptr)
 					continue;
@@ -1543,7 +1541,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 				Module *module_ptr { _module_ptrs[id] };
 				module_ptr->execute(progress);
 				module_ptr->for_each_generated_request([&] (Module_request &req) {
-					if (req.dst_module_id() >= NR_OF_MODULES) {
+					if (req.dst_module_id() > MAX_MODULE_ID) {
 						class Exception_1 { };
 						throw Exception_1 { };
 					}
@@ -1571,7 +1569,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 					return Module::REQUEST_HANDLED;
 				});
 				module_ptr->for_each_completed_request([&] (Module_request &req) {
-					if (req.src_module_id() >= NR_OF_MODULES) {
+					if (req.src_module_id() > MAX_MODULE_ID) {
 						class Exception_2 { };
 						throw Exception_2 { };
 					}

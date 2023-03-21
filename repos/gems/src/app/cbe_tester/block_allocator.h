@@ -25,6 +25,10 @@ namespace Cbe
 	class Block_allocator;
 	class Block_allocator_request;
 	class Block_allocator_channel;
+
+	enum {
+		NR_OF_SUPERBLOCKS = 8, // XXX keep in sync with library
+	};
 }
 
 
