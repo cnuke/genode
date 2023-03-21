@@ -1626,6 +1626,20 @@ class Main : Vfs::Env::User, public Cbe::Module
 		}
 };
 
+namespace Libc {
+
+	struct Env;
+
+	struct Component
+	{
+		void construct(Libc::Env &);
+	};
+}
+
+
+void Libc::Component::construct(Libc::Env &) { }
+
+
 void Component::construct(Genode::Env &env)
 {
 	env.exec_static_constructors();

@@ -14,6 +14,9 @@
 /* base includes */
 #include <util/string.h>
 
+/* libcrypto */
+#include <openssl/sha.h>
+
 /* cbe tester includes */
 #include <sha256_4k_hash.h>
 
@@ -27,4 +30,23 @@ bool Cbe::check_sha256_4k_hash(void const *data_ptr,
 	uint8_t got_hash[32];
 	calc_sha256_4k_hash(data_ptr, &got_hash);
 	return !memcmp(&got_hash, exp_hash_ptr, sizeof(got_hash));
+}
+
+
+void Cbe::calc_sha256_4k_hash(void const * const data_ptr,
+                              void       * const hash_ptr)
+{
+	SHA256_CTX context { };
+	if (!SHA256_Init(&context)) {
+		class Calc_sha256_4k_hash_init_error { };
+		throw Calc_sha256_4k_hash_init_error { };
+	}
+	if (!SHA256_Update(&context, data_ptr, 4096)) {
+		class Calc_sha256_4k_hash_update_error { };
+		throw Calc_sha256_4k_hash_update_error { };
+	}
+	if (!SHA256_Final(static_cast<unsigned char *>(hash_ptr), &context)) {
+		class Calc_sha256_4k_hash_final_error { };
+		throw Calc_sha256_4k_hash_final_error { };
+	}
 }

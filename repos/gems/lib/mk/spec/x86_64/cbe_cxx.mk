@@ -1,6 +1,6 @@
 CBE_DIR := $(call select_from_ports,cbe)
 
-LIBS += spark libsparkcrypto sha256_4k cbe cbe_common cbe_cxx_common
+LIBS += spark libsparkcrypto cbe cbe_common cbe_cxx_common
 
 INC_DIR += $(CBE_DIR)/src/lib/cbe
 INC_DIR += $(CBE_DIR)/src/lib/cbe_common
