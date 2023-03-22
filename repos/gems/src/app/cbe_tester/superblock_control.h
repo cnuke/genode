@@ -1,30 +1,3 @@
-//
-//		/**
-//		 * Query list of active snapshots
-//		 *
-//		 * \param  ids  reference to destination buffer
-//		 */
-//		void active_snapshot_ids(Active_snapshot_ids &ids) const;
-//
-//		/**
-//		 * Get highest virtual-block-address useable by the current active snapshot
-//		 *
-//		 * \return  highest addressable virtual-block-address
-//		 */
-//		Virtual_block_address max_vba() const;
-//
-//		/**
-//		 * Get information about the CBE
-//		 *
-//		 * \return  information structure
-//		 */
-//		Info info() const
-//		{
-//			Info inf { };
-//			_info(inf);
-//			return inf;
-//		}
-
 /*
  * \brief  Module for management of the superblocks
  * \author Martin Stein
@@ -232,7 +205,6 @@ class Cbe::Superblock_control_channel
 		Hash_new                   _hash               { };
 		Key_new                    _curr_key_plaintext { };
 		Key_new                    _prev_key_plaintext { };
-		Block_data                 _blk_io_data        { };
 
 		Superblock &_sb_ciphertext() { return *(Superblock *)&_sb_ciphertext_blk; }
 
