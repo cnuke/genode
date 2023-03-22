@@ -103,7 +103,7 @@ bool Meta_tree::_peek_generated_request(uint8_t *buf_ptr,
 {
 	for (uint32_t id { 0 }; id < NR_OF_CHANNELS; id++) {
 
-		Channel const &channel { _channels[id] };
+		Channel &channel { _channels[id] };
 		Local_cache_request const &local_req { channel._cache_request };
 		if (local_req.state == Local_cache_request::PENDING) {
 
@@ -118,13 +118,10 @@ bool Meta_tree::_peek_generated_request(uint8_t *buf_ptr,
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
-			if (blk_io_req_type == Block_io_request::WRITE)
-				memcpy((void *)channel._blk_io_data, (void *)channel._cache_request.block_data, BLOCK_SIZE);
-
 			Block_io_request::create(
 				buf_ptr, buf_size, META_TREE, id, blk_io_req_type,
 				0, 0, nullptr, 0, 0, local_req.pba, 0, 1,
-				(void *)channel._blk_io_data);
+				channel._cache_request.block_data);
 
 			return true;
 		}
@@ -184,25 +181,25 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 
 		if (local_req.level > T2_NODE_LVL) {
 
-			if (!check_sha256_4k_hash(&channel._blk_io_data, &t1_info.node.hash)) {
+			if (!check_sha256_4k_hash(channel._cache_request.block_data, &t1_info.node.hash)) {
 
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
 			} else {
 
-				memcpy(&t1_info.entries, channel._blk_io_data, BLOCK_SIZE);
+				memcpy(&t1_info.entries, channel._cache_request.block_data, BLOCK_SIZE);
 				t1_info.index = 0;
 				t1_info.state = Type_1_info::READ_COMPLETE;
 			}
 		} else if (local_req.level == T2_NODE_LVL) {
 
-			if (!check_sha256_4k_hash(&channel._blk_io_data, &t2_info.node.hash)) {
+			if (!check_sha256_4k_hash(channel._cache_request.block_data, &t2_info.node.hash)) {
 
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
 			} else {
 
-				memcpy(&t2_info.entries, channel._blk_io_data, BLOCK_SIZE);
+				memcpy(&t2_info.entries, channel._cache_request.block_data, BLOCK_SIZE);
 				t2_info.index = 0;
 				t2_info.state = Type_2_info::READ_COMPLETE;
 			}
