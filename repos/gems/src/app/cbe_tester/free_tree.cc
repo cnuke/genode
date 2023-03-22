@@ -823,7 +823,7 @@ bool Free_tree::_peek_generated_request(uint8_t *buf_ptr,
 {
 	for (uint32_t id { 0 }; id < NR_OF_CHANNELS; id++) {
 
-		Channel const &channel { _channels[id] };
+		Channel &channel { _channels[id] };
 		Local_cache_request const &local_crq { channel._cache_request };
 		if (local_crq.state == Local_cache_request::PENDING) {
 
@@ -838,13 +838,10 @@ bool Free_tree::_peek_generated_request(uint8_t *buf_ptr,
 				class Exception_1 { };
 				throw Exception_1 { };
 			}
-			if (blk_io_req_type == Block_io_request::WRITE)
-				memcpy((void *)&channel._blk_io_data, (void *)&channel._cache_block_data, BLOCK_SIZE);
-
 			Block_io_request::create(
 				buf_ptr, buf_size, FREE_TREE, id, blk_io_req_type,
 				0, 0, nullptr, 0, 0, local_crq.pba, 0, 1,
-				(void *)&channel._blk_io_data);
+				&channel._cache_block_data);
 
 			return true;
 		}
@@ -946,9 +943,8 @@ void Free_tree::generated_request_complete(Module_request &mod_req)
 
 		case Local_cache_request::READ:
 
-			if (check_sha256_4k_hash(&channel._blk_io_data, &n.node.hash)) {
+			if (check_sha256_4k_hash(&channel._cache_block_data, &n.node.hash)) {
 
-				memcpy(&channel._cache_block_data, &channel._blk_io_data, BLOCK_SIZE);
 				n.state = Type_1_info::AVAILABLE;
 				channel._level_n_stacks[local_req.level].update_top(n);
 

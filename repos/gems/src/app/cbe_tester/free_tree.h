@@ -354,7 +354,6 @@ class Cbe::Free_tree_channel
 
 		State                   _state                                 { INVALID };
 		Request                 _request                               { };
-		Block_data              _blk_io_data                           { };
 		Genode::uint64_t        _needed_blocks                         { 0 };
 		Genode::uint64_t        _found_blocks                          { 0 };
 		Genode::uint64_t        _exchanged_blocks                      { 0 };
