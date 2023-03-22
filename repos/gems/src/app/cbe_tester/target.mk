@@ -22,11 +22,6 @@ INC_DIR := $(PRG_DIR)
 
 LIBS += base
 LIBS += vfs
-LIBS += cbe
-LIBS += cbe_common
-LIBS += cbe_cxx
-LIBS += cbe_cxx_common
 LIBS += libcrypto
-LIBS += spark
 
 CC_CXX_WARN_STRICT_CONVERSION =

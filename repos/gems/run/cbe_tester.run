@@ -1,13 +1,5 @@
-
 assert_spec linux
 assert_spec x86_64
-
-exec rm -rf var/libcache/cbe
-exec rm -rf var/libcache/cbe_cxx
-exec rm -rf var/libcache/cbe_common
-exec rm -rf var/libcache/cbe_common_cxx
-exec rm -rf var/libcache/cbe_init
-exec rm -rf var/libcache/cbe_init_cxx
 
 set dd [installed_command dd]
 
@@ -1026,7 +1018,6 @@ append boot_modules {
 	cbe_tester
 	ld.lib.so spark.lib.so
 	libsparkcrypto.lib.so
-	cbe_cxx.lib.so
 	log_terminal
 	report_rom
 	lx_fs
