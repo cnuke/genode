@@ -216,7 +216,6 @@ class Cbe::Virtual_block_device_channel
 		Number_of_blocks_new         _nr_of_blks       { 0 };
 		Generation                   _last_secured_gen { 0 };
 		Generation                   _free_gen         { 0 };
-		Block_data                   _blk_io_data      { };
 		Block_data                   _data_blk         { };
 };
 

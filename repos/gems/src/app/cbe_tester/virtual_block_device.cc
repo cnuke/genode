@@ -1,83 +1,4 @@
 /*
-
--- Generated_Request_Complete
-
-      when Primitive.Tag_VBD_Rkg_Crypto_Decrypt =>
-
-         VBD_Rekeying.Mark_Generated_Prim_Completed_Plain_Data (
-            Obj.VBD_Rkg, Prim, Blk_Data_Acc.all);
-
-      when Primitive.Tag_VBD_Rkg_Crypto_Encrypt =>
-
-         VBD_Rekeying.Mark_Generated_Prim_Completed_Cipher_Data (
-            Obj.VBD_Rkg, Prim, Blk_Data_Acc.all);
-
-      when Primitive.Tag_VBD_Rkg_Blk_IO_Read_Client_Data |
-           Primitive.Tag_VBD_Rkg_Blk_IO |
-           Primitive.Tag_VBD_Rkg_Cache =>
-
-         VBD_Rekeying.Mark_Generated_Prim_Completed (
-            Obj.VBD_Rkg, Prim);
-
-      when Primitive.Tag_VBD_Rkg_Blk_IO_Write_Client_Data =>
-
-         VBD_Rekeying.Mark_Generated_Prim_Completed_Hash (
-            Obj.VBD_Rkg, Prim, Hash_Acc.All);
-
-      when Primitive.Tag_VBD_Rkg_FT_Alloc_For_Rkg_Curr_Gen_Blks |
-           Primitive.Tag_VBD_Rkg_FT_Alloc_For_Rkg_Old_Gen_Blks |
-           Primitive.Tag_VBD_Rkg_FT_Alloc_For_Non_Rkg
-      =>
-
-         VBD_Rekeying.Mark_Generated_Prim_Completed_New_PBAs (
-            Obj.VBD_Rkg, Prim);
-
-
--- Execute
-
-      VBD_Rekeying.Execute (Obj.VBD_Rkg, Progress);
-
-      Loop_Completed_Prims :
-      loop
-         Declare_Prim :
-         declare
-            Prim : constant Primitive.Object_Type :=
-               VBD_Rekeying.Peek_Completed_Primitive (Obj.VBD_Rkg);
-         begin
-            exit Loop_Completed_Prims when not Primitive.Valid (Prim);
-
-            case Primitive.Tag (Prim) is
-            when Primitive.Tag_SB_Ctrl_VBD_Rkg_Read_VBA =>
-
-               Superblock_Control.Mark_Generated_Prim_Complete (
-                  Obj.SB_Ctrl, Prim);
-
-               VBD_Rekeying.Drop_Completed_Primitive (Obj.VBD_Rkg, Prim);
-               Progress := True;
-
-            when Primitive.Tag_SB_Ctrl_VBD_Rkg_Write_VBA =>
-
-               Superblock_Control.Mark_Generated_Prim_Complete_Snap (
-                  Obj.SB_Ctrl,
-                  Prim,
-                  VBD_Rekeying.Peek_Completed_Snap (Obj.VBD_Rkg, Prim));
-
-               VBD_Rekeying.Drop_Completed_Primitive (Obj.VBD_Rkg, Prim);
-               Progress := True;
-
-            when others =>
-
-               raise Program_Error;
-
-            end case;
-
-         end Declare_Prim;
-      end loop Loop_Completed_Prims;
-*/
-
-
-
-/*
  * \brief  Module for virtual block device rekeying
  * \author Martin Stein
  * \date   2023-03-09
@@ -886,26 +807,21 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 		case Channel::WRITE_ROOT_NODE_PENDING:
 		case Channel::WRITE_INNER_NODE_PENDING:
 
-			memcpy(
-				(void *)&chan._blk_io_data,
-				(void *)&chan._t1_blks.blk[chan._t1_blk_idx], BLOCK_SIZE);
-
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE, 0, 0, nullptr, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				(void *)&chan._blk_io_data);
+				&chan._t1_blks.blk[chan._t1_blk_idx]);
 
 			return true;
 
 		case Channel::WRITE_LEAF_NODE_PENDING:
 
-			chan._blk_io_data = chan._data_blk;
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE, 0, 0, nullptr, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				(void *)&chan._blk_io_data);
+				&chan._data_blk);
 
 			return true;
 
@@ -926,7 +842,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ, 0, 0, nullptr, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				(void *)&chan._blk_io_data);
+				&chan._t1_blks.blk[chan._t1_blk_idx]);
 
 			return true;
 
@@ -935,8 +851,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ, 0, 0, nullptr, 0, 0,
-				chan._generated_prim.blk_nr, 0, 1,
-				(void *)&chan._blk_io_data);
+				chan._generated_prim.blk_nr, 0, 1, &chan._data_blk);
 
 			return true;
 
@@ -1082,32 +997,13 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 		Block_io_request &blk_io_req { *dynamic_cast<Block_io_request *>(&mod_req) };
 		chan._generated_prim.succ = blk_io_req.success();
 		switch (chan._state) {
-		case Channel::READ_ROOT_NODE_IN_PROGRESS:
-			memcpy((void *)&chan._t1_blks.blk[chan._t1_blk_idx],
-			       (void *)&chan._blk_io_data, BLOCK_SIZE);
-			chan._state = Channel::READ_ROOT_NODE_COMPLETED;
-			break;
-		case Channel::READ_INNER_NODE_IN_PROGRESS:
-			memcpy((void *)&chan._t1_blks.blk[chan._t1_blk_idx],
-			       (void *)&chan._blk_io_data, BLOCK_SIZE);
-			chan._state = Channel::READ_INNER_NODE_COMPLETED;
-			break;
-		case Channel::WRITE_ROOT_NODE_IN_PROGRESS:
-			chan._state = Channel::WRITE_ROOT_NODE_COMPLETED;
-			break;
-		case Channel::WRITE_INNER_NODE_IN_PROGRESS:
-			chan._state = Channel::WRITE_INNER_NODE_COMPLETED;
-			break;
-		case Channel::READ_LEAF_NODE_IN_PROGRESS:
-			chan._data_blk = chan._blk_io_data;
-			chan._state = Channel::READ_LEAF_NODE_COMPLETED;
-			break;
-		case Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_IN_PROGRESS:
-			chan._state = Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_COMPLETED;
-			break;
-		case Channel::WRITE_LEAF_NODE_IN_PROGRESS:
-			chan._state = Channel::WRITE_LEAF_NODE_COMPLETED;
-			break;
+		case Channel::READ_ROOT_NODE_IN_PROGRESS: chan._state = Channel::READ_ROOT_NODE_COMPLETED; break;
+		case Channel::READ_INNER_NODE_IN_PROGRESS: chan._state = Channel::READ_INNER_NODE_COMPLETED; break;
+		case Channel::WRITE_ROOT_NODE_IN_PROGRESS: chan._state = Channel::WRITE_ROOT_NODE_COMPLETED; break;
+		case Channel::WRITE_INNER_NODE_IN_PROGRESS: chan._state = Channel::WRITE_INNER_NODE_COMPLETED; break;
+		case Channel::READ_LEAF_NODE_IN_PROGRESS: chan._state = Channel::READ_LEAF_NODE_COMPLETED; break;
+		case Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_IN_PROGRESS: chan._state = Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_COMPLETED; break;
+		case Channel::WRITE_LEAF_NODE_IN_PROGRESS: chan._state = Channel::WRITE_LEAF_NODE_COMPLETED; break;
 		case Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_IN_PROGRESS:
 			memcpy(&chan._hash, blk_io_req.hash_ptr(), HASH_SIZE);
 			chan._state = Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_COMPLETED;
