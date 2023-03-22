@@ -121,7 +121,7 @@ bool Meta_tree::_peek_generated_request(uint8_t *buf_ptr,
 			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, META_TREE, id, blk_io_req_type,
 				0, 0, 0, local_req.pba, 0, 1,
-				channel._cache_request.block_data, nullptr);
+				channel._cache_request.blk_ptr, nullptr);
 
 			return true;
 		}
@@ -185,25 +185,24 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 
 		if (local_req.level > T2_NODE_LVL) {
 
-			if (!check_sha256_4k_hash(channel._cache_request.block_data, &t1_info.node.hash)) {
-
+			if (!check_sha256_4k_hash(channel._cache_request.blk_ptr, &t1_info.node.hash)) {
+error(__LINE__, " ", channel._cache_request.blk_ptr);
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
 			} else {
 
-				memcpy(&t1_info.entries, channel._cache_request.block_data, BLOCK_SIZE);
 				t1_info.index = 0;
 				t1_info.state = Type_1_info::READ_COMPLETE;
 			}
 		} else if (local_req.level == T2_NODE_LVL) {
 
-			if (!check_sha256_4k_hash(channel._cache_request.block_data, &t2_info.node.hash)) {
+			if (!check_sha256_4k_hash(channel._cache_request.blk_ptr, &t2_info.node.hash)) {
 
+error(__LINE__);
 				channel._state = Channel::TREE_HASH_MISMATCH;
 
 			} else {
 
-				memcpy(&t2_info.entries, channel._cache_request.block_data, BLOCK_SIZE);
 				t2_info.index = 0;
 				t2_info.state = Type_2_info::READ_COMPLETE;
 			}
@@ -230,9 +229,7 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 		}
 		break;
 	}
-	local_req = Local_cache_request {
-		Local_cache_request::INVALID, Local_cache_request::READ,
-		false, 0, 0, nullptr };
+	local_req = Local_cache_request { };
 }
 
 
@@ -394,7 +391,7 @@ void Meta_tree::_handle_level_1_node(Channel &channel,
 
 		channel._cache_request = Local_cache_request {
 			Local_cache_request::PENDING, Local_cache_request::READ, false,
-			t2_info.node.pba, 1, nullptr };
+			t2_info.node.pba, 1, &t2_info.entries };
 
 		handled = true;
 		break;
@@ -590,7 +587,9 @@ void Meta_tree::_handle_level_n_nodes(Channel &channel,
 
 			channel._cache_request = Local_cache_request {
 				Local_cache_request::PENDING, Local_cache_request::READ, false,
-				t1_info.node.pba, lvl, nullptr };
+				t1_info.node.pba, lvl, &t1_info.entries };
+
+error(__LINE__, " ", channel._cache_request.blk_ptr);
 
 			handled = true;
 			return;
@@ -671,10 +670,7 @@ void Meta_tree::_handle_level_n_nodes(Channel &channel,
 			else
 				channel._level_n_nodes[lvl + 1].index++;
 
-			channel._cache_request = Local_cache_request {
-				Local_cache_request::INVALID, Local_cache_request::READ,
-				false, 0, 0, nullptr };
-
+			channel._cache_request = Local_cache_request { };
 			t1_info.state = Type_1_info::INVALID;
 			handled = true;
 			return;

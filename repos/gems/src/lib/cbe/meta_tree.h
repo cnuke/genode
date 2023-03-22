@@ -137,30 +137,27 @@ class Cbe::Meta_tree_channel
 			enum State { INVALID, PENDING, IN_PROGRESS };
 			enum Op { READ, WRITE, SYNC };
 
-			State            state                  { INVALID };
-			Op               op                     { READ };
-			bool             success                { false };
-			Genode::uint64_t pba                    { 0 };
-			Genode::uint64_t level                  { 0 };
-			Genode::uint8_t  block_data[BLOCK_SIZE] { 0 };
+			State             state   { INVALID };
+			Op                op      { READ };
+			bool              success { false };
+			Genode::uint64_t  pba     { 0 };
+			Genode::uint64_t  level   { 0 };
+			void             *blk_ptr { nullptr };
 
 			Local_cache_request(State             state,
 			                    Op                op,
 			                    bool              success,
 			                    Genode::uint64_t  pba,
 			                    Genode::uint64_t  level,
-			                    Genode::uint8_t  *blk_ptr)
+			                    void             *blk_ptr)
 			:
 				state   { state },
 				op      { op },
 				success { success },
 				pba     { pba },
-				level   { level }
-			{
-				if (blk_ptr != nullptr) {
-					Genode::memcpy(&block_data, blk_ptr, BLOCK_SIZE);
-				}
-			}
+				level   { level },
+				blk_ptr { blk_ptr }
+			{ }
 
 			Local_cache_request() { }
 		};
