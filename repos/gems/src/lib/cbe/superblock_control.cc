@@ -1019,61 +1019,63 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::READ_VBA_AT_VBD_PENDING:
 
-			Virtual_block_device_request::create(
+			construct_in_buf<Virtual_block_device_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Virtual_block_device_request::READ_VBA, nullptr, 0,
+				Virtual_block_device_request::READ_VBA,
 				req._client_req_offset, req._client_req_tag,
-				_superblock.last_secured_generation,
+				(Generation)_superblock.last_secured_generation,
 				(addr_t)&_superblock.free_number,
 				(addr_t)&_superblock.free_gen,
 				(addr_t)&_superblock.free_hash,
-				_superblock.free_max_level,
-				_superblock.free_degree,
-				_superblock.free_leaves,
+				(Tree_level_index)_superblock.free_max_level,
+				(Tree_degree)_superblock.free_degree,
+				(Number_of_leaves)_superblock.free_leaves,
 				(addr_t)&_superblock.meta_number,
 				(addr_t)&_superblock.meta_gen,
 				(addr_t)&_superblock.meta_hash,
-				_superblock.meta_max_level,
-				_superblock.meta_degree,
-				_superblock.meta_leaves,
-				_superblock.degree,
+				(Tree_level_index)_superblock.meta_max_level,
+				(Tree_degree)_superblock.meta_degree,
+				(Number_of_leaves)_superblock.meta_leaves,
+				(Tree_degree)_superblock.degree,
 				max_vba(),
 				_superblock.state == REKEYING ? 1 : 0,
 				req._vba,
-				&_superblock.snapshots.items[_superblock.curr_snap],
-				_superblock.degree,
+				_superblock.snapshots,
+				(Snapshots_index)_superblock.curr_snap,
+				(Tree_degree)_superblock.degree,
 				_curr_gen,
-				chan._curr_key_plaintext.id);
+				(Key_id)chan._curr_key_plaintext.id);
 
 			return 1;
 
 		case Channel::WRITE_VBA_AT_VBD_PENDING:
 
-			Virtual_block_device_request::create(
+			construct_in_buf<Virtual_block_device_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Virtual_block_device_request::WRITE_VBA, nullptr, 0,
+				Virtual_block_device_request::WRITE_VBA,
 				req._client_req_offset, req._client_req_tag,
-				_superblock.last_secured_generation,
+				(Generation)_superblock.last_secured_generation,
 				(addr_t)&_superblock.free_number,
 				(addr_t)&_superblock.free_gen,
 				(addr_t)&_superblock.free_hash,
-				_superblock.free_max_level,
-				_superblock.free_degree,
-				_superblock.free_leaves,
+				(Tree_level_index)_superblock.free_max_level,
+				(Tree_degree)_superblock.free_degree,
+				(Number_of_leaves)_superblock.free_leaves,
 				(addr_t)&_superblock.meta_number,
 				(addr_t)&_superblock.meta_gen,
 				(addr_t)&_superblock.meta_hash,
-				_superblock.meta_max_level,
-				_superblock.meta_degree,
-				_superblock.meta_leaves,
-				_superblock.degree,
+				(Tree_level_index)_superblock.meta_max_level,
+				(Tree_degree)_superblock.meta_degree,
+				(Number_of_leaves)_superblock.meta_leaves,
+				(Tree_degree)_superblock.degree,
 				max_vba(),
 				_superblock.state == REKEYING ? 1 : 0,
 				req._vba,
-				&_superblock.snapshots.items[_superblock.curr_snap],
-				_superblock.degree,
+				_superblock.snapshots,
+				(Snapshots_index)_superblock.curr_snap,
+				(Tree_degree)_superblock.degree,
 				_curr_gen,
-				chan._curr_key_plaintext.id);
+				(Key_id)chan._curr_key_plaintext.id);
 
 			return 1;
 
@@ -1299,10 +1301,7 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 		chan._generated_prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::READ_VBA_AT_VBD_IN_PROGRESS: chan._state = Channel::READ_VBA_AT_VBD_COMPLETED; break;
-		case Channel::WRITE_VBA_AT_VBD_IN_PROGRESS:
-			chan._state = Channel::WRITE_VBA_AT_VBD_COMPLETED;
-			chan._snapshots.items[0] = *(gen_req.snapshot_ptr());
-			break;
+		case Channel::WRITE_VBA_AT_VBD_IN_PROGRESS: chan._state = Channel::WRITE_VBA_AT_VBD_COMPLETED; break;
 		default:
 			class Exception_6 { };
 			throw Exception_6 { };
