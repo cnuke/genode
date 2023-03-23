@@ -896,39 +896,19 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 				class Exception_9 { };
 				throw Exception_9 { };
 			}
-			Free_tree_request::create(
-				buf_ptr,
-				buf_size,
-				VIRTUAL_BLOCK_DEVICE,
-				id,
-				Free_tree_request::ALLOC_FOR_NON_RKG,
-				req._ft_root_pba_ptr,
-				req._ft_root_gen_ptr,
-				req._ft_root_hash_ptr,
-				req._ft_max_level,
-				req._ft_degree,
-				req._ft_leaves,
-				req._mt_root_pba_ptr,
-				req._mt_root_gen_ptr,
-				req._mt_root_hash_ptr,
-				req._mt_max_level,
-				req._mt_degree,
-				req._mt_leaves,
-				&req._snapshots,
-				req._last_secured_generation,
-				req._curr_gen,
-				chan._free_gen,
-				chan._nr_of_blks,
-				(addr_t)&chan._new_pbas,
-				(addr_t)&chan._t1_node_walk,
-				req._snapshots.items[chan._snapshot_idx].max_level,
-				chan._vba,
-				req._vbd_degree,
-				req._vbd_highest_vba,
-				req._rekeying,
-				req._old_key_id,
-				req._new_key_id,
-				chan._vba);
+			construct_in_buf<Free_tree_request>(
+				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
+				Free_tree_request::ALLOC_FOR_NON_RKG, req._ft_root_pba_ptr,
+				req._ft_root_gen_ptr, req._ft_root_hash_ptr,
+				req._ft_max_level, req._ft_degree, req._ft_leaves,
+				req._mt_root_pba_ptr, req._mt_root_gen_ptr,
+				req._mt_root_hash_ptr, req._mt_max_level, req._mt_degree,
+				req._mt_leaves, &req._snapshots, req._last_secured_generation,
+				req._curr_gen, chan._free_gen, chan._nr_of_blks,
+				(addr_t)&chan._new_pbas, (addr_t)&chan._t1_node_walk,
+				(uint64_t)req._snapshots.items[chan._snapshot_idx].max_level,
+				chan._vba, req._vbd_degree, req._vbd_highest_vba,
+				req._rekeying, req._old_key_id, req._new_key_id, chan._vba);
 
 			return true;
 

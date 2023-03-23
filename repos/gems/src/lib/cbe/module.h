@@ -18,6 +18,9 @@
 #include <util/string.h>
 #include <base/log.h>
 
+/* cbe lib includes */
+#include <construct_in_buf.h>
+
 namespace Cbe {
 
 	enum {

@@ -28,54 +28,6 @@ vbd_node_lowest_vba(Tree_degree_log_2     vbd_degree_log_2,
  ** Free_tree_request **
  ***********************/
 
-void Free_tree_request::create(void            *buf_ptr,
-                               size_t           buf_size,
-                               uint64_t         src_module_id,
-                               uint64_t         src_request_id,
-                               size_t           req_type,
-                               addr_t           ft_root_pba_ptr,
-                               addr_t           ft_root_gen_ptr,
-                               addr_t           ft_root_hash_ptr,
-                               uint64_t         ft_max_level,
-                               uint64_t         ft_degree,
-                               uint64_t         ft_leaves,
-                               addr_t           mt_root_pba_ptr,
-                               addr_t           mt_root_gen_ptr,
-                               addr_t           mt_root_hash_ptr,
-                               uint64_t         mt_max_level,
-                               uint64_t         mt_degree,
-                               uint64_t         mt_leaves,
-                               Snapshots const *snapshots_ptr,
-                               Generation       last_secured_generation,
-                               uint64_t         current_gen,
-                               uint64_t         free_gen,
-                               uint64_t         requested_blocks,
-                               addr_t           new_blocks_ptr,
-                               addr_t           old_blocks_ptr,
-                               uint64_t         max_level,
-                               uint64_t         vba,
-                               uint64_t         vbd_degree,
-                               uint64_t         vbd_highest_vba,
-                               bool             rekeying,
-                               uint32_t         previous_key_id,
-                               uint32_t         current_key_id,
-                               uint64_t         rekeying_vba)
-{
-	if (sizeof(Free_tree_request) > buf_size) {
-		class Exception_2 { };
-		throw Exception_2 { };
-	}
-	construct_at<Free_tree_request>(
-		buf_ptr, src_module_id, src_request_id, req_type, ft_root_pba_ptr,
-		ft_root_gen_ptr, ft_root_hash_ptr, ft_max_level, ft_degree, ft_leaves,
-		mt_root_pba_ptr, mt_root_gen_ptr, mt_root_hash_ptr, mt_max_level,
-		mt_degree, mt_leaves, snapshots_ptr, last_secured_generation,
-		current_gen, free_gen, requested_blocks, new_blocks_ptr,
-		old_blocks_ptr, max_level, vba, vbd_degree, vbd_highest_vba, rekeying,
-		previous_key_id, current_key_id, rekeying_vba);
-}
-
-
 char const *Free_tree_request::type_to_string(Type type)
 {
 	switch (type) {
