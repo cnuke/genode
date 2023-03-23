@@ -809,9 +809,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
-				Block_io_request::WRITE, 0, 0, nullptr, 0, 0,
+				Block_io_request::WRITE, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				&chan._t1_blks.blk[chan._t1_blk_idx]);
+				&chan._t1_blks.blk[chan._t1_blk_idx], nullptr);
 
 			return true;
 
@@ -819,9 +819,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
-				Block_io_request::WRITE, 0, 0, nullptr, 0, 0,
+				Block_io_request::WRITE, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				&chan._data_blk);
+				&chan._data_blk, nullptr);
 
 			return true;
 
@@ -830,8 +830,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE_CLIENT_DATA, req._client_req_offset,
-				req._client_req_tag, nullptr, 0, req._new_key_id,
-				chan._generated_prim.blk_nr, chan._vba, 1, nullptr);
+				req._client_req_tag, req._new_key_id,
+				chan._generated_prim.blk_nr, chan._vba, 1, nullptr,
+				&chan._hash);
 
 			return true;
 
@@ -840,9 +841,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
-				Block_io_request::READ, 0, 0, nullptr, 0, 0,
+				Block_io_request::READ, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
-				&chan._t1_blks.blk[chan._t1_blk_idx]);
+				&chan._t1_blks.blk[chan._t1_blk_idx], nullptr);
 
 			return true;
 
@@ -850,8 +851,8 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
-				Block_io_request::READ, 0, 0, nullptr, 0, 0,
-				chan._generated_prim.blk_nr, 0, 1, &chan._data_blk);
+				Block_io_request::READ, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1, &chan._data_blk, nullptr);
 
 			return true;
 
@@ -860,8 +861,8 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 			Block_io_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ_CLIENT_DATA, req._client_req_offset,
-				req._client_req_tag, nullptr, 0, req._new_key_id,
-				chan._generated_prim.blk_nr, chan._vba, 1, nullptr);
+				req._client_req_tag, req._new_key_id,
+				chan._generated_prim.blk_nr, chan._vba, 1, nullptr, nullptr);
 
 			return true;
 
@@ -1003,10 +1004,7 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 		case Channel::READ_LEAF_NODE_IN_PROGRESS: chan._state = Channel::READ_LEAF_NODE_COMPLETED; break;
 		case Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_IN_PROGRESS: chan._state = Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_COMPLETED; break;
 		case Channel::WRITE_LEAF_NODE_IN_PROGRESS: chan._state = Channel::WRITE_LEAF_NODE_COMPLETED; break;
-		case Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_IN_PROGRESS:
-			memcpy(&chan._hash, blk_io_req.hash_ptr(), HASH_SIZE);
-			chan._state = Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_COMPLETED;
-			break;
+		case Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_IN_PROGRESS: chan._state = Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_COMPLETED; break;
 		default:
 			class Exception_4 { };
 			throw Exception_4 { };

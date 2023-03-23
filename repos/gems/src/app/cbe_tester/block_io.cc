@@ -13,6 +13,7 @@
 
 /* base includes */
 #include <base/log.h>
+#include <util/construct_at.h>
 
 /* cbe tester includes */
 #include <crypto.h>
@@ -29,6 +30,31 @@ enum { VERBOSE_BLOCK_IO = 0 };
  ** Block_io_request **
  **********************/
 
+Block_io_request::Block_io_request(uint64_t  src_module_id,
+                                   uint64_t  src_request_id,
+                                   size_t    req_type,
+                                   uint64_t  client_req_offset,
+                                   uint64_t  client_req_tag,
+                                   uint32_t  key_id,
+                                   uint64_t  pba,
+                                   uint64_t  vba,
+                                   uint64_t  blk_count,
+                                   void     *blk_ptr,
+                                   void     *hash_ptr)
+:
+	Module_request     { src_module_id, src_request_id, BLOCK_IO },
+	_type              { (Type)req_type },
+	_client_req_offset { client_req_offset },
+	_client_req_tag    { client_req_tag },
+	_key_id            { key_id },
+	_pba               { pba },
+	_vba               { vba },
+	_blk_count         { blk_count },
+	_blk_ptr           { (addr_t)blk_ptr },
+	_hash_ptr          { (addr_t)hash_ptr }
+{ }
+
+
 void Block_io_request::create(void       *buf_ptr,
                               size_t      buf_size,
                               uint64_t    src_module_id,
@@ -36,45 +62,21 @@ void Block_io_request::create(void       *buf_ptr,
                               size_t      req_type,
                               uint64_t    client_req_offset,
                               uint64_t    client_req_tag,
-                              void       *prim_ptr,
-                              size_t      prim_size,
                               uint32_t    key_id,
                               uint64_t    pba,
                               uint64_t    vba,
                               uint64_t    blk_count,
-                              void       *blk_ptr)
+                              void       *blk_ptr,
+                              void       *hash_ptr)
 {
-	Block_io_request req { src_module_id, src_request_id };
-	req._type = (Type)req_type;
-	req._client_req_offset = client_req_offset;
-	req._client_req_tag = client_req_tag;
-	req._pba = pba;
-	req._vba = vba;
-	req._key_id = key_id;
-	if (prim_ptr != nullptr) {
-		if (prim_size > sizeof(req._prim)) {
-			error(prim_size, " ", sizeof(req._prim));
-			class Exception_1 { };
-			throw Exception_1 { };
-		}
-		memcpy(&req._prim, prim_ptr, prim_size);
+	if (sizeof(Block_io_request) > buf_size) {
+		class Buf_too_small { };
+		throw Buf_too_small { };
 	}
-	req._blk_count = blk_count;
-	req._blk_ptr = (addr_t)blk_ptr;
-
-	if (sizeof(req) > buf_size) {
-		class Exception_2 { };
-		throw Exception_2 { };
-	}
-	memcpy(buf_ptr, &req, sizeof(req));
+	construct_at<Block_io_request>(
+		buf_ptr, src_module_id, src_request_id, req_type, client_req_offset,
+		client_req_tag, key_id, pba, vba, blk_count, blk_ptr, hash_ptr);
 }
-
-
-Block_io_request::Block_io_request(unsigned long src_module_id,
-                                   unsigned long src_request_id)
-:
-	Module_request { src_module_id, src_request_id, BLOCK_IO }
-{ }
 
 
 char const *Block_io_request::type_to_string(Type type)
@@ -389,7 +391,7 @@ void Block_io::_execute_write_client_data(Channel &channel,
 			_mark_req_failed(channel, progress, "encrypt client data");
 			return;
 		}
-		calc_sha256_4k_hash((void *)channel._blk_buf, (void *)req._hash);
+		calc_sha256_4k_hash((void *)channel._blk_buf, (void *)req._hash_ptr);
 		_vfs_handle.seek(req._pba * Cbe::BLOCK_SIZE +
 		                 channel._nr_of_processed_bytes);
 

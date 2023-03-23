@@ -452,7 +452,7 @@ bool Vbd_initializer::_peek_generated_request(Genode::uint8_t *buf_ptr,
 {
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 
-		Channel const &channel { _channels[id] };
+		Channel &channel { _channels[id] };
 
 		if (channel._state != Vbd_initializer_channel::State::INACTIVE)
 
@@ -476,9 +476,10 @@ bool Vbd_initializer::_peek_generated_request(Genode::uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, VBD_INITIALIZER, id,
-				block_io_req_type, 0, 0, nullptr, 0, 0,
+				block_io_req_type, 0, 0, 0,
 				channel._child_pba, 0,
-				1, (void*)&channel._t1_levels[channel._level_to_write].children);
+				1, &channel._t1_levels[channel._level_to_write].children,
+				nullptr);
 
 			if (DEBUG) {
 				Genode::log("BLOCK_IO_PENDING write ", channel._child_pba);

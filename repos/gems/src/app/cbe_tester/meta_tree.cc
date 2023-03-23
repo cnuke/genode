@@ -120,8 +120,8 @@ bool Meta_tree::_peek_generated_request(uint8_t *buf_ptr,
 			}
 			Block_io_request::create(
 				buf_ptr, buf_size, META_TREE, id, blk_io_req_type,
-				0, 0, nullptr, 0, 0, local_req.pba, 0, 1,
-				channel._cache_request.block_data);
+				0, 0, 0, local_req.pba, 0, 1,
+				channel._cache_request.block_data, nullptr);
 
 			return true;
 		}

@@ -839,9 +839,8 @@ bool Free_tree::_peek_generated_request(uint8_t *buf_ptr,
 				throw Exception_1 { };
 			}
 			Block_io_request::create(
-				buf_ptr, buf_size, FREE_TREE, id, blk_io_req_type,
-				0, 0, nullptr, 0, 0, local_crq.pba, 0, 1,
-				&channel._cache_block_data);
+				buf_ptr, buf_size, FREE_TREE, id, blk_io_req_type, 0, 0, 0,
+				local_crq.pba, 0, 1, &channel._cache_block_data, nullptr);
 
 			return true;
 		}

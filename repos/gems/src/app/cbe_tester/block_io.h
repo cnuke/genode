@@ -44,21 +44,29 @@ class Cbe::Block_io_request : public Module_request
 		Type             _type                { INVALID };
 		Genode::uint64_t _client_req_offset   { 0 };
 		Genode::uint64_t _client_req_tag      { 0 };
-		Genode::uint8_t  _prim[PRIM_BUF_SIZE] { 0 };
 		Genode::uint32_t _key_id              { 0 };
 		Genode::uint64_t _pba                 { 0 };
 		Genode::uint64_t _vba                 { 0 };
 		Genode::uint64_t _blk_count           { 0 };
 		Genode::addr_t   _blk_ptr             { 0 };
-		Genode::uint8_t  _hash[HASH_SIZE]     { 0 };
+		Genode::addr_t   _hash_ptr            { 0 };
 		bool             _success             { false };
 
 	public:
 
 		Block_io_request() { }
 
-		Block_io_request(unsigned long src_module_id,
-		                 unsigned long src_request_id);
+		Block_io_request(Genode::uint64_t  src_module_id,
+		                 Genode::uint64_t  src_request_id,
+		                 Genode::size_t    req_type,
+		                 Genode::uint64_t  client_req_offset,
+		                 Genode::uint64_t  client_req_tag,
+		                 Genode::uint32_t  key_id,
+		                 Genode::uint64_t  pba,
+		                 Genode::uint64_t  vba,
+		                 Genode::uint64_t  blk_count,
+		                 void             *blk_ptr,
+		                 void             *hash_ptr);
 
 		static void create(void             *buf_ptr,
 		                   Genode::size_t    buf_size,
@@ -67,17 +75,12 @@ class Cbe::Block_io_request : public Module_request
 		                   Genode::size_t    req_type,
 		                   Genode::uint64_t  client_req_offset,
 		                   Genode::uint64_t  client_req_tag,
-		                   void             *prim_ptr,
-		                   Genode::size_t    prim_size,
 		                   Genode::uint32_t  key_id,
 		                   Genode::uint64_t  pba,
 		                   Genode::uint64_t  vba,
 		                   Genode::uint64_t  blk_count,
-		                   void             *blk_ptr);
-
-		void *prim_ptr() { return (void *)&_prim; }
-
-		void *hash_ptr() { return (void *)&_hash; }
+		                   void             *blk_ptr,
+		                   void             *hash_ptr);
 
 		Type type() const { return _type; }
 

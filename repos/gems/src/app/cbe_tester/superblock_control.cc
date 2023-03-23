@@ -1082,8 +1082,9 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Block_io_request::READ, 0, 0, nullptr, 0, 0,
-				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk);
+				Block_io_request::READ, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk,
+				nullptr);
 
 			return true;
 
@@ -1092,8 +1093,8 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Block_io_request::SYNC, 0, 0, nullptr, 0, 0,
-				chan._generated_prim.blk_nr, 0, 1, nullptr);
+				Block_io_request::SYNC, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1, nullptr, nullptr);
 
 			return true;
 
@@ -1101,8 +1102,9 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Block_io_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Block_io_request::WRITE, 0, 0, nullptr, 0, 0,
-				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk);
+				Block_io_request::WRITE, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk,
+				nullptr);
 
 			return true;
 
