@@ -53,8 +53,6 @@ void Free_tree_request::create(void            *buf_ptr,
                                addr_t           new_blocks_ptr,
                                addr_t           old_blocks_ptr,
                                uint64_t         max_level,
-                               void            *prim_ptr,
-                               size_t           prim_size,
                                uint64_t         vba,
                                uint64_t         vbd_degree,
                                uint64_t         vbd_highest_vba,
@@ -63,50 +61,18 @@ void Free_tree_request::create(void            *buf_ptr,
                                uint32_t         current_key_id,
                                uint64_t         rekeying_vba)
 {
-	Free_tree_request req { src_module_id, src_request_id };
-	req._type                    = (Type)req_type;
-	req._ft_root_pba_ptr         = (addr_t)ft_root_pba_ptr;
-	req._ft_root_gen_ptr         = (addr_t)ft_root_gen_ptr;
-	req._ft_root_hash_ptr        = (addr_t)ft_root_hash_ptr;
-	req._ft_max_level            = ft_max_level;
-	req._ft_degree               = ft_degree;
-	req._ft_leaves               = ft_leaves;
-	req._mt_root_pba_ptr         = (addr_t)mt_root_pba_ptr;
-	req._mt_root_gen_ptr         = (addr_t)mt_root_gen_ptr;
-	req._mt_root_hash_ptr        = (addr_t)mt_root_hash_ptr;
-	req._mt_max_level            = mt_max_level;
-	req._mt_degree               = mt_degree;
-	req._mt_leaves               = mt_leaves;
-	req._current_gen             = current_gen;
-	req._free_gen                = free_gen;
-	req._requested_blocks        = requested_blocks;
-	req._new_blocks_ptr          = (addr_t)new_blocks_ptr;
-	req._old_blocks_ptr          = (addr_t)old_blocks_ptr;
-	req._max_level               = max_level;
-	req._vba                     = vba;
-	req._vbd_degree              = vbd_degree;
-	req._vbd_highest_vba         = vbd_highest_vba;
-	req._rekeying                = rekeying;
-	req._previous_key_id         = previous_key_id;
-	req._current_key_id          = current_key_id;
-	req._rekeying_vba            = rekeying_vba;
-	req._last_secured_generation = last_secured_generation;
-
-	memcpy(&req._snapshots, snapshots_ptr, sizeof(Snapshots));
-
-	if (prim_ptr != nullptr) {
-		if (prim_size > sizeof(req._prim)) {
-			error(prim_size, " ", sizeof(req._prim));
-			class Exception_1 { };
-			throw Exception_1 { };
-		}
-		memcpy(&req._prim, prim_ptr, prim_size);
-	}
-	if (sizeof(req) > buf_size) {
+	if (sizeof(Free_tree_request) > buf_size) {
 		class Exception_2 { };
 		throw Exception_2 { };
 	}
-	memcpy(buf_ptr, &req, sizeof(req));
+	construct_at<Free_tree_request>(
+		buf_ptr, src_module_id, src_request_id, req_type, ft_root_pba_ptr,
+		ft_root_gen_ptr, ft_root_hash_ptr, ft_max_level, ft_degree, ft_leaves,
+		mt_root_pba_ptr, mt_root_gen_ptr, mt_root_hash_ptr, mt_max_level,
+		mt_degree, mt_leaves, snapshots_ptr, last_secured_generation,
+		current_gen, free_gen, requested_blocks, new_blocks_ptr,
+		old_blocks_ptr, max_level, vba, vbd_degree, vbd_highest_vba, rekeying,
+		previous_key_id, current_key_id, rekeying_vba);
 }
 
 
@@ -122,10 +88,66 @@ char const *Free_tree_request::type_to_string(Type type)
 }
 
 
-Free_tree_request::Free_tree_request(unsigned long src_module_id,
-                                     unsigned long src_request_id)
+Free_tree_request::Free_tree_request(uint64_t         src_module_id,
+                                     uint64_t         src_request_id,
+                                     size_t           req_type,
+                                     addr_t           ft_root_pba_ptr,
+                                     addr_t           ft_root_gen_ptr,
+                                     addr_t           ft_root_hash_ptr,
+                                     uint64_t         ft_max_level,
+                                     uint64_t         ft_degree,
+                                     uint64_t         ft_leaves,
+                                     addr_t           mt_root_pba_ptr,
+                                     addr_t           mt_root_gen_ptr,
+                                     addr_t           mt_root_hash_ptr,
+                                     uint64_t         mt_max_level,
+                                     uint64_t         mt_degree,
+                                     uint64_t         mt_leaves,
+                                     Snapshots const *snapshots_ptr,
+                                     Generation       last_secured_generation,
+                                     uint64_t         current_gen,
+                                     uint64_t         free_gen,
+                                     uint64_t         requested_blocks,
+                                     addr_t           new_blocks_ptr,
+                                     addr_t           old_blocks_ptr,
+                                     uint64_t         max_level,
+                                     uint64_t         vba,
+                                     uint64_t         vbd_degree,
+                                     uint64_t         vbd_highest_vba,
+                                     bool             rekeying,
+                                     uint32_t         previous_key_id,
+                                     uint32_t         current_key_id,
+                                     uint64_t         rekeying_vba)
 :
-	Module_request { src_module_id, src_request_id, FREE_TREE }
+	Module_request           { src_module_id, src_request_id, FREE_TREE },
+	_type                    { (Type)req_type },
+	_ft_root_pba_ptr         { (addr_t)ft_root_pba_ptr },
+	_ft_root_gen_ptr         { (addr_t)ft_root_gen_ptr },
+	_ft_root_hash_ptr        { (addr_t)ft_root_hash_ptr },
+	_ft_max_level            { ft_max_level },
+	_ft_degree               { ft_degree },
+	_ft_leaves               { ft_leaves },
+	_mt_root_pba_ptr         { (addr_t)mt_root_pba_ptr },
+	_mt_root_gen_ptr         { (addr_t)mt_root_gen_ptr },
+	_mt_root_hash_ptr        { (addr_t)mt_root_hash_ptr },
+	_mt_max_level            { mt_max_level },
+	_mt_degree               { mt_degree },
+	_mt_leaves               { mt_leaves },
+	_current_gen             { current_gen },
+	_free_gen                { free_gen },
+	_requested_blocks        { requested_blocks },
+	_new_blocks_ptr          { (addr_t)new_blocks_ptr },
+	_old_blocks_ptr          { (addr_t)old_blocks_ptr },
+	_max_level               { max_level },
+	_vba                     { vba },
+	_vbd_degree              { vbd_degree },
+	_vbd_highest_vba         { vbd_highest_vba },
+	_rekeying                { rekeying },
+	_previous_key_id         { previous_key_id },
+	_current_key_id          { current_key_id },
+	_rekeying_vba            { rekeying_vba },
+	_snapshots_ptr           { (addr_t)snapshots_ptr },
+	_last_secured_generation { last_secured_generation }
 { }
 
 
@@ -137,7 +159,7 @@ void Free_tree::execute(bool &progress)
 {
 	for (Channel &channel : _channels) {
 		_execute(
-			channel, channel._request._snapshots,
+			channel, *(Snapshots *)channel._request._snapshots_ptr,
 			channel._request._last_secured_generation, progress);
 	}
 }

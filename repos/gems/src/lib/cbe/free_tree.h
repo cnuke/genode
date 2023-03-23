@@ -45,7 +45,6 @@ class Cbe::Free_tree_request : public Module_request
 		friend class Free_tree_channel;
 
 		Type             _type                    { INVALID };
-		Genode::uint8_t  _prim[PRIM_BUF_SIZE]     { 0 };
 		Genode::addr_t   _ft_root_pba_ptr         { 0 };
 		Genode::addr_t   _ft_root_gen_ptr         { 0 };
 		Genode::addr_t   _ft_root_hash_ptr        { 0 };
@@ -72,15 +71,43 @@ class Cbe::Free_tree_request : public Module_request
 		Genode::uint32_t _current_key_id          { 0 };
 		Genode::uint64_t _rekeying_vba            { 0 };
 		bool             _success                 { false };
-		Snapshots        _snapshots               { };
+		Genode::addr_t   _snapshots_ptr           { 0 };
 		Generation       _last_secured_generation { INVALID_GENERATION };
 
 	public:
 
 		Free_tree_request() { }
 
-		Free_tree_request(unsigned long src_module_id,
-		                  unsigned long src_request_id);
+		Free_tree_request(Genode::uint64_t  src_module_id,
+		                  Genode::uint64_t  src_request_id,
+		                  Genode::size_t    req_type,
+		                  Genode::addr_t    ft_root_pba_ptr,
+		                  Genode::addr_t    ft_root_gen_ptr,
+		                  Genode::addr_t    ft_root_hash_ptr,
+		                  Genode::uint64_t  ft_max_level,
+		                  Genode::uint64_t  ft_degree,
+		                  Genode::uint64_t  ft_leaves,
+		                  Genode::addr_t    mt_root_pba_ptr,
+		                  Genode::addr_t    mt_root_gen_ptr,
+		                  Genode::addr_t    mt_root_hash_ptr,
+		                  Genode::uint64_t  mt_max_level,
+		                  Genode::uint64_t  mt_degree,
+		                  Genode::uint64_t  mt_leaves,
+		                  Snapshots const  *snapshots,
+		                  Generation        last_secured_generation,
+		                  Genode::uint64_t  current_gen,
+		                  Genode::uint64_t  free_gen,
+		                  Genode::uint64_t  requested_blocks,
+		                  Genode::addr_t    new_blocks_ptr,
+		                  Genode::addr_t    old_blocks_ptr,
+		                  Genode::uint64_t  max_level,
+		                  Genode::uint64_t  vba,
+		                  Genode::uint64_t  vbd_degree,
+		                  Genode::uint64_t  vbd_highest_vba,
+		                  bool              rekeying,
+		                  Genode::uint32_t  previous_key_id,
+		                  Genode::uint32_t  current_key_id,
+		                  Genode::uint64_t  rekeying_vba);
 
 		static void create(void             *buf_ptr,
 		                   Genode::size_t    buf_size,
@@ -107,8 +134,6 @@ class Cbe::Free_tree_request : public Module_request
 		                   Genode::addr_t    new_blocks_ptr,
 		                   Genode::addr_t    old_blocks_ptr,
 		                   Genode::uint64_t  max_level,
-		                   void             *prim_ptr,
-		                   Genode::size_t    prim_size,
 		                   Genode::uint64_t  vba,
 		                   Genode::uint64_t  vbd_degree,
 		                   Genode::uint64_t  vbd_highest_vba,
@@ -116,8 +141,6 @@ class Cbe::Free_tree_request : public Module_request
 		                   Genode::uint32_t  previous_key_id,
 		                   Genode::uint32_t  current_key_id,
 		                   Genode::uint64_t  rekeying_vba);
-
-		void *prim_ptr() { return (void *)&_prim; }
 
 		Type type() const { return _type; }
 
