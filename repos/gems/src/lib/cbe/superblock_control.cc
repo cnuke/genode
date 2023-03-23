@@ -971,48 +971,48 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::ADD_KEY_AT_CRYPTO_MODULE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::ADD_KEY, 0, 0, chan._key_plaintext.id,
+				Crypto_request::ADD_KEY, 0, 0, (Key_id)chan._key_plaintext.id,
 				&chan._key_plaintext.value, 0, 0, nullptr, nullptr);
 
 			return 1;
 
 		case Channel::ADD_CURRENT_KEY_AT_CRYPTO_MODULE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::ADD_KEY, 0, 0, chan._curr_key_plaintext.id,
+				Crypto_request::ADD_KEY, 0, 0, (Key_id)chan._curr_key_plaintext.id,
 				&chan._curr_key_plaintext.value, 0, 0, nullptr, nullptr);
 
 			return 1;
 
 		case Channel::ADD_PREVIOUS_KEY_AT_CRYPTO_MODULE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Crypto_request::ADD_KEY, 0, 0,
-				chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
+				(Key_id)chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 
 			return 1;
 
 		case Channel::REMOVE_PREVIOUS_KEY_AT_CRYPTO_MODULE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Crypto_request::REMOVE_KEY, 0, 0,
-				chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
+				(Key_id)chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 
 			return 1;
 
 		case Channel::REMOVE_CURRENT_KEY_AT_CRYPTO_MODULE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Crypto_request::REMOVE_KEY, 0, 0,
-				chan._curr_key_plaintext.id, &chan._curr_key_plaintext.value,
+				(Key_id)chan._curr_key_plaintext.id, &chan._curr_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 
 			return 1;

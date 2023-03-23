@@ -89,7 +89,7 @@ bool Block_io::_peek_generated_request(uint8_t *buf_ptr,
 		if (crypto_req_type != Crypto_request::INVALID) {
 
 			Request const &req { channel._request };
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, BLOCK_IO, id, crypto_req_type,
 				req._client_req_offset, req._client_req_tag,
 				req._key_id, nullptr, req._pba, req._vba, nullptr,

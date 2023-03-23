@@ -21,15 +21,15 @@ namespace Cbe
 {
 	template <typename    T,
 	          typename... ARGS>
-	static inline T &construct_in_buf(void           *buf_ptr,
-	                                  Genode::size_t  buf_size,
-	                                  ARGS     &&...  args)
+	static inline void construct_in_buf(void           *buf_ptr,
+	                                    Genode::size_t  buf_size,
+	                                    ARGS     &&...  args)
 	{
 		if (sizeof(T) > buf_size) {
 			class Buffer_too_small { };
 			throw Buffer_too_small { };
 		}
-		return *Genode::construct_at<T>(buf_ptr, args...);
+		Genode::construct_at<T>(buf_ptr, args...);
 	}
 }
 

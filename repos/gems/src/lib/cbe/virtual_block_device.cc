@@ -868,7 +868,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::DECRYPT_LEAF_NODE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Crypto_request::DECRYPT,
 				0, 0, req._old_key_id, nullptr,
@@ -879,7 +879,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::ENCRYPT_LEAF_NODE_PENDING:
 
-			Crypto_request::create(
+			construct_in_buf<Crypto_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Crypto_request::ENCRYPT,
 				0, 0, req._new_key_id, nullptr,

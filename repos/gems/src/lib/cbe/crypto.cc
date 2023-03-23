@@ -54,31 +54,6 @@ Crypto_request::Crypto_request(uint64_t  src_module_id,
 { }
 
 
-void Crypto_request::create(void     *buf_ptr,
-                            size_t    buf_size,
-                            uint64_t  src_module_id,
-                            uint64_t  src_request_id,
-                            size_t    req_type,
-                            uint64_t  client_req_offset,
-                            uint64_t  client_req_tag,
-                            uint32_t  key_id,
-                            void     *key_plaintext_ptr,
-                            uint64_t  pba,
-                            uint64_t  vba,
-                            void     *plaintext_blk_ptr,
-                            void     *ciphertext_blk_ptr)
-{
-	if (sizeof(Crypto_request) > buf_size) {
-		class Bad_size_0 { };
-		throw Bad_size_0 { };
-	}
-	construct_at<Crypto_request>(
-		buf_ptr, src_module_id, src_request_id, req_type, client_req_offset,
-		client_req_tag, key_id, key_plaintext_ptr, pba, vba, plaintext_blk_ptr,
-		ciphertext_blk_ptr);
-}
-
-
 char const *Crypto_request::type_name()
 {
 	switch (_type) {

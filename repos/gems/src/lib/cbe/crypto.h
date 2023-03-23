@@ -70,20 +70,6 @@ class Cbe::Crypto_request : public Module_request
 		               void             *plaintext_blk_ptr,
 		               void             *ciphertext_blk_ptr);
 
-		static void create(void             *buf_ptr,
-		                   Genode::size_t    buf_size,
-		                   Genode::uint64_t  src_module_id,
-		                   Genode::uint64_t  src_request_id,
-		                   Genode::size_t    req_type,
-		                   Genode::uint64_t  client_req_offset,
-		                   Genode::uint64_t  client_req_tag,
-		                   Genode::uint32_t  key_id,
-		                   void             *key_plaintext_ptr,
-		                   Genode::uint64_t  pba,
-		                   Genode::uint64_t  vba,
-		                   void             *plaintext_blk_ptr,
-		                   void             *ciphertext_blk_ptr);
-
 		bool success() const { return _success; }
 
 
