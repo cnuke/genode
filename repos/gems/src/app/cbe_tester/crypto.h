@@ -41,17 +41,16 @@ class Cbe::Crypto_request : public Module_request
 		friend class Crypto;
 		friend class Crypto_channel;
 
-		Type             _type                    { INVALID };
-		Genode::uint64_t _client_req_offset       { 0 };
-		Genode::uint64_t _client_req_tag          { 0 };
-		Genode::uint64_t _pba                     { 0 };
-		Genode::uint64_t _vba                     { 0 };
-		Genode::uint32_t _key_id                  { 0 };
-		Genode::uint8_t  _prim[PRIM_BUF_SIZE]     { 0 };
-		Genode::uint8_t  _key_plaintext[KEY_SIZE] { 0 };
-		Genode::addr_t   _plaintext_blk_ptr       { 0 };
-		Genode::addr_t   _ciphertext_blk_ptr      { 0 };
-		bool             _success                 { false };
+		Type             _type                { INVALID };
+		Genode::uint64_t _client_req_offset   { 0 };
+		Genode::uint64_t _client_req_tag      { 0 };
+		Genode::uint64_t _pba                 { 0 };
+		Genode::uint64_t _vba                 { 0 };
+		Genode::uint32_t _key_id              { 0 };
+		Genode::addr_t   _key_plaintext_ptr   { 0 };
+		Genode::addr_t   _plaintext_blk_ptr   { 0 };
+		Genode::addr_t   _ciphertext_blk_ptr  { 0 };
+		bool             _success             { false };
 
 	public:
 
@@ -59,8 +58,17 @@ class Cbe::Crypto_request : public Module_request
 
 		Type type() const { return _type; }
 
-		Crypto_request(unsigned long src_module_id,
-		               unsigned long src_request_id);
+		Crypto_request(Genode::uint64_t  src_module_id,
+		               Genode::uint64_t  src_request_id,
+		               Genode::size_t    req_type,
+		               Genode::uint64_t  client_req_offset,
+		               Genode::uint64_t  client_req_tag,
+		               Genode::uint32_t  key_id,
+		               void             *key_plaintext_ptr,
+		               Genode::uint64_t  pba,
+		               Genode::uint64_t  vba,
+		               void             *plaintext_blk_ptr,
+		               void             *ciphertext_blk_ptr);
 
 		static void create(void             *buf_ptr,
 		                   Genode::size_t    buf_size,
@@ -69,18 +77,12 @@ class Cbe::Crypto_request : public Module_request
 		                   Genode::size_t    req_type,
 		                   Genode::uint64_t  client_req_offset,
 		                   Genode::uint64_t  client_req_tag,
-		                   void             *prim_ptr,
-		                   size_t            prim_size,
 		                   Genode::uint32_t  key_id,
 		                   void             *key_plaintext_ptr,
 		                   Genode::uint64_t  pba,
 		                   Genode::uint64_t  vba,
 		                   void             *plaintext_blk_ptr,
 		                   void             *ciphertext_blk_ptr);
-
-		void *prim_ptr() { return (void *)&_prim; }
-
-		void *result_blk_ptr();
 
 		bool success() const { return _success; }
 

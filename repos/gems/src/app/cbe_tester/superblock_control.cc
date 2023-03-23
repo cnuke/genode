@@ -973,9 +973,8 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Crypto_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::ADD_KEY, 0, 0, nullptr, 0,
-				chan._key_plaintext.id, &chan._key_plaintext.value,
-				0, 0, nullptr, nullptr);
+				Crypto_request::ADD_KEY, 0, 0, chan._key_plaintext.id,
+				&chan._key_plaintext.value, 0, 0, nullptr, nullptr);
 
 			return 1;
 
@@ -983,9 +982,8 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Crypto_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::ADD_KEY, 0, 0, nullptr, 0,
-				chan._curr_key_plaintext.id, &chan._curr_key_plaintext.value,
-				0, 0, nullptr, nullptr);
+				Crypto_request::ADD_KEY, 0, 0, chan._curr_key_plaintext.id,
+				&chan._curr_key_plaintext.value, 0, 0, nullptr, nullptr);
 
 			return 1;
 
@@ -993,7 +991,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Crypto_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::ADD_KEY, 0, 0, nullptr, 0,
+				Crypto_request::ADD_KEY, 0, 0,
 				chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 
@@ -1003,7 +1001,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Crypto_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::REMOVE_KEY, 0, 0, nullptr, 0,
+				Crypto_request::REMOVE_KEY, 0, 0,
 				chan._prev_key_plaintext.id, &chan._prev_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 
@@ -1013,7 +1011,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 			Crypto_request::create(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
-				Crypto_request::REMOVE_KEY, 0, 0, nullptr, 0,
+				Crypto_request::REMOVE_KEY, 0, 0,
 				chan._curr_key_plaintext.id, &chan._curr_key_plaintext.value,
 				0, 0, nullptr, nullptr);
 

@@ -870,9 +870,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 			Crypto_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Crypto_request::DECRYPT,
-				0, 0, nullptr, 0, req._old_key_id, nullptr,
-				chan._generated_prim.blk_nr, 0, nullptr,
-				(void *)&chan._data_blk);
+				0, 0, req._old_key_id, nullptr,
+				chan._generated_prim.blk_nr, 0, &chan._data_blk,
+				&chan._data_blk);
 
 			return true;
 
@@ -881,9 +881,9 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 			Crypto_request::create(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Crypto_request::ENCRYPT,
-				0, 0, nullptr, 0, req._new_key_id, nullptr,
-				chan._generated_prim.blk_nr, 0, (void *)&chan._data_blk,
-				nullptr);
+				0, 0, req._new_key_id, nullptr,
+				chan._generated_prim.blk_nr, 0, &chan._data_blk,
+				&chan._data_blk);
 
 			return true;
 
@@ -981,7 +981,6 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 	case CRYPTO:
 	{
 		Crypto_request &crypto_req { *static_cast<Crypto_request *>(&mod_req) };
-		memcpy(&chan._data_blk, crypto_req.result_blk_ptr(), BLOCK_SIZE);
 		chan._generated_prim.succ = crypto_req.success();
 		switch (chan._state) {
 		case Channel::DECRYPT_LEAF_NODE_IN_PROGRESS: chan._state = Channel::DECRYPT_LEAF_NODE_COMPLETED; break;

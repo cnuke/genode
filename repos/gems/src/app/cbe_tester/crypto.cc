@@ -13,6 +13,7 @@
 
 /* base includes */
 #include <base/log.h>
+#include <util/construct_at.h>
 
 /* cbe tester includes */
 #include <crypto.h>
@@ -28,6 +29,31 @@ enum { VERBOSE_CRYPTO = 0 };
  ** Crypto_request **
  ********************/
 
+Crypto_request::Crypto_request(uint64_t  src_module_id,
+                               uint64_t  src_request_id,
+                               size_t    req_type,
+                               uint64_t  client_req_offset,
+                               uint64_t  client_req_tag,
+                               uint32_t  key_id,
+                               void     *key_plaintext_ptr,
+                               uint64_t  pba,
+                               uint64_t  vba,
+                               void     *plaintext_blk_ptr,
+                               void     *ciphertext_blk_ptr)
+:
+	Module_request      { src_module_id, src_request_id, CRYPTO },
+	_type               { (Type)req_type },
+	_client_req_offset  { client_req_offset },
+	_client_req_tag     { client_req_tag },
+	_pba                { pba },
+	_vba                { vba },
+	_key_id             { key_id },
+	_key_plaintext_ptr  { (addr_t)key_plaintext_ptr },
+	_plaintext_blk_ptr  { (addr_t)plaintext_blk_ptr },
+	_ciphertext_blk_ptr { (addr_t)ciphertext_blk_ptr }
+{ }
+
+
 void Crypto_request::create(void     *buf_ptr,
                             size_t    buf_size,
                             uint64_t  src_module_id,
@@ -35,8 +61,6 @@ void Crypto_request::create(void     *buf_ptr,
                             size_t    req_type,
                             uint64_t  client_req_offset,
                             uint64_t  client_req_tag,
-                            void     *prim_ptr,
-                            size_t    prim_size,
                             uint32_t  key_id,
                             void     *key_plaintext_ptr,
                             uint64_t  pba,
@@ -44,55 +68,15 @@ void Crypto_request::create(void     *buf_ptr,
                             void     *plaintext_blk_ptr,
                             void     *ciphertext_blk_ptr)
 {
-	Crypto_request req { src_module_id, src_request_id };
-	req._type = (Type)req_type;
-	req._client_req_offset = client_req_offset;
-	req._client_req_tag = client_req_tag;
-	if (prim_size > sizeof(req._prim)) {
-		class Bad_size_1 { };
-		throw Bad_size_1 { };
-	}
-	memcpy(&req._prim, prim_ptr, prim_size);
-	req._key_id = key_id;
-	if (key_plaintext_ptr != nullptr)
-		memcpy(
-			&req._key_plaintext, key_plaintext_ptr,
-			sizeof(req._key_plaintext));
-
-	req._pba = pba;
-	req._vba = vba;
-	req._plaintext_blk_ptr = (addr_t)plaintext_blk_ptr;
-	req._ciphertext_blk_ptr = (addr_t)ciphertext_blk_ptr;
-
-	if (sizeof(req) > buf_size) {
+	if (sizeof(Crypto_request) > buf_size) {
 		class Bad_size_0 { };
 		throw Bad_size_0 { };
 	}
-	memcpy(buf_ptr, &req, sizeof(req));
+	construct_at<Crypto_request>(
+		buf_ptr, src_module_id, src_request_id, req_type, client_req_offset,
+		client_req_tag, key_id, key_plaintext_ptr, pba, vba, plaintext_blk_ptr,
+		ciphertext_blk_ptr);
 }
-
-
-void *Crypto_request::result_blk_ptr()
-{
-	switch (_type) {
-	case DECRYPT: return (void *)_plaintext_blk_ptr;
-	case ENCRYPT: return (void *)_ciphertext_blk_ptr;
-	case INVALID:
-	case ADD_KEY:
-	case REMOVE_KEY:
-	case DECRYPT_CLIENT_DATA:
-	case ENCRYPT_CLIENT_DATA:
-		break;
-	}
-	return nullptr;
-}
-
-
-Crypto_request::Crypto_request(unsigned long src_module_id,
-                               unsigned long src_request_id)
-:
-	Module_request { src_module_id, src_request_id, CRYPTO }
-{ }
 
 
 char const *Crypto_request::type_name()
@@ -209,10 +193,9 @@ void Crypto::_execute_add_key(Channel &channel,
 	{
 		_add_key_handle.seek(0);
 
-		char buf[sizeof(req._key_plaintext) + sizeof(req._key_id)] { };
+		char buf[sizeof(req._key_id) + KEY_SIZE] { };
 		memcpy(buf, &req._key_id, sizeof(req._key_id));
-		memcpy(buf + sizeof(req._key_id), req._key_plaintext,
-		       sizeof(req._key_plaintext));
+		memcpy(buf + sizeof(req._key_id), (void *)req._key_plaintext_ptr, KEY_SIZE);
 
 		Vfs::file_size nr_of_written_bytes { 0 };
 		Write_result const write_result {

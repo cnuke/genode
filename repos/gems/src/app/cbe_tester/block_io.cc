@@ -113,7 +113,7 @@ bool Block_io::_peek_generated_request(uint8_t *buf_ptr,
 			Request const &req { channel._request };
 			Crypto_request::create(
 				buf_ptr, buf_size, BLOCK_IO, id, crypto_req_type,
-				req._client_req_offset, req._client_req_tag, nullptr, 0,
+				req._client_req_offset, req._client_req_tag,
 				req._key_id, nullptr, req._pba, req._vba, nullptr,
 				(void *)channel._blk_buf);
 
