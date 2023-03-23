@@ -449,7 +449,7 @@ bool Sb_initializer::_peek_generated_request(Genode::uint8_t *buf_ptr,
 			Block_io_request::Type const block_io_req_type {
 				Block_io_request::WRITE };
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, SB_INITIALIZER, id, block_io_req_type, 0, 0,
 				0, channel._sb_slot_index, 0, 1, (void*)&channel._sb_slot,
 				nullptr);
@@ -461,7 +461,7 @@ bool Sb_initializer::_peek_generated_request(Genode::uint8_t *buf_ptr,
 			Block_io_request::Type const block_io_req_type {
 				Block_io_request::SYNC };
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, SB_INITIALIZER, id,
 				block_io_req_type, 0, 0, 0,
 				channel._sb_slot_index, 0,

@@ -807,7 +807,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 		case Channel::WRITE_ROOT_NODE_PENDING:
 		case Channel::WRITE_INNER_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
@@ -817,7 +817,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::WRITE_LEAF_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
@@ -827,7 +827,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::WRITE_CLIENT_DATA_TO_LEAF_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::WRITE_CLIENT_DATA, req._client_req_offset,
 				req._client_req_tag, req._new_key_id,
@@ -839,7 +839,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 		case Channel::READ_ROOT_NODE_PENDING:
 		case Channel::READ_INNER_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1,
@@ -849,7 +849,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::READ_LEAF_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1, &chan._data_blk, nullptr);
@@ -858,7 +858,7 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::READ_CLIENT_DATA_FROM_LEAF_NODE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, VIRTUAL_BLOCK_DEVICE, id,
 				Block_io_request::READ_CLIENT_DATA, req._client_req_offset,
 				req._client_req_tag, req._new_key_id,

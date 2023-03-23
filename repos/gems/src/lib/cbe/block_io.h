@@ -68,20 +68,6 @@ class Cbe::Block_io_request : public Module_request
 		                 void             *blk_ptr,
 		                 void             *hash_ptr);
 
-		static void create(void             *buf_ptr,
-		                   Genode::size_t    buf_size,
-		                   Genode::uint64_t  src_module_id,
-		                   Genode::uint64_t  src_request_id,
-		                   Genode::size_t    req_type,
-		                   Genode::uint64_t  client_req_offset,
-		                   Genode::uint64_t  client_req_tag,
-		                   Genode::uint32_t  key_id,
-		                   Genode::uint64_t  pba,
-		                   Genode::uint64_t  vba,
-		                   Genode::uint64_t  blk_count,
-		                   void             *blk_ptr,
-		                   void             *hash_ptr);
-
 		Type type() const { return _type; }
 
 		bool success() const { return _success; }

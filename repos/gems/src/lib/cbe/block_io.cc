@@ -55,30 +55,6 @@ Block_io_request::Block_io_request(uint64_t  src_module_id,
 { }
 
 
-void Block_io_request::create(void       *buf_ptr,
-                              size_t      buf_size,
-                              uint64_t    src_module_id,
-                              uint64_t    src_request_id,
-                              size_t      req_type,
-                              uint64_t    client_req_offset,
-                              uint64_t    client_req_tag,
-                              uint32_t    key_id,
-                              uint64_t    pba,
-                              uint64_t    vba,
-                              uint64_t    blk_count,
-                              void       *blk_ptr,
-                              void       *hash_ptr)
-{
-	if (sizeof(Block_io_request) > buf_size) {
-		class Buf_too_small { };
-		throw Buf_too_small { };
-	}
-	construct_at<Block_io_request>(
-		buf_ptr, src_module_id, src_request_id, req_type, client_req_offset,
-		client_req_tag, key_id, pba, vba, blk_count, blk_ptr, hash_ptr);
-}
-
-
 char const *Block_io_request::type_to_string(Type type)
 {
 	switch (type) {

@@ -1080,7 +1080,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 		case Channel::READ_SB_PENDING:
 		case Channel::READ_CURRENT_SB_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Block_io_request::READ, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk,
@@ -1091,7 +1091,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 		case Channel::SYNC_BLK_IO_PENDING:
 		case Channel::SYNC_CACHE_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Block_io_request::SYNC, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1, nullptr, nullptr);
@@ -1100,7 +1100,7 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::WRITE_SB_PENDING:
 
-			Block_io_request::create(
+			construct_in_buf<Block_io_request>(
 				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
 				Block_io_request::WRITE, 0, 0, 0,
 				chan._generated_prim.blk_nr, 0, 1, &chan._sb_ciphertext_blk,
