@@ -791,7 +791,7 @@ class Command_pool : public Module {
 			case TRUST_ANCHOR:
 			{
 				Trust_anchor_request const &ta_req {
-					*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+					*static_cast<Trust_anchor_request *>(&mod_req)};
 
 				if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
 					class Exception_2 { };
@@ -803,7 +803,7 @@ class Command_pool : public Module {
 			case SB_INITIALIZER:
 			{
 				Sb_initializer_request const &sb_req {
-					*dynamic_cast<Sb_initializer_request *>(&mod_req)};
+					*static_cast<Sb_initializer_request *>(&mod_req)};
 
 				if (sb_req.type() != Sb_initializer_request::INIT) {
 					class Exception_2 { };
@@ -826,7 +826,7 @@ class Command_pool : public Module {
 			case TRUST_ANCHOR:
 			{
 				Trust_anchor_request const &ta_req {
-					*dynamic_cast<Trust_anchor_request *>(&mod_req)};
+					*static_cast<Trust_anchor_request *>(&mod_req)};
 
 				if (ta_req.type() != Trust_anchor_request::INITIALIZE) {
 					class Exception_2 { };
@@ -839,7 +839,7 @@ class Command_pool : public Module {
 			case SB_INITIALIZER:
 			{
 				Sb_initializer_request const &sb_req {
-					*dynamic_cast<Sb_initializer_request *>(&mod_req)};
+					*static_cast<Sb_initializer_request *>(&mod_req)};
 
 				if (sb_req.type() != Sb_initializer_request::INIT) {
 					class Exception_2 { };
@@ -852,7 +852,7 @@ class Command_pool : public Module {
 			case REQUEST_POOL:
 			{
 				Request const &rp_req {
-					*dynamic_cast<Request *>(&mod_req)};
+					*static_cast<Request *>(&mod_req)};
 
 				mark_command_completed(
 					rp_req.src_request_id(), rp_req.success());
@@ -1211,7 +1211,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 				throw Exception_1 { };
 			}
 			req.dst_request_id(0);
-			_client_data_request = *dynamic_cast<Client_data_request *>(&req);
+			_client_data_request = *static_cast<Client_data_request *>(&req);
 			switch (_client_data_request._type) {
 			case Client_data_request::OBTAIN_PLAINTEXT_BLK:
 

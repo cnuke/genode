@@ -186,7 +186,7 @@ void Virtual_block_device::submit_request(Module_request &mod_req)
 		Channel &chan { _channels[id] };
 		if (chan._request._type == Request::INVALID) {
 			mod_req.dst_request_id(id);
-			chan._request = *dynamic_cast<Request *>(&mod_req);
+			chan._request = *static_cast<Request *>(&mod_req);
 			chan._state = Channel::SUBMITTED;
 			return;
 		}
@@ -980,7 +980,7 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 	switch (mod_req.dst_module_id()) {
 	case CRYPTO:
 	{
-		Crypto_request &crypto_req { *dynamic_cast<Crypto_request *>(&mod_req) };
+		Crypto_request &crypto_req { *static_cast<Crypto_request *>(&mod_req) };
 		memcpy(&chan._data_blk, crypto_req.result_blk_ptr(), BLOCK_SIZE);
 		chan._generated_prim.succ = crypto_req.success();
 		switch (chan._state) {
@@ -994,7 +994,7 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 	}
 	case BLOCK_IO:
 	{
-		Block_io_request &blk_io_req { *dynamic_cast<Block_io_request *>(&mod_req) };
+		Block_io_request &blk_io_req { *static_cast<Block_io_request *>(&mod_req) };
 		chan._generated_prim.succ = blk_io_req.success();
 		switch (chan._state) {
 		case Channel::READ_ROOT_NODE_IN_PROGRESS: chan._state = Channel::READ_ROOT_NODE_COMPLETED; break;
@@ -1016,7 +1016,7 @@ void Virtual_block_device::generated_request_complete(Module_request &mod_req)
 	}
 	case FREE_TREE:
 	{
-		Free_tree_request &ft_req { *dynamic_cast<Free_tree_request *>(&mod_req) };
+		Free_tree_request &ft_req { *static_cast<Free_tree_request *>(&mod_req) };
 		chan._generated_prim.succ = ft_req.success();
 		switch (chan._state) {
 		case Channel::ALLOC_PBAS_AT_LEAF_LVL_IN_PROGRESS: chan._state = Channel::ALLOC_PBAS_AT_LEAF_LVL_COMPLETED; break;

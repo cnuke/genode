@@ -1243,7 +1243,7 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 	switch (mod_req.dst_module_id()) {
 	case TRUST_ANCHOR:
 	{
-		Trust_anchor_request &gen_req { *dynamic_cast<Trust_anchor_request*>(&mod_req) };
+		Trust_anchor_request &gen_req { *static_cast<Trust_anchor_request*>(&mod_req) };
 		chan._generated_prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::CREATE_KEY_IN_PROGRESS:
@@ -1279,7 +1279,7 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 	}
 	case CRYPTO:
 	{
-		Crypto_request &gen_req { *dynamic_cast<Crypto_request*>(&mod_req) };
+		Crypto_request &gen_req { *static_cast<Crypto_request*>(&mod_req) };
 		chan._generated_prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::ADD_KEY_AT_CRYPTO_MODULE_IN_PROGRESS: chan._state = Channel::ADD_KEY_AT_CRYPTO_MODULE_COMPLETED; break;
@@ -1295,7 +1295,7 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 	}
 	case VIRTUAL_BLOCK_DEVICE:
 	{
-		Virtual_block_device_request &gen_req { *dynamic_cast<Virtual_block_device_request*>(&mod_req) };
+		Virtual_block_device_request &gen_req { *static_cast<Virtual_block_device_request*>(&mod_req) };
 		chan._generated_prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::READ_VBA_AT_VBD_IN_PROGRESS: chan._state = Channel::READ_VBA_AT_VBD_COMPLETED; break;
@@ -1311,7 +1311,7 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 	}
 	case BLOCK_IO:
 	{
-		Block_io_request &gen_req { *dynamic_cast<Block_io_request*>(&mod_req) };
+		Block_io_request &gen_req { *static_cast<Block_io_request*>(&mod_req) };
 		chan._generated_prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::READ_SB_IN_PROGRESS: chan._state = Channel::READ_SB_COMPLETED; break;
@@ -1386,7 +1386,7 @@ void Superblock_control::submit_request(Module_request &req)
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._request._type == Request::INVALID) {
 			req.dst_request_id(id);
-			_channels[id]._request = *dynamic_cast<Request *>(&req);
+			_channels[id]._request = *static_cast<Request *>(&req);
 			_channels[id]._state = Channel::SUBMITTED;
 			return;
 		}

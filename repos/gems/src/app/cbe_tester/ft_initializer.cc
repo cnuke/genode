@@ -682,24 +682,25 @@ void Ft_initializer::generated_request_complete(Module_request &req)
 	switch (_channels[id]._state) {
 	case Channel::BLOCK_ALLOC_IN_PROGRESS:
 	{
+		if (req.dst_module_id() != BLOCK_ALLOCATOR) {
+			class Exception_3 { };
+			throw Exception_3 { };
+		}
+		Block_allocator_request const *block_allocator_req = static_cast<Block_allocator_request const*>(&req);
 		_channels[id]._state = Channel::BLOCK_ALLOC_COMPLETE;
-		Block_allocator_request const *block_allocator_req =
-			dynamic_cast<Block_allocator_request const*>(&req);
-
 		_channels[id]._blk_nr = block_allocator_req->blk_nr();
-		_channels[id]._generated_req_success =
-			block_allocator_req->success();
+		_channels[id]._generated_req_success = block_allocator_req->success();
 		break;
 	}
 	case Channel::BLOCK_IO_IN_PROGRESS:
 	{
+		if (req.dst_module_id() != BLOCK_IO) {
+			class Exception_4 { };
+			throw Exception_4 { };
+		}
+		Block_io_request const *block_io_req = static_cast<Block_io_request const*>(&req);
 		_channels[id]._state = Channel::BLOCK_IO_COMPLETE;
-
-		Block_io_request const *block_io_req =
-			dynamic_cast<Block_io_request const*>(&req);
-
-		_channels[id]._generated_req_success =
-			block_io_req->success();
+		_channels[id]._generated_req_success = block_io_req->success();
 		break;
 	}
 	default:
@@ -728,7 +729,7 @@ void Ft_initializer::submit_request(Module_request &req)
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._state == Channel::INACTIVE) {
 			req.dst_request_id(id);
-			_channels[id]._request = *dynamic_cast<Request *>(&req);
+			_channels[id]._request = *static_cast<Request *>(&req);
 			_channels[id]._state = Channel::SUBMITTED;
 			return;
 		}

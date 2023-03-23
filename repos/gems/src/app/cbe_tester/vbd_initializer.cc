@@ -516,34 +516,41 @@ void Vbd_initializer::_drop_generated_request(Module_request &req)
 }
 
 
-void Vbd_initializer::generated_request_complete(Module_request &req)
+void Vbd_initializer::generated_request_complete(Module_request &mod_req)
 {
-	unsigned long const id { req.src_request_id() };
+	unsigned long const id { mod_req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
 		class Exception_1 { };
 		throw Exception_1 { };
 	}
-	switch (_channels[id]._state) {
-	case Channel::BLOCK_ALLOC_IN_PROGRESS:
+	switch (mod_req.dst_module_id()) {
+	case BLOCK_ALLOCATOR:
 	{
-		_channels[id]._state = Channel::BLOCK_ALLOC_COMPLETE;
-		Block_allocator_request const *block_allocator_req =
-			dynamic_cast<Block_allocator_request const*>(&req);
-
-		_channels[id]._blk_nr = block_allocator_req->blk_nr();
-		_channels[id]._generated_req_success =
-			block_allocator_req->success();
+		Block_allocator_request const &gen_req { *static_cast<Block_allocator_request *>(&mod_req) };
+		switch (_channels[id]._state) {
+		case Channel::BLOCK_ALLOC_IN_PROGRESS:
+			_channels[id]._state = Channel::BLOCK_ALLOC_COMPLETE;
+			_channels[id]._blk_nr = gen_req.blk_nr();
+			_channels[id]._generated_req_success = gen_req.success();
+			break;
+		default:
+			class Exception_2 { };
+			throw Exception_2 { };
+		}
 		break;
 	}
-	case Channel::BLOCK_IO_IN_PROGRESS:
+	case BLOCK_IO:
 	{
-		_channels[id]._state = Channel::BLOCK_IO_COMPLETE;
-
-		Block_io_request const *block_io_req =
-			dynamic_cast<Block_io_request const*>(&req);
-
-		_channels[id]._generated_req_success =
-			block_io_req->success();
+		Block_io_request const &gen_req { *static_cast<Block_io_request *>(&mod_req) };
+		switch (_channels[id]._state) {
+		case Channel::BLOCK_IO_IN_PROGRESS:
+			_channels[id]._state = Channel::BLOCK_IO_COMPLETE;
+			_channels[id]._generated_req_success = gen_req.success();
+			break;
+		default:
+			class Exception_2 { };
+			throw Exception_2 { };
+		}
 		break;
 	}
 	default:
@@ -572,7 +579,7 @@ void Vbd_initializer::submit_request(Module_request &req)
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._state == Channel::INACTIVE) {
 			req.dst_request_id(id);
-			_channels[id]._request = *dynamic_cast<Request *>(&req);
+			_channels[id]._request = *static_cast<Request *>(&req);
 			_channels[id]._state = Channel::SUBMITTED;
 			return;
 		}

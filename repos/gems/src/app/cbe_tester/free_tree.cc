@@ -794,7 +794,7 @@ void Free_tree::submit_request(Module_request &mod_req)
 
 			mod_req.dst_request_id(id);
 
-			chan._request = *dynamic_cast<Request *>(&mod_req);
+			chan._request = *static_cast<Request *>(&mod_req);
 			chan._exchanged_blocks = 0;
 			_reset_block_state(chan);
 
@@ -926,7 +926,7 @@ void Free_tree::generated_request_complete(Module_request &mod_req)
 			class Exception_2 { };
 			throw Exception_2 { };
 		}
-		Block_io_request &blk_io_req { *dynamic_cast<Block_io_request *>(&mod_req) };
+		Block_io_request &blk_io_req { *static_cast<Block_io_request *>(&mod_req) };
 		Channel &channel { _channels[id] };
 		if (!blk_io_req.success()) {
 			class Exception_3 { };
@@ -969,7 +969,7 @@ void Free_tree::generated_request_complete(Module_request &mod_req)
 			class Exception_5 { };
 			throw Exception_5 { };
 		}
-		Meta_tree_request &mt_req { *dynamic_cast<Meta_tree_request *>(&mod_req) };
+		Meta_tree_request &mt_req { *static_cast<Meta_tree_request *>(&mod_req) };
 		if (!mt_req.success()) {
 			class Exception_6 { };
 			throw Exception_6 { };

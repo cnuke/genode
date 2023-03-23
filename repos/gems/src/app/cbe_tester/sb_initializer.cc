@@ -518,37 +518,35 @@ bool Sb_initializer::_peek_generated_request(Genode::uint8_t *buf_ptr,
 
 void Sb_initializer::_drop_generated_request(Module_request &req)
 {
-	using CS = Channel::State;
-
 	unsigned long const id { req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
 		class Bad_id { };
 		throw Bad_id { };
 	}
 	switch (_channels[id]._state) {
-	case CS::VBD_REQUEST_PENDING:
-		_channels[id]._state = CS::VBD_REQUEST_IN_PROGRESS;
+	case Channel::VBD_REQUEST_PENDING:
+		_channels[id]._state = Channel::VBD_REQUEST_IN_PROGRESS;
 		break;
-	case CS::FT_REQUEST_PENDING:
-		_channels[id]._state = CS::FT_REQUEST_IN_PROGRESS;
+	case Channel::FT_REQUEST_PENDING:
+		_channels[id]._state = Channel::FT_REQUEST_IN_PROGRESS;
 		break;
-	case CS::MT_REQUEST_PENDING:
-		_channels[id]._state = CS::MT_REQUEST_IN_PROGRESS;
+	case Channel::MT_REQUEST_PENDING:
+		_channels[id]._state = Channel::MT_REQUEST_IN_PROGRESS;
 		break;
-	case CS::WRITE_REQUEST_PENDING:
-		_channels[id]._state = CS::WRITE_REQUEST_IN_PROGRESS;
+	case Channel::WRITE_REQUEST_PENDING:
+		_channels[id]._state = Channel::WRITE_REQUEST_IN_PROGRESS;
 		break;
-	case CS::SYNC_REQUEST_PENDING:
-		_channels[id]._state = CS::SYNC_REQUEST_IN_PROGRESS;
+	case Channel::SYNC_REQUEST_PENDING:
+		_channels[id]._state = Channel::SYNC_REQUEST_IN_PROGRESS;
 		break;
-	case CS::TA_REQUEST_CREATE_KEY_PENDING:
-		_channels[id]._state = CS::TA_REQUEST_CREATE_KEY_IN_PROGRESS;
+	case Channel::TA_REQUEST_CREATE_KEY_PENDING:
+		_channels[id]._state = Channel::TA_REQUEST_CREATE_KEY_IN_PROGRESS;
 		break;
-	case CS::TA_REQUEST_ENCRYPT_KEY_PENDING:
-		_channels[id]._state = CS::TA_REQUEST_ENCRYPT_KEY_IN_PROGRESS;
+	case Channel::TA_REQUEST_ENCRYPT_KEY_PENDING:
+		_channels[id]._state = Channel::TA_REQUEST_ENCRYPT_KEY_IN_PROGRESS;
 		break;
-	case CS::TA_REQUEST_SECURE_SB_PENDING:
-		_channels[id]._state = CS::TA_REQUEST_SECURE_SB_IN_PROGRESS;
+	case Channel::TA_REQUEST_SECURE_SB_PENDING:
+		_channels[id]._state = Channel::TA_REQUEST_SECURE_SB_IN_PROGRESS;
 		break;
 	default:
 		class Exception_1 { };
@@ -559,50 +557,52 @@ void Sb_initializer::_drop_generated_request(Module_request &req)
 
 void Sb_initializer::generated_request_complete(Module_request &req)
 {
-	using CS = Channel::State;
-
 	unsigned long const id { req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
 		class Exception_1 { };
 		throw Exception_1 { };
 	}
-
 	Channel &channel = _channels[id];
 
 	switch (channel._state) {
-	case CS::VBD_REQUEST_IN_PROGRESS:
+	case Channel::VBD_REQUEST_IN_PROGRESS:
 	{
-		channel._state = CS::VBD_REQUEST_COMPLETE;
-		Vbd_initializer_request const *vbd_initializer_req =
-			dynamic_cast<Vbd_initializer_request const*>(&req);
-
+		if (req.dst_module_id() != VBD_INITIALIZER) {
+			class Exception_3 { };
+			throw Exception_3 { };
+		}
+		Vbd_initializer_request const *vbd_initializer_req = static_cast<Vbd_initializer_request const*>(&req);
+		channel._state = Channel::VBD_REQUEST_COMPLETE;
+		channel._generated_req_success = vbd_initializer_req->success();
 		memcpy(&channel._vbd_node,
 		       const_cast<Vbd_initializer_request*>(vbd_initializer_req)->root_node(),
 		       sizeof(Cbe::Type_1_node));
 
-		channel._generated_req_success =
-			vbd_initializer_req->success();
 		break;
 	}
-	case CS::FT_REQUEST_IN_PROGRESS:
+	case Channel::FT_REQUEST_IN_PROGRESS:
 	{
-		channel._state = CS::FT_REQUEST_COMPLETE;
-		Ft_initializer_request const *ft_initializer_req =
-			dynamic_cast<Ft_initializer_request const*>(&req);
-
+		if (req.dst_module_id() != FT_INITIALIZER) {
+			class Exception_4 { };
+			throw Exception_4 { };
+		}
+		Ft_initializer_request const *ft_initializer_req = static_cast<Ft_initializer_request const*>(&req);
+		channel._state = Channel::FT_REQUEST_COMPLETE;
+		channel._generated_req_success = ft_initializer_req->success();
 		memcpy(&channel._ft_node,
 		       const_cast<Ft_initializer_request*>(ft_initializer_req)->root_node(),
 		       sizeof(Cbe::Type_1_node));
 
-		channel._generated_req_success =
-			ft_initializer_req->success();
 		break;
 	}
-	case CS::MT_REQUEST_IN_PROGRESS:
+	case Channel::MT_REQUEST_IN_PROGRESS:
 	{
-		channel._state = CS::MT_REQUEST_COMPLETE;
-		Ft_initializer_request const *ft_initializer_req =
-			dynamic_cast<Ft_initializer_request const*>(&req);
+		if (req.dst_module_id() != FT_INITIALIZER) {
+			class Exception_5 { };
+			throw Exception_5 { };
+		}
+		channel._state = Channel::MT_REQUEST_COMPLETE;
+		Ft_initializer_request const *ft_initializer_req = static_cast<Ft_initializer_request const*>(&req);
 
 		memcpy(&channel._mt_node,
 		       const_cast<Ft_initializer_request*>(ft_initializer_req)->root_node(),
@@ -612,25 +612,30 @@ void Sb_initializer::generated_request_complete(Module_request &req)
 			ft_initializer_req->success();
 		break;
 	}
-	case CS::TA_REQUEST_CREATE_KEY_IN_PROGRESS:
+	case Channel::TA_REQUEST_CREATE_KEY_IN_PROGRESS:
 	{
-		channel._state = CS::TA_REQUEST_CREATE_KEY_COMPLETE;
-		Trust_anchor_request const *trust_anchor_req =
-			dynamic_cast<Trust_anchor_request const*>(&req);
-
+		if (req.dst_module_id() != TRUST_ANCHOR) {
+			class Exception_6 { };
+			throw Exception_6 { };
+		}
+		Trust_anchor_request const *trust_anchor_req = static_cast<Trust_anchor_request const*>(&req);
+		channel._state = Channel::TA_REQUEST_CREATE_KEY_COMPLETE;
+		channel._generated_req_success = trust_anchor_req->success();
 		memcpy(&channel._key_plain.value,
 		       const_cast<Trust_anchor_request*>(trust_anchor_req)->key_plaintext_ptr(),
 		       sizeof(channel._key_plain.value));
 
-		channel._generated_req_success =
-			trust_anchor_req->success();
 		break;
 	}
-	case CS::TA_REQUEST_ENCRYPT_KEY_IN_PROGRESS:
+	case Channel::TA_REQUEST_ENCRYPT_KEY_IN_PROGRESS:
 	{
-		channel._state = CS::TA_REQUEST_ENCRYPT_KEY_COMPLETE;
+		if (req.dst_module_id() != TRUST_ANCHOR) {
+			class Exception_7 { };
+			throw Exception_7 { };
+		}
+		channel._state = Channel::TA_REQUEST_ENCRYPT_KEY_COMPLETE;
 		Trust_anchor_request const *trust_anchor_req =
-			dynamic_cast<Trust_anchor_request const*>(&req);
+			static_cast<Trust_anchor_request const*>(&req);
 
 		/* store and set ID to copy later on */
 		memcpy(&channel._key_cipher.value,
@@ -642,31 +647,43 @@ void Sb_initializer::generated_request_complete(Module_request &req)
 			trust_anchor_req->success();
 		break;
 	}
-	case CS::TA_REQUEST_SECURE_SB_IN_PROGRESS:
+	case Channel::TA_REQUEST_SECURE_SB_IN_PROGRESS:
 	{
-		channel._state = CS::TA_REQUEST_SECURE_SB_COMPLETE;
+		if (req.dst_module_id() != TRUST_ANCHOR) {
+			class Exception_8 { };
+			throw Exception_8 { };
+		}
+		channel._state = Channel::TA_REQUEST_SECURE_SB_COMPLETE;
 		Trust_anchor_request const *trust_anchor_req =
-			dynamic_cast<Trust_anchor_request const*>(&req);
+			static_cast<Trust_anchor_request const*>(&req);
 
 		channel._generated_req_success =
 			trust_anchor_req->success();
 		break;
 	}
-	case CS::WRITE_REQUEST_IN_PROGRESS:
+	case Channel::WRITE_REQUEST_IN_PROGRESS:
 	{
-		channel._state = CS::WRITE_REQUEST_COMPLETE;
+		if (req.dst_module_id() != BLOCK_IO) {
+			class Exception_9 { };
+			throw Exception_9 { };
+		}
+		channel._state = Channel::WRITE_REQUEST_COMPLETE;
 		Block_io_request const *block_io_req =
-			dynamic_cast<Block_io_request const*>(&req);
+			static_cast<Block_io_request const*>(&req);
 
 		channel._generated_req_success =
 			block_io_req->success();
 		break;
 	}
-	case CS::SYNC_REQUEST_IN_PROGRESS:
+	case Channel::SYNC_REQUEST_IN_PROGRESS:
 	{
-		channel._state = CS::SYNC_REQUEST_COMPLETE;
+		if (req.dst_module_id() != BLOCK_IO) {
+			class Exception_10 { };
+			throw Exception_10 { };
+		}
+		channel._state = Channel::SYNC_REQUEST_COMPLETE;
 		Block_io_request const *block_io_req =
-			dynamic_cast<Block_io_request const*>(&req);
+			static_cast<Block_io_request const*>(&req);
 
 		channel._generated_req_success =
 			block_io_req->success();
@@ -698,7 +715,7 @@ void Sb_initializer::submit_request(Module_request &req)
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._state == Channel::INACTIVE) {
 			req.dst_request_id(id);
-			_channels[id]._request = *dynamic_cast<Request *>(&req);
+			_channels[id]._request = *static_cast<Request *>(&req);
 			_channels[id]._state = Channel::SUBMITTED;
 			return;
 		}

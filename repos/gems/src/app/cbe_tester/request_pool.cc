@@ -388,7 +388,7 @@ void Request_pool::submit_request(Module_request &mod_req)
 {
 	for (unsigned long idx { 0 }; idx < NR_OF_CHANNELS; idx++) {
 		if (_channels[idx]._state == Channel::INVALID) {
-			Request &req { *dynamic_cast<Request *>(&mod_req) };
+			Request &req { *static_cast<Request *>(&mod_req) };
 			switch (req.operation()) {
 			case Request::INITIALIZE:
 
@@ -483,7 +483,7 @@ void Request_pool::generated_request_complete(Module_request &mod_req)
 	switch (mod_req.dst_module_id()) {
 	case SUPERBLOCK_CONTROL:
 	{
-		Superblock_control_request &gen_req { *dynamic_cast<Superblock_control_request *>(&mod_req) };
+		Superblock_control_request &gen_req { *static_cast<Superblock_control_request *>(&mod_req) };
 		chan._prim.succ = gen_req.success();
 		switch (chan._state) {
 		case Channel::READ_VBA_AT_SB_CTRL_IN_PROGRESS: chan._state = Channel::READ_VBA_AT_SB_CTRL_COMPLETE; break;

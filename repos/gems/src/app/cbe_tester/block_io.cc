@@ -145,27 +145,35 @@ void Block_io::_drop_generated_request(Module_request &req)
 }
 
 
-void Block_io::generated_request_complete(Module_request &req)
+void Block_io::generated_request_complete(Module_request &mod_req)
 {
-	unsigned long const id { req.src_request_id() };
+	unsigned long const id { mod_req.src_request_id() };
 	if (id >= NR_OF_CHANNELS) {
 		class Exception_1 { };
 		throw Exception_1 { };
 	}
-	switch (_channels[id]._state) {
-	case Channel::DECRYPT_CLIENT_DATA_IN_PROGRESS:
-		_channels[id]._state = Channel::DECRYPT_CLIENT_DATA_COMPLETE;
-		_channels[id]._generated_req_success =
-			dynamic_cast<Crypto_request *>(&req)->success();
+	switch (mod_req.dst_module_id()) {
+	case CRYPTO:
+	{
+		Crypto_request const &gen_req { *static_cast<Crypto_request *>(&mod_req) };
+		switch (_channels[id]._state) {
+		case Channel::DECRYPT_CLIENT_DATA_IN_PROGRESS:
+			_channels[id]._state = Channel::DECRYPT_CLIENT_DATA_COMPLETE;
+			_channels[id]._generated_req_success = gen_req.success();
+			break;
+		case Channel::ENCRYPT_CLIENT_DATA_IN_PROGRESS:
+			_channels[id]._state = Channel::ENCRYPT_CLIENT_DATA_COMPLETE;
+			_channels[id]._generated_req_success = gen_req.success();
+			break;
+		default:
+			class Exception_2 { };
+			throw Exception_2 { };
+		}
 		break;
-	case Channel::ENCRYPT_CLIENT_DATA_IN_PROGRESS:
-		_channels[id]._state = Channel::ENCRYPT_CLIENT_DATA_COMPLETE;
-		_channels[id]._generated_req_success =
-			dynamic_cast<Crypto_request *>(&req)->success();
-		break;
+	}
 	default:
-		class Exception_2 { };
-		throw Exception_2 { };
+		class Exception_3 { };
+		throw Exception_3 { };
 	}
 }
 
@@ -669,7 +677,7 @@ void Block_io::submit_request(Module_request &req)
 	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
 		if (_channels[id]._state == Channel::INACTIVE) {
 			req.dst_request_id(id);
-			_channels[id]._request = *dynamic_cast<Request *>(&req);
+			_channels[id]._request = *static_cast<Request *>(&req);
 			_channels[id]._state = Channel::SUBMITTED;
 			return;
 		}

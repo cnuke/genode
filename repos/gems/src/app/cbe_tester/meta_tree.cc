@@ -158,7 +158,11 @@ void Meta_tree::generated_request_complete(Module_request &mod_req)
 		class Exception_2 { };
 		throw Exception_2 { };
 	}
-	Block_io_request &blk_io_req { *dynamic_cast<Block_io_request *>(&mod_req) };
+	if (mod_req.dst_module_id() != BLOCK_IO) {
+		class Exception_3 { };
+		throw Exception_3 { };
+	}
+	Block_io_request &blk_io_req { *static_cast<Block_io_request *>(&mod_req) };
 	Channel &channel { _channels[id] };
 	if (!blk_io_req.success()) {
 
@@ -539,7 +543,7 @@ void Meta_tree::submit_request(Module_request &mod_req)
 
 			mod_req.dst_request_id(id);
 
-			chan._request = *dynamic_cast<Request *>(&mod_req);
+			chan._request = *static_cast<Request *>(&mod_req);
 			chan._finished = false;
 			chan._state = Channel::UPDATE;
 			for (Type_1_info &t1_info : chan._level_n_nodes) {
