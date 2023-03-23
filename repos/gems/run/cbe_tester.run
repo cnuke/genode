@@ -16,8 +16,8 @@ proc autopilot_cbe_image { } {
 }
 
 set image_size 1024
-if {[info exists ::env(CBE_IMAGE_SIZE)]} {
-	set image_size $::env(CBE_IMAGE_SIZE)
+if {[info exists ::env(cbe_IMAGE_SIZE)]} {
+	set image_size $::env(cbe_IMAGE_SIZE)
 }
 
 proc cbe_image_size_mb { } {
@@ -1016,8 +1016,7 @@ append boot_modules {
 	init
 	timer
 	cbe_tester
-	ld.lib.so spark.lib.so
-	libsparkcrypto.lib.so
+	ld.lib.so
 	log_terminal
 	report_rom
 	lx_fs
