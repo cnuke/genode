@@ -54,6 +54,7 @@ namespace Cbe
 			Number_of_blocks_old _count;
 			uint32_t             _key_id;
 			uint32_t             _tag;
+			uint32_t             _snap_id;
 
 		public:
 
@@ -64,6 +65,7 @@ namespace Cbe
 			        Number_of_blocks_old count,
 			        uint32_t             key_id,
 			        uint32_t             tag,
+			        uint32_t             snap_id,
 			        unsigned long        src_module_id,
 			        unsigned long        src_request_id)
 			:
@@ -74,7 +76,8 @@ namespace Cbe
 				_offset        { offset       },
 				_count         { count        },
 				_key_id        { key_id       },
-				_tag           { tag          }
+				_tag           { tag          },
+				_snap_id       { snap_id      }
 			{ }
 
 			Request()
@@ -86,7 +89,8 @@ namespace Cbe
 				_offset        { 0 },
 				_count         { 0 },
 				_key_id        { 0 },
-				_tag           { 0 }
+				_tag           { 0 },
+				_snap_id       { 0 }
 			{ }
 
 			bool valid() const
@@ -120,10 +124,12 @@ namespace Cbe
 			Number_of_blocks_old count()        const { return _count; }
 			uint32_t             key_id()       const { return _key_id; }
 			uint32_t             tag()          const { return _tag; }
+			uint32_t             snap_id()      const { return _snap_id; }
 
 			void offset(uint64_t arg) { _offset = arg; }
 			void success(bool arg) { _success = arg; }
 			void tag(uint32_t arg)    { _tag = arg; }
+			void snap_id(uint32_t arg) { _snap_id = arg; }
 
 			char const *type_name() override;
 

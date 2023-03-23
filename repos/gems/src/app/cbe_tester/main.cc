@@ -1349,6 +1349,7 @@ class Main : Vfs::Env::User, public Cbe::Module
 					req_node.has_attr_count() ? req_node.count() : 0,
 					0,
 					cmd.id(),
+					0,
 					COMMAND_POOL, cmd.id() };
 
 				_request_pool->submit_request(cbe_req);

@@ -226,7 +226,7 @@ void Request_pool::_execute_initialize(Channel &channel, Index_queue &indices,
 			class Exception_rekeying { };
 			throw Exception_rekeying { };
 			channel._request = Cbe::Request(Request::Operation::REKEY,
-			                                false, 0, 0, 0, 0, 0,
+			                                false, 0, 0, 0, 0, 0, 0,
 			                                INVALID_MODULE_ID,
 			                                INVALID_MODULE_REQUEST_ID);
 			indices.enqueue(idx);
@@ -240,7 +240,7 @@ void Request_pool::_execute_initialize(Channel &channel, Index_queue &indices,
 			channel._state = Channel::State::SUBMITTED;
 
 			channel._request = Cbe::Request(Request::Operation::EXTEND_VBD,
-			                                false, 0, 0, 0, 0, 0,
+			                                false, 0, 0, 0, 0, 0, 0,
 			                                INVALID_MODULE_ID,
 			                                INVALID_MODULE_REQUEST_ID);
 
@@ -256,7 +256,7 @@ void Request_pool::_execute_initialize(Channel &channel, Index_queue &indices,
 			channel._state = Channel::State::SUBMITTED;
 
 			channel._request = Cbe::Request(Request::Operation::EXTEND_FT,
-			                                false, 0, 0, 0, 0, 0,
+			                                false, 0, 0, 0, 0, 0, 0,
 			                                INVALID_MODULE_ID,
 			                                INVALID_MODULE_REQUEST_ID);
 
@@ -518,8 +518,8 @@ Request_pool::Request_pool()
 	Slots_index const idx { 0 };
 	_channels[idx]._state = Channel::SUBMITTED;
 	_channels[idx]._request = Request {
-		Request::INITIALIZE, false, 0, 0, 0, 0, 0, INVALID_MODULE_ID,
-		INVALID_MODULE_REQUEST_ID };
+		Request::INITIALIZE, false, 0, 0, 0, 0, 0, 0,
+		INVALID_MODULE_ID, INVALID_MODULE_REQUEST_ID };
 
 	_indices.enqueue(idx);
 }
