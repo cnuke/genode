@@ -257,6 +257,9 @@ append config {
 									<fs label="cbe" buffer_size="1M"/>
 								</dir>
 								<rom name=".profile" label="vfs_cbe.sh"/>
+								<rom name="block.txt"/>
+<inline name="test.txt">HALLO GENODE
+</inline>
 							</vfs>
 							<arg value="bash"/>
 							<arg value="--login"/>
@@ -315,6 +318,8 @@ append boot_modules {
 	core
 	timer
 	ld.lib.so
+
+	block.txt
 }
 
 append boot_modules {

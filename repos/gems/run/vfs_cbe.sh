@@ -1,5 +1,14 @@
 #!/bin/bash
 
+set -x
+
+dd if=block.txt of=/dev/cbe/current/data bs=4096 count=1
+dd of=/tmp/block.txt if=/dev/cbe/current/data bs=4096 count=1
+dd of=/tmp/block.txt.6 if=/dev/cbe/current/data bs=6 count=1
+dd if=/tmp/block.txt.6 of=/dev/cbe/current/data bs=512 count=1 seek=1
+dd of=/tmp/block.txt.512 if=/dev/cbe/current/data bs=512 count=1 seek=1
+return
+
 echo "--- Automated CBE testing ---"
 
 produce_pattern() {
