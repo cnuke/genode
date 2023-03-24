@@ -25,6 +25,11 @@ namespace Cbe
 	class Client_data_request;
 }
 
+namespace Vfs_cbe {
+
+	class Wrapper;
+}
+
 class Main;
 
 class Cbe::Client_data_request : public Module_request
@@ -35,6 +40,7 @@ class Cbe::Client_data_request : public Module_request
 
 	private:
 
+		friend class ::Vfs_cbe::Wrapper;
 		friend class ::Main;
 
 		Type             _type              { INVALID };

@@ -28,7 +28,6 @@
 #include <request_pool.h>
 #include <superblock_control.h>
 #include <trust_anchor.h>
-#include <verbose_node.h>
 #include <virtual_block_device.h>
 
 
@@ -148,7 +147,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		bool ready_to_submit_request() override
 		{
-			return _client_data_request._type == Client_data_request::INVALID;
+			return _client_data_request.type() == Client_data_request::INVALID;
 		}
 
 		void submit_request(Module_request &req) override
@@ -174,10 +173,6 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 				(void)memcpy((void*)_client_data_request._plaintext_blk_ptr,
 				             src, sizeof(Cbe::Block_data));
 
-				// if (_verbose_node.client_data_transferred())
-				// 	log("client data: vba=", _client_data_request._vba,
-				// 	    " req_tag=", _client_data_request._client_req_tag);
-
 				_client_data_request._success = true;
 				break;
 			}
@@ -193,10 +188,6 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 				(void)memcpy(dst, (void const*)_client_data_request._plaintext_blk_ptr,
 				             sizeof(Cbe::Block_data));
-
-				// if (_verbose_node.client_data_transferred())
-				// 	log("client data: vba=", _client_data_request._vba,
-				// 	    " req_tag=", _client_data_request._client_req_tag);
 
 				_client_data_request._success = true;
 				break;
