@@ -323,7 +323,6 @@ class File_vault::Main
 		Child_state                            _image_fs_query                     { _children, "image_fs_query", "fs_query", Ram_quota { 1 * 1024 * 1024 }, Cap_quota { 100 } };
 		Child_state                            _client_fs_fs_query                 { _children, "client_fs_fs_query", "fs_query", Ram_quota { 1 * 1024 * 1024 }, Cap_quota { 100 } };
 		Child_state                            _cbe_init_trust_anchor              { _children, "cbe_init_trust_anchor", Ram_quota { 4 * 1024 * 1024 }, Cap_quota { 100 } };
-		Child_state                            _cbe_image_vfs_block                { _children, "vfs_block", Ram_quota { 4 * 1024 * 1024 }, Cap_quota { 100 } };
 		Child_state                            _cbe_init                           { _children, "cbe_init", Ram_quota { 4 * 1024 * 1024 }, Cap_quota { 100 } };
 		Child_state                            _snapshots_fs_query                 { _children, "snapshots_fs_query", "fs_query", Ram_quota { 1 * 1024 * 1024 }, Cap_quota { 100 } };
 		Child_state                            _resizing_fs_tool                   { _children, "resizing_fs_tool", "fs_tool", Ram_quota { 5 * 1024 * 1024 }, Cap_quota { 200 } };
@@ -1985,7 +1984,7 @@ void File_vault::Main::wakeup_local_service()
 
 		} else {
 
-			error("failed to deliver Report session");
+			error("failed to deliver Report session with label ", request.label);
 		}
 	});
 
@@ -2133,7 +2132,6 @@ void File_vault::Main::_generate_sandbox_config(Xml_generator &xml) const
 		gen_parent_provides_and_report_nodes(xml);
 		gen_menu_view_start_node(xml, _menu_view);
 		gen_cbe_trust_anchor_vfs_start_node(xml, _cbe_trust_anchor_vfs);
-		gen_cbe_image_vfs_block_start_node(xml, _cbe_image_vfs_block);
 		gen_cbe_init_start_node(xml, _cbe_init, vbd_tree_geom, free_tree_geom);
 		break;
 	}

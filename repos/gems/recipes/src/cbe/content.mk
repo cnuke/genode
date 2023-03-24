@@ -2,10 +2,10 @@ MIRROR_FROM_REP_DIR := \
 	src/lib/cbe \
 	lib/import/import-cbe.mk \
 	lib/mk/cbe.mk \
-	lib/mk/spec/x86_64/vfs_cbe.mk \
-	lib/mk/spec/x86_64/vfs_cbe_crypto_aes_cbc.mk \
-	lib/mk/spec/x86_64/vfs_cbe_crypto_memcopy.mk \
-	lib/mk/spec/x86_64/vfs_cbe_trust_anchor.mk \
+	lib/mk/vfs_cbe.mk \
+	lib/mk/vfs_cbe_crypto_aes_cbc.mk \
+	lib/mk/vfs_cbe_crypto_memcopy.mk \
+	lib/mk/vfs_cbe_trust_anchor.mk \
 	src/lib/vfs/cbe \
 	src/lib/vfs/cbe_crypto/vfs.cc \
 	src/lib/vfs/cbe_crypto/aes_cbc \

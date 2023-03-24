@@ -658,32 +658,6 @@ namespace File_vault {
 		});
 	}
 
-	void gen_cbe_image_vfs_block_start_node(Xml_generator     &xml,
-	                                        Child_state const &child)
-	{
-		child.gen_start_node(xml, [&] () {
-
-			gen_provides_service(xml, "Block");
-			xml.node("config", [&] () {
-				xml.node("vfs", [&] () {
-					xml.node("fs", [&] () {
-						xml.attribute("buffer_size", "1M");
-					});
-				});
-				xml.node("policy", [&] () {
-					xml.attribute("label", "cbe_init -> ");
-					xml.attribute("block_size", "512");
-					xml.attribute("file", "/cbe.img");
-					xml.attribute("writeable", "yes");
-				});
-			});
-			xml.node("route", [&] () {
-				route_to_parent_service(xml, "File_system");
-				gen_parent_routes_for_pd_rom_cpu_log(xml);
-			});
-		});
-	}
-
 	void gen_cbe_init_start_node(Xml_generator       &xml,
 	                             Child_state   const &child,
 	                             Tree_geometry const &vbd_geom,
@@ -692,18 +666,30 @@ namespace File_vault {
 		child.gen_start_node(xml, [&] () {
 
 			xml.node("config", [&] () {
-				xml.attribute("trust_anchor_dir", "/trust_anchor");
 
+				xml.node("trust-anchor", [&] () {
+					xml.attribute("path", "/trust_anchor");
+				});
+				xml.node("block-io", [&] () {
+					xml.attribute("type", "vfs");
+					xml.attribute("path", "/cbe.img");
+				});
+				xml.node("crypto", [&] () {
+					xml.attribute("path", "/crypto");
+				});
 				xml.node("vfs", [&] () {
+					xml.node("fs", [&] () {
+						xml.attribute("buffer_size", "1M");
+					});
+					xml.node("cbe_crypto_aes_cbc", [&] () {
+						xml.attribute("name", "crypto");
+					});
 					xml.node("dir", [&] () {
 						xml.attribute("name", "trust_anchor");
 						xml.node("fs", [&] () {
 							xml.attribute("label", "trust_anchor");
 						});
 					});
-				});
-				xml.node("key", [&] () {
-					xml.attribute("id", "12");
 				});
 				xml.node("virtual-block-device", [&] () {
 					xml.attribute("nr_of_levels",   vbd_geom.nr_of_levels());
@@ -718,7 +704,7 @@ namespace File_vault {
 			});
 			xml.node("route", [&] () {
 				route_to_child_service(xml, "cbe_trust_anchor_vfs", "File_system", "trust_anchor");
-				route_to_child_service(xml, "vfs_block", "Block");
+				route_to_parent_service(xml, "File_system");
 				gen_parent_routes_for_pd_rom_cpu_log(xml);
 			});
 		});

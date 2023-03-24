@@ -254,7 +254,7 @@ append config {
 			</config>
 			<route>
 				<service name="File_system" label="cbe_trust_anchor_vfs -> storage_dir"> <child name="trust_anchor_fs" label="file_vault -> trust_anchor"/> </service>
-				<service name="File_system" label="vfs_block -> ">                       <child name="data_fs"         label="file_vault -> data"/> </service>
+				<service name="File_system" label="cbe_init -> ">                        <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="cbe">                                 <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="fs_query -> ">                        <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="image_fs_query -> ">                  <child name="data_fs"         label="file_vault -> data"/> </service>
@@ -281,6 +281,8 @@ puts $fd "<focus label=\"file_vault -> \"/>"
 close $fd
 
 if {[have_board linux]} {
+	exec rm -rf bin/file_vault_dir/data
+	exec rm -rf bin/file_vault_dir/trust_anchor
 	exec mkdir -p bin/file_vault_dir/data
 	exec mkdir -p bin/file_vault_dir/trust_anchor
 }
