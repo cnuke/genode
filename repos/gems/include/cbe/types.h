@@ -47,7 +47,7 @@ namespace Cbe {
 		void print(Genode::Output &out) const
 		{
 			using namespace Genode;
-			for (unsigned idx { 0 }; idx < 16; idx++)
+			for (unsigned idx { 1023 }; idx < 1024 + 32; idx++)
 				Genode::print(
 					out, idx && !(idx % 4) ? " " : "",
 					Hex(values[idx], Hex::OMIT_PREFIX, Hex::PAD));
