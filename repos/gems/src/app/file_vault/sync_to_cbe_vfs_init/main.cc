@@ -30,9 +30,10 @@ int main(int, char **)
 		printf("Error: failed to open file %s\n", file_path);
 		exit(-1);
 	}
-	int const result { fsync(file_descriptor) };
-	if (result != 0) {
-		printf("Error: fsync on file %s failed\n", file_path);
+	char buf[1];
+	long int const result { read(file_descriptor, buf, 1) };
+	if (result != 1) {
+		printf("Error: read on file %s failed\n", file_path);
 		exit(-1);
 	}
 	exit(0);

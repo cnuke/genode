@@ -440,7 +440,7 @@ namespace File_vault {
 				xml.node("vfs", [&] () {
 					xml.node("rump", [&] () {
 						xml.attribute("fs", "ext2fs");
-						xml.attribute("ram", "10M");
+						xml.attribute("ram", "20M");
 					});
 				});
 

@@ -2053,17 +2053,23 @@ int Libc::Vfs_plugin::fsync(File_descriptor *fd)
 	Vfs::Vfs_handle *handle = vfs_handle(fd);
 
 	if (!fd->modified)
+{
+Genode::log(__func__, __LINE__);
 		return 0;
+}
 
 	Sync sync { *handle, _update_mtime, _current_real_time };
 
 	monitor().monitor([&] {
 		if (!sync.complete()) {
+Genode::log(__func__, __LINE__);
 			return Fn::INCOMPLETE;
 		}
+Genode::log(__func__, __LINE__);
 		return Fn::COMPLETE;
 	});
 
+Genode::log(__func__, __LINE__);
 	return 0;
 }
 
