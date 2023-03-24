@@ -30,7 +30,10 @@ namespace Vfs_cbe {
 	class Wrapper;
 }
 
-class Main;
+namespace Cbe_tester {
+
+	class Main;
+}
 
 class Cbe::Client_data_request : public Module_request
 {
@@ -41,7 +44,7 @@ class Cbe::Client_data_request : public Module_request
 	private:
 
 		friend class ::Vfs_cbe::Wrapper;
-		friend class ::Main;
+		friend class ::Cbe_tester::Main;
 
 		Type             _type              { INVALID };
 		Genode::uint64_t _client_req_offset { 0 };

@@ -45,6 +45,11 @@ using namespace Vfs;
 
 enum { VERBOSE_MODULE_COMMUNICATION = 0 };
 
+namespace Cbe_tester {
+
+	class Main;
+}
+
 namespace Cbe {
 
 	char const *module_name(unsigned long id)
@@ -1109,7 +1114,7 @@ Genode::uint64_t block_allocator_nr_of_blks()
 }
 
 
-class Main : Vfs::Env::User, public Cbe::Module
+class Cbe_tester::Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
@@ -1640,7 +1645,7 @@ void Component::construct(Genode::Env &env)
 {
 	env.exec_static_constructors();
 
-	static Main main(env);
+	static Cbe_tester::Main main(env);
 
 	(void)block_allocator_first_block();
 	(void)block_allocator_nr_of_blks();
