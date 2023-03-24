@@ -255,9 +255,10 @@ append config {
 								<dir name="dev">
 									<fs label="cbe" buffer_size="1M"/>
 								</dir>
-								<rom name=".bashrc" label="vfs_cbe.sh"/>
+								<rom name=".profile" label="vfs_cbe.sh"/>
 							</vfs>
 							<arg value="bash"/>
+							<arg value="--login"/>
 							<env key="TERM" value="screen"/>
 							<env key="HOME" value="/"/>
 							<env key="PATH" value="/bin"/>

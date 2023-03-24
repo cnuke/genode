@@ -113,7 +113,7 @@ void Superblock_control::_execute_read_vba(Channel          &channel,
 	case Channel::State::SUBMITTED:
 		switch (sb.state) {
 		case Superblock_state::REKEYING: {
-			auto const vba = channel._request._vba;
+			Virtual_block_address const vba = channel._request._vba;
 
 			if (vba < sb.rekeying_vba)
 				channel._curr_key_plaintext.id = sb.current_key.id;
@@ -122,14 +122,17 @@ void Superblock_control::_execute_read_vba(Channel          &channel,
 
 			break;
 		}
-		case Superblock_state::NORMAL: {
-			auto const vba = channel._request._vba;
+		case Superblock_state::NORMAL:
+		{
+			Virtual_block_address const vba = channel._request._vba;
 			if (vba > max_vba()) {
 				channel._request._success = false;
 				channel._state = Channel::State::COMPLETED;
 				progress = true;
 				return;
 			}
+			channel._curr_key_plaintext.id = sb.current_key.id;
+			break;
 		}
 		case Superblock_state::EXTENDING_FT:
 		case Superblock_state::EXTENDING_VBD:
@@ -176,7 +179,7 @@ void Superblock_control::_execute_write_vba(Channel         &channel,
 	case Channel::State::SUBMITTED:
 		switch (sb.state) {
 		case Superblock_state::REKEYING: {
-			auto const vba = channel._request._vba;
+			Virtual_block_address const vba = channel._request._vba;
 
 			if (vba < sb.rekeying_vba)
 				channel._curr_key_plaintext.id = sb.current_key.id;
@@ -185,14 +188,17 @@ void Superblock_control::_execute_write_vba(Channel         &channel,
 
 			break;
 		}
-		case Superblock_state::NORMAL: {
-			auto const vba = channel._request._vba;
+		case Superblock_state::NORMAL:
+		{
+			Virtual_block_address const vba = channel._request._vba;
 			if (vba > max_vba()) {
 				channel._request._success = false;
 				channel._state = Channel::State::COMPLETED;
 				progress = true;
 				return;
 			}
+			channel._curr_key_plaintext.id = sb.current_key.id;
+			break;
 		}
 		case Superblock_state::EXTENDING_FT:
 		case Superblock_state::EXTENDING_VBD:

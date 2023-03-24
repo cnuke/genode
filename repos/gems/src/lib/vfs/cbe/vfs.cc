@@ -107,6 +107,7 @@ namespace Cbe {
 		case VBD_INITIALIZER: return "vbd_initializer";
 		case FT_INITIALIZER: return "ft_initializer";
 		case SB_INITIALIZER: return "sb_initializer";
+		case REQUEST_POOL: return "request_pool";
 		default: break;
 		}
 		return "?";
@@ -147,7 +148,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		bool ready_to_submit_request() override
 		{
-			return _client_data_request.type() == Client_data_request::INVALID;
+			return _client_data_request._type == Client_data_request::INVALID;
 		}
 
 		void submit_request(Module_request &req) override
@@ -224,25 +225,6 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 				using ST = Frontend_request::State;
 
 				Cbe::Request &request = _frontend_request.cbe_request;
-				Cbe::Virtual_block_address const vba = request.block_number();
-
-				if (vba > _sb_control->max_vba()) {
-					warning("reject request with out-of-range virtual block start address ", vba);
-					_frontend_request.state = ST::ERROR_EOF;
-					return;
-				}
-
-				if (vba + request.count() < vba) {
-					warning("reject wraping request", vba);
-					_frontend_request.state = ST::ERROR_EOF;
-					return;
-				}
-
-				if (vba + request.count() > (_sb_control->max_vba() + 1)) {
-					warning("reject invalid request ", vba, " ", request.count());
-					_frontend_request.state = ST::ERROR_EOF;
-					return;
-				}
 
 				if (_request_pool->ready_to_submit_request()) {
 					_request_pool->submit_request(request);
@@ -374,13 +356,13 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 		Pointer<Deinitialize_file_system> _deinit_fs    { };
 
 		/* configuration options */
-		bool _verbose       { true };
-		bool _debug         { true };
+		bool _verbose       { false };
+		bool _debug         { false };
 
 		void _read_config(Xml_node config)
 		{
-			//_verbose      = config.attribute_value("verbose", _verbose);
-			//_debug        = config.attribute_value("debug",   _debug);
+			_verbose      = config.attribute_value("verbose", _verbose);
+			_debug        = config.attribute_value("debug",   _debug);
 		}
 
 		struct Could_not_open_block_backend : Genode::Exception { };
@@ -388,7 +370,6 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		void _initialize_cbe()
 		{
-log("----------------------", __func__, __LINE__);
 			_free_tree.construct();
 			_modules_add(FREE_TREE, *_free_tree);
 
@@ -400,14 +381,13 @@ log("----------------------", __func__, __LINE__);
 
 			_request_pool.construct();
 			_modules_add(REQUEST_POOL, *_request_pool);
-log("----------------------", __func__, __LINE__);
 		}
 
 		/************************
 		 ** Module composition **
 		 ************************/
 
-		enum { VERBOSE_MODULE_COMMUNICATION = 1 };
+		enum { VERBOSE_MODULE_COMMUNICATION = 0 };
 
 		void _modules_add(unsigned long  module_id,
 		                  Module        &module)
@@ -438,7 +418,6 @@ log("----------------------", __func__, __LINE__);
 
 		void _modules_execute(bool &progress)
 		{
-log("----------------------", __func__, __LINE__);
 			for (unsigned long id { 0 }; id <= MAX_MODULE_ID; id++) {
 
 				if (_module_ptrs[id] == nullptr)
@@ -592,8 +571,14 @@ log("----------------------", __func__, __LINE__);
 					_helper_read_request.state  = Helper_request::State::NONE;
 					_helper_write_request.state = Helper_request::State::NONE;
 
-					_frontend_request.state = ST::COMPLETE;
-					_frontend_request.cbe_request.success(cbe_request.success());
+					bool const eof = cbe_request.block_number() > _sb_control->max_vba();
+					_frontend_request.state = eof ? ST::ERROR_EOF : ST::ERROR;
+					_frontend_request.cbe_request.success(false);
+					if (_verbose) {
+						Genode::log("Request failed: ",
+						            " (frontend request: ", _frontend_request.cbe_request,
+						            " count: ", _frontend_request.count, ")");
+					}
 					break;
 				}
 
@@ -822,12 +807,10 @@ log("----------------------", __func__, __LINE__);
 
 		Wrapper(Vfs::Env &vfs_env, Xml_node config) : _vfs_env { vfs_env }
 		{
-log("----------------------", __func__, __LINE__);
 			_read_config(config);
 
 			using S = Genode::String<32>;
 
-log("----------------------", __func__, __LINE__);
 			S const block_path =
 				config.attribute_value("block", S());
 			if (block_path.valid())
@@ -835,7 +818,6 @@ log("----------------------", __func__, __LINE__);
 					[&] (Xml_node const &node) {
 						_block_io.construct(vfs_env, node);
 					});
-log("----------------------", __func__, __LINE__);
 
 			S const trust_anchor_path =
 				config.attribute_value("trust_anchor", S());
@@ -844,7 +826,6 @@ log("----------------------", __func__, __LINE__);
 					[&] (Xml_node const &node) {
 						_trust_anchor.construct(vfs_env, node);
 					});
-log("----------------------", __func__, __LINE__);
 
 			S const crypto_path =
 				config.attribute_value("crypto", S());
@@ -860,7 +841,6 @@ log("----------------------", __func__, __LINE__);
 			_modules_add(TRUST_ANCHOR,  *_trust_anchor);
 			_modules_add(CLIENT_DATA,  *this);
 			_modules_add(BLOCK_IO,      *_block_io);
-log("----------------------", __func__, __LINE__);
 
 			_initialize_cbe();
 		}
@@ -988,7 +968,6 @@ log("----------------------", __func__, __LINE__);
 
 			/* short-cut for SYNC requests */
 			if (op == Cbe::Request::Operation::SYNC) {
-log("----------------------", __func__, __LINE__);
 				_frontend_request.cbe_request = Cbe::Request(
 					op,
 					false,
