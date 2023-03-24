@@ -497,6 +497,7 @@ void Superblock_control::_execute_initialize(Channel           &channel,
 			class Execute_initialize_error { };
 			throw Execute_initialize_error { };
 		}
+		Genode::error("sb_idx: ", channel._read_sb_idx, ": ", channel._sb_ciphertext());
 		if (channel._sb_ciphertext().state != Superblock_state::INVALID) {
 
 			Superblock const &cipher { channel._sb_ciphertext() };
