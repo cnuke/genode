@@ -374,13 +374,13 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 		Pointer<Deinitialize_file_system> _deinit_fs    { };
 
 		/* configuration options */
-		bool _verbose       { false };
-		bool _debug         { false };
+		bool _verbose       { true };
+		bool _debug         { true };
 
 		void _read_config(Xml_node config)
 		{
-			_verbose      = config.attribute_value("verbose", _verbose);
-			_debug        = config.attribute_value("debug",   _debug);
+			//_verbose      = config.attribute_value("verbose", _verbose);
+			//_debug        = config.attribute_value("debug",   _debug);
 		}
 
 		struct Could_not_open_block_backend : Genode::Exception { };
@@ -388,6 +388,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		void _initialize_cbe()
 		{
+log("----------------------", __func__, __LINE__);
 			_free_tree.construct();
 			_modules_add(FREE_TREE, *_free_tree);
 
@@ -399,13 +400,14 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 			_request_pool.construct();
 			_modules_add(REQUEST_POOL, *_request_pool);
+log("----------------------", __func__, __LINE__);
 		}
 
 		/************************
 		 ** Module composition **
 		 ************************/
 
-		enum { VERBOSE_MODULE_COMMUNICATION = 0 };
+		enum { VERBOSE_MODULE_COMMUNICATION = 1 };
 
 		void _modules_add(unsigned long  module_id,
 		                  Module        &module)
@@ -436,6 +438,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		void _modules_execute(bool &progress)
 		{
+log("----------------------", __func__, __LINE__);
 			for (unsigned long id { 0 }; id <= MAX_MODULE_ID; id++) {
 
 				if (_module_ptrs[id] == nullptr)
@@ -819,10 +822,12 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 		Wrapper(Vfs::Env &vfs_env, Xml_node config) : _vfs_env { vfs_env }
 		{
+log("----------------------", __func__, __LINE__);
 			_read_config(config);
 
 			using S = Genode::String<32>;
 
+log("----------------------", __func__, __LINE__);
 			S const block_path =
 				config.attribute_value("block", S());
 			if (block_path.valid())
@@ -830,6 +835,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 					[&] (Xml_node const &node) {
 						_block_io.construct(vfs_env, node);
 					});
+log("----------------------", __func__, __LINE__);
 
 			S const trust_anchor_path =
 				config.attribute_value("trust_anchor", S());
@@ -838,6 +844,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 					[&] (Xml_node const &node) {
 						_trust_anchor.construct(vfs_env, node);
 					});
+log("----------------------", __func__, __LINE__);
 
 			S const crypto_path =
 				config.attribute_value("crypto", S());
@@ -853,6 +860,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 			_modules_add(TRUST_ANCHOR,  *_trust_anchor);
 			_modules_add(CLIENT_DATA,  *this);
 			_modules_add(BLOCK_IO,      *_block_io);
+log("----------------------", __func__, __LINE__);
 
 			_initialize_cbe();
 		}
@@ -980,6 +988,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 			/* short-cut for SYNC requests */
 			if (op == Cbe::Request::Operation::SYNC) {
+log("----------------------", __func__, __LINE__);
 				_frontend_request.cbe_request = Cbe::Request(
 					op,
 					false,
