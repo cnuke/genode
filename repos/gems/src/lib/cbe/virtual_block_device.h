@@ -39,9 +39,13 @@ class Cbe::Virtual_block_device_request : public Module_request
 		friend class Virtual_block_device_channel;
 
 		Type                  _type                    { INVALID };
-		Genode::uint64_t      _client_req_offset       { 0 };
-		Genode::uint64_t      _client_req_tag          { 0 };
-		Generation            _last_secured_generation { INVALID_GENERATION };
+		Genode::uint8_t       _prim[PRIM_BUF_SIZE]     { 0 };
+		Virtual_block_address _vba                     { 0 };
+		Snapshots             _snapshots               { };
+		Tree_degree           _snapshots_degree        { 0 };
+		Generation            _curr_gen                { INVALID_GENERATION };
+		Key_id                _new_key_id              { 0 };
+		Key_id                _old_key_id              { 0 };
 		Genode::addr_t        _ft_root_pba_ptr         { 0 };
 		Genode::addr_t        _ft_root_gen_ptr         { 0 };
 		Genode::addr_t        _ft_root_hash_ptr        { 0 };
@@ -57,48 +61,54 @@ class Cbe::Virtual_block_device_request : public Module_request
 		Genode::uint64_t      _vbd_degree              { 0 };
 		Genode::uint64_t      _vbd_highest_vba         { 0 };
 		bool                  _rekeying                { 0 };
-		Virtual_block_address _vba                     { 0 };
-		Genode::addr_t        _snapshots_ptr           { 0 };
-		Snapshots_index       _snap_idx                { 0 };
-		Tree_degree           _snapshots_degree        { 0 };
-		Generation            _curr_gen                { INVALID_GENERATION };
-		Key_id                _new_key_id              { 0 };
-		Key_id                _old_key_id              { 0 };
+		Genode::uint64_t      _client_req_offset       { 0 };
+		Genode::uint64_t      _client_req_tag          { 0 };
+		Generation            _last_secured_generation { INVALID_GENERATION };
 		bool                  _success                 { false };
 
 	public:
 
 		Virtual_block_device_request() { }
 
-		Virtual_block_device_request(Genode::uint64_t       src_module_id,
-		                             Genode::uint64_t       src_request_id,
-		                             Genode::size_t         req_type,
-		                             Genode::uint64_t       client_req_offset,
-		                             Genode::uint64_t       client_req_tag,
-		                             Generation             last_secured_generation,
-		                             Genode::addr_t         ft_root_pba_ptr,
-		                             Genode::addr_t         ft_root_gen_ptr,
-		                             Genode::addr_t         ft_root_hash_ptr,
-		                             Genode::uint64_t       ft_max_level,
-		                             Genode::uint64_t       ft_degree,
-		                             Genode::uint64_t       ft_leaves,
-		                             Genode::addr_t         mt_root_pba_ptr,
-		                             Genode::addr_t         mt_root_gen_ptr,
-		                             Genode::addr_t         mt_root_hash_ptr,
-		                             Genode::uint64_t       mt_max_level,
-		                             Genode::uint64_t       mt_degree,
-		                             Genode::uint64_t       mt_leaves,
-		                             Genode::uint64_t       vbd_degree,
-		                             Genode::uint64_t       vbd_highest_vba,
-		                             bool                   rekeying,
-		                             Virtual_block_address  vba,
-		                             Snapshots const       &snapshots,
-		                             Snapshots_index        snap_idx,
-		                             Tree_degree            snapshots_degree,
-		                             Generation             current_gen,
-		                             Key_id                 key_id);
+		Virtual_block_device_request(unsigned long src_module_id,
+		                             unsigned long src_request_id);
+
+		static void create(void                  *buf_ptr,
+		                   Genode::size_t         buf_size,
+		                   Genode::uint64_t       src_module_id,
+		                   Genode::uint64_t       src_request_id,
+		                   Genode::size_t         req_type,
+		                   void                  *prim_ptr,
+		                   Genode::size_t         prim_size,
+		                   Genode::uint64_t       client_req_offset,
+		                   Genode::uint64_t       client_req_tag,
+		                   Generation             last_secured_generation,
+		                   Genode::addr_t         ft_root_pba_ptr,
+		                   Genode::addr_t         ft_root_gen_ptr,
+		                   Genode::addr_t         ft_root_hash_ptr,
+		                   Genode::uint64_t       ft_max_level,
+		                   Genode::uint64_t       ft_degree,
+		                   Genode::uint64_t       ft_leaves,
+		                   Genode::addr_t         mt_root_pba_ptr,
+		                   Genode::addr_t         mt_root_gen_ptr,
+		                   Genode::addr_t         mt_root_hash_ptr,
+		                   Genode::uint64_t       mt_max_level,
+		                   Genode::uint64_t       mt_degree,
+		                   Genode::uint64_t       mt_leaves,
+		                   Genode::uint64_t       vbd_degree,
+		                   Genode::uint64_t       vbd_highest_vba,
+		                   bool                   rekeying,
+		                   Virtual_block_address  vba,
+		                   Snapshot const        *snapshot_ptr,
+		                   Tree_degree            snapshots_degree,
+		                   Generation             current_gen,
+		                   Key_id                 key_id);
 
 		bool success() const { return _success; }
+
+		void *prim_ptr() { return (void *)&_prim; }
+
+		Snapshot *snapshot_ptr() { return &_snapshots.items[0]; }
 
 		static char const *type_to_string(Type type);
 
@@ -187,7 +197,7 @@ class Cbe::Virtual_block_device_channel
 		Snapshot &snapshots(Snapshots_index idx)
 		{
 			if (idx < MAX_NR_OF_SNAPSHOTS_PER_SB)
-				return ((Snapshots*)_request._snapshots_ptr)->items[idx];
+				return _request._snapshots.items[idx];
 
 			class Snapshot_idx_too_large { };
 			throw Snapshot_idx_too_large { };

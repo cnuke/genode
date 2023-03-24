@@ -65,63 +65,82 @@ char const *Virtual_block_device_request::type_to_string(Type op)
 	return "?";
 }
 
+void Virtual_block_device_request::create(void                  *buf_ptr,
+                                          Genode::size_t         buf_size,
+                                          Genode::uint64_t       src_module_id,
+                                          Genode::uint64_t       src_request_id,
+                                          Genode::size_t         req_type,
+                                          void                  *prim_ptr,
+                                          Genode::size_t         prim_size,
+                                          Genode::uint64_t       client_req_offset,
+                                          Genode::uint64_t       client_req_tag,
+                                          Generation             last_secured_generation,
+                                          addr_t                 ft_root_pba_ptr,
+                                          addr_t                 ft_root_gen_ptr,
+                                          addr_t                 ft_root_hash_ptr,
+                                          uint64_t               ft_max_level,
+                                          uint64_t               ft_degree,
+                                          uint64_t               ft_leaves,
+                                          addr_t                 mt_root_pba_ptr,
+                                          addr_t                 mt_root_gen_ptr,
+                                          addr_t                 mt_root_hash_ptr,
+                                          uint64_t               mt_max_level,
+                                          uint64_t               mt_degree,
+                                          uint64_t               mt_leaves,
+                                          uint64_t               vbd_degree,
+                                          uint64_t               vbd_highest_vba,
+                                          bool                   rekeying,
+                                          Virtual_block_address  vba,
+                                          Snapshot const        *snapshot_ptr,
+                                          Tree_degree            snapshots_degree,
+                                          Generation             current_gen,
+                                          Key_id                 key_id)
+{
+	Virtual_block_device_request req { src_module_id, src_request_id };
+	req._type                    = (Type)req_type;
+	req._last_secured_generation = last_secured_generation;
+	req._ft_root_pba_ptr         = (addr_t)ft_root_pba_ptr;
+	req._ft_root_gen_ptr         = (addr_t)ft_root_gen_ptr;
+	req._ft_root_hash_ptr        = (addr_t)ft_root_hash_ptr;
+	req._ft_max_level            = ft_max_level;
+	req._ft_degree               = ft_degree;
+	req._ft_leaves               = ft_leaves;
+	req._mt_root_pba_ptr         = (addr_t)mt_root_pba_ptr;
+	req._mt_root_gen_ptr         = (addr_t)mt_root_gen_ptr;
+	req._mt_root_hash_ptr        = (addr_t)mt_root_hash_ptr;
+	req._mt_max_level            = mt_max_level;
+	req._mt_degree               = mt_degree;
+	req._mt_leaves               = mt_leaves;
+	req._vbd_degree              = vbd_degree;
+	req._vbd_highest_vba         = vbd_highest_vba;
+	req._rekeying                = rekeying;
+	req._vba                     = vba;
+	req._snapshots.items[0]      = *snapshot_ptr;
+	req._snapshots_degree        = snapshots_degree;
+	req._client_req_offset       = client_req_offset;
+	req._client_req_tag          = client_req_tag;
+	req._curr_gen                = current_gen;
+	req._new_key_id              = key_id;
 
-Virtual_block_device_request::
-Virtual_block_device_request(uint64_t               src_module_id,
-                             uint64_t               src_request_id,
-                             size_t                 req_type,
-                             uint64_t               client_req_offset,
-                             uint64_t               client_req_tag,
-                             Generation             last_secured_generation,
-                             addr_t                 ft_root_pba_ptr,
-                             addr_t                 ft_root_gen_ptr,
-                             addr_t                 ft_root_hash_ptr,
-                             uint64_t               ft_max_level,
-                             uint64_t               ft_degree,
-                             uint64_t               ft_leaves,
-                             addr_t                 mt_root_pba_ptr,
-                             addr_t                 mt_root_gen_ptr,
-                             addr_t                 mt_root_hash_ptr,
-                             uint64_t               mt_max_level,
-                             uint64_t               mt_degree,
-                             uint64_t               mt_leaves,
-                             uint64_t               vbd_degree,
-                             uint64_t               vbd_highest_vba,
-                             bool                   rekeying,
-                             Virtual_block_address  vba,
-                             Snapshots const       &snapshots,
-                             Snapshots_index        snap_idx,
-                             Tree_degree            snapshots_degree,
-                             Generation             current_gen,
-                             Key_id                 key_id)
+	if (prim_ptr != nullptr) {
+		if (prim_size > sizeof(req._prim)) {
+			class Exception_1 { };
+			throw Exception_1 { };
+		}
+		memcpy(&req._prim, prim_ptr, prim_size);
+	}
+	if (sizeof(req) > buf_size) {
+		class Exception_2 { };
+		throw Exception_2 { };
+	}
+	memcpy(buf_ptr, &req, sizeof(req));
+}
+
+
+Virtual_block_device_request::Virtual_block_device_request(unsigned long src_module_id,
+                                                           unsigned long src_request_id)
 :
-	Module_request           { src_module_id, src_request_id,
-	                           VIRTUAL_BLOCK_DEVICE },
-	_type                    { (Type)req_type },
-	_client_req_offset       { client_req_offset },
-	_client_req_tag          { client_req_tag },
-	_last_secured_generation { last_secured_generation },
-	_ft_root_pba_ptr         { (addr_t)ft_root_pba_ptr },
-	_ft_root_gen_ptr         { (addr_t)ft_root_gen_ptr },
-	_ft_root_hash_ptr        { (addr_t)ft_root_hash_ptr },
-	_ft_max_level            { ft_max_level },
-	_ft_degree               { ft_degree },
-	_ft_leaves               { ft_leaves },
-	_mt_root_pba_ptr         { (addr_t)mt_root_pba_ptr },
-	_mt_root_gen_ptr         { (addr_t)mt_root_gen_ptr },
-	_mt_root_hash_ptr        { (addr_t)mt_root_hash_ptr },
-	_mt_max_level            { mt_max_level },
-	_mt_degree               { mt_degree },
-	_mt_leaves               { mt_leaves },
-	_vbd_degree              { vbd_degree },
-	_vbd_highest_vba         { vbd_highest_vba },
-	_rekeying                { rekeying },
-	_vba                     { vba },
-	_snapshots_ptr           { (addr_t)&snapshots },
-	_snap_idx                { snap_idx },
-	_snapshots_degree        { snapshots_degree },
-	_curr_gen                { current_gen },
-	_new_key_id              { key_id }
+	Module_request { src_module_id, src_request_id, VIRTUAL_BLOCK_DEVICE }
 { }
 
 
@@ -259,7 +278,7 @@ void Virtual_block_device::_execute_read_vba(Channel &channel,
 	{
 		Request &request  = channel._request;
 
-		channel._snapshot_idx = request._snap_idx;
+		channel._snapshot_idx = 0;
 		channel._vba          = request._vba;
 
 		Snapshot &snapshot = channel.snapshots(channel._snapshot_idx);
@@ -884,10 +903,10 @@ bool Virtual_block_device::_peek_generated_request(uint8_t *buf_ptr,
 				req._ft_max_level, req._ft_degree, req._ft_leaves,
 				req._mt_root_pba_ptr, req._mt_root_gen_ptr,
 				req._mt_root_hash_ptr, req._mt_max_level, req._mt_degree,
-				req._mt_leaves, (Snapshots *)req._snapshots_ptr, req._last_secured_generation,
+				req._mt_leaves, &req._snapshots, req._last_secured_generation,
 				req._curr_gen, chan._free_gen, chan._nr_of_blks,
 				(addr_t)&chan._new_pbas, (addr_t)&chan._t1_node_walk,
-				(uint64_t)((Snapshots *)req._snapshots_ptr)->items[chan._snapshot_idx].max_level,
+				(uint64_t)req._snapshots.items[chan._snapshot_idx].max_level,
 				chan._vba, req._vbd_degree, req._vbd_highest_vba,
 				req._rekeying, req._old_key_id, req._new_key_id, chan._vba);
 
