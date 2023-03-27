@@ -29,8 +29,6 @@
 		<rom label="vfs_cbe.lib.so"/>
 		<rom label="vfs_cbe_crypto_aes_cbc.lib.so"/>
 		<rom label="vfs_cbe_trust_anchor.lib.so"/>
-		<rom label="cbe_cxx.lib.so"/>
-		<rom label="cbe_init_cxx.lib.so"/>
 		<rom label="cbe_init"/>
 		<rom label="cbe_init_trust_anchor"/>
 		<rom label="libcrypto.lib.so"/>
@@ -38,8 +36,6 @@
 		<rom label="vfs_rump.lib.so"/>
 		<rom label="rump_fs.lib.so"/>
 		<rom label="sandbox.lib.so"/>
-		<rom label="libsparkcrypto.lib.so"/>
-		<rom label="spark.lib.so"/>
 		<rom label="fs_tool"/>
 		<rom label="mke2fs"/>
 		<rom label="resize2fs"/>

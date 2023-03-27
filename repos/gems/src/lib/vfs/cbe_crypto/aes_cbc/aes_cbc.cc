@@ -41,7 +41,8 @@ struct Crypto : Cbe_crypto::Interface
 			unsigned tail { 0 };
 
 			struct {
-				Cbe::Request    request { };
+				uint64_t        blk_nr  { 0 };
+				uint32_t        key_id  { 0 };
 				Cbe::Block_data data    { };
 			} queue [4];
 
@@ -172,10 +173,10 @@ struct Crypto : Cbe_crypto::Interface
 
 		return apply_key (key_id, [&] (auto &meta) {
 			return jobs.queue_encrypt([&] (auto &job) {
-				job.request = Cbe::Request(Cbe::Request::Operation::WRITE,
-				                           false, block_number, 0, 1, key_id, 0);
+				job.blk_nr = block_number;
+				job.key_id = key_id;
 
-				uint64_t block_id = job.request.block_number();
+				uint64_t block_id = job.blk_nr;
 
 				Aes_cbc_4k::Block_number     block_number { block_id };
 				Aes_cbc_4k::Plaintext const &plaintext  = *reinterpret_cast<Aes_cbc_4k::Plaintext const *>(src.start);
@@ -204,7 +205,7 @@ struct Crypto : Cbe_crypto::Interface
 		bool const valid = jobs.apply_encrypt([&](auto const &job) {
 			Genode::memcpy(dst.start, &job.data, sizeof(job.data));
 
-			block_id = job.request.block_number();
+			block_id = job.blk_nr;
 
 			return true;
 		});
@@ -228,8 +229,8 @@ struct Crypto : Cbe_crypto::Interface
 		/* use apply_key to make sure key_id is actually known */
 		return apply_key (key_id, [&] (auto &) {
 			return jobs.queue_decrypt([&] (auto &job) {
-				job.request = Cbe::Request(Cbe::Request::Operation::READ,
-				                           false, block_number, 0, 1, key_id, 0);
+				job.blk_nr = block_number;
+				job.key_id = key_id;
 				Genode::memcpy(&job.data, src.start, sizeof(job.data));
 			});
 		});
@@ -248,8 +249,8 @@ struct Crypto : Cbe_crypto::Interface
 		uint64_t block_id = 0;
 
 		bool const valid = jobs.apply_decrypt([&](auto const &job) {
-			bool ok = apply_key (job.request.key_id(), [&] (auto &meta) {
-				block_id = job.request.block_number();
+			bool ok = apply_key (job.key_id, [&] (auto &meta) {
+				block_id = job.blk_nr;
 
 				Aes_cbc_4k::Block_number      block_number { block_id };
 				Aes_cbc_4k::Ciphertext const &ciphertext = *reinterpret_cast<Aes_cbc_4k::Ciphertext const *>(&job.data);

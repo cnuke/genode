@@ -22,7 +22,6 @@
 		<rom label="cbe_cxx.lib.so"/>
 		<rom label="ld.lib.so"/>
 		<rom label="libcrypto.lib.so"/>
-		<rom label="spark.lib.so"/>
 		<rom label="vfs"/>
 		<rom label="vfs_cbe.lib.so"/>
 		<rom label="vfs_cbe_crypto_aes_cbc.lib.so"/>

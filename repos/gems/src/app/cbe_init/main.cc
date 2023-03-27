@@ -23,327 +23,297 @@
 #include <vfs/simple_env.h>
 
 /* CBE includes */
-#include <cbe/init/library.h>
 #include <cbe/init/configuration.h>
-#include <cbe/vfs/trust_anchor_vfs.h>
+#include <block_allocator.h>
+#include <block_io.h>
+#include <crypto.h>
+#include <ft_initializer.h>
+#include <sb_initializer.h>
+#include <trust_anchor.h>
+#include <vbd_initializer.h>
+
 
 enum { VERBOSE = 0 };
 
 using namespace Genode;
+using namespace Cbe;
 
-class Main : Vfs::Env::User
+namespace Cbe {
+
+	char const *module_name(unsigned long id)
+	{
+		switch (id) {
+		case CRYPTO: return "crypto";
+		case BLOCK_IO: return "block_io";
+		case CBE_LIBRARA: return "cbe";
+		case CBE_INIT_LIBRARA: return "cbe_init";
+		case CACHE: return "cache";
+		case META_TREE: return "meta_tree";
+		case FREE_TREE: return "free_tree";
+		case VIRTUAL_BLOCK_DEVICE: return "vbd";
+		case SUPERBLOCK_CONTROL: return "sb_control";
+		case CLIENT_DATA: return "client_data";
+		case TRUST_ANCHOR: return "trust_anchor";
+		case COMMAND_POOL: return "command_pool";
+		case BLOCK_ALLOCATOR: return "block_allocator";
+		case VBD_INITIALIZER: return "vbd_initializer";
+		case FT_INITIALIZER: return "ft_initializer";
+		case SB_INITIALIZER: return "sb_initializer";
+		default: break;
+		}
+		return "?";
+	}
+}
+
+
+static Block_allocator *_block_allocator_ptr;
+
+
+Genode::uint64_t block_allocator_first_block()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->first_block();
+}
+
+
+Genode::uint64_t block_allocator_nr_of_blks()
+{
+	if (!_block_allocator_ptr) {
+		struct Exception_1 { };
+		throw Exception_1();
+	}
+
+	return _block_allocator_ptr->nr_of_blks();
+}
+
+
+class Main : Vfs::Env::User, public Cbe::Module
 {
 	private:
 
-		enum { TX_BUF_SIZE = Block::Session::TX_QUEUE_SIZE * Cbe::BLOCK_SIZE };
+		/*
+		 * Noncopyable
+		 */
+		Main(Main const &) = delete;
+		Main &operator = (Main const &) = delete;
 
-		Env                  &_env;
-		Heap                  _heap        { _env.ram(), _env.rm() };
+		Env  &_env;
+		Heap  _heap { _env.ram(), _env.rm() };
 
 		Attached_rom_dataspace _config_rom { _env, "config" };
 
-		Allocator_avl         _blk_alloc   { &_heap };
-		Block::Connection<>   _blk         { _env, &_blk_alloc, TX_BUF_SIZE };
-		Signal_handler<Main>  _blk_handler { _env.ep(), *this, &Main::_execute };
-		Cbe::Request          _blk_req     { };
-		Cbe::Io_buffer        _blk_buf     { };
-		Cbe_init::Library     _cbe_init    { };
+		Vfs::Simple_env       _vfs_env { _env, _heap, _config_rom.xml().sub_node("vfs"), *this };
+		Vfs::File_system     &_vfs     { _vfs_env.root_dir() };
+		Signal_handler<Main>  _sigh    { _env.ep(), *this, &Main::_execute };
 
-		Genode::size_t        _blk_ratio   {
-			Cbe::BLOCK_SIZE / _blk.info().block_size };
+		Constructible<Cbe_init::Configuration> _cfg { };
 
-		Vfs::Simple_env   _vfs_env { _env, _heap, _config_rom.xml().sub_node("vfs"), *this };
-		Vfs::File_system &_vfs     { _vfs_env.root_dir() };
+		Trust_anchor    _trust_anchor    { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
+		Crypto          _crypto          { _vfs_env, _config_rom.xml().sub_node("crypto") };
+		Block_io        _block_io        { _vfs_env, _config_rom.xml().sub_node("block-io") };
+		Block_allocator _block_allocator { NR_OF_SUPERBLOCK_SLOTS };
+		Vbd_initializer _vbd_initializer { };
+		Ft_initializer  _ft_initializer  { };
+		Sb_initializer  _sb_initializer  { };
+
+		Module *_module_ptrs[MAX_MODULE_ID + 1] { };
 
 		/**
 		 * Vfs::Env::User interface
 		 */
-		void wakeup_vfs_user() override { _blk_handler.local_submit(); }
+		void wakeup_vfs_user() override { _sigh.local_submit(); }
 
-		static Util::Trust_anchor_vfs::Path _config_ta_dir(Xml_node const &node)
+		/************************
+		 ** Module composition **
+		 ************************/
+
+		enum { VERBOSE_MODULE_COMMUNICATION = 0 };
+
+		void _modules_add(unsigned long  module_id,
+		                  Module        &module)
 		{
-			using String_path = Genode::String<1024>;
-			String_path const path =
-				node.attribute_value("trust_anchor_dir", String_path());
-
-			if (!path.valid()) {
-
-				error("missing mandatory 'trust_anchor_dir' config attribute");
-				struct Missing_config_attribute { };
-				throw Missing_config_attribute();
+			if (module_id > MAX_MODULE_ID) {
+				class Exception_1 { };
+				throw Exception_1 { };
 			}
-
-			return Util::Trust_anchor_vfs::Path { path.string() };
+			if (_module_ptrs[module_id] != nullptr) {
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+			_module_ptrs[module_id] = &module;
 		}
 
-		Util::Trust_anchor_vfs _trust_anchor {
-			_vfs, _vfs_env.alloc(), _config_ta_dir(_config_rom.xml()) };
-
-		bool _execute_trust_anchor()
+		void _modules_remove(unsigned long  module_id)
 		{
-			bool progress = _trust_anchor.execute();
-
-			using Op = Cbe::Trust_anchor_request::Operation;
-
-			while (true) {
-
-				Cbe::Trust_anchor_request const request =
-					_cbe_init.peek_generated_ta_request();
-
-				if (!request.valid()) { break; }
-				if (!_trust_anchor.request_acceptable()) { break; }
-
-				switch (request.operation()) {
-				case Op::CREATE_KEY:
-					_trust_anchor.submit_create_key_request(request);
-					break;
-				case Op::SECURE_SUPERBLOCK:
-				{
-					Cbe::Hash const sb_hash = _cbe_init.peek_generated_ta_sb_hash(request);
-					_trust_anchor.submit_secure_superblock_request(request, sb_hash);
-					break;
-				}
-				case Op::ENCRYPT_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						_cbe_init.peek_generated_ta_key_value_plaintext(request);
-
-					_trust_anchor.submit_encrypt_key_request(request, pk);
-					break;
-				}
-				case Op::DECRYPT_KEY:
-				{
-					Cbe::Key_ciphertext_value const ck =
-						_cbe_init.peek_generated_ta_key_value_ciphertext(request);
-
-					_trust_anchor.submit_decrypt_key_request(request, ck);
-					break;
-				}
-				case Op::LAST_SB_HASH:
-					break;
-				case Op::INITIALIZE:
-					class Bad_operation { };
-					throw Bad_operation { };
-				case Op::INVALID:
-					/* never reached */
-					break;
-				}
-				_cbe_init.drop_generated_ta_request(request);
-				progress |= true;
+			if (module_id > MAX_MODULE_ID) {
+				class Exception_1 { };
+				throw Exception_1 { };
 			}
-
-			while (true) {
-
-				Cbe::Trust_anchor_request const request =
-					_trust_anchor.peek_completed_request();
-
-				if (!request.valid()) { break; }
-
-				switch (request.operation()) {
-				case Op::CREATE_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						_trust_anchor.peek_completed_key_value_plaintext(request);
-
-					_cbe_init.mark_generated_ta_create_key_request_complete(request, pk);
-					break;
-				}
-				case Op::SECURE_SUPERBLOCK:
-				{
-					_cbe_init.mark_generated_ta_secure_sb_request_complete(request);
-					break;
-				}
-				case Op::ENCRYPT_KEY:
-				{
-					Cbe::Key_ciphertext_value const ck =
-						_trust_anchor.peek_completed_key_value_ciphertext(request);
-
-					_cbe_init.mark_generated_ta_encrypt_key_request_complete(request, ck);
-					break;
-				}
-				case Op::DECRYPT_KEY:
-				{
-					Cbe::Key_plaintext_value const pk =
-						_trust_anchor.peek_completed_key_value_plaintext(request);
-
-					_cbe_init.mark_generated_ta_decrypt_key_request_complete(request, pk);
-					break;
-				}
-				case Op::LAST_SB_HASH:
-					break;
-				case Op::INITIALIZE:
-					class Bad_operation { };
-					throw Bad_operation { };
-				case Op::INVALID:
-					/* never reached */
-					break;
-				}
-				_trust_anchor.drop_completed_request(request);
-				progress |= true;
+			if (_module_ptrs[module_id] == nullptr) {
+				class Exception_2 { };
+				throw Exception_2 { };
 			}
+			_module_ptrs[module_id] = nullptr;
+		}
 
-			return progress;
+		void _modules_execute(bool &progress)
+		{
+			for (unsigned long id { 0 }; id <= MAX_MODULE_ID; id++) {
+
+				if (_module_ptrs[id] == nullptr)
+					continue;
+
+				Module *module_ptr { _module_ptrs[id] };
+				module_ptr->execute(progress);
+				module_ptr->for_each_generated_request([&] (Module_request &req) {
+					if (req.dst_module_id() > MAX_MODULE_ID) {
+						class Bad_dst_module { };
+						throw Bad_dst_module { };
+					}
+					Module &dst_module { *_module_ptrs[req.dst_module_id()] };
+					if (!dst_module.ready_to_submit_request()) {
+
+						if (VERBOSE_MODULE_COMMUNICATION)
+							Genode::log(
+								module_name(id), ":", req.src_request_id_str(),
+								" --", req.type_name(), "-| ",
+								module_name(req.dst_module_id()));
+
+						return Module::REQUEST_NOT_HANDLED;
+					}
+					dst_module.submit_request(req);
+
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(id), ":", req.src_request_id_str(),
+							" --", req.type_name(), "--> ",
+							module_name(req.dst_module_id()), ":",
+							req.dst_request_id_str());
+
+					progress = true;
+					return Module::REQUEST_HANDLED;
+				});
+				module_ptr->for_each_completed_request([&] (Module_request &req) {
+					if (req.src_module_id() > MAX_MODULE_ID) {
+						class Bad_src_module { };
+						throw Bad_src_module { };
+					}
+					if (VERBOSE_MODULE_COMMUNICATION)
+						Genode::log(
+							module_name(req.src_module_id()), ":",
+							req.src_request_id_str(), " <--", req.type_name(),
+							"-- ", module_name(id), ":",
+							req.dst_request_id_str());
+					Module &src_module { *_module_ptrs[req.src_module_id()] };
+					src_module.generated_request_complete(req);
+					progress = true;
+				});
+			}
 		}
 
 		void _execute()
 		{
-			for (bool progress { true }; progress; ) {
+			bool progress { true };
+			while (progress) {
 
 				progress = false;
-
-				_cbe_init.execute(_blk_buf);
-				if (_cbe_init.execute_progress()) {
-					progress = true;
-				}
-
-				Cbe::Request const req {
-					_cbe_init.peek_completed_client_request() };
-
-				if (req.valid()) {
-					_cbe_init.drop_completed_client_request(req);
-					if (req.success()) {
-						if (VERBOSE) {
-							log("CBE initialization finished");
-						}
-						_env.parent().exit(0);
-					} else {
-						error("request was not successful");;
-						_env.parent().exit(-1);
-					}
-				}
-
-				progress |= _execute_trust_anchor();
-
-				struct Invalid_io_request : Exception { };
-
-				while (_blk.tx()->ready_to_submit()) {
-
-					Cbe::Io_buffer::Index data_index { 0 };
-					Cbe::Request request { };
-					_cbe_init.has_io_request(request, data_index);
-
-					if (!request.valid()) {
-						break;
-					}
-					if (_blk_req.valid()) {
-						break;
-					}
-					try {
-						request.tag(data_index.value);
-						Block::Packet_descriptor::Opcode op;
-						switch (request.operation()) {
-						case Cbe::Request::Operation::READ:
-							op = Block::Packet_descriptor::READ;
-							break;
-						case Cbe::Request::Operation::WRITE:
-							op = Block::Packet_descriptor::WRITE;
-							break;
-						case Cbe::Request::Operation::SYNC:
-							op = Block::Packet_descriptor::SYNC;
-							break;
-						default:
-							throw Invalid_io_request();
-						}
-						Block::Packet_descriptor packet {
-							_blk.alloc_packet(Cbe::BLOCK_SIZE), op,
-							request.block_number() * _blk_ratio,
-							request.count() * _blk_ratio };
-
-						if (request.operation() == Cbe::Request::Operation::WRITE) {
-							*reinterpret_cast<Cbe::Block_data*>(
-								_blk.tx()->packet_content(packet)) =
-									_blk_buf.item(data_index);
-						}
-						_blk.tx()->try_submit_packet(packet);
-						_blk_req = request;
-						_cbe_init.io_request_in_progress(data_index);
-						progress = true;
-					}
-					catch (Block::Session::Tx::Source::Packet_alloc_failed) {
-						break;
-					}
-				}
-
-				while (_blk.tx()->ack_avail()) {
-
-					Block::Packet_descriptor packet =
-						_blk.tx()->try_get_acked_packet();
-
-					if (!_blk_req.valid()) {
-						break;
-					}
-
-					bool const read  =
-						packet.operation() == Block::Packet_descriptor::READ;
-
-					bool const write =
-						packet.operation() == Block::Packet_descriptor::WRITE;
-
-					bool const sync =
-						packet.operation() == Block::Packet_descriptor::SYNC;
-
-					bool const op_match =
-						(read && _blk_req.read()) ||
-						(write && _blk_req.write()) ||
-						(sync && _blk_req.sync());
-
-					bool const bn_match =
-						packet.block_number() / _blk_ratio == _blk_req.block_number();
-
-					if (!bn_match || !op_match) {
-						break;
-					}
-
-					_blk_req.success(packet.succeeded());
-
-					Cbe::Io_buffer::Index const data_index { _blk_req.tag() };
-					bool                  const success    { _blk_req.success() };
-
-					if (read && success) {
-						_blk_buf.item(data_index) =
-							*reinterpret_cast<Cbe::Block_data*>(
-								_blk.tx()->packet_content(packet));
-					}
-					_cbe_init.io_request_completed(data_index, success);
-					_blk.tx()->release_packet(packet);
-					_blk_req = Cbe::Request();
-					progress = true;
-				}
+				_modules_execute(progress);
 			}
-			_blk.tx()->wakeup();
+
 			_vfs_env.io().commit();
+
+			if (_state == COMPLETE)
+				_env.parent().exit(0);
+		}
+
+		/****************
+		 ** Module API **
+		 ****************/
+
+		enum State { INVALID, PENDING, IN_PROGRESS, COMPLETE };
+
+		State _state { INVALID };
+
+		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override
+		{
+			if (_state != PENDING)
+				return false;
+
+			Sb_initializer_request::create(
+				buf_ptr, buf_size, COMMAND_POOL, 0,
+				(unsigned long)Sb_initializer_request::INIT,
+				nullptr, 0,
+				_cfg->vbd_nr_of_lvls() - 1,
+				_cfg->vbd_nr_of_children(),
+				_cfg->vbd_nr_of_leafs(),
+				_cfg->ft_nr_of_lvls() - 1,
+				_cfg->ft_nr_of_children(),
+				_cfg->ft_nr_of_leafs(),
+				_cfg->ft_nr_of_lvls() - 1,
+				_cfg->ft_nr_of_children(),
+				_cfg->ft_nr_of_leafs());
+
+			return true;
+		}
+
+		void _drop_generated_request(Module_request &mod_req) override
+		{
+			if (_state != PENDING) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+
+			switch (mod_req.dst_module_id()) {
+			case SB_INITIALIZER:
+				_state = IN_PROGRESS;
+				break;
+			default:
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
+		}
+
+		void generated_request_complete(Module_request &mod_req) override
+		{
+			if (_state != IN_PROGRESS) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+
+			switch (mod_req.dst_module_id()) {
+			case SB_INITIALIZER:
+				_state = COMPLETE;
+				break;
+			default:
+				class Exception_2 { };
+				throw Exception_2 { };
+			}
 		}
 
 	public:
 
 		Main(Env &env) : _env { env }
 		{
-			if (_blk_ratio == 0) {
-				error("backend block size not supported");
-				_env.parent().exit(-1);
-				return;
-			}
+			_modules_add(COMMAND_POOL,      *this);
+			_modules_add(CRYPTO,            _crypto);
+			_modules_add(TRUST_ANCHOR,      _trust_anchor);
+			_modules_add(BLOCK_IO,          _block_io);
+			_modules_add(BLOCK_ALLOCATOR,   _block_allocator);
+			_modules_add(VBD_INITIALIZER,   _vbd_initializer);
+			_modules_add(FT_INITIALIZER,    _ft_initializer);
+			_modules_add(SB_INITIALIZER,    _sb_initializer);
+
+			_block_allocator_ptr = &_block_allocator;
 
 			Xml_node const &config { _config_rom.xml() };
 			try {
-				Cbe_init::Configuration const cfg { config };
-				if (!_cbe_init.client_request_acceptable()) {
-					error("failed to submit request");
-					_env.parent().exit(-1);
-				}
-				_cbe_init.submit_client_request(
-					Cbe::Request(
-						Cbe::Request::Operation::READ,
-						false, 0, 0, 0, 0, 0),
-					cfg.vbd_nr_of_lvls() - 1,
-					cfg.vbd_nr_of_children(),
-					cfg.vbd_nr_of_leafs(),
-					cfg.ft_nr_of_lvls() - 1,
-					cfg.ft_nr_of_children(),
-					cfg.ft_nr_of_leafs());
-
-				_blk.tx_channel()->sigh_ack_avail(_blk_handler);
-				_blk.tx_channel()->sigh_ready_to_submit(_blk_handler);
+				_cfg.construct(config);
+				_state = PENDING;
 
 				_execute();
 			}
@@ -352,28 +322,30 @@ class Main : Vfs::Env::User
 				_env.parent().exit(-1);
 			}
 		}
-
-		~Main()
-		{
-			_blk.tx_channel()->sigh_ack_avail(Signal_context_capability());
-			_blk.tx_channel()->sigh_ready_to_submit(Signal_context_capability());
-		}
 };
 
-extern "C" int memcmp(const void *p0, const void *p1, Genode::size_t size)
-{
-	return Genode::memcmp(p0, p1, size);
-}
-
-extern "C" void adainit();
 
 void Component::construct(Genode::Env &env)
 {
 	env.exec_static_constructors();
 
-	Cbe::assert_valid_object_size<Cbe_init::Library>();
-
-	cbe_init_cxx_init();
-
 	static Main main(env);
 }
+
+
+/*
+ * XXX Libc::Component::construct is needed for linking libcrypto
+ *     because it depends on the libc but does not need to be
+ *     executed.
+ */
+namespace Libc {
+	struct Env;
+
+	struct Component
+	{
+		void construct(Libc::Env &);
+	};
+}
+
+
+void Libc::Component::construct(Libc::Env &) { }

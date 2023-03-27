@@ -10,8 +10,6 @@
 		<rom label="init.config"/>
 		<rom label="ld.lib.so"/>
 		<rom label="cbe_check_cxx.lib.so"/>
-		<rom label="libsparkcrypto.lib.so"/>
-		<rom label="spark.lib.so"/>
 		<rom label="vfs.lib.so"/>
 		<rom label="vfs_block"/>
 	</content>
@@ -50,7 +48,7 @@
 					<fs buffer_size="1M"/>
 				</vfs>
 				<policy label_prefix="cbe_check" block_size="512"
-						file="/cbe.img" writeable="yes"/>
+				        file="/cbe.img" writeable="yes"/>
 			</config>
 			<route>
 				<service name="File_system"> <parent label="cbe_fs"/> </service>

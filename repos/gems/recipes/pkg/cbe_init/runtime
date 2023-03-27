@@ -10,8 +10,6 @@
 		<rom label="init.config"/>
 		<rom label="ld.lib.so"/>
 		<rom label="cbe_init_cxx.lib.so"/>
-		<rom label="libsparkcrypto.lib.so"/>
-		<rom label="spark.lib.so"/>
 		<rom label="vfs.lib.so"/>
 		<rom label="vfs_block"/>
 	</content>
@@ -39,10 +37,10 @@
 				<key id="23"/>
 				<!-- VBD is 1GiB (~16MiB MD) -->
 				<virtual-block-device nr_of_levels="5" nr_of_children="64"
-									  nr_of_leafs="262144"/>
+				                      nr_of_leafs="262144"/>
 				<!-- FT is 128MiB (~2MiB MD) -->
 				<free-tree nr_of_levels="4" nr_of_children="64"
-						   nr_of_leafs="32768"/>
+				           nr_of_leafs="32768"/>
 			</config>
 			<route>
 				<service name="Block"> <child name="vfs_block"/> </service>

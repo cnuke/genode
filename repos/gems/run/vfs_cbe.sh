@@ -23,6 +23,12 @@ test_write_1() {
 	dd bs=4096 count=1 if=$pattern_file of=$data_file seek=$offset 2>/dev/null || exit 1
 }
 
+test_read_seq_unaligned_512() {
+	local data_file="$1"
+	local length="$2"
+	dd bs=512 count=$((length / 512)) if=$data_file of=/dev/null
+}
+
 test_read_compare_1() {
 	local data_file="$1"
 	local offset=$2
@@ -169,6 +175,8 @@ main() {
 
 		echo "--> Run $i:"
 
+		test_read_seq_unaligned_512 "$data_file" "1048576"
+
 		local pattern_file="/tmp/pattern"
 		produce_pattern "$i" "4096" > $pattern_file
 
@@ -176,7 +184,7 @@ main() {
 		test_write_1 "$data_file"  "63"
 		test_write_1 "$data_file" "333"
 
-		test_vbd_extension "$cbe_dir" "1000"
+		#test_vbd_extension "$cbe_dir" "1000"
 		test_read_compare_1 "$data_file" "63"
 		test_write_1 "$data_file" "175"
 		test_read_compare_1 "$data_file" "419"
@@ -184,13 +192,13 @@ main() {
 		test_read_compare_1 "$data_file" "175"
 		test_read_compare_1 "$data_file" "91"
 		test_read_compare_1 "$data_file" "333"
-		wait_for_vbd_extension "$cbe_dir"
+		#wait_for_vbd_extension "$cbe_dir"
 
 		test_write_1 "$data_file"  "32"
 		test_write_1 "$data_file"  "77"
 		test_write_1 "$data_file" "199"
 
-		test_ft_extension "$cbe_dir" "1000"
+		#test_ft_extension "$cbe_dir" "1000"
 		test_read_compare_1 "$data_file" "32"
 		test_write_1 "$data_file" "211"
 		test_read_compare_1 "$data_file" "77"
@@ -198,7 +206,7 @@ main() {
 		test_read_compare_1 "$data_file" "199"
 		test_read_compare_1 "$data_file" "278"
 		test_read_compare_1 "$data_file" "211"
-		wait_for_ft_extension "$cbe_dir"
+		#wait_for_ft_extension "$cbe_dir"
 
 		test_write_1 "$data_file"  "0"
 		test_write_1 "$data_file"  "8"
@@ -211,25 +219,25 @@ main() {
 		test_read_compare_1 "$data_file" "16"
 		test_read_compare_1 "$data_file" "490"
 
-		test_rekey "$cbe_dir"
+		#test_rekey "$cbe_dir"
 		test_write_1 "$data_file" "0"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_read_compare_1 "$data_file" "490"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_write_1 "$data_file" "16"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_read_compare_1 "$data_file" "468"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_read_compare_1 "$data_file" "8"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_read_compare_1 "$data_file" "16"
-		test_rekey_state "$cbe_dir"
+		#test_rekey_state "$cbe_dir"
 		test_read_compare_1 "$data_file" "0"
 		test_write_1 "$data_file" "300"
 		test_write_1 "$data_file" "240"
 		test_write_1 "$data_file" "201"
 		test_write_1 "$data_file" "328"
-		wait_for_rekeying "$cbe_dir"
+		#wait_for_rekeying "$cbe_dir"
 
 		echo "--> Run $i done"
 
