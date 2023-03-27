@@ -1,0 +1,26 @@
+LIB_DIR := $(REP_DIR)/src/lib/cbe
+
+SRC_CC += crypto.cc
+SRC_CC += request_pool.cc
+SRC_CC += sha256_4k_hash.cc
+SRC_CC += trust_anchor.cc
+SRC_CC += block_io.cc
+SRC_CC += meta_tree.cc
+SRC_CC += virtual_block_device.cc
+SRC_CC += superblock_control.cc
+SRC_CC += free_tree.cc
+SRC_CC += module.cc
+SRC_CC += block_allocator.cc
+SRC_CC += vbd_initializer.cc
+SRC_CC += ft_initializer.cc
+SRC_CC += sb_initializer.cc
+SRC_CC += vfs_utilities.cc
+
+vpath % $(LIB_DIR)
+
+INC_DIR += $(LIB_DIR)
+
+LIBS += libcrypto
+LIBS += vfs
+
+CC_CXX_WARN_STRICT_CONVERSION =

@@ -1,5 +1,3 @@
-assert_spec x86_64
-
 build { app/file_vault }
 
 create_boot_directory
@@ -16,8 +14,6 @@ append archives "
 	[depot_user]/src/fs_query
 	[depot_user]/src/menu_view
 	[depot_user]/src/cbe
-	[depot_user]/src/spark
-	[depot_user]/src/libsparkcrypto
 	[depot_user]/src/vfs_block
 	[depot_user]/src/vfs_jitterentropy
 	[depot_user]/src/vfs
@@ -254,7 +250,7 @@ append config {
 			</config>
 			<route>
 				<service name="File_system" label="cbe_trust_anchor_vfs -> storage_dir"> <child name="trust_anchor_fs" label="file_vault -> trust_anchor"/> </service>
-				<service name="File_system" label="vfs_block -> ">                       <child name="data_fs"         label="file_vault -> data"/> </service>
+				<service name="File_system" label="cbe_init -> ">                        <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="cbe">                                 <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="fs_query -> ">                        <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="image_fs_query -> ">                  <child name="data_fs"         label="file_vault -> data"/> </service>

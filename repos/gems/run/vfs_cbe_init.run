@@ -1,18 +1,5 @@
 assert_spec linux
 
-if {[expr ![info exists ::env(CBE_KEEP)]]} {
-exec rm -rf var/libcache/cbe
-exec rm -rf var/libcache/cbe_cxx
-exec rm -rf var/libcache/cbe_common
-exec rm -rf var/libcache/cbe_common_cxx
-exec rm -rf var/libcache/cbe_init
-exec rm -rf var/libcache/cbe_init_cxx
-exec rm -rf var/libcache/cbe_check
-exec rm -rf var/libcache/cbe_check_cxx
-exec rm -rf var/libcache/cbe_dump
-exec rm -rf var/libcache/cbe_dump_cxx
-}
-
 proc cbe_image_file { } {
 	return "vfs_cbe_block.img"
 }
@@ -33,6 +20,7 @@ append build_components {
 
 	app/cbe_init_trust_anchor
 	app/cbe_init
+	lib/vfs_cbe_crypto_aes_cbc
 	lib/vfs_cbe_trust_anchor
 	lib/vfs_jitterentropy
 	lib/libc
@@ -64,12 +52,6 @@ append config {
 	<start name="timer">
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
-	</start>
-
-	<start name="lx_block" ld="no">
-		<resource name="RAM" quantum="2M"/>
-		<provides> <service name="Block"/> </provides>
-		<config file="} [cbe_image_file] {" block_size="4K" writeable="yes"/>
 	</start>
 
 	<start name="lx_fs" ld="no">
@@ -123,14 +105,20 @@ append config {
 
 			<start name="cbe_init">
 				<resource name="RAM" quantum="4M"/>
-				<config trust_anchor_dir="/trust_anchor">
+				<config>
+
+					<block-io type="vfs" path="/} [cbe_image_file] {"/>
+					<crypto path="/crypto"/>
+					<trust-anchor path="/trust_anchor"/>
+
 					<vfs>
+						<fs buffer_size="1M"/>
+						<cbe_crypto_aes_cbc name="crypto"/>
 						<dir name="trust_anchor">
 							<fs label="ta"/>
 						</dir>
 					</vfs>
 
-					<key id="12"/>
 					<virtual-block-device
 						nr_of_levels="3"
 						nr_of_children="64"
@@ -148,7 +136,7 @@ append config {
 			<service name="File_system" label_last="ta">
 				<child name="vfs_trust_anchor"/>
 			</service>
-			<service name="Block"> <child name="lx_block"/> </service>
+			<service name="File_system"> <child name="lx_fs"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
 	</start>
@@ -160,13 +148,22 @@ exec rm -rf bin/[cbe_image_file]
 exec truncate -s [cbe_image_size_mb]M bin/[cbe_image_file]
 
 append boot_modules {
-	core init timer lx_block lx_fs sequence
-	vfs vfs.lib.so vfs_jitterentropy.lib.so
-	ld.lib.so spark.lib.so libsparkcrypto.lib.so libcrypto.lib.so libc.lib.so
-
+	core
+	init
+	timer
+	lx_block
+	lx_fs
+	sequence
+	vfs
+	vfs.lib.so
+	vfs_jitterentropy.lib.so
+	ld.lib.so
+	libcrypto.lib.so
+	libc.lib.so
 	cbe_init_trust_anchor
-	cbe_init cbe_init_cxx.lib.so
+	cbe_init
 	vfs_cbe_trust_anchor.lib.so
+	vfs_cbe_crypto_aes_cbc.lib.so
 }
 
 append boot_modules [cbe_image_file]

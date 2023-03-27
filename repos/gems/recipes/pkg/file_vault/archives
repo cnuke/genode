@@ -5,8 +5,6 @@ _/src/zlib
 _/src/fs_query
 _/src/menu_view
 _/src/cbe
-_/src/spark
-_/src/libsparkcrypto
 _/src/vfs_block
 _/src/vfs_jitterentropy
 _/src/vfs

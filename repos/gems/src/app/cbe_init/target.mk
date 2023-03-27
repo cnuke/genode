@@ -1,9 +1,12 @@
-REQUIRES += x86_64
+TARGET := cbe_init
 
-TARGET  := cbe_init
+SRC_CC += main.cc
 
-SRC_CC  += main.cc
 INC_DIR += $(PRG_DIR)
-LIBS    += base vfs cbe_init_cxx
 
-CONFIG_XSD = config.xsd
+LIBS += base
+LIBS += cbe
+
+CONFIG_XSD := config.xsd
+
+CC_CXX_WARN_STRICT_CONVERSION =

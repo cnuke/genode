@@ -1,18 +1,5 @@
 assert_spec linux
 
-if {[expr ![info exists ::env(CBE_KEEP)]]} {
-exec rm -rf var/libcache/cbe
-exec rm -rf var/libcache/cbe_cxx
-exec rm -rf var/libcache/cbe_common
-exec rm -rf var/libcache/cbe_common_cxx
-exec rm -rf var/libcache/cbe_init
-exec rm -rf var/libcache/cbe_init_cxx
-exec rm -rf var/libcache/cbe_check
-exec rm -rf var/libcache/cbe_check_cxx
-exec rm -rf var/libcache/cbe_dump
-exec rm -rf var/libcache/cbe_dump_cxx
-}
-
 create_boot_directory
 
 proc cbe_image_file { } {
@@ -46,6 +33,7 @@ build {
 	server/report_rom
 	server/fs_rom
 	app/cbe_init_trust_anchor
+	app/sequence
 }
 
 set config {
@@ -81,9 +69,7 @@ set config {
 			<service name="Event">   <child name="nitpicker"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
-	</start>}
-
-append_if $use_interactively config {
+	</start>
 
 	<start name="nitpicker">
 		<resource name="RAM" quantum="4M"/>
@@ -100,7 +86,9 @@ append_if $use_interactively config {
 		<route>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
-	</start>
+	</start>}
+
+append_if $use_interactively config {
 
 	<start name="terminal_service" caps="110">
 		<binary name="terminal"/>
@@ -268,9 +256,10 @@ append config {
 								<dir name="dev">
 									<fs label="cbe" buffer_size="1M"/>
 								</dir>
-								<rom name=".bashrc" label="vfs_cbe.sh"/>
+								<rom name=".profile" label="vfs_cbe.sh"/>
 							</vfs>
 							<arg value="bash"/>
+							<arg value="--login"/>
 							<env key="TERM" value="screen"/>
 							<env key="HOME" value="/"/>
 							<env key="PATH" value="/bin"/>
@@ -307,9 +296,6 @@ exec cp $repo/$shell_script bin/
 append boot_modules {
 	lx_fs
 	cbe_init_trust_anchor
-	spark.lib.so
-	libsparkcrypto.lib.so
-	cbe_cxx.lib.so
 	vfs_cbe.lib.so
 	vfs_cbe_crypto_aes_cbc.lib.so
 	vfs_cbe_crypto_memcopy.lib.so
