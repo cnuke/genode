@@ -20,6 +20,7 @@
 #include <gui_session/connection.h>
 #include <capture_session/connection.h>
 #include <timer_session/connection.h>
+#include <os/vfs.h>
 
 namespace Test {
 
@@ -65,6 +66,8 @@ struct Test::Main
 	Attached_rom_dataspace _config { _env, "config" };
 
 	Heap _heap { _env.ram(), _env.rm() };
+
+	Root_directory _root_dir { _env, _heap, _config.xml().sub_node("vfs") };
 
 	static Gui::Point _point_from_xml(Xml_node node)
 	{
@@ -177,6 +180,8 @@ struct Test::Main
 
 	Signal_handler<Main> _timer_handler { _env.ep(), *this, &Main::_handle_timer };
 
+	Genode::uint64_t _counter = 0;
+
 	void _handle_timer()
 	{
 		if (!_capture_input.constructed() || !_output.constructed())
@@ -194,6 +199,15 @@ struct Test::Main
 
 					Blit_painter::paint(surface, texture, Gui::Point(0, 0));
 				});
+
+				{
+					Const_byte_range_ptr const pixels {
+						(char const*)surface.addr(), surface.size().count() * 4 };
+
+					Genode::String<16> const fn { ++_counter, ".data" };
+					New_file new_file { _root_dir, fn };
+					new_file.append(pixels);
+				}
 
 				affected.for_each_rect([&] (Gui::Rect const rect) {
 					_output->_gui.framebuffer()->refresh(rect.x1(), rect.y1(),
