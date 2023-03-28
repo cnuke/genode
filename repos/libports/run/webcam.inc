@@ -1,16 +1,16 @@
 assert_spec x86
 
 # fuji4
-proc libuvc_vendor_id {}  { return "0x04f2" }
-proc libuvc_product_id {} { return "0xb564" }
+#proc libuvc_vendor_id {}  { return "0x04f2" }
+#proc libuvc_product_id {} { return "0xb564" }
 
 # c270
 #proc libuvc_vendor_id {}  { return "0x046d" }
 #proc libuvc_product_id {} { return "0x0825" }
 
 # quickcam
-#proc libuvc_vendor_id {}  { return "0x046d" }
-#proc libuvc_product_id {} { return "0x09c1" }
+proc libuvc_vendor_id {}  { return "0x046d" }
+proc libuvc_product_id {} { return "0x09c1" }
 
 # t470
 #proc libuvc_vendor_id {}  { return "0x0bda" }
@@ -35,7 +35,7 @@ import_from_depot [depot_user]/src/[base_src] \
 import_from_depot $test_imports
 
 append config {
-<config verbose="no" prio_levels="2">
+<config verbose="no" prio_levels="4">
 	<parent-provides>
 		<service name="ROM"/>
 		<service name="IRQ"/>
@@ -63,9 +63,10 @@ append config {
 	<start name="report_rom">
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config>
+		<config verbose="yes">
 			<policy label="pci_decode -> system"    report="acpi_drv -> acpi"/>
 			<policy label="platform_drv -> devices" report="pci_decode -> devices"/>
+			<policy label="intel_fb_drv -> intel_opregion" report="acpi_drv -> intel_opregion"/>
 		</config>
 	</start>
 
@@ -99,10 +100,14 @@ append config {
 		<config>
 			<policy label="usb_drv -> " info="yes"> <pci class="USB"/> </policy>
 			<policy label="fb_drv -> "  info="yes"> <pci class="VGA"/> </policy>
+			<policy label_prefix="intel_fb_drv" info="yes">
+				<pci class="VGA"/>
+				<pci class="ISABRIDGE"/>
+			</policy>
 		</config>
 	</start>
 
-	<start name="usb_drv" priority="0" caps="200">
+	<start name="usb_drv" priority="-1" caps="200">
 		<binary name="pc_usb_host_drv"/>
 		<resource name="RAM" quantum="16M"/>
 		<!-- <resource name="CPU" quantum="10"/> -->
@@ -116,6 +121,21 @@ append config {
 		</route>
 	</start>
 
+	<start name="intel_fb_drv" priority="-1" caps="1000">
+		<binary name="pc_intel_fb_drv"/>
+		<resource name="RAM" quantum="90M"/>
+		<config>
+			<report connectors="yes"/>
+		</config>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="Capture"> <child name="nitpicker"/> </service>
+			<service name="ROM" label="intel_opregion"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+<!--
 	<start name="fb_drv" priority="-1" caps="150">
 		<binary name="vesa_fb_drv"/>
 		<resource name="RAM" quantum="20M"/>
@@ -125,7 +145,7 @@ append config {
 			<any-service> <parent/> <any-child /> </any-service>
 		</route>
 	</start>
-
+-->
 	<start name="nitpicker" priority="-1" caps="150">
 		<resource name="RAM" quantum="12M"/>
 		<provides>
@@ -147,7 +167,7 @@ append config {
 		<binary name="dynamic_rom"/>
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="ROM"/> </provides>
-		<config verbose="yes">
+		<config verbose="no">
 			<rom name="config">
 				<inline>
 					<config verbose="no">
@@ -162,7 +182,7 @@ append config {
 						</parent-provides>
 						<start name="} $test_binary {" caps="100">
 							<resource name="RAM" quantum="8M"/>
-							<config period_ms="20" width="640" height="480"> }
+							<config period_ms="20" width="1024" height="768"> }
 append config $test_vfs_config
 append config {
 								<view xpos="100" ypos="100"/> <!--view xpos="800" ypos="600"/-->
@@ -173,7 +193,7 @@ append config {
 						</start>
 					</config>
 				</inline>
-				<sleep milliseconds="7000"/>
+				<sleep milliseconds="60000"/>
 				<inline/>
 				<sleep milliseconds="3000"/>
 			</rom>
@@ -198,7 +218,7 @@ append config {
 		</route>
 	</start>
 
-	<start name="webcam" priority="-1" caps="800">
+	<start name="webcam" priority="-2" caps="800">
 		<binary name="init"/>
 		<resource name="RAM" quantum="64MB"/>
 		<route>
@@ -213,7 +233,11 @@ append config {
 
 install_config $config
 
-build_boot_image { }
+build {
+	drivers/framebuffer/intel/pc
+	drivers/usb_host app/usb_webcam
+}
+build_boot_image [build_artifacts]
 
 append qemu_args { -usb -device usb-host,vendorid=[libuvc_vendor_id],productid=[libuvc_product_id] }
 
