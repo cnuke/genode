@@ -240,7 +240,7 @@ if { $use_wifi_driver } {
 				<ram/>
 				<import>
 					<inline name="wifi_config">
-<wifi_config connected_scan_interval="0" scan_interval="10" rfkill="no" verbose="no" verbose_state="no">}
+<wifi_config connected_scan_interval="30" scan_interval="10" rfkill="no" verbose="no" verbose_state="no">}
 append config "<network ssid=\"$wifi_ssid\" protection=\"WPA2\" passphrase=\"$wifi_psk\"/>"
 append  config { </wifi_config>
 					</inline>
@@ -258,6 +258,18 @@ append  config { </wifi_config>
 			<service name="File_system"> <child name="config_fs" /> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
+	</start>
+
+	<start name="mem_track_report_rom" caps="100">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="2M"/>
+		<provides>
+			<service name="ROM" />
+			<service name="Report" />
+		</provides>
+		<config verbose="yes">
+			<policy label="dummy" report="wifi_drv -> mem_track"/>
+		</config>
 	</start>
 
 	<start name="nic_drv" caps="300">
@@ -278,6 +290,7 @@ append  config { </wifi_config>
 			<service name="Rtc"> <any-child/> </service>
 			<service name="File_system"> <child name="config_fs"/> </service>
 			<service name="ROM" label="wifi_config"> <child name="config_rom" /> </service>
+			<service name="Report" label="mem_track"> <child name="mem_track_report_rom"/> </service>
 			<service name="Report"> <child name="report_rom"/> </service>
 			<service name="Uplink"> <child name="nic_router"/> </service>
 			<any-service> <parent/> <any-child /> </any-service>
@@ -458,7 +471,7 @@ set force_ports "-P [server_data_port],[server_data_port]"
 if {[have_spec linux]} {
 	run_genode_until {.*family AF_INET.*\n} 60
 } else {
-	run_genode_until $ip_match_string 60
+	run_genode_until $ip_match_string 180
 }
 
 set serial_id [output_spawn_id]
@@ -477,7 +490,7 @@ sleep 3
 foreach netperf_test $netperf_tests {
 	puts "\n---------------------------- $netperf_test -----------------------"
 
-	spawn netperf-$version -4 -H $ip_addr -P 1 -v 2 -f m -t $netperf_test -c -C -- $force_ports \
+	spawn netperf-$version -4 -H $ip_addr -P 1 -v 2 -f m -l 60 -t $netperf_test -c -C -- $force_ports \
 	-k THROUGHPUT,THROUGHPUT_UNITS,LOCAL_TRANSPORT_RETRANS,MEAN_LATENCY,REMOTE_SEND_CALLS,REMOTE_RECV_CALLS,ELAPSED_TIME
 	set netperf_id $spawn_id
 
@@ -485,7 +498,7 @@ foreach netperf_test $netperf_tests {
 
 	# reset output, so that we get on the second run not the result of the first
 	set output ""
-	run_genode_until "ELAPSED_TIME=.*\n" 120 $spawn_id_list
+	run_genode_until "ELAPSED_TIME=.*\n" 180 $spawn_id_list
 
 	set units "Mbit/s"
 

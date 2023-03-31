@@ -271,6 +271,19 @@ append config {
 		<config verbose="yes"/>
 	</start>
 
+	        <start name="mem_track_report_rom" caps="100">
+                <binary name="report_rom"/>
+                <resource name="RAM" quantum="2M"/>
+                <provides>
+                        <service name="ROM" />
+                        <service name="Report" />
+                </provides>
+                <config verbose="yes">
+                        <policy label="dummy" report="wifi_drv -> mem_track"/>
+                </config>
+        </start>
+
+
 	<start name="wifi_drv" caps="300" priority="-1">
 		<binary name="pc_wifi_drv"/>
 		<resource name="RAM" quantum="36M"/>
@@ -288,6 +301,7 @@ append config {
 		<route>
 			<service name="Uplink"> <child name="nic_router"/> </service>
 			<service name="Rtc"> <any-child/> </service>
+			<service name="Report" label="mem_track"> <child name="mem_track_report_rom"/> </service>
 			<service name="Report" label="accesspoints"> <child name="accesspoints_report_rom"/> </service>
 			<service name="Report" label="state"> <child name="state_report_rom"/> </service>
 			<service name="Report" label="devices"> <child name="devices_report_rom"/> </service>
