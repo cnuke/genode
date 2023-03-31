@@ -1804,7 +1804,7 @@ class Vfs_cbe_trust_anchor::Initialize_file_system : public Vfs::Single_file_sys
 
 					char const *str { "ok" };
 					if (buf.num_bytes < 3) {
-						Genode::error("read buffer too small ", buf.num_bytes);
+						Genode::error("read buffer too small");
 						return READ_ERR_IO;
 					}
 					memcpy(buf.start, str, 3);
@@ -1814,7 +1814,7 @@ class Vfs_cbe_trust_anchor::Initialize_file_system : public Vfs::Single_file_sys
 
 					char const *str { "failed" };
 					if (buf.num_bytes < 7) {
-						Genode::error("read buffer too small ", buf.num_bytes);
+						Genode::error("read buffer too small");
 						return READ_ERR_IO;
 					}
 					memcpy(buf.start, str, 7);

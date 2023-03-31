@@ -363,8 +363,8 @@ void File_vault::gen_global_controls(Xml_generator &xml,
                                      size_t         cbe_image_size,
                                      size_t         client_fs_size,
                                      size_t         nr_of_clients,
-                                     bool           shut_down_button_hovered,
-                                     bool           shut_down_button_selected)
+                                     bool           lock_button_hovered,
+                                     bool           lock_button_selected)
 {
 	gen_empty_line(xml, "Status 0", min_width);
 	gen_centered_info_line(xml, "Status 1",
@@ -382,8 +382,6 @@ void File_vault::gen_global_controls(Xml_generator &xml,
 
 	xml.node("hbox", [&] () {
 		gen_action_button(
-			xml, "Shut down", "Shut down",
-			shut_down_button_hovered,
-			shut_down_button_selected);
+			xml, "Lock", "Lock", lock_button_hovered, lock_button_selected);
 	});
 }

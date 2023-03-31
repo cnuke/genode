@@ -215,7 +215,8 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
                                             String<128> const &file_path,
                                             Channel           &channel,
                                             char        const *write_buf,
-                                            bool              &progress)
+                                            bool              &progress,
+                                            bool               result_via_read)
 {
 	Request &req { channel._request };
 	switch (channel._state) {
@@ -254,7 +255,12 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
 			}
 			channel._state = Channel::READ_PENDING;
 			channel._file_offset = 0;
-			channel._file_size = 0;
+
+			if (result_via_read)
+				channel._file_size = sizeof(_read_buf);
+			else
+				channel._file_size = 0;
+
 			progress = true;
 			return;
 
@@ -297,7 +303,6 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
 
 			channel._file_offset += nr_of_read_bytes;
 			channel._file_size -= nr_of_read_bytes;
-			req._success = true;
 
 			if (channel._file_size > 0) {
 
@@ -305,6 +310,11 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
 				progress = true;
 				return;
 			}
+			if (result_via_read) {
+				req._success = !strcmp(_read_buf, "ok", 3);
+			} else
+				req._success = true;
+
 			channel._state = Channel::COMPLETE;
 			progress = true;
 			return;
@@ -408,7 +418,7 @@ void Trust_anchor::execute(bool &progress)
 			}
 			_execute_write_operation(
 				_initialize_file, _initialize_path, channel,
-				(char const *)req._passphrase_ptr, progress);
+				(char const *)req._passphrase_ptr, progress, true);
 
 			break;
 
@@ -421,7 +431,7 @@ void Trust_anchor::execute(bool &progress)
 			}
 			_execute_write_operation(
 				_hashsum_file, _hashsum_path, channel,
-				(char const *)&req._hash, progress);
+				(char const *)&req._hash, progress, false);
 
 			break;
 
