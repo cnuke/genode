@@ -8,7 +8,7 @@ drivers:       fuji4
 #numlock_remap: default
 ram_fs:        fuji4
 system:        pc
-#usb:           default
+usb:           fuji4
 
 # optional config (managed by sculpt if not specified)
 nic_router:   fuji4

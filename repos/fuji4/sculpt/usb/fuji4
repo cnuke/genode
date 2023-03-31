@@ -1,0 +1,13 @@
+<!--
+  Manually maintained rules for assigning USB devices to clients.
+
+  The content is indented with two tabs because it is incorporated as is
+  into the <raw> sub node of the the USB driver configuration.
+  -->
+
+<usb>
+	<policy label_suffix="jabra"    vendor_id="0x0b0e" product_id="0x0420"/>
+	<policy label_suffix="quickcam" vendor_id="0x046d" product_id="0x09c1"/>
+	<policy label_suffix="fuji5cam" vendor_id="0x04f2" product_id="0xb704"/>
+	<policy label_suffix="fuji4cam" vendor_id="0x04f2" product_id="0xb564"/>
+</usb>
