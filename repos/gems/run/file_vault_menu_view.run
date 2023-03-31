@@ -1,0 +1,2 @@
+set ui "menu_view"
+source ${genode_dir}/repos/gems/run/file_vault.inc

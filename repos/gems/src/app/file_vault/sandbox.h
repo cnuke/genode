@@ -317,7 +317,7 @@ namespace File_vault {
 					xml.attribute("writeable", "yes");
 				});
 				xml.node("policy", [&] () {
-					xml.attribute("label", "shut_down_fs_tool -> ");
+					xml.attribute("label", "lock_fs_tool -> ");
 					xml.attribute("root", "/dev");
 					xml.attribute("writeable", "yes");
 				});
@@ -347,7 +347,7 @@ namespace File_vault {
 					xml.attribute("writeable", "yes");
 				});
 				xml.node("policy", [&] () {
-					xml.attribute("label", "shut_down_fs_query -> ");
+					xml.attribute("label", "lock_fs_query -> ");
 					xml.attribute("root", "/dev");
 					xml.attribute("writeable", "yes");
 				});
@@ -632,15 +632,15 @@ namespace File_vault {
 		});
 	}
 
-	void gen_cbe_init_trust_anchor_start_node(Xml_generator          &xml,
-	                                          Child_state      const &child,
-	                                          Input_passphrase const &passphrase)
+	void gen_cbe_init_trust_anchor_start_node(Xml_generator           &xml,
+	                                          Child_state       const &child,
+	                                          Passphrase_string const &passphrase)
 	{
 		child.gen_start_node(xml, [&] () {
 
 			xml.node("config", [&] () {
 
-				xml.attribute("passphrase", passphrase.plaintext().string());
+				xml.attribute("passphrase", passphrase);
 				xml.attribute("trust_anchor_dir", "/trust_anchor");
 				xml.node("vfs", [&] () {
 					xml.node("dir", [&] () {
@@ -805,7 +805,7 @@ namespace File_vault {
 		});
 	}
 
-	void gen_shut_down_fs_tool_start_node(Xml_generator     &xml,
+	void gen_lock_fs_tool_start_node(Xml_generator     &xml,
 	                                      Child_state const &child)
 	{
 		child.gen_start_node(xml, [&] () {
@@ -867,8 +867,8 @@ namespace File_vault {
 		});
 	}
 
-	void gen_shut_down_fs_query_start_node(Xml_generator     &xml,
-	                                       Child_state const &child)
+	void gen_lock_fs_query_start_node(Xml_generator     &xml,
+	                                  Child_state const &child)
 	{
 		child.gen_start_node(xml, [&] () {
 

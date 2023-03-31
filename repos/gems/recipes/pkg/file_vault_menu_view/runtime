@@ -70,7 +70,7 @@
 			<provides>
 				<service name="File_system"/>
 			</provides>
-			<config>
+			<config user_interface="menu_view">
 				<vfs>
 					<dir name="cbe">
 						<fs label="cbe"/>

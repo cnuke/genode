@@ -174,8 +174,8 @@ namespace File_vault {
 	                         size_t         cbe_image_size,
 	                         size_t         client_fs_size,
 	                         size_t         nr_of_clients,
-	                         bool           shut_down_button_hovered,
-	                         bool           shut_down_button_selected);
+	                         bool           lock_button_hovered,
+	                         bool           lock_button_selected);
 }
 
 #endif /* _MENU_VIEW_DIALOG_H_ */

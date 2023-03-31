@@ -1,18 +1,19 @@
+proc ui_is { arg } {
+
+	global ui
+	return [string equal $arg $ui ]
+}
+
 build { app/file_vault }
 
 create_boot_directory
 
 append archives "
 	[depot_user]/src/[base_src]
-	[depot_user]/pkg/[drivers_interactive_pkg]
-	[depot_user]/pkg/fonts_fs
 	[depot_user]/src/init
-	[depot_user]/src/nitpicker
 	[depot_user]/src/libc
-	[depot_user]/src/libpng
 	[depot_user]/src/zlib
 	[depot_user]/src/fs_query
-	[depot_user]/src/menu_view
 	[depot_user]/src/cbe
 	[depot_user]/src/vfs_block
 	[depot_user]/src/vfs_jitterentropy
@@ -25,7 +26,16 @@ append archives "
 	[depot_user]/src/sandbox
 "
 
-append_if [have_board linux] archives [depot_user]/src/lx_fs
+lappend_if [ui_is menu_view] archives [depot_user]/src/nitpicker
+lappend_if [ui_is menu_view] archives [depot_user]/src/menu_view
+lappend_if [ui_is menu_view] archives [depot_user]/src/libpng
+lappend_if [ui_is menu_view] archives [depot_user]/pkg/fonts_fs
+lappend_if [ui_is menu_view] archives [depot_user]/pkg/[drivers_interactive_pkg]
+
+lappend_if [ui_is config_and_report] archives [depot_user]/src/report_rom
+lappend_if [ui_is config_and_report] archives [depot_user]/src/dynamic_rom
+
+lappend_if [have_board linux] archives [depot_user]/src/lx_fs
 
 import_from_depot $archives
 
@@ -54,6 +64,8 @@ append config {
 				<service name="CPU"> <parent/> </service>
 			</route>
 		</start>
+}
+append_if [ui_is menu_view] config {
 
 		<start name="drivers" caps="1500" managing_system="yes">
 			<resource name="RAM" quantum="64M"/>
@@ -107,6 +119,157 @@ append config {
 				<service name="ROM"> <parent/> </service>
 				<service name="LOG"> <parent/> </service>
 				<service name="CPU"> <parent/> </service>
+			</route>
+		</start>
+
+		<start name="fonts_fs" caps="150">
+			<binary name="vfs"/>
+			<resource name="RAM" quantum="4M"/>
+			<provides>
+				<service name="File_system"/>
+			</provides>
+			<config>
+				<vfs>
+					<rom name="Vera.ttf"/>
+					<rom name="VeraMono.ttf"/>
+					<dir name="fonts">
+						<dir name="title">
+							<ttf name="regular" path="/Vera.ttf" size_px="18" cache="256K"/>
+						</dir>
+						<dir name="text">
+							<ttf name="regular" path="/Vera.ttf" size_px="14" cache="256K"/>
+						</dir>
+						<dir name="annotation">
+							<ttf name="regular" path="/Vera.ttf" size_px="11" cache="256K"/>
+						</dir>
+						<dir name="monospace">
+							<ttf name="regular" path="/VeraMono.ttf" size_px="14" cache="256K"/>
+						</dir>
+					</dir>
+				</vfs>
+
+				<policy label="file_vault -> fonts" root="/fonts" />
+			</config>
+			<route>
+				<service name="ROM" label="config"> <parent label="fonts_fs.config"/> </service>
+				<service name="PD">                 <parent/> </service>
+				<service name="ROM">                <parent/> </service>
+				<service name="LOG">                <parent/> </service>
+				<service name="CPU">                <parent/> </service>
+			</route>
+		</start>
+}
+append_if [ui_is config_and_report] config {
+
+		<start name="dynamic_rom" caps="100">
+			<resource name="RAM" quantum="4M"/>
+			<provides><service name="ROM"/> </provides>
+			<config verbose="no">
+				<rom name="file_vault_ui_config">
+					<inline>
+
+						<ui_config version="step_1_wait"/>
+
+					</inline>
+					<sleep milliseconds="4000"/>
+					<inline>
+
+						<ui_config version="step_2_init" passphrase="abcdefgh"
+						                                 client_fs_size="1M"
+						                                 journaling_buf_size="1M"/>
+
+					</inline>
+					<sleep milliseconds="4000"/>
+					<inline>
+
+						<ui_config version="step_3_lock"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_4_unlock_fast" passphrase="abcdefgh"/>
+
+					</inline>
+					<sleep milliseconds="4000"/>
+					<inline>
+
+						<ui_config version="step_5_lock"/>
+
+					</inline>
+					<sleep milliseconds="4000"/>
+					<inline>
+
+						<ui_config version="step_6_bad_unlock" passphrase="00000001"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_7_bad_unlock" passphrase="00000002"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_8_bad_unlock" passphrase="00000003"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_9_bad_unlock" passphrase="00000004"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_10_bad_unlock" passphrase="00000005"/>
+
+					</inline>
+					<sleep milliseconds="4000"/>
+					<inline>
+
+						<ui_config version="step_11_wait"/>
+
+					</inline>
+					<sleep milliseconds="8000"/>
+					<inline>
+
+						<ui_config version="step_12_unlock" passphrase="abcdefgh"/>
+
+					</inline>
+					<sleep milliseconds="400"/>
+					<inline>
+
+						<ui_config version="step_13_lock_fast"/>
+
+					</inline>
+					<sleep milliseconds="600000"/>
+
+				</rom>
+			</config>
+			<route>
+				<service name="Timer"> <child name="timer"/> </service>
+				<service name="PD">  <parent/> </service>
+				<service name="ROM"> <parent/> </service>
+				<service name="LOG"> <parent/> </service>
+				<service name="CPU"> <parent/> </service>
+			</route>
+		</start>
+
+		<start name="report_rom" caps="70">
+			<resource name="RAM" quantum="1M"/>
+			<provides>
+				<service name="ROM" />
+				<service name="Report" />
+			</provides>
+			<config verbose="yes"/>
+			<route>
+				<service name="LOG"> <parent/> </service>
+				<service name="PD">  <parent/> </service>
+				<service name="CPU"> <parent/> </service>
+				<service name="ROM"> <parent/> </service>
 			</route>
 		</start>
 }
@@ -202,46 +365,9 @@ if {[have_board linux]} {
 }
 append config {
 
-		<start name="fonts_fs" caps="150">
-			<binary name="vfs"/>
-			<resource name="RAM" quantum="4M"/>
-			<provides>
-				<service name="File_system"/>
-			</provides>
-			<config>
-				<vfs>
-					<rom name="Vera.ttf"/>
-					<rom name="VeraMono.ttf"/>
-					<dir name="fonts">
-						<dir name="title">
-							<ttf name="regular" path="/Vera.ttf" size_px="18" cache="256K"/>
-						</dir>
-						<dir name="text">
-							<ttf name="regular" path="/Vera.ttf" size_px="14" cache="256K"/>
-						</dir>
-						<dir name="annotation">
-							<ttf name="regular" path="/Vera.ttf" size_px="11" cache="256K"/>
-						</dir>
-						<dir name="monospace">
-							<ttf name="regular" path="/VeraMono.ttf" size_px="14" cache="256K"/>
-						</dir>
-					</dir>
-				</vfs>
-
-				<policy label="file_vault -> fonts" root="/fonts" />
-			</config>
-			<route>
-				<service name="ROM" label="config"> <parent label="fonts_fs.config"/> </service>
-				<service name="PD">                 <parent/> </service>
-				<service name="ROM">                <parent/> </service>
-				<service name="LOG">                <parent/> </service>
-				<service name="CPU">                <parent/> </service>
-			</route>
-		</start>
-
 		<start name="file_vault" caps="2000">
 			<resource name="RAM" quantum="200M"/>
-			<config>
+			<config user_interface="} $ui {">
 				<vfs>
 					<dir name="cbe">
 						<fs label="cbe"/>
@@ -249,6 +375,18 @@ append config {
 				</vfs>
 			</config>
 			<route>
+}
+append_if [ui_is menu_view] config {
+
+				<service name="File_system" label="menu_view -> fonts">                  <child name="fonts_fs"        label="file_vault -> fonts"/> </service>
+				<service name="Gui">                                                     <child name="nitpicker"/> </service>
+}
+append_if [ui_is config_and_report] config {
+
+				<service name="ROM"         label="ui_config">                           <child name="dynamic_rom"     label="file_vault_ui_config"/> </service>
+				<service name="Report"      label="ui_report">                           <child name="report_rom"/> </service>
+}
+append config {
 				<service name="File_system" label="cbe_trust_anchor_vfs -> storage_dir"> <child name="trust_anchor_fs" label="file_vault -> trust_anchor"/> </service>
 				<service name="File_system" label="cbe_init -> ">                        <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="cbe">                                 <child name="data_fs"         label="file_vault -> data"/> </service>
@@ -256,9 +394,7 @@ append config {
 				<service name="File_system" label="image_fs_query -> ">                  <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="cbe_vfs -> cbe_fs">                   <child name="data_fs"         label="file_vault -> data"/> </service>
 				<service name="File_system" label="truncate_file -> cbe">                <child name="data_fs"         label="file_vault -> data"/> </service>
-				<service name="File_system" label="menu_view -> fonts">                  <child name="fonts_fs"        label="file_vault -> fonts"/> </service>
 				<service name="Timer">                                                   <child name="timer"/> </service>
-				<service name="Gui">                                                     <child name="nitpicker"/> </service>
 				<service name="PD">                                                      <parent/> </service>
 				<service name="ROM">                                                     <parent/> </service>
 				<service name="CPU">                                                     <parent/> </service>
@@ -272,25 +408,56 @@ append config {
 
 install_config $config
 
-set fd [open [run_dir]/genode/focus w]
-puts $fd "<focus label=\"file_vault -> \"/>"
-close $fd
-
 if {[have_board linux]} {
+
+	if {[ui_is config_and_report]} {
+
+		exec rm -rf bin/file_vault_dir
+	}
 	exec mkdir -p bin/file_vault_dir/data
 	exec mkdir -p bin/file_vault_dir/trust_anchor
 }
 
 append boot_modules {
+
 	file_vault
 	file_vault-sync_to_cbe_vfs_init
 	file_vault-truncate_file
 }
 
-append qemu_args " -display gtk "
+lappend_if [have_board linux] boot_modules file_vault_dir
 
-append_if [have_board linux] boot_modules file_vault_dir
+if {[ui_is menu_view]} {
 
-build_boot_image $boot_modules
+	set fd [open [run_dir]/genode/focus w]
+	puts $fd "<focus label=\"file_vault -> \"/>"
+	close $fd
 
-run_genode_until forever
+	append qemu_args " -display gtk "
+	build_boot_image $boot_modules
+	run_genode_until forever
+}
+
+if {[ui_is config_and_report]} {
+
+	build_boot_image $boot_modules
+
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"uninitialized\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"initializing\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
+	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
+
+	append qemu_args " -display none "
+	run_genode_until $exp_output 120
+}
