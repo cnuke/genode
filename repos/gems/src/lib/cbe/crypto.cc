@@ -22,8 +22,6 @@
 using namespace Genode;
 using namespace Cbe;
 
-enum { VERBOSE_CRYPTO = 0 };
-
 
 /********************
  ** Crypto_request **
@@ -54,9 +52,9 @@ Crypto_request::Crypto_request(uint64_t  src_module_id,
 { }
 
 
-char const *Crypto_request::type_name()
+char const *Crypto_request::type_to_string(Type type)
 {
-	switch (_type) {
+	switch (type) {
 	case INVALID: return "invalid";
 	case ADD_KEY: return "add_key";
 	case REMOVE_KEY: return "remove_key";
@@ -143,7 +141,7 @@ void Crypto::_mark_req_failed(Channel    &channel,
                               bool       &progress,
                               char const *str)
 {
-	error("request failed: failed to ", str);
+	error("crypto: request (", channel._request, ") failed at step \"", str, "\"");
 	channel._request._success = false;
 	channel._state = Channel::COMPLETE;
 	progress = true;
@@ -378,13 +376,12 @@ void Crypto::_execute_encrypt(Channel &channel,
 		Vfs::file_size nr_of_read_bytes { 0 };
 		Read_result const result {
 			channel._vfs_handle->fs().complete_read(
-				channel._vfs_handle, (char *)&channel._blk_buf,
+				channel._vfs_handle, (char *)req._ciphertext_blk_ptr,
 				BLOCK_SIZE, nr_of_read_bytes) };
 
 		switch (result) {
 		case Read_result::READ_OK:
 
-			req._ciphertext_blk_ptr = (addr_t)&channel._blk_buf;
 			_mark_req_successful(channel, progress);
 			return;
 
@@ -446,13 +443,12 @@ void Crypto::_execute_decrypt(Channel &channel,
 		Vfs::file_size nr_of_read_bytes { 0 };
 		Read_result const result {
 			channel._vfs_handle->fs().complete_read(
-				channel._vfs_handle, (char *)&channel._blk_buf,
+				channel._vfs_handle, (char *)req._plaintext_blk_ptr,
 				BLOCK_SIZE, nr_of_read_bytes) };
 
 		switch (result) {
 		case Read_result::READ_OK:
 
-			req._plaintext_blk_ptr = (addr_t)&channel._blk_buf;
 			_mark_req_successful(channel, progress);
 			return;
 
@@ -636,13 +632,29 @@ bool Crypto::_peek_completed_request(uint8_t *buf_ptr,
 			memcpy(buf_ptr, &channel._request, sizeof(channel._request));
 
 			Request &req { channel._request };
+			if (VERBOSE_VBA_ACCESS) {
+
+				switch (req._type) {
+				case Request::DECRYPT_CLIENT_DATA:
+				case Request::ENCRYPT_CLIENT_DATA:
+				{
+					log("    plain  ", *(Block_data *)channel._blk_buf);
+					log("    cipher ", *(Block_data *)req._ciphertext_blk_ptr);
+
+					break;
+				}
+				default:
+					break;
+				}
+			}
 			if (VERBOSE_CRYPTO) {
 
 				switch (req._type) {
 				case Request::DECRYPT_CLIENT_DATA:
 				case Request::ENCRYPT_CLIENT_DATA:
 				{
-					log("crypto: ", req.type_name(), " pba ", req._pba,
+					log("crypto: ", req.type_to_string(req._type),
+					    " pba ", req._pba,
 					    " vba ", req._vba,
 					    " plain ", *(Block_data *)channel._blk_buf,
 					    " cipher ", *(Block_data *)req._ciphertext_blk_ptr);
