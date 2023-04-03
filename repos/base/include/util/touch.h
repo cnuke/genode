@@ -14,11 +14,16 @@
 #ifndef _INCLUDE__UTIL__TOUCH_H_
 #define _INCLUDE__UTIL__TOUCH_H_
 
+#include <os/backtrace.h>
+
 namespace Genode {
 
 	/** Touch one byte at address read only */
 	inline void touch_read(unsigned char const volatile *addr)
 	{
+		if (addr > (unsigned char const *)0x4000000000000000)
+			Genode::backtrace();
+
 		(void)*addr;
 	}
 
