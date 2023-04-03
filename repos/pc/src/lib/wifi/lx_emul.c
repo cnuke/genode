@@ -404,6 +404,7 @@ void __put_page(struct page * page)
 }
 
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6,1,0)
 #include <linux/mm.h>
 
 void __folio_put(struct folio * folio)
@@ -411,6 +412,7 @@ void __folio_put(struct folio * folio)
 	__free_pages(&folio->page, 0);
 	kfree(folio);
 }
+#endif
 
 
 #include <linux/prandom.h>
