@@ -89,6 +89,9 @@ void Cpu_scheduler::_head_claimed(unsigned const r)
 
 void Cpu_scheduler::_head_filled(unsigned const r)
 {
+	if (_fills.head() != &_head->_fill_item)
+		return;
+
 	if (r)
 		_head->_fill = r;
 	else
@@ -233,7 +236,8 @@ void Cpu_scheduler::ready(Share &s)
 		}
 	}
 
-	_fills.insert_head(&s._fill_item);
+	s._fill = _fill;
+	_fills.insert_tail(&s._fill_item);
 	if (!_head || _head == &_idle) {
 
 		_need_to_schedule = true;
