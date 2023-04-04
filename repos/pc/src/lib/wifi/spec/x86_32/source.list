@@ -175,6 +175,7 @@ lib/bsearch.c
 lib/crc32.c
 lib/crypto/aes.c
 lib/crypto/memneq.c
+lib/crypto/utils.c
 lib/ctype.c
 lib/debug_locks.c
 lib/dynamic_queue_limits.c
