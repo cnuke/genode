@@ -19,10 +19,6 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 	                         Cap_quota{250}, Ram_quota{32*1024*1024},
 	                         Priority::NETWORK);
 
-	xml.node("binary", [&] () {
-		xml.attribute("name", "pc_wifi_drv");
-	});
-
 	xml.node("config", [&] () {
 
 		xml.node("vfs", [&] () {
@@ -60,7 +56,8 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 			xml.node("parent", [&] () {
 				xml.attribute("label", "wifi"); }); });
 
-		gen_parent_rom_route(xml, "pc_wifi_drv");
+		gen_parent_rom_route(xml, "wifi_drv");
+		gen_parent_rom_route(xml, "wifi_drv.dtb");
 		gen_parent_rom_route(xml, "ld.lib.so");
 		gen_parent_rom_route(xml, "libcrypto.lib.so");
 		gen_parent_rom_route(xml, "vfs.lib.so");
@@ -68,8 +65,10 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 		gen_parent_rom_route(xml, "libm.lib.so");
 		gen_parent_rom_route(xml, "vfs_jitterentropy.lib.so");
 		gen_parent_rom_route(xml, "vfs_wifi.lib.so");
+		gen_parent_rom_route(xml, "vfs_a64_wifi.lib.so");
 		gen_parent_rom_route(xml, "libssl.lib.so");
 		gen_parent_rom_route(xml, "wifi.lib.so");
+		gen_parent_rom_route(xml, "a64_wifi.lib.so");
 		gen_parent_rom_route(xml, "wpa_driver_nl80211.lib.so");
 		gen_parent_rom_route(xml, "wpa_supplicant.lib.so");
 		gen_parent_rom_route(xml, "iwlwifi-1000-5.ucode");
