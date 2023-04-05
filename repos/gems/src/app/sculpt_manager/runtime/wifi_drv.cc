@@ -21,6 +21,8 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 
 	xml.node("config", [&] () {
 
+		xml.attribute("dtb", "wifi_drv.dtb");
+
 		xml.node("vfs", [&] () {
 			gen_named_node(xml, "dir", "dev", [&] () {
 				xml.node("null", [&] () {});
