@@ -77,6 +77,8 @@ extern "C" int lx_emul_request_firmware_nowait(const char *name, void **dest,
 	if (!dest || !result)
 		return -1;
 
+	error(__func__, ": name: '", name, "'");
+
 	/* only try to load known firmware images */
 	Firmware_list *fwl = 0;
 	for (size_t i = 0; i < fw_list_len; i++) {
@@ -95,6 +97,9 @@ extern "C" int lx_emul_request_firmware_nowait(const char *name, void **dest,
 
 	char const *fw_name = fwl->available_name
 	                    ? fwl->available_name : fwl->requested_name;
+
+	error(__func__, ": fw_name: '", fw_name, "'");
+
 	Rom_connection rom(Lx_kit::env().env, fw_name);
 	Dataspace_capability ds_cap = rom.dataspace();
 
