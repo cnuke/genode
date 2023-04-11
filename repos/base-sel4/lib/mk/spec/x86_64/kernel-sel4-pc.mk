@@ -12,8 +12,6 @@ all:
 endif
 
 build_kernel:
-	$(VERBOSE)$(MAKE) \
-	          TOOLPREFIX=$(CROSS_DEV_PREFIX) \
-	          BOARD=x86_64 ARCH=x86 SEL4_ARCH=x86_64 PLAT=pc99 DEBUG=1 \
-	          SOURCE_ROOT=$(SEL4_DIR) -f$(SEL4_DIR)/Makefile
-
+	$(VERBOSE) cmake -DCROSS_COMPILER_PREFIX=$(CROSS_DEV_PREFIX) \
+	          -DCMAKE_TOOLCHAIN_FILE=$(SEL4_DIR)/gcc.cmake -G Ninja -C $(SEL4_DIR)/configs/X64_verified.cmake $(SEL4_DIR) \
+	&& ninja kernel.elf
