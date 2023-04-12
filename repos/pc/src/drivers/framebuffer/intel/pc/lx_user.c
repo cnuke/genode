@@ -628,6 +628,9 @@ int user_attach_fb_to_crtc(struct drm_client_dev          * const dev,
 		.mode               = *mode,
 	};
 
+	/* normally set in 'drm_setclientcap()' */
+	dev->file->aspect_ratio_allowed = 1;
+
 	result = drm_mode_setcrtc(dev->dev, &crtc_req, dev->file);
 	if (result)
 		drm_err(dev->dev, "%s: failed to set crtc %d\n", __func__, result);
