@@ -122,6 +122,12 @@ Virtual_block_address Superblock_control::max_vba() const
 }
 
 
+Virtual_block_address Superblock_control::rekeying_vba() const
+{
+	return _sb.rekeying_vba;
+}
+
+
 void Superblock_control::_execute_read_vba(Channel          &channel,
                                            uint64_t   const job_idx,
                                            Superblock const &sb,

@@ -335,6 +335,8 @@ class Cbe::Superblock_control : public Module
 
 		Virtual_block_address max_vba() const;
 
+		Virtual_block_address rekeying_vba() const;
+
 		void active_snapshot_ids(Active_snapshot_ids &snap_ids) const
 		{
 			if (_sb.valid()) {
