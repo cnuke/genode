@@ -260,6 +260,14 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 			Result   last_result;
 			uint32_t key_id;
 
+			Virtual_block_address max_vba;
+			Virtual_block_address rekeying_vba;
+
+			bool idle()        const { return state == IDLE; }
+			bool in_progress() const { return state == IN_PROGRESS; }
+
+			bool success()     const { return last_result == SUCCESS; }
+
 			static char const *state_to_cstring(State const s)
 			{
 				switch (s) {
@@ -328,9 +336,11 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 	private:
 
 		Rekeying _rekey_obj {
-			.state       = Rekeying::State::UNKNOWN,
-			.last_result = Rekeying::Result::NONE,
-			.key_id      = 0, };
+			.state        = Rekeying::State::UNKNOWN,
+			.last_result  = Rekeying::Result::NONE,
+			.key_id       = 0,
+			.max_vba      = 0,
+			.rekeying_vba = 0, };
 
 		Deinitialize _deinit_obj
 		{
@@ -1102,6 +1112,9 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 
 				_rekey_fs_trigger_watch_response();
 			}
+
+			if (_rekey_obj.in_progress())
+				_rekey_obj.rekeying_vba = _sb_control->rekeying_vba();
 		}
 
 		bool client_request_acceptable()
@@ -1128,8 +1141,10 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 			}
 
 			_request_pool->submit_request(req);
-			_rekey_obj.state       = Rekeying::State::IN_PROGRESS;
-			_rekey_obj.last_result = Rekeying::Rekeying::FAILED;
+			_rekey_obj.state        = Rekeying::State::IN_PROGRESS;
+			_rekey_obj.last_result  = Rekeying::Rekeying::FAILED;
+			_rekey_obj.max_vba      = _sb_control->max_vba();
+			_rekey_obj.rekeying_vba = _sb_control->rekeying_vba();
 			_rekey_fs_trigger_watch_response();
 
 			// XXX kick-off rekeying
@@ -1751,36 +1766,21 @@ class Vfs_cbe::Rekey_file_system : public Vfs::Single_file_system
 
 		using Content_string = String<32>;
 
-		static Content_string content_string(Wrapper const &wrapper)
+		static file_size copy_content(Content_string const &content,
+		                              char *dst, file_size const count)
 		{
-			Wrapper::Rekeying const & rekeying_progress {
-				wrapper.rekeying_progress() };
-
-			bool const in_progress {
-				rekeying_progress.state ==
-					Wrapper::Rekeying::State::IN_PROGRESS };
-
-			bool const last_result {
-				!in_progress &&
-				rekeying_progress.last_result !=
-					Wrapper::Rekeying::Result::NONE };
-
-			bool const success {
-				rekeying_progress.last_result ==
-					Wrapper::Rekeying::Result::SUCCESS };
-
-			Content_string const result {
-				Wrapper::Rekeying::state_to_cstring(rekeying_progress.state),
-				" last-result:",
-				last_result ? success ? "success" : "failed" : "none",
-				"\n" };
-
-			return result;
+			copy_cstring(dst, content.string(), count);
+			size_t const length_without_nul = content.length() - 1;
+			return count > length_without_nul - 1 ? length_without_nul
+			                                      : count;
 		}
 
 		struct Vfs_handle : Single_vfs_handle
 		{
 			Wrapper &_w;
+
+			/* store VBA in case the handle is kept open */
+			Virtual_block_address _last_rekeying_vba;
 
 			Vfs_handle(Directory_service &ds,
 			           File_io_service   &fs,
@@ -1788,23 +1788,51 @@ class Vfs_cbe::Rekey_file_system : public Vfs::Single_file_system
 			           Wrapper &w)
 			:
 				Single_vfs_handle(ds, fs, alloc, 0),
-				_w(w)
+				_w(w),
+				_last_rekeying_vba(_w.rekeying_progress().rekeying_vba)
 			{ }
 
 			Read_result read(char *dst, file_size count,
 			                 file_size &out_count) override
 			{
+				/* EOF */
 				if (seek() != 0) {
 					out_count = 0;
 					return READ_OK;
 				}
-				Content_string const result { content_string(_w) };
-				copy_cstring(dst, result.string(), count);
-				size_t const length_without_nul = result.length() - 1;
-				out_count = count > length_without_nul - 1 ?
-				            length_without_nul : count;
 
-				return READ_OK;
+				/*
+				 * For now trigger rekeying execution via this hook
+				 * like we do in the Data_file_system.
+				 */
+				_w.handle_frontend_request();
+
+				Wrapper::Rekeying const & rekeying {
+					_w.rekeying_progress() };
+
+				if (rekeying.in_progress()
+				 && rekeying.rekeying_vba == _last_rekeying_vba)
+					return READ_QUEUED;
+
+				if (rekeying.in_progress()) {
+					_last_rekeying_vba = rekeying.rekeying_vba;
+
+					Content_string const content { "at ",
+						rekeying.rekeying_vba * 100 / rekeying.max_vba, "%" };
+
+					out_count = copy_content(content, dst, count);
+					return READ_OK;
+				}
+
+				if (rekeying.idle()) {
+					Content_string const content {
+						rekeying.success() ? "successful"
+						                   : "failed" };
+					out_count = copy_content(content, dst, count);
+					return READ_OK;
+				}
+
+				return READ_ERR_IO;
 			}
 
 			Write_result write(char const *src, file_size count, file_size &out_count) override
@@ -1906,7 +1934,7 @@ class Vfs_cbe::Rekey_file_system : public Vfs::Single_file_system
 		Stat_result stat(char const *path, Stat &out) override
 		{
 			Stat_result result = Single_file_system::stat(path, out);
-			out.size = content_string(_w).length() - 1;
+			out.size = Content_string::size();
 			return result;
 		}
 
