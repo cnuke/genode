@@ -4,6 +4,7 @@ _/pkg/chocolate-doom
 _/pkg/cmus
 _/pkg/fs_rom
 _/pkg/glmark2
+_/pkg/gui_mixer_qt
 _/pkg/mesa_gears
 _/pkg/pdf_view
 _/pkg/ssh_client
