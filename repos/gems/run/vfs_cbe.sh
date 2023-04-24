@@ -106,8 +106,19 @@ test_ft_extension() {
 test_rekey_state() {
 	local cbe_dir="$1"
 	local state="$(< $cbe_dir/control/rekey)"
+	local progress="$(< $cbe_dir/control/rekey_progress)"
 
-	echo "Rekeying state: $state"
+	local result="unknown"
+	case "$progress" in
+	*at*)
+		result="$progress"
+		;;
+	*idle*)
+		result="done"
+		;;
+	esac
+
+	echo "Rekeying state: $state progress: $result"
 }
 
 test_rekey() {
@@ -126,27 +137,23 @@ wait_for_rekeying() {
 	echo "Wait for rekeying to finish..."
 	while : ; do
 		local done=0
-		local file_content="$(< $cbe_dir/control/rekey)"
+		local file_content="$(< $cbe_dir/control/rekey_progress)"
+		echo "file_content: ${file_content}"
 		case "$file_content" in
 		*at*)
 			if [ "$verbose" = "yes" ]; then
 				echo "Rekeying: $file_content"
 			fi
 			;;
-		*failed*)
-			result="failed"
+		*idle*)
 			done=1;
-			;;
-		*successful*)
-			result="successful"
-			done=1
 			;;
 		esac
 		if [ $done -gt 0 ]; then
 			break
 		fi
 	done
-	echo "Rekeying done: $result"
+	echo "Rekeying done"
 }
 
 wait_for_vbd_extension() {
