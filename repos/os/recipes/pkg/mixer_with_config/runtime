@@ -1,0 +1,95 @@
+<runtime ram="24M" caps="800" binary="init">
+
+	<requires>
+		<audio_out/>
+		<file_system/>
+		<report/>
+		<timer/>
+	</requires>
+
+	<provides>
+		<audio_out/>
+	</provides>
+
+	<config verbose="no">
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="PD"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="LOG"/>
+			<service name="Timer"/>
+			<service name="Report"/>
+			<service name="File_system"/>
+			<service name="Audio_out"/>
+		</parent-provides>
+
+		<default-route> <any-service> <parent/> </any-service> </default-route>
+		<default caps="100"/>
+
+		<service name="Audio_out">
+			<default-policy> <child name="mixer"/> </default-policy>
+		</service>
+
+		<start name="vfs">
+			<resource name="RAM" quantum="2M"/>
+			<provides> <service name="File_system"/> </provides>
+			<config>
+				<vfs>
+					<fs/>
+					<import>
+						<inline name="mixer.config">
+<config>
+	<default out_volume="100" volume="25" muted="false"/>
+	<channel_list/>
+</config>
+						</inline>
+					</import>
+				</vfs>
+				<policy label_prefix="fs_rom" root="/" writeable="no"/>
+				<policy label_prefix="mixer_gui_qt" root="/" writeable="yes"/>
+			</config>
+			<route>
+				<!-- force omission of sub directory -->
+				<service name="File_system"> <parent label=""/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="fs_rom">
+			<resource name="RAM" quantum="1M"/>
+			<provides> <service name="ROM"/> </provides>
+			<route>
+				<service name="File_system"> <child name="vfs"/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="mixer">
+			<resource name="RAM" quantum="16M"/>
+			<provides> <service name="Audio_out"/> </provides>
+			<route>
+				<service name="ROM" label="config">
+					<child name="fs_rom" label="mixer.config"/>
+				</service>
+				<!-- submission of sub directory possible> -->
+				<service name="Report" label="channel_list">
+					<parent/>
+				</service>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+
+	</config>
+
+	<content>
+		<rom label="fs_rom"/>
+		<rom label="init"/>
+		<rom label="ld.lib.so"/>
+		<rom label="mixer"/>
+		<rom label="vfs"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="vfs_import.lib.so"/>
+	</content>
+
+</runtime>
