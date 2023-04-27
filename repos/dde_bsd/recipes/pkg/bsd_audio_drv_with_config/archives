@@ -1,0 +1,5 @@
+_/src/bsd_audio_drv
+_/src/fs_rom
+_/src/init
+_/src/vfs
+_/src/vfs_import
