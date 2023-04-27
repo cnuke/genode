@@ -22,18 +22,20 @@
 #include <types.h>
 #include <view/network_dialog.h>
 #include <view/panel_dialog.h>
+#include <view/system_dialog.h>
 
 namespace Sculpt { struct Keyboard_focus; }
 
 struct Sculpt::Keyboard_focus
 {
-	enum Target { INITIAL, WPA_PASSPHRASE, WM } target { INITIAL };
+	enum Target { INITIAL, WPA_PASSPHRASE, SYSTEM_DIALOG, WM } target { INITIAL };
 
 	Expanding_reporter _focus_reporter;
 
 	Network_dialog      const &_network_dialog;
 	Wpa_passphrase            &_wpa_passphrase;
 	Panel_dialog::State const &_panel;
+	System_dialog       const &_system_dialog;
 
 	void update()
 	{
@@ -43,6 +45,9 @@ struct Sculpt::Keyboard_focus
 
 		if (_panel.network_visible() && _network_dialog.need_keyboard_focus_for_passphrase())
 			target = WPA_PASSPHRASE;
+
+		if (_system_dialog.keyboard_needed())
+			target = SYSTEM_DIALOG;
 
 		if (orig_target == target)
 			return;
@@ -54,6 +59,7 @@ struct Sculpt::Keyboard_focus
 			switch (target) {
 
 			case WPA_PASSPHRASE:
+			case SYSTEM_DIALOG:
 				xml.attribute("label", "manager -> input");
 				break;
 
@@ -68,12 +74,14 @@ struct Sculpt::Keyboard_focus
 	Keyboard_focus(Env &env,
 	               Network_dialog      const &network_dialog,
 	               Wpa_passphrase            &wpa_passphrase,
-	               Panel_dialog::State const &panel)
+	               Panel_dialog::State const &panel,
+	               System_dialog       const &system_dialog)
 	:
 		_focus_reporter(env, "focus", "focus"),
 		_network_dialog(network_dialog),
 		_wpa_passphrase(wpa_passphrase),
-		_panel(panel)
+		_panel(panel),
+		_system_dialog(system_dialog)
 	{
 		update();
 	}

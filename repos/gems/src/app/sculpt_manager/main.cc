@@ -672,7 +672,8 @@ struct Sculpt::Main : Input_event_handler,
 		_try_handle_click();
 	}
 
-	Keyboard_focus _keyboard_focus { _env, _network.dialog, _network.wpa_passphrase, *this };
+	Keyboard_focus _keyboard_focus { _env, _network.dialog, _network.wpa_passphrase,
+	                                 *this, _system_dialog };
 
 	Constructible<Input::Seq_number> _clicked_seq_number { };
 	Constructible<Input::Seq_number> _clacked_seq_number { };
@@ -1710,6 +1711,7 @@ void Sculpt::Main::_handle_window_layout()
 
 	/* define window-manager focus */
 	_wm_focus.generate([&] (Xml_generator &xml) {
+
 		_window_list.xml().for_each_sub_node("window", [&] (Xml_node win) {
 			Label const label = win.attribute_value("label", Label());
 
@@ -1987,6 +1989,10 @@ void Sculpt::Main::_handle_runtime_state()
 				_index_update_queue.try_schedule_downloads();
 				if (_index_update_queue.download_count != orig_download_count)
 					_deploy.update_installation();
+
+				/* update depot-user selection after adding new depot URL */
+				if (_system_visible)
+					trigger_depot_query();
 
 				/*
 				 * The removal of an index file may have completed, re-query index
