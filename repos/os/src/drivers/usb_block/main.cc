@@ -908,6 +908,14 @@ struct Usb::Block_driver : Usb::Completion
 		if (device_plugged == false)
 			return Response::REJECTED;
 
+		/*
+		 * Check if there is already a request pending and wait
+		 * until it has finished. We do this check here to implement
+		 * 'SYNC' as barrier that waits for out-standing requests.
+		 */
+		if (request_pending())
+			return Response::RETRY;
+
 		Operation const &op = block_request.operation;
 
 		/* read only */
@@ -924,11 +932,15 @@ struct Usb::Block_driver : Usb::Completion
 		if (!force_cmd_16 && last >= ~0U)
 			return Response::REJECTED;
 
-		/* check if request is pending */
-		if (request_pending())
-			return Response::RETRY;
-
 		request.construct(block_request, payload);
+
+		/* operations currently handled as successful NOP */
+		if (request->block_request.operation.type == Operation::Type::TRIM
+		 || request->block_request.operation.type == Operation::Type::SYNC) {
+			request->block_request.success = true;
+			request->completed             = true;
+			return Response::ACCEPTED;
+		}
 
 		/* execute */
 		send_cbw(op.block_number, op.count, request->read());
@@ -993,35 +1005,37 @@ struct Usb::Main : Rpc_object<Typed_root<Block::Session>>
 		env.parent().announce(env.ep().manage(*this));
 	}
 
-	/**
-	 * There can only be one request in flight for this driver, so keep it simple
-	 */
 	void handle_requests()
 	{
 		if (!block_session.constructed()) return;
 
-		/* ack and release possibly pending packet */
-		block_session->try_acknowledge([&] (Block_session_component::Ack &ack) {
-			driver.with_completed([&] (Block::Request &request) {
-				ack.submit(request);
+		for (;;) {
+			bool progress = false;
+
+			/* ack and release possibly pending packet */
+			block_session->try_acknowledge([&] (Block_session_component::Ack &ack) {
+				driver.with_completed([&] (Block::Request &request) {
+					ack.submit(request);
+					progress = true;
+				});
 			});
-		});
 
-		block_session->with_requests([&] (Request request) {
+			block_session->with_requests([&] (Request request) {
 
-			/* only read/write for now */
-			if (Operation::has_payload(request.operation.type) == false) {
-				request.success = true;
-				return Response::REJECTED;
-			}
+				Response response = Response::RETRY;
 
-			Response response = Response::RETRY;
+				block_session->with_payload([&] (Request_stream::Payload const &payload) {
+					response = driver.submit(request, payload);
+				});
+				if (response != Response::RETRY)
+					progress = true;
 
-			block_session->with_payload([&] (Request_stream::Payload const &payload) {
-				response = driver.submit(request, payload);
+				return response;
 			});
-			return response;
-		});
+
+			if (!progress)
+				break;
+		}
 
 		block_session->wakeup_client_if_needed();
 	}
