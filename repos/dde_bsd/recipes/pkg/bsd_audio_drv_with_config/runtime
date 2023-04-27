@@ -1,0 +1,98 @@
+<runtime ram="8M" caps="400" binary="init">
+
+	<requires>
+		<platform/>
+		<rm/>
+		<file_system/>
+		<report/>
+		<timer/>
+	</requires>
+
+	<provides>
+		<audio_out/>
+		<audio_in/>
+	</provides>
+
+	<config verbose="no">
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="PD"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="LOG"/>
+			<service name="Timer"/>
+			<service name="Platform"/>
+			<service name="Report"/>
+			<service name="File_system"/>
+		</parent-provides>
+
+		<default-route> <any-service> <parent/> </any-service> </default-route>
+		<default caps="100"/>
+
+		<service name="Audio_out">
+			<default-policy> <child name="pci_audio_drv"/> </default-policy>
+		</service>
+
+		<service name="Audio_in">
+			<default-policy> <child name="pci_audio_drv"/> </default-policy>
+		</service>
+
+		<start name="vfs">
+			<resource name="RAM" quantum="2M"/>
+			<provides> <service name="File_system"/> </provides>
+			<config>
+				<vfs>
+					<fs/>
+					<import>
+						<inline name="bsd_audio_drv.config">
+<config report_mixer="yes">
+	<mixer field="outputs.master" value="128"/>
+</config>
+						</inline>
+					</import>
+				</vfs>
+				<policy label_prefix="fs_rom" root="/" writeable="no"/>
+			</config>
+			<route>
+				<!-- force omission of sub directory -->
+				<service name="File_system"> <parent label=""/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="fs_rom">
+			<resource name="RAM" quantum="1M"/>
+			<provides> <service name="ROM"/> </provides>
+			<route>
+				<service name="File_system"> <child name="vfs"/> </service>
+				<any-service> <parent /> </any-service>
+			</route>
+		</start>
+
+		<start name="pci_audio_drv">
+			<resource name="RAM" quantum="2M"/>
+			<provides>
+				<service name="Audio_out"/>
+				<service name="Audio_in"/>
+			</provides>
+			<route>
+				<service name="ROM" label="config">
+					<child name="fs_rom" label="bsd_audio_drv.config"/>
+				</service>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+
+	</config>
+
+	<content>
+		<rom label="fs_rom"/>
+		<rom label="init"/>
+		<rom label="ld.lib.so"/>
+		<rom label="pci_audio_drv"/>
+		<rom label="vfs"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="vfs_import.lib.so"/>
+	</content>
+
+</runtime>
