@@ -36,6 +36,7 @@ struct Sculpt::Keyboard_focus
 	Wpa_passphrase            &_wpa_passphrase;
 	Panel_dialog::State const &_panel;
 	System_dialog       const &_system_dialog;
+	bool                const &_system_visible;
 
 	void update()
 	{
@@ -46,7 +47,7 @@ struct Sculpt::Keyboard_focus
 		if (_panel.network_visible() && _network_dialog.need_keyboard_focus_for_passphrase())
 			target = WPA_PASSPHRASE;
 
-		if (_system_dialog.keyboard_needed())
+		if (_system_dialog.keyboard_needed() && _system_visible)
 			target = SYSTEM_DIALOG;
 
 		if (orig_target == target)
@@ -75,13 +76,15 @@ struct Sculpt::Keyboard_focus
 	               Network_dialog      const &network_dialog,
 	               Wpa_passphrase            &wpa_passphrase,
 	               Panel_dialog::State const &panel,
-	               System_dialog       const &system_dialog)
+	               System_dialog       const &system_dialog,
+	               bool                const &system_visible)
 	:
 		_focus_reporter(env, "focus", "focus"),
 		_network_dialog(network_dialog),
 		_wpa_passphrase(wpa_passphrase),
 		_panel(panel),
-		_system_dialog(system_dialog)
+		_system_dialog(system_dialog),
+		_system_visible(system_visible)
 	{
 		update();
 	}
