@@ -332,10 +332,12 @@ struct Driver_manager::Nvme_driver : Device_driver
 	{
 		xml.node("start", [&] () {
 			_gen_common_start_node_content(xml, _driver_name, "nvme_drv",
-			                               Ram_quota{8*1024*1024}, Cap_quota{100},
+			                               Ram_quota{24*1024*1024}, Cap_quota{100},
 			                               Priority{-1}, Version{0});
 			_gen_provides_node<Block::Session>(xml);
 			xml.node("config", [&] () {
+				xml.attribute("max_hmb_size", "16M");
+
 				xml.node("report", [&] () { xml.attribute("namespaces", "yes"); });
 				xml.node("policy", [&] () {
 					xml.attribute("label_suffix", String<64>("nvme-", _device_name, "-", 1));
