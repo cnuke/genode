@@ -508,7 +508,7 @@ component in the graph and select "Inspect". In the panel, a third tab named
 "Inspect" appears, which hosts the command-line interface
 (Figure [sculpt_23_04_inspect_tab]).
 
-[image sculpt_23_04_inspect_tab 60%]
+[image sculpt_23_04_inspect_tab 100%]
 
 The inspect tab hosts a small Unix-like runtime as user interface. Don't let
 the presence of a Unix shell mislead you. Sculpt is not a Unix system. It
