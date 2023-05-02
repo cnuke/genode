@@ -1,9 +1,10 @@
-The pc_wifi_drv component is a port of the Linux mac802.11 stack, including
+The wifi_drv component is a port of the Linux mac802.11 stack, including
 the iwlwifi driver as well as libnl and wpa_supplicant, to Genode.
 
-To start the component the following configuration snippet can be used:
+To start the component on the PC platform the following configuration snippet
+can be used:
 
-!<start name="pc_wifi_drv" caps="250">
+!<start name="wifi_drv" caps="250">
 !  <resource name="RAM" quantum="32M"/>
 !  <provides><service name="Nic"/></provides>
 !  <config>
@@ -16,10 +17,15 @@ To start the component the following configuration snippet can be used:
 !    </vfs>
 !  </config>
 !  <route>
+!    <service name="ROM" label="wifi.lib.so>
+!      <parent label="pc_wifi.lib.so"/>
+!    </service>
 !    <service name="Rtc"> <any-child /> </service>
 !    <any-service> <parent/> <any-child /> </any-service>
 !  </route>
-!</start
+!</start>
+
+Other platform will differ
 
 The driver will request access to the ROM module 'wifi_config' to
 connect to a network:
@@ -98,7 +104,7 @@ non alphanumeric characters.
 
 The driver optionally reports the following information under the
 label "devices" if requested in the config as depicted.
-
+child 
 ! <config> <report mac_address="true"/> </config>
 
 ! <devices> <nic mac_address="02:00:00:00:00:01"/> </devices>
