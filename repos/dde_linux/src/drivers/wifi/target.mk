@@ -1,9 +1,11 @@
 TARGET  := wifi_drv
-SRC_CC  := main.cc wpa.cc
+SRC_CC  := main.cc wpa.cc access_firmware.cc
 LIBS    := base wifi
 LIBS    += libc
 LIBS    += wpa_supplicant
 LIBS    += libcrypto libssl wpa_driver_nl80211
+
+LD_OPT += --export-dynamic
 
 INC_DIR += $(PRG_DIR)
 

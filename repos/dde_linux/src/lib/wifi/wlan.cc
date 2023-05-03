@@ -78,6 +78,129 @@ bool wifi_get_rfkill(void)
 	return _wifi_get_rfkill();
 }
 
+/* Firmware access, move to object later */
+
+#include <wifi/firmware_access.h>
+
+struct task_struct;
+
+struct Firmware_access_helper
+{
+	Firmware_access_helper(Firmware_access_helper const&) = delete;
+	Firmware_access_helper & operator = (Firmware_access_helper const&) = delete;
+
+	Genode::Signal_handler<Firmware_access_helper> _response_handler;
+
+	Genode::Signal_context_capability _request_sigh;
+
+	Wifi::Firmware_request _request { };
+
+	void *calling_task { nullptr };
+
+	void _handle_response()
+	{
+		if (calling_task)
+			lx_emul_task_unblock((struct task_struct*)calling_task);
+
+		Lx_kit::env().scheduler.schedule();
+	}
+
+	Firmware_access_helper(Genode::Entrypoint &ep,
+	                       Genode::Signal_context_capability request_sigh)
+	:
+		_response_handler { ep, *this, &Firmware_access_helper::_handle_response },
+		_request_sigh { request_sigh }
+	{ }
+
+	void submit_response()
+	{
+		Genode::Signal_transmitter(_response_handler).submit();
+	}
+
+	void submit_request()
+	{
+		Genode::Signal_transmitter(_request_sigh).submit();
+	}
+
+	Wifi::Firmware_request *request()
+	{
+		return &_request;
+	}
+};
+
+Constructible<Firmware_access_helper> firmware_access_helper { };
+
+
+size_t _wifi_probe_firmware(char const *name)
+{
+	using namespace Wifi;
+
+	Firmware_request &request = *firmware_access_helper->request();
+
+	if (request.state != Firmware_request::State::INVALID) {
+		error(__func__, ": cannot probe '", name, "' state: ",
+		      (unsigned)request.state);
+		return 0;
+	}
+
+	request.name    = name;
+	request.state   = Firmware_request::State::PROBING;
+	request.dst     = nullptr;
+	request.dst_len = 0;
+
+	firmware_access_helper->calling_task = lx_emul_task_get_current();
+	firmware_access_helper->submit_request();
+
+	do {
+		lx_emul_task_schedule(true);
+	} while (request.state != Firmware_request::State::PROBING_COMPLETE);
+
+	request.state = Firmware_request::State::INVALID;
+	firmware_access_helper->calling_task = nullptr;
+
+	return request.fw_len;
+}
+
+
+int _wifi_request_firmware(char const *name, char *dst, size_t dst_len)
+{
+	using namespace Wifi;
+
+	Firmware_request &request = *firmware_access_helper->request();
+
+	if (request.state != Firmware_request::State::INVALID) {
+		error(__func__, ": cannot request '", name, "' state: ",
+		      (unsigned)request.state);
+		return -1;
+	}
+
+	if (strcmp(request.name, name) != 0) {
+		error(__func__, ": cannot request '", name, "' name does not match");
+		return -1;
+	}
+
+	if (request.fw_len != dst_len) {
+		error(__func__, ": cannot request '", name, "' length does not match");
+		return -1;
+	}
+
+	request.state   = Firmware_request::State::REQUESTING;
+	request.dst     = dst;
+	request.dst_len = dst_len;
+
+	firmware_access_helper->calling_task = lx_emul_task_get_current();
+	firmware_access_helper->submit_request();
+
+	do {
+		lx_emul_task_schedule(true);
+	} while (request.state != Firmware_request::State::REQUESTING_COMPLETE);
+
+	request.state        = Firmware_request::State::INVALID;
+	firmware_access_helper->calling_task = nullptr;
+
+	return 0;
+}
+
 
 extern "C" unsigned int wifi_ifindex(void)
 {
@@ -208,4 +331,26 @@ void wifi_init(Env &env, Blockade &blockade)
 void wifi_set_rfkill_sigh(Signal_context_capability cap)
 {
 	_rfkill_sigh_cap = cap;
+}
+
+
+void wifi_firmware_request_sigh(Genode::Signal_context_capability sig_cap)
+{
+	firmware_access_helper.construct(Lx_kit::env().env.ep(), sig_cap);
+}
+
+
+void wifi_firmware_response_notification()
+{
+	if (firmware_access_helper.constructed())
+		firmware_access_helper->submit_response();
+}
+
+
+Wifi::Firmware_request *wifi_firmware_get_request()
+{
+	if (firmware_access_helper.constructed())
+		return firmware_access_helper->request();
+
+	return nullptr;
 }

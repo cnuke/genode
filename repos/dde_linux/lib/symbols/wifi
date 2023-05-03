@@ -19,3 +19,6 @@ jiffies_64 D 0
 socket_call B 1
 wifi_ifindex T
 wifi_ifname T
+_Z25wifi_firmware_get_requestv T
+_Z26wifi_firmware_request_sighN6Genode10CapabilityINS_14Signal_contextEEE T
+_Z35wifi_firmware_response_notificationv T
