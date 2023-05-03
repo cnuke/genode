@@ -12,6 +12,7 @@
  */
 
 #include <runtime.h>
+#include <feature.h>
 
 void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 {
@@ -68,8 +69,7 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 		gen_parent_rom_route(xml, "vfs_jitterentropy.lib.so");
 		gen_parent_rom_route(xml, "vfs_wifi.lib.so");
 		gen_parent_rom_route(xml, "libssl.lib.so");
-		gen_parent_rom_route(xml, "wifi.lib.so");
-		gen_parent_rom_route(xml, "a64_wifi.lib.so");
+		gen_parent_rom_route(xml, "wifi.lib.so", Sculpt::Feature::WIFI_DRV_LIBRARY_NAME);
 		gen_parent_rom_route(xml, "wpa_driver_nl80211.lib.so");
 		gen_parent_rom_route(xml, "wpa_supplicant.lib.so");
 		gen_parent_rom_route(xml, "iwlwifi-1000-5.ucode");
