@@ -239,7 +239,7 @@ struct Sculpt::Main : Input_event_handler,
 	Network _network { _env, _heap, *this, _child_states, *this, _runtime_state, _pci_info };
 
 	Menu_view _network_menu_view { _env, _child_states, _network.dialog, "network_view",
-	                               Ram_quota{4*1024*1024}, Cap_quota{150},
+	                               Ram_quota{6*1024*1024}, Cap_quota{150},
 	                               "network_dialog", "network_view_hover",
 	                               *this };
 
