@@ -27,6 +27,9 @@
 #include <lx_kit/init.h>
 #include <lx_user/io.h>
 
+/* wifi includes */
+#include <wifi/firmware.h>
+
 /* local includes */
 #include "lx_user.h"
 #include "dtb_helper.h"
@@ -76,6 +79,164 @@ void _wifi_set_rfkill(bool blocked)
 bool wifi_get_rfkill(void)
 {
 	return _wifi_get_rfkill();
+}
+
+
+/* Firmware access, move to object later */
+
+struct task_struct;
+
+struct Firmware_helper
+{
+	Firmware_helper(Firmware_helper const&) = delete;
+	Firmware_helper & operator = (Firmware_helper const&) = delete;
+
+	void *waiting_task { nullptr };
+	void *calling_task { nullptr };
+
+	Genode::Signal_handler<Firmware_helper> _response_handler;
+
+	void _handle_response()
+	{
+		if (calling_task)
+			lx_emul_task_unblock((struct task_struct*)calling_task);
+
+		Lx_kit::env().scheduler.schedule();
+	}
+
+	Wifi::Firmware_request_handler &_request_handler;
+
+	struct Request : Wifi::Firmware_request
+	{
+		Genode::Signal_context &_response_handler;
+
+		Request(Genode::Signal_context &sig_ctx)
+		:
+			_response_handler { sig_ctx }
+		{ }
+
+		void submit_response() override
+		{
+			switch (state) {
+			case Firmware_request::State::PROBING:
+				state = Firmware_request::State::PROBING_COMPLETE;
+				break;
+			case Firmware_request::State::REQUESTING:
+				state = Firmware_request::State::REQUESTING_COMPLETE;
+				break;
+			default:
+				return;
+			}
+			_response_handler.local_submit();
+		}
+	};
+
+	Request _request { _response_handler };
+
+	void _submit_request()
+	{
+		calling_task = lx_emul_task_get_current();
+		_request_handler.submit_request();
+	}
+
+	Firmware_helper(Genode::Entrypoint &ep,
+	                       Wifi::Firmware_request_handler &request_handler)
+	:
+		_response_handler { ep, *this, &Firmware_helper::_handle_response },
+		_request_handler  { request_handler }
+	{ }
+
+	void submit_probing(char const *name)
+	{
+		_request.name    = name;
+		_request.state   = Wifi::Firmware_request::State::PROBING;
+		_request.dst     = nullptr;
+		_request.dst_len = 0;
+
+		_submit_request();
+	}
+
+	void submit_requesting(char const *name, char *dst, size_t dst_len)
+	{
+		_request.name    = name;
+		_request.state   = Wifi::Firmware_request::State::REQUESTING;
+		_request.dst     = dst;
+		_request.dst_len = dst_len;
+
+		_submit_request();
+	}
+
+	Wifi::Firmware_request *request()
+	{
+		return &_request;
+	}
+};
+
+
+Constructible<Firmware_helper> firmware_helper { };
+
+
+size_t _wifi_probe_firmware(char const *name)
+{
+	using namespace Wifi;
+
+	Firmware_request &request = *firmware_helper->request();
+
+	if (request.state != Firmware_request::State::INVALID) {
+
+		do {
+			firmware_helper->waiting_task = lx_emul_task_get_current();
+
+			lx_emul_task_schedule(true);
+		} while (request.state != Firmware_request::State::INVALID);
+	}
+
+	firmware_helper->submit_probing(name);
+
+	do {
+		lx_emul_task_schedule(true);
+	} while (request.state != Firmware_request::State::PROBING_COMPLETE);
+
+	request.state = Firmware_request::State::INVALID;
+	if (firmware_helper->waiting_task) {
+		lx_emul_task_unblock((struct task_struct*)firmware_helper->waiting_task);
+		firmware_helper->waiting_task = nullptr;
+	}
+	firmware_helper->calling_task = nullptr;
+
+	return request.fw_len;
+}
+
+
+int _wifi_request_firmware(char const *name, char *dst, size_t dst_len)
+{
+	using namespace Wifi;
+
+	Firmware_request &request = *firmware_helper->request();
+
+	if (request.state != Firmware_request::State::INVALID) {
+
+		do {
+			firmware_helper->waiting_task = lx_emul_task_get_current();
+
+			lx_emul_task_schedule(true);
+		} while (request.state != Firmware_request::State::INVALID);
+	}
+
+	firmware_helper->submit_requesting(name, dst, dst_len);
+
+	do {
+		lx_emul_task_schedule(true);
+	} while (request.state != Firmware_request::State::REQUESTING_COMPLETE);
+
+	request.state = Firmware_request::State::INVALID;
+	if (firmware_helper->waiting_task) {
+		lx_emul_task_unblock((struct task_struct*)firmware_helper->waiting_task);
+		firmware_helper->waiting_task = nullptr;
+	}
+	firmware_helper->calling_task = nullptr;
+
+	return 0;
 }
 
 
@@ -208,4 +369,19 @@ void wifi_init(Env &env, Blockade &blockade)
 void wifi_set_rfkill_sigh(Signal_context_capability cap)
 {
 	_rfkill_sigh_cap = cap;
+}
+
+
+void Wifi::firmware_establish_handler(Wifi::Firmware_request_handler &request_handler)
+{
+	firmware_helper.construct(Lx_kit::env().env.ep(), request_handler);
+}
+
+
+Wifi::Firmware_request *Wifi::firmware_get_request()
+{
+	if (firmware_helper.constructed())
+		return firmware_helper->request();
+
+	return nullptr;
 }
