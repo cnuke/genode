@@ -88,6 +88,18 @@ void wifi_notify_event(void)
 extern void wifi_init(Genode::Env&, Genode::Blockade&);
 extern void wifi_set_rfkill_sigh(Genode::Signal_context_capability);
 
+/* imported by wifi.lib.so */
+size_t wifi_probe_firmware(char const *name)
+{
+	return 0;
+}
+
+
+int wifi_request_firmware(char const *name, char *dst, size_t dst_len)
+{
+	return -1;
+}
+
 
 struct Main
 {

@@ -281,6 +281,9 @@ append config {
 					<jitterentropy name="urandom"/>
 					<wifi/>
 				</dir>
+				<dir name="firmware">
+					<tar name="wifi_firmware.tar"/>
+				</dir>
 			</vfs>
 		</config>
 		<route>
@@ -291,6 +294,7 @@ append config {
 			<service name="Report" label="devices"> <child name="devices_report_rom"/> </service>
 			<service name="ROM" label="wifi_config"> <child name="config_rom"/> </service>
 			<service name="ROM" label="wifi.lib.so"> <parent label="pc_wifi.lib.so"/> </service>
+			<service name="ROM" label="wifi_firmware.tar"> <parent label="pc_wifi_firmware.tar"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>

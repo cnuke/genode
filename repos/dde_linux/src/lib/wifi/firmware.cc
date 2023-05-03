@@ -71,49 +71,36 @@ size_t fw_list_len = sizeof(fw_list) / sizeof(fw_list[0]);
  ** linux/firmware.h **
  **********************/
 
+extern size_t wifi_probe_firmware(char const *name);
+extern int    wifi_request_firmware(char const *name, void *dst, size_t dst_len);
+
+
 extern "C" int lx_emul_request_firmware_nowait(const char *name, void **dest,
-                                               size_t *result, bool warn)
+                                               size_t *result, bool /* warn */)
 {
 	if (!dest || !result)
 		return -1;
 
-	/* only try to load known firmware images */
-	Firmware_list *fwl = 0;
-	for (size_t i = 0; i < fw_list_len; i++) {
-		if (strcmp(name, fw_list[i].requested_name) == 0) {
-			fwl = &fw_list[i];
-			break;
-		}
-	}
+	size_t const fw_size = wifi_probe_firmware(name);
 
-	if (!fwl ) {
-		if (warn)
-			error("firmware '", name, "' is not in the firmware white list");
-
-		return -1;
-	}
-
-	char const *fw_name = fwl->available_name
-	                    ? fwl->available_name : fwl->requested_name;
-	Rom_connection rom(Lx_kit::env().env, fw_name);
-	Dataspace_capability ds_cap = rom.dataspace();
-
-	if (!ds_cap.valid()) {
-		error("could not get firmware ROM dataspace");
+	if (!fw_size) {
+		warning("firmware ", name, " not found");
 		return -1;
 	}
 
 	/* use allocator because fw is too big for slab */
-	void *data = Lx_kit::env().heap.alloc(fwl->size);
+	void *data = Lx_kit::env().heap.alloc(fw_size);
 	if (!data)
 		return -1;
 
-	void const *image = Lx_kit::env().env.rm().attach(ds_cap);
-	memcpy(data, image, fwl->size);
-	Lx_kit::env().env.rm().detach(image);
+	if (wifi_request_firmware(name, data, fw_size)) {
+		error("could not request firmware ", name);
+		Lx_kit::env().heap.free(const_cast<void *>(data), fw_size);
+		return -1;
+	}
 
 	*dest   = data;
-	*result = fwl->size;
+	*result = fw_size;
 
 	return 0;
 }
