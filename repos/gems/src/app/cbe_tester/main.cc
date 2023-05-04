@@ -41,6 +41,7 @@
 #include <ft_check.h>
 #include <virtual_block_device.h>
 #include <superblock_control.h>
+#include <ft_resizing.h>
 
 using namespace Genode;
 using namespace Cbe;
@@ -1146,6 +1147,7 @@ class Cbe_tester::Main : Vfs::Env::User, public Cbe::Module
 		Constructible<Virtual_block_device> _vbd                 { };
 		Constructible<Superblock_control>   _sb_control          { };
 		Constructible<Request_pool>         _request_pool        { };
+		Constructible<Ft_resizing>          _ft_resizing         { };
 		Benchmark                           _benchmark           { _env };
 		Meta_tree                           _meta_tree           { };
 		Trust_anchor                        _trust_anchor        { _vfs_env, _config_rom.xml().sub_node("trust-anchor") };
@@ -1181,6 +1183,9 @@ class Cbe_tester::Main : Vfs::Env::User, public Cbe::Module
 
 			_request_pool.construct();
 			_modules_add(REQUEST_POOL, *_request_pool);
+
+			_ft_resizing.construct();
+			_modules_add(FT_RESIZING, *_ft_resizing);
 		}
 
 		void _destruct_cbe()
