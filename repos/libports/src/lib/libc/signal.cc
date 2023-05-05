@@ -136,12 +136,11 @@ extern "C" __sighandler_t * signal(int sig, __sighandler_t * func)
 	struct sigaction oact { }, act { };
 	act.sa_handler = func;
 
-	if (sigaction(sig, &act, &oact) == 0) {
+	if (sigaction(sig, &act, &oact) == 0)
 		return oact.sa_handler;
-	} else {
-		errno = EINVAL;
-		return SIG_ERR;
-	}
+
+	errno = EINVAL;
+	return SIG_ERR;
 }
 
 
