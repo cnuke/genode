@@ -216,6 +216,7 @@ append config {
 					<log string="Step 2: test synchronous write, read"/>
 
 					<request op="write" vba="1"   count="1"   sync="yes" salt="1234"/>
+					<request op="extend_ft"      count="23"  sync="yes"/>
 					<request op="read"  vba="1"   count="1"   sync="yes" salt="1234"/>
 					<request op="write" vba="12"  count="10"  sync="yes"/>
 					<request op="read"  vba="12"  count="10"  sync="yes"/>
