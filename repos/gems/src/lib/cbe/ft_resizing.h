@@ -37,7 +37,44 @@ class Cbe::Ft_resizing_request : public Module_request
 		friend class Ft_resizing;
 		friend class Ft_resizing_channel;
 
-		Type _type { INVALID };
+		Type                   _type            { INVALID };
+		Generation             _curr_gen        { INVALID_GENERATION };
+		Type_1_node            _ft_root         { };
+		Tree_level_index       _ft_max_lvl      { 0 };
+		Number_of_leaves       _ft_nr_of_leaves { 0 };
+		Tree_degree            _ft_degree       { 0 };
+		Physical_block_address _first_pba       { 0 };
+		Number_of_blocks       _nr_of_pbas      { 0 };
+		bool                   _success         { false };
+
+		Ft_resizing_request() { }
+
+		Ft_resizing_request(Genode::uint64_t       src_module_id,
+		                    Genode::uint64_t       src_request_id,
+		                    Type                   type,
+		                    Generation             curr_gen,
+		                    Type_1_node            ft_root,
+		                    Tree_level_index       ft_max_lvl,
+		                    Number_of_leaves       ft_nr_of_leaves,
+		                    Tree_degree            ft_degree,
+		                    Physical_block_address first_pba,
+		                    Number_of_blocks       nr_of_pbas);
+
+		Type type() const { return _type; }
+
+		bool success() const { return _success; }
+
+		static char const *type_to_string(Type type);
+
+
+		/********************
+		 ** Module_request **
+		 ********************/
+
+		void print(Genode::Output &out) const override
+		{
+			Genode::print(out, type_to_string(_type));
+		}
 };
 
 class Cbe::Ft_resizing_channel

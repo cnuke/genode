@@ -22,65 +22,23 @@ using namespace Genode;
 using namespace Cbe;
 
 
-static Virtual_block_address tree_max_max_vba(Tree_degree      const degree,
-                                              Tree_level_index const max_lvl_idx)
-{
-	return (Virtual_block_address(degree) ^ max_lvl_idx) - 1;
-}
+/*************************
+ ** Ft_resizing_request **
+ *************************/
 
-
-static Physical_block_address alloc_pba_from_resizing_contingent(Physical_block_address &first_pba,
-                                                                 Number_of_blocks       &nr_of_pbas)
+char const *Ft_resizing_request::type_to_string(Type op)
 {
-	if (nr_of_pbas == 0) {
-		class Program_error_ft_resizing_nr_of_pbas_zero { };
-		throw Program_error_ft_resizing_nr_of_pbas_zero { };
+	switch (op) {
+	case INVALID: return "invalid";
+	case FT_EXTENSION_STEP: return "ft_extension_step";
 	}
-
-	auto const allocated_pba = first_pba;
-
-	first_pba  = first_pba  + 1;
-	nr_of_pbas = nr_of_pbas - 1;
-
-	return allocated_pba;
+	return "?";
 }
 
 
-static uint64_t log_2(uint64_t const value)
-{
-	class Log_2_error { };
-
-	if (value == 0)
-		throw Log_2_error { };
-
-	uint64_t result = log2(value);
-	if (result >= sizeof(value) * 8)
-		throw Log_2_error { };
-
-	return result;
-}
-
-
-static Node_index t1_child_idx_for_vba(Virtual_block_address const vba,
-                                       Tree_level_index      const lvl,
-                                       Tree_degree           const degr)
-{
-	uint64_t const degree_log_2 { log_2(degr) };
-	uint64_t const degree_mask  { (1ull << degree_log_2) - 1 };
-	uint64_t const vba_rshift   { degree_log_2 * (lvl - 1) };
-	return degree_mask & (vba >> vba_rshift);
-}
-
-
-static Node_index t2_child_idx_for_vba(Virtual_block_address const vba,
-                                       Tree_degree           const degr)
-{
-	uint64_t const degree_log_2 { log_2(degr) };
-	uint64_t const degree_mask  { (1ull << degree_log_2) - 1 };
-
-	return degree_mask & vba;
-}
-
+/*************************
+ ** Ft_resizing_request **
+ *************************/
 
 void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        &channel,
                                                                  unsigned const  job_idx,
@@ -141,22 +99,10 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 			channel._state = Channel::State::READ_INNER_NODE_PENDING;
 			progress       = true;
 
-/*
-               pragma Debug (Debug.Print_String (
-                  "   READ LVL " &
-                  Debug.To_String (Debug.Uint64_Type (Child_Lvl_Idx)) &
-                  " PARENT LVL " &
-                  Debug.To_String (Debug.Uint64_Type (Parent_Lvl_Idx)) &
-                  " CHILD " &
-                  Debug.To_String (Debug.Uint64_Type (Child_Idx)) &
-                  " PBA " &
-                  Debug.To_String (Debug.Uint64_Type (Child.PBA)) &
-                  " GEN " &
-                  Debug.To_String (Debug.Uint64_Type (Child.Gen)) &
-                  " " &
-                  Debug.To_String (Child.Hash) &
-                  " "));
-*/
+			if (VERBOSE_FT_EXTENSION)
+				log("  read lvl ", parent_lvl_idx, " child ", child_idx,
+				    ": ", child);
+
 		} else {
 
 			_add_new_branch_to_ft_using_pba_contingent(parent_lvl_idx,
@@ -236,11 +182,10 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 			                                           channel._nr_of_leaves);
 
 			channel._alloc_lvl_idx = parent_lvl_idx;
-/*
-            pragma Debug (Debug.Print_String (
-               "   ALLOC LVL " &
-               Debug.To_String (Debug.Uint64_Type (Job.Alloc_Lvl_Idx))));
-*/
+
+			if (VERBOSE_FT_EXTENSION)
+				log("  alloc lvl ", channel._alloc_lvl_idx);
+
 			channel._generated_prim = {
 				.op     = Channel::Generated_prim::Type::READ,
 				.succ   = false,
@@ -282,14 +227,8 @@ void Ft_resizing::_set_args_for_write_back_of_inner_lvl(Tree_level_index       c
 		.idx    = prim_idx
 	};
 
-/*
-      pragma Debug (Debug.Print_String (
-         "   WRITE LVL " &
-         Debug.To_String (Debug.Uint64_Type (Lvl_Idx)) &
-         " PBA " &
-         Debug.To_String (Debug.Uint64_Type (PBA)) &
-         " "));
-*/
+	if (VERBOSE_FT_EXTENSION)
+		log("  write lvl ", lvl_idx, " pba ", pba);
 
 	if (lvl_idx < max_lvl_idx) {
 		job_state = Channel::State::WRITE_INNER_NODE_PENDING;
@@ -327,35 +266,14 @@ void Ft_resizing::_add_new_root_lvl_to_ft_using_pba_contingent(Type_1_node      
 		.gen     = curr_gen,
 		.hash    = { },
 	};
-/*
-      pragma Debug (Debug.Print_String (
-         "   SET FT_ROOT PBA " &
-         Debug.To_String (Debug.Uint64_Type (FT_Root.PBA)) &
-         " GEN " &
-         Debug.To_String (Debug.Uint64_Type (FT_Root.Gen)) &
-         " LEAVES " &
-         Debug.To_String (Debug.Uint64_Type (FT_Nr_Of_Leaves)) &
-         " MAX_LVL " &
-         Debug.To_String (Debug.Uint64_Type (FT_Max_Lvl_Idx)) &
-         " " &
-         Debug.To_String (FT_Root.Hash) &
-         " "));
 
-      pragma Debug (Debug.Print_String (
-         "   SET LVL " &
-         Debug.To_String (Debug.Uint64_Type (FT_Max_Lvl_Idx)) &
-         " CHILD 0 PBA " &
-         Debug.To_String (Debug.Uint64_Type (
-            T1_Blks (FT_Max_Lvl_Idx) (0).PBA)) &
-         " GEN " &
-         Debug.To_String (Debug.Uint64_Type (
-            T1_Blks (FT_Max_Lvl_Idx) (0).Gen)) &
-         " " &
-         Debug.To_String (
-            T1_Blks (FT_Max_Lvl_Idx) (0).Hash) &
-         " "));
-      pragma Unreferenced (FT_Nr_Of_Leaves);
-*/
+	if (VERBOSE_FT_EXTENSION) {
+		log("  set ft root: ", ft_root, " leaves ", ft_nr_of_leaves,
+		    " max lvl ", ft_max_lvl_idx);
+
+		log("  set lvl ", ft_max_lvl_idx,
+		    " child 0: ", t1_blks.items[ft_max_lvl_idx].nodes[0]);
+	}
 	(void)ft_nr_of_leaves;
 }
 
@@ -381,11 +299,9 @@ void Ft_resizing::_add_new_branch_to_ft_using_pba_contingent(Tree_level_index   
 				t1_blks.items[lvl_idx] = { };
 			else
 				t2_blk = { };
-/*
-            pragma Debug (Debug.Print_String (
-               "   RESET LVL " &
-               Debug.To_String (Debug.Uint64_Type (Lvl_Idx))));
-*/
+
+			if (VERBOSE_FT_EXTENSION)
+				log("  reset lvl ", lvl_idx);
 		}
 	}
 
@@ -411,23 +327,10 @@ void Ft_resizing::_add_new_branch_to_ft_using_pba_contingent(Tree_level_index   
 					.hash = { }
 				};
 
-/*
-                  pragma Debug (Debug.Print_String (
-                     "   SET LVL " &
-                     Debug.To_String (Debug.Uint64_Type (Lvl_Idx)) &
-                     " CHILD " &
-                     Debug.To_String (Debug.Uint64_Type (Child_Idx)) &
-                     " PBA " &
-                     Debug.To_String (Debug.Uint64_Type (
-                        T1_Blks (Lvl_Idx) (Child_Idx).PBA)) &
-                     " GEN " &
-                     Debug.To_String (Debug.Uint64_Type (
-                        T1_Blks (Lvl_Idx) (Child_Idx).Gen)) &
-                     " " &
-                     Debug.To_String (
-                        T1_Blks (Lvl_Idx) (Child_Idx).Hash) &
-                     " "));
-*/
+				if (VERBOSE_FT_EXTENSION)
+					log("  set lvl ", lvl_idx, " child ", child_idx,
+					    ": ", t1_blks.items[lvl_idx].nodes[child_idx]);
+
 			} else {
 				auto const first_child_idx = (lvl_idx == mount_point_lvl_idx)
 				                           ? mount_point_child_idx : 0;
@@ -441,36 +344,17 @@ void Ft_resizing::_add_new_branch_to_ft_using_pba_contingent(Tree_level_index   
 
 					t2_blk.nodes[child_idx] = {
 						.pba         = child_pba,
-						.last_vba    = { }, /* vba invalid XXX ? */
-						.alloc_gen   = { INITIAL_GENERATION },
-						.free_gen    = { INITIAL_GENERATION },
-						.last_key_id = { }, /* key_id_invalid XXX ? */
+						.last_vba    = INVALID_VBA,
+						.alloc_gen   = INITIAL_GENERATION,
+						.free_gen    = INITIAL_GENERATION,
+						.last_key_id = INVALID_KEY_ID,
 						.reserved    = false
 					};
 
-/*
-                     pragma Debug (Debug.Print_String (
-                        "   SET LVL " &
-                        Debug.To_String (Debug.Uint64_Type (Lvl_Idx)) &
-                        " CHILD " &
-                        Debug.To_String (Debug.Uint64_Type (Child_Idx)) &
-                        " PBA " &
-                        Debug.To_String (Debug.Uint64_Type (
-                           T2_Blk (Child_Idx).PBA)) &
-                        " AGEN " &
-                        Debug.To_String (Debug.Uint64_Type (
-                           T2_Blk (Child_Idx).Alloc_Gen)) &
-                        " FGEN " &
-                        Debug.To_String (Debug.Uint64_Type (
-                           T2_Blk (Child_Idx).Free_Gen)) &
-                        " KEY " &
-                        Debug.To_String (Debug.Uint64_Type (
-                           T2_Blk (Child_Idx).Last_Key_ID)) &
-                        " VBA " &
-                        Debug.To_String (Debug.Uint64_Type (
-                           T2_Blk (Child_Idx).Last_VBA)) &
-                        " "));
-*/
+					if (VERBOSE_FT_EXTENSION)
+						log("  set lvl ", lvl_idx, " child ", child_idx,
+						    ": ", t2_blk.nodes[child_idx]);
+
 					nr_of_leaves = nr_of_leaves + 1;
 				}
 			}
@@ -506,26 +390,13 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 				.blk_nr = channel._ft_root.pba,
 				.idx    = job_idx
 			};
-/*
-            pragma Debug (Debug.Print_String (
-               "   READ LVL " &
-               Debug.To_String (Debug.Uint64_Type (Job.Lvl_Idx)) &
-               " PARENT FT_ROOT PBA " &
-               Debug.To_String (Debug.Uint64_Type (
-                  Job.FT_Root.PBA)) &
-               " GEN " &
-               Debug.To_String (Debug.Uint64_Type (
-                  Job.FT_Root.Gen)) &
-               " LEAVES " &
-               Debug.To_String (Debug.Uint64_Type (
-                  Job.FT_Nr_Of_Leaves)) &
-               " MAX_LVL " &
-               Debug.To_String (Debug.Uint64_Type (
-                  Job.FT_Max_Lvl_Idx)) &
-               " " &
-               Debug.To_String (Job.FT_Root.Hash) &
-               " "));
-*/
+
+			if (VERBOSE_FT_EXTENSION)
+				log("  read lvl ", channel._lvl_idx,
+				    ": parent ft_root ", channel._ft_root,
+				    " leaves ", channel._ft_nr_of_leaves,
+				    " max lvl ", channel._ft_max_lvl_idx);
+
 			channel._state = Channel::State::READ_ROOT_NODE_PENDING;
 			progress       = true;
 
@@ -552,12 +423,8 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 			                                           channel._lvl_idx,
 			                                           channel._nr_of_leaves);
 
-/*
-            pragma Debug (Debug.Print_String (
-               "   PBAS ALLOCATED CURR_GEN " &
-               Debug.To_String (Debug.Uint64_Type (Job.Curr_Gen)) &
-               " "));
-*/
+			if (VERBOSE_FT_EXTENSION)
+				log("  pbas allocated: curr gen ", channel._curr_gen);
 
 			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
 			                                      channel._lvl_idx,
@@ -604,12 +471,9 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 			}
 
 		} else {
-/*
-            pragma Debug (Debug.Print_String (
-               "   PBAS ALLOCATED CURR_GEN " &
-               Debug.To_String (Debug.Uint64_Type (channel._Curr_Gen)) &
-               " "));
-*/
+
+			if (VERBOSE_FT_EXTENSION)
+				log("  pbas allocated: curr gen ", channel._curr_gen);
 
 			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
 			                                      channel._lvl_idx,
@@ -647,23 +511,9 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 			calc_sha256_4k_hash(&channel._t1_blks.items[child_lvl_idx],
 			                    &child.hash);
 
-/*
-               pragma Debug (Debug.Print_String (
-                  "   SET LVL " &
-                  Debug.To_String (Debug.Uint64_Type (Parent_Lvl_Idx)) &
-                  " CHILD " &
-                  Debug.To_String (Debug.Uint64_Type (Child_Idx)) &
-                  " PBA " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     Job.T1_Blks (Parent_Lvl_Idx) (Child_Idx).PBA)) &
-                  " GEN " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     Job.T1_Blks (Parent_Lvl_Idx) (Child_Idx).Gen)) &
-                  " " &
-                  Debug.To_String (
-                     Job.T1_Blks (Parent_Lvl_Idx) (Child_Idx).Hash) &
-                  " "));
-*/
+			if (VERBOSE_FT_EXTENSION)
+				log("  set lvl ", parent_lvl_idx, " child ", child_idx,
+				    ": ", child);
 
 			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
 			                                      parent_lvl_idx,
@@ -692,25 +542,9 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 
 			calc_sha256_4k_hash(&channel._t2_blk, &child.hash);
 
-/*
-               pragma Debug (Debug.Print_String (
-                  "   SET LVL " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     Parent_Lvl_Idx)) &
-                  " CHILD " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     Child_Idx)) &
-                  " PBA " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     channel._T1_Blks (Parent_Lvl_Idx) (Child_Idx).PBA)) &
-                  " GEN " &
-                  Debug.To_String (Debug.Uint64_Type (
-                     channel._T1_Blks (Parent_Lvl_Idx) (Child_Idx).Gen)) &
-                  " " &
-                  Debug.To_String (
-                     channel._T1_Blks (Parent_Lvl_Idx) (Child_Idx).Hash) &
-                  " "));
-*/
+			if (VERBOSE_FT_EXTENSION)
+				log("  set lvl ", parent_lvl_idx, " child ", child_idx,
+				    ": ", child);
 
 			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
 			                                      parent_lvl_idx,
