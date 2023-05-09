@@ -150,6 +150,9 @@ CC_C_OPT += -Wno-discarded-qualifiers
 # avoid link errors whenever the build config's CC_OLEVEL is set to -O0
 override CC_OLEVEL := -O2
 
+# prevent compiler from generating SIMD instructions
+CC_OPT += -fno-tree-vectorize
+
 LX_SRC   = $(shell grep ".*\.c" $(TARGET_SOURCE_LIST))
 SRC_S   += $(shell grep ".*\.S" $(TARGET_SOURCE_LIST))
 SRC_C   += $(LX_SRC)
