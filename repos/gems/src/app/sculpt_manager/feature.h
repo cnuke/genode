@@ -33,8 +33,8 @@ struct Sculpt::Feature
 	/* highlight hovered buttons, not possible on touch-screen devices */
 	static constexpr bool VISUAL_HOVER = true;
 
-	/* name of the shared-object providing the WLAN driver */
-	static constexpr char const *WIFI_DRV_LIBRARY_NAME = "pc_wifi.lib.so";
+	/* prefix of the WLAN driver for the given platform */
+	static constexpr char const *WIFI_DRV_PREFIX = "pc";
 };
 
 #endif /* _FEATURE_H_ */
