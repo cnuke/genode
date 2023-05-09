@@ -91,6 +91,7 @@ struct Firmware_helper
 	Firmware_helper(Firmware_helper const&) = delete;
 	Firmware_helper & operator = (Firmware_helper const&) = delete;
 
+	void *waiting_task { nullptr };
 	void *calling_task { nullptr };
 
 	Genode::Signal_handler<Firmware_helper> _response_handler;
@@ -184,7 +185,12 @@ size_t _wifi_probe_firmware(char const *name)
 	if (request.state != Firmware_request::State::INVALID) {
 		error(__func__, ": cannot probe '", name, "' state: ",
 		      (unsigned)request.state);
-		return 0;
+		firmware_helper->waiting_task = lx_emul_task_get_current();
+		error("waiting_task: ", firmware_helper->waiting_task, " calling_task: ", firmware_helper->calling_task);
+		do {
+			lx_emul_task_schedule(true);
+		} while (request.state != Firmware_request::State::INVALID);
+		error("done waiting: ", lx_emul_task_get_current());
 	}
 
 	firmware_helper->submit_probing(name);
@@ -194,6 +200,11 @@ size_t _wifi_probe_firmware(char const *name)
 	} while (request.state != Firmware_request::State::PROBING_COMPLETE);
 
 	request.state = Firmware_request::State::INVALID;
+	if (firmware_helper->waiting_task) {
+		error("finished waiting_task: ", firmware_helper->waiting_task, " calling_task: ", firmware_helper->calling_task);
+		lx_emul_task_unblock((struct task_struct*)firmware_helper->waiting_task);
+		firmware_helper->waiting_task = nullptr;
+	}
 	firmware_helper->calling_task = nullptr;
 
 	return request.fw_len;
@@ -209,17 +220,12 @@ int _wifi_request_firmware(char const *name, char *dst, size_t dst_len)
 	if (request.state != Firmware_request::State::INVALID) {
 		error(__func__, ": cannot request '", name, "' state: ",
 		      (unsigned)request.state);
-		return -1;
-	}
-
-	if (strcmp(request.name, name) != 0) {
-		error(__func__, ": cannot request '", name, "' name does not match");
-		return -1;
-	}
-
-	if (request.fw_len != dst_len) {
-		error(__func__, ": cannot request '", name, "' length does not match");
-		return -1;
+		error("waiting_task: ", firmware_helper->waiting_task, " calling_task: ", firmware_helper->calling_task);
+		firmware_helper->waiting_task = lx_emul_task_get_current();
+		do {
+			lx_emul_task_schedule(true);
+		} while (request.state != Firmware_request::State::INVALID);
+		error("done waiting: ", lx_emul_task_get_current());
 	}
 
 	firmware_helper->submit_requesting(name, dst, dst_len);
@@ -229,6 +235,11 @@ int _wifi_request_firmware(char const *name, char *dst, size_t dst_len)
 	} while (request.state != Firmware_request::State::REQUESTING_COMPLETE);
 
 	request.state = Firmware_request::State::INVALID;
+	if (firmware_helper->waiting_task) {
+		error("finished waiting_task: ", firmware_helper->waiting_task, " calling_task: ", firmware_helper->calling_task);
+		lx_emul_task_unblock((struct task_struct*)firmware_helper->waiting_task);
+		firmware_helper->waiting_task = nullptr;
+	}
 	firmware_helper->calling_task = nullptr;
 
 	return 0;

@@ -153,20 +153,15 @@ static void request_firmware_work_func(struct work_struct *work)
 		container_of(work, struct firmware_work, work);
 	struct firmware *fw = fw_work->firmware;
 
-	// bool loaded = true;
 	if (lx_emul_request_firmware_nowait(fw_work->name, &fw->data, &fw->size, true)) {
 		kfree(fw);
 		fw = NULL;
-		// loaded = false;
 	}
 
 	fw_work->cont(fw, fw_work->context);
 
 	kfree(fw_work);
 	kfree(fw);
-
-// 	if (loaded)
-// 		schedule_work(next_work)
 }
 
 
@@ -191,12 +186,6 @@ int request_firmware_nowait(struct module * module,
 	fw_work->context  = context;
 	fw_work->cont     = cont;
 
-	/*
-	 * XXX reg.db and the fw will try to be loaded con-currently which the
-	 *     current emul layer does not support - introduce list for pending
-	 *     work items and let the last successful one schedule next,
-	 *     see 'request_firmware_work_func()'
-	 */
 	INIT_WORK(&fw_work->work, request_firmware_work_func);
 	schedule_work(&fw_work->work);
 
