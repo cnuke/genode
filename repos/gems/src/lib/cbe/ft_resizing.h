@@ -26,6 +26,7 @@ namespace Cbe
 	class Ft_resizing_channel;
 }
 
+
 class Cbe::Ft_resizing_request : public Module_request
 {
 	public:
@@ -42,10 +43,13 @@ class Cbe::Ft_resizing_request : public Module_request
 		Type_1_node            _ft_root         { };
 		Tree_level_index       _ft_max_lvl      { 0 };
 		Number_of_leaves       _ft_nr_of_leaves { 0 };
-		Tree_degree            _ft_degree       { 0 };
-		Physical_block_address _first_pba       { 0 };
+		Tree_degree            _ft_degree       { TREE_MIN_DEGREE };
+		Physical_block_address _pba             { 0 };
 		Number_of_blocks       _nr_of_pbas      { 0 };
+		Tree_number_of_leaves  _nr_of_leaves    { 0 };
 		bool                   _success         { false };
+
+	public:
 
 		Ft_resizing_request() { }
 
@@ -57,7 +61,7 @@ class Cbe::Ft_resizing_request : public Module_request
 		                    Tree_level_index       ft_max_lvl,
 		                    Number_of_leaves       ft_nr_of_leaves,
 		                    Tree_degree            ft_degree,
-		                    Physical_block_address first_pba,
+		                    Physical_block_address pba,
 		                    Number_of_blocks       nr_of_pbas);
 
 		Type type() const { return _type; }
@@ -66,6 +70,13 @@ class Cbe::Ft_resizing_request : public Module_request
 
 		static char const *type_to_string(Type type);
 
+		Type_1_node ft_root() const { return _ft_root; }
+		Tree_level_index ft_max_lvl() const { return _ft_max_lvl; }
+		Number_of_leaves ft_nr_of_leaves() const { return _ft_nr_of_leaves; }
+		Number_of_leaves nr_of_leaves() const { return _nr_of_leaves; }
+		Physical_block_address pba() const { return _pba; }
+		Number_of_blocks nr_of_pbas() const { return _nr_of_pbas; }
+
 
 		/********************
 		 ** Module_request **
@@ -73,7 +84,7 @@ class Cbe::Ft_resizing_request : public Module_request
 
 		void print(Genode::Output &out) const override
 		{
-			Genode::print(out, type_to_string(_type));
+			Genode::print(out, type_to_string(_type), " root ", _ft_root, " leaves ", _ft_nr_of_leaves, " max_lvl ", _ft_max_lvl);
 		}
 };
 
@@ -131,11 +142,6 @@ class Cbe::Ft_resizing_channel
 			uint64_t idx    { 0 };
 		};
 
-		struct Submitted_prim
-		{
-			bool succ { false };
-		};
-
 		/* same as in virtual_block_device.h ?! XXX */
 		struct Type_1_node_blocks
 		{
@@ -156,28 +162,17 @@ class Cbe::Ft_resizing_channel
 			Generation values[TREE_MAX_MAX_LEVEL + 1] { }; /* +1 right ? see above XXX */
 		};
 
-		Ft_resizing_request    _request         { };
-		State                  _state           { SUBMITTED };
-
-		Submitted_prim         _submitted_prim  { };
-		Generated_prim         _generated_prim  { };
-
-		Type_1_node            _ft_root         { };
-		Tree_level_index       _ft_max_lvl_idx  { 0 }; /* XXX min value ? -> 0 */
-		Tree_number_of_leaves  _ft_nr_of_leaves { 0 };
-		Tree_degree            _ft_degree       { TREE_MIN_DEGREE }; /* XXX */
-		Type_1_node_blocks     _t1_blks         { };
-		Type_2_node_block      _t2_blk          { };
-		Tree_level_index       _lvl_idx         { 0 }; /* XXX ? */
-		Tree_level_index       _alloc_lvl_idx   { 0 }; /* XXX ? */
-		Virtual_block_address  _vba             { };
-		Tree_walk_pbas         _old_pbas        { };
-		Generations            _old_generations { };
-		Tree_walk_pbas         _new_pbas        { };
-		Physical_block_address _pba             { };
-		Number_of_blocks       _nr_of_pbas      { };
-		Tree_number_of_leaves  _nr_of_leaves    { };
-		Generation             _curr_gen        { };
+		Ft_resizing_request   _request         { };
+		State                 _state           { SUBMITTED };
+		Generated_prim        _generated_prim  { };
+		Type_1_node_blocks    _t1_blks         { };
+		Type_2_node_block     _t2_blk          { };
+		Tree_level_index      _lvl_idx         { 0 }; /* XXX ? */
+		Tree_level_index      _alloc_lvl_idx   { 0 }; /* XXX ? */
+		Virtual_block_address _vba             { };
+		Tree_walk_pbas        _old_pbas        { };
+		Generations           _old_generations { };
+		Tree_walk_pbas        _new_pbas        { };
 };
 
 class Cbe::Ft_resizing : public Module
@@ -232,8 +227,30 @@ class Cbe::Ft_resizing : public Module
 		 ** Module **
 		 ************/
 
-		void execute(bool &) override;
+		bool _peek_completed_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override;
 
+		void _drop_completed_request(Module_request &req) override;
+
+		bool _peek_generated_request(Genode::uint8_t *buf_ptr,
+		                             Genode::size_t   buf_size) override;
+
+		void _drop_generated_request(Module_request &mod_req) override;
+
+		void generated_request_complete(Module_request &req) override;
+
+
+	public:
+
+		/************
+		 ** Module **
+		 ************/
+
+		bool ready_to_submit_request() override;
+
+		void submit_request(Module_request &req) override;
+
+		void execute(bool &) override;
 };
 
 #endif /* _FT_RESIZING_H_ */

@@ -47,7 +47,7 @@ using namespace Genode;
 using namespace Cbe;
 using namespace Vfs;
 
-enum { VERBOSE_MODULE_COMMUNICATION = 0 };
+enum { VERBOSE_MODULE_COMMUNICATION = 1 };
 
 namespace Cbe_tester {
 
@@ -1190,6 +1190,9 @@ class Cbe_tester::Main : Vfs::Env::User, public Cbe::Module
 
 		void _destruct_cbe()
 		{
+			_modules_remove(FT_RESIZING);
+			_ft_resizing.destruct();
+
 			_modules_remove(REQUEST_POOL);
 			_request_pool.destruct();
 

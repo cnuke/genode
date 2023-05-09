@@ -623,7 +623,7 @@ namespace Cbe {
 		uint64_t const degree_log_2 { log_2(degr) };
 		uint64_t const degree_mask  { ((uint64_t)1ull << (uint64_t)degree_log_2) - (uint64_t)1 };
 		uint64_t const vba_rshift   { (uint64_t)degree_log_2 * ((uint64_t)lvl - (uint64_t)1) };
-		return (uint64_t)degree_mask & (uint64_t)((uint64_t)vba >> (uint64_t)vba_rshift);
+		return (Node_index)((uint64_t)degree_mask & (uint64_t)((uint64_t)vba >> (uint64_t)vba_rshift));
 	}
 
 
@@ -631,9 +631,9 @@ namespace Cbe {
 	                                       Tree_degree           const degr)
 	{
 		uint64_t const degree_log_2 { log_2(degr) };
-		uint64_t const degree_mask  { (1ull << degree_log_2) - 1 };
+		uint64_t const degree_mask  { ((uint64_t)1ull << (uint64_t)degree_log_2) - (uint64_t)1 };
 
-		return degree_mask & vba;
+		return (Node_index)((uint64_t)vba & (uint64_t)degree_mask);
 	}
 }
 

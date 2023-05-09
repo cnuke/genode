@@ -15,6 +15,7 @@
 #include <base/log.h>
 
 /* cbe tester includes */
+#include <block_io.h>
 #include <ft_resizing.h>
 #include <sha256_4k_hash.h>
 
@@ -26,11 +27,34 @@ using namespace Cbe;
  ** Ft_resizing_request **
  *************************/
 
+Ft_resizing_request::
+Ft_resizing_request(Genode::uint64_t       src_module_id,
+                    Genode::uint64_t       src_request_id,
+                    Type                   type,
+                    Generation             curr_gen,
+                    Type_1_node            ft_root,
+                    Tree_level_index       ft_max_lvl,
+                    Number_of_leaves       ft_nr_of_leaves,
+                    Tree_degree            ft_degree,
+                    Physical_block_address pba,
+                    Number_of_blocks       nr_of_pbas)
+:
+	Module_request   { src_module_id, src_request_id, FT_RESIZING },
+	_type            { type            },
+	_curr_gen        { curr_gen        },
+	_ft_root         { ft_root         },
+	_ft_max_lvl      { ft_max_lvl      },
+	_ft_nr_of_leaves { ft_nr_of_leaves },
+	_ft_degree       { ft_degree       },
+	_pba             { pba             },
+	_nr_of_pbas      { nr_of_pbas      }
+{ }
+
 char const *Ft_resizing_request::type_to_string(Type op)
 {
 	switch (op) {
 	case INVALID: return "invalid";
-	case FT_EXTENSION_STEP: return "ft_extension_step";
+	case FT_EXTENSION_STEP: return "ft_ext_step";
 	}
 	return "?";
 }
@@ -44,6 +68,7 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
                                                                  unsigned const  job_idx,
                                                                  bool           &progress)
 {
+	Request &req { channel._request };
 	if (not channel._generated_prim.succ) {
 		class Primitive_not_successfull_ft_resizing { };
 		throw Primitive_not_successfull_ft_resizing { };
@@ -51,10 +76,10 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 
 	if (channel._lvl_idx > 1) {
 
-		if (channel._lvl_idx == channel._ft_max_lvl_idx) {
+		if (channel._lvl_idx == req._ft_max_lvl) {
 
 			if (not check_sha256_4k_hash(&channel._t1_blks.items[channel._lvl_idx],
-                                         &channel._ft_root.hash)) {
+                                         &req._ft_root.hash)) {
 				class Program_error_ft_resizing_hash_mismatch { };
 				throw Program_error_ft_resizing_hash_mismatch { };
 			}
@@ -64,7 +89,7 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 			auto const parent_lvl_idx = channel._lvl_idx + 1;
 			auto const child_idx = t1_child_idx_for_vba(channel._vba,
 			                                            parent_lvl_idx,
-			                                            channel._ft_degree);
+			                                            req._ft_degree);
 			auto const &child = channel._t1_blks.items[parent_lvl_idx].nodes[child_idx];
 
 			if (not check_sha256_4k_hash(&channel._t1_blks.items[channel._lvl_idx],
@@ -79,7 +104,7 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 		auto const child_lvl_idx = channel._lvl_idx - 1;
 		auto const child_idx = t1_child_idx_for_vba(channel._vba,
 		                                            parent_lvl_idx,
-		                                            channel._ft_degree);
+		                                            req._ft_degree);
 		auto const &child = channel._t1_blks.items[parent_lvl_idx].nodes[child_idx];
 
 		if (child.valid()) {
@@ -107,19 +132,19 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 
 			_add_new_branch_to_ft_using_pba_contingent(parent_lvl_idx,
 			                                           child_idx,
-			                                           channel._ft_degree,
-			                                           channel._curr_gen,
-			                                           channel._pba,
-			                                           channel._nr_of_pbas,
+			                                           req._ft_degree,
+			                                           req._curr_gen,
+			                                           req._pba,
+			                                           req._nr_of_pbas,
 			                                           channel._t1_blks,
 			                                           channel._t2_blk,
 			                                           channel._new_pbas,
 			                                           channel._lvl_idx,
-			                                           channel._nr_of_leaves);
+			                                           req._nr_of_leaves);
 
 			channel._alloc_lvl_idx = parent_lvl_idx;
 
-			if (channel._old_generations.values[channel._alloc_lvl_idx] == channel._curr_gen) {
+			if (channel._old_generations.values[channel._alloc_lvl_idx] == req._curr_gen) {
 
 				channel._new_pbas.pbas[channel._alloc_lvl_idx] =
 				   channel._old_pbas.pbas[channel._alloc_lvl_idx];
@@ -148,7 +173,7 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 			auto const parent_lvl_idx = channel._lvl_idx + 1;
 			auto const child_idx = t1_child_idx_for_vba(channel._vba,
 			                                            parent_lvl_idx,
-			                                            channel._ft_degree);
+			                                            req._ft_degree);
 
 			if (not check_sha256_4k_hash(&channel._t2_blk,
 			                             &channel._t1_blks.items[parent_lvl_idx].nodes[child_idx].hash)) {
@@ -160,7 +185,7 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 		{
 			auto const parent_lvl_idx = channel._lvl_idx;
 			auto const child_idx = t2_child_idx_for_vba(channel._vba,
-			                                            channel._ft_degree);
+			                                            req._ft_degree);
 
 			auto const &child = channel._t2_blk.nodes[child_idx];
 
@@ -171,15 +196,15 @@ void Ft_resizing::_execute_ft_ext_step_read_inner_node_completed(Channel        
 
 			_add_new_branch_to_ft_using_pba_contingent(parent_lvl_idx,
 			                                           child_idx,
-			                                           channel._ft_degree,
-			                                           channel._curr_gen,
-			                                           channel._pba,
-			                                           channel._nr_of_pbas,
+			                                           req._ft_degree,
+			                                           req._curr_gen,
+			                                           req._pba,
+			                                           req._nr_of_pbas,
 			                                           channel._t1_blks,
 			                                           channel._t2_blk,
 			                                           channel._new_pbas,
 			                                           channel._lvl_idx,
-			                                           channel._nr_of_leaves);
+			                                           req._nr_of_leaves);
 
 			channel._alloc_lvl_idx = parent_lvl_idx;
 
@@ -363,109 +388,110 @@ void Ft_resizing::_add_new_branch_to_ft_using_pba_contingent(Tree_level_index   
 }
 
 
-void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
-                                             unsigned const  job_idx,
+void Ft_resizing::_execute_ft_extension_step(Channel        &chan,
+                                             unsigned const  chan_idx,
                                              bool           &progress)
 {
-	switch (channel._state) {
+	Request &req { chan._request };
+	switch (chan._state) {
 	case Channel::State::SUBMITTED:
 
-		channel._nr_of_leaves = 0;
-		channel._vba          = channel._ft_nr_of_leaves;
+		req._nr_of_leaves = 0;
+		chan._vba          = req._ft_nr_of_leaves;
 
-		channel._old_pbas        = { };
-		channel._old_generations = { };
-		channel._new_pbas        = { };
+		chan._old_pbas        = { };
+		chan._old_generations = { };
+		chan._new_pbas        = { };
 
-		channel._lvl_idx                                  = channel._ft_max_lvl_idx;
-		channel._old_pbas.pbas[channel._lvl_idx]          = channel._ft_root.pba;
-		channel._old_generations.values[channel._lvl_idx] = channel._ft_root.gen;
+		chan._lvl_idx                                  = req._ft_max_lvl;
+		chan._old_pbas.pbas[chan._lvl_idx]          = req._ft_root.pba;
+		chan._old_generations.values[chan._lvl_idx] = req._ft_root.gen;
 
-		if (channel._vba <= tree_max_max_vba(channel._ft_degree, channel._ft_max_lvl_idx)) {
+		if (chan._vba <= tree_max_max_vba(req._ft_degree, req._ft_max_lvl)) {
 
-			channel._generated_prim = {
+			chan._generated_prim = {
 				.op     = Channel::Generated_prim::Type::READ,
 				.succ   = false,
 				.tg     = Channel::Tag_type::TAG_FT_RSZG_CACHE,
-				.blk_nr = channel._ft_root.pba,
-				.idx    = job_idx
+				.blk_nr = req._ft_root.pba,
+				.idx    = chan_idx
 			};
 
 			if (VERBOSE_FT_EXTENSION)
-				log("  read lvl ", channel._lvl_idx,
-				    ": parent ft_root ", channel._ft_root,
-				    " leaves ", channel._ft_nr_of_leaves,
-				    " max lvl ", channel._ft_max_lvl_idx);
+				log("  read lvl ", chan._lvl_idx,
+				    ": parent ft_root ", req._ft_root,
+				    " leaves ", req._ft_nr_of_leaves,
+				    " max lvl ", req._ft_max_lvl);
 
-			channel._state = Channel::State::READ_ROOT_NODE_PENDING;
+			chan._state = Channel::State::READ_ROOT_NODE_PENDING;
 			progress       = true;
 
 		} else {
 
-			_add_new_root_lvl_to_ft_using_pba_contingent(channel._ft_root,
-			                                             channel._ft_max_lvl_idx,
-			                                             channel._ft_nr_of_leaves,
-			                                             channel._curr_gen,
-			                                             channel._t1_blks,
-			                                             channel._new_pbas,
-			                                             channel._pba,
-			                                             channel._nr_of_pbas);
+			_add_new_root_lvl_to_ft_using_pba_contingent(req._ft_root,
+			                                             req._ft_max_lvl,
+			                                             req._ft_nr_of_leaves,
+			                                             req._curr_gen,
+			                                             chan._t1_blks,
+			                                             chan._new_pbas,
+			                                             req._pba,
+			                                             req._nr_of_pbas);
 
-			_add_new_branch_to_ft_using_pba_contingent(channel._ft_max_lvl_idx,
+			_add_new_branch_to_ft_using_pba_contingent(req._ft_max_lvl,
 			                                           1,
-			                                           channel._ft_degree,
-			                                           channel._curr_gen,
-			                                           channel._pba,
-			                                           channel._nr_of_pbas,
-			                                           channel._t1_blks,
-			                                           channel._t2_blk,
-			                                           channel._new_pbas,
-			                                           channel._lvl_idx,
-			                                           channel._nr_of_leaves);
+			                                           req._ft_degree,
+			                                           req._curr_gen,
+			                                           req._pba,
+			                                           req._nr_of_pbas,
+			                                           chan._t1_blks,
+			                                           chan._t2_blk,
+			                                           chan._new_pbas,
+			                                           chan._lvl_idx,
+			                                           req._nr_of_leaves);
 
 			if (VERBOSE_FT_EXTENSION)
-				log("  pbas allocated: curr gen ", channel._curr_gen);
+				log("  pbas allocated: curr gen ", req._curr_gen);
 
-			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
-			                                      channel._lvl_idx,
-			                                      channel._new_pbas.pbas[channel._lvl_idx],
-			                                      job_idx,
-			                                      channel._state,
+			_set_args_for_write_back_of_inner_lvl(req._ft_max_lvl,
+			                                      chan._lvl_idx,
+			                                      chan._new_pbas.pbas[chan._lvl_idx],
+			                                      chan_idx,
+			                                      chan._state,
 			                                      progress,
-			                                      channel._generated_prim);
+			                                      chan._generated_prim);
 
 		}
 
 		break;
 	case Channel::State::READ_ROOT_NODE_COMPLETED:
-		_execute_ft_ext_step_read_inner_node_completed(channel, job_idx, progress);
+		_execute_ft_ext_step_read_inner_node_completed(chan, chan_idx, progress);
 		break;
 	case Channel::State::READ_INNER_NODE_COMPLETED:
-		_execute_ft_ext_step_read_inner_node_completed(channel, job_idx, progress);
+		_execute_ft_ext_step_read_inner_node_completed(chan, chan_idx, progress);
 		break;
 	case Channel::State::ALLOC_PBA_COMPLETED:
-		if (channel._alloc_lvl_idx < channel._ft_max_lvl_idx) {
+		if (chan._alloc_lvl_idx < req._ft_max_lvl) {
 
-			channel._alloc_lvl_idx = channel._alloc_lvl_idx + 1;
+			chan._alloc_lvl_idx = chan._alloc_lvl_idx + 1;
 
-			if (channel._old_generations.values[channel._alloc_lvl_idx] == channel._curr_gen) {
+			if (chan._old_generations.values[chan._alloc_lvl_idx] == req._curr_gen) {
 
-				channel._new_pbas.pbas[channel._alloc_lvl_idx] = channel._old_pbas.pbas[channel._alloc_lvl_idx];
+				chan._new_pbas.pbas[chan._alloc_lvl_idx] = chan._old_pbas.pbas[chan._alloc_lvl_idx];
 
-				channel._state = Channel::State::ALLOC_PBA_COMPLETED;
+				chan._state = Channel::State::ALLOC_PBA_COMPLETED;
 				progress = true;
 
 			} else {
 
-				channel._generated_prim = {
+				chan._generated_prim = {
 					.op     = Channel::Generated_prim::Type::READ,
 					.succ   = false,
 					.tg     = Channel::Tag_type::TAG_FT_RSZG_MT_ALLOC,
 					.blk_nr = 0,
-					.idx    = job_idx
+					.idx    = chan_idx
 				};
 
-				channel._state = Channel::State::ALLOC_PBA_PENDING;
+				chan._state = Channel::State::ALLOC_PBA_PENDING;
 				progress       = true;
 
 			}
@@ -473,114 +499,114 @@ void Ft_resizing::_execute_ft_extension_step(Channel        &channel,
 		} else {
 
 			if (VERBOSE_FT_EXTENSION)
-				log("  pbas allocated: curr gen ", channel._curr_gen);
+				log("  pbas allocated: curr gen ", req._curr_gen);
 
-			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
-			                                      channel._lvl_idx,
-			                                      channel._new_pbas.pbas[channel._lvl_idx],
-			                                      job_idx,
-			                                      channel._state,
+			_set_args_for_write_back_of_inner_lvl(req._ft_max_lvl,
+			                                      chan._lvl_idx,
+			                                      chan._new_pbas.pbas[chan._lvl_idx],
+			                                      chan_idx,
+			                                      chan._state,
 			                                      progress,
-			                                      channel._generated_prim);
+			                                      chan._generated_prim);
 
 		}
 		break;
 	case Channel::State::WRITE_INNER_NODE_COMPLETED:
 
-		if (not channel._generated_prim.succ) {
+		if (not chan._generated_prim.succ) {
 			class Primitive_not_successfull_ft_resizing_write_inner { };
 			throw Primitive_not_successfull_ft_resizing_write_inner { };
 		}
 
-		if (channel._lvl_idx > 1) {
+		if (chan._lvl_idx > 1) {
 
-			auto const parent_lvl_idx = channel._lvl_idx + 1;
-			auto const child_lvl_idx  = channel._lvl_idx;
-			auto const child_idx = t1_child_idx_for_vba(channel._vba,
+			auto const parent_lvl_idx = chan._lvl_idx + 1;
+			auto const child_lvl_idx  = chan._lvl_idx;
+			auto const child_idx = t1_child_idx_for_vba(chan._vba,
 			                                            parent_lvl_idx,
-			                                            channel._ft_degree);
+			                                            req._ft_degree);
 
-			auto &child = channel._t1_blks.items[parent_lvl_idx].nodes[child_idx];
+			auto &child = chan._t1_blks.items[parent_lvl_idx].nodes[child_idx];
 
 			child = {
-				.pba     = channel._new_pbas.pbas[child_lvl_idx],
-				.gen     = channel._curr_gen,
+				.pba     = chan._new_pbas.pbas[child_lvl_idx],
+				.gen     = req._curr_gen,
 				.padding = {}
 			};
 
-			calc_sha256_4k_hash(&channel._t1_blks.items[child_lvl_idx],
+			calc_sha256_4k_hash(&chan._t1_blks.items[child_lvl_idx],
 			                    &child.hash);
 
 			if (VERBOSE_FT_EXTENSION)
 				log("  set lvl ", parent_lvl_idx, " child ", child_idx,
 				    ": ", child);
 
-			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
+			_set_args_for_write_back_of_inner_lvl(req._ft_max_lvl,
 			                                      parent_lvl_idx,
-			                                      channel._new_pbas.pbas[parent_lvl_idx],
-			                                      job_idx,
-			                                      channel._state,
+			                                      chan._new_pbas.pbas[parent_lvl_idx],
+			                                      chan_idx,
+			                                      chan._state,
 			                                      progress,
-			                                      channel._generated_prim);
+			                                      chan._generated_prim);
 
-			channel._lvl_idx += 1;
+			chan._lvl_idx += 1;
 
 		} else {
 
-			auto const parent_lvl_idx = channel._lvl_idx + 1;
-			auto const child_lvl_idx  = channel._lvl_idx;
-			auto const child_idx      = t1_child_idx_for_vba(channel._vba,
+			auto const parent_lvl_idx = chan._lvl_idx + 1;
+			auto const child_lvl_idx  = chan._lvl_idx;
+			auto const child_idx      = t1_child_idx_for_vba(chan._vba,
 			                                                 parent_lvl_idx,
-			                                                 channel._ft_degree);
+			                                                 req._ft_degree);
 
-			auto &child = channel._t1_blks.items[parent_lvl_idx].nodes[child_idx];
+			auto &child = chan._t1_blks.items[parent_lvl_idx].nodes[child_idx];
 			child = {
-				.pba = channel._new_pbas.pbas[child_lvl_idx],
-				.gen = channel._curr_gen,
+				.pba = chan._new_pbas.pbas[child_lvl_idx],
+				.gen = req._curr_gen,
 				.padding = {}
 			};
 
-			calc_sha256_4k_hash(&channel._t2_blk, &child.hash);
+			calc_sha256_4k_hash(&chan._t2_blk, &child.hash);
 
 			if (VERBOSE_FT_EXTENSION)
 				log("  set lvl ", parent_lvl_idx, " child ", child_idx,
 				    ": ", child);
 
-			_set_args_for_write_back_of_inner_lvl(channel._ft_max_lvl_idx,
+			_set_args_for_write_back_of_inner_lvl(req._ft_max_lvl,
 			                                      parent_lvl_idx,
-			                                      channel._new_pbas.pbas[parent_lvl_idx],
-			                                      job_idx,
-			                                      channel._state,
+			                                      chan._new_pbas.pbas[parent_lvl_idx],
+			                                      chan_idx,
+			                                      chan._state,
 			                                      progress,
-			                                      channel._generated_prim);
+			                                      chan._generated_prim);
 
-			channel._lvl_idx += 1;
+			chan._lvl_idx += 1;
 
 		}
 		break;
 	case Channel::State::WRITE_ROOT_NODE_COMPLETED: {
 
-		if (not channel._generated_prim.succ) {
+		if (not chan._generated_prim.succ) {
 			class Primitive_not_successfull_ft_resizing_write_root { };
 			throw Primitive_not_successfull_ft_resizing_write_root { };
 		}
 
-		auto const child_lvl_idx = channel._lvl_idx;
-		auto const child_pba     = channel._new_pbas.pbas[child_lvl_idx];
+		auto const child_lvl_idx = chan._lvl_idx;
+		auto const child_pba     = chan._new_pbas.pbas[child_lvl_idx];
 
-		channel._ft_root = {
+		req._ft_root = {
 			.pba = child_pba,
-			.gen = channel._curr_gen,
+			.gen = req._curr_gen,
 			.padding = {}
 		};
 
-		calc_sha256_4k_hash(&channel._t1_blks.items[child_lvl_idx], &channel._ft_root);
+		calc_sha256_4k_hash(&chan._t1_blks.items[child_lvl_idx], &req._ft_root.hash);
 
-		channel._ft_nr_of_leaves = channel._ft_nr_of_leaves + channel._nr_of_leaves;
+		req._ft_nr_of_leaves += req._nr_of_leaves;
 
-		channel._submitted_prim.succ = true;
+		req._success = true;
 
-		channel._state = Channel::State::COMPLETED;
+		chan._state = Channel::State::COMPLETED;
 		progress       = true;
 
 		break;
@@ -600,10 +626,165 @@ void Ft_resizing::execute(bool &progress)
 
 		switch (request._type) {
 		case Request::INVALID:
-			_execute_ft_extension_step(channel, idx, progress);
 			break;
 		case Request::FT_EXTENSION_STEP:
+			_execute_ft_extension_step(channel, idx, progress);
 			break;
 		}
 	}
+}
+
+
+bool Ft_resizing::_peek_completed_request(uint8_t *buf_ptr,
+                                          size_t   buf_size)
+{
+	for (Channel &channel : _channels) {
+		if (channel._request._type != Request::INVALID &&
+		    channel._state == Channel::COMPLETED) {
+
+			if (sizeof(channel._request) > buf_size) {
+				class Exception_1 { };
+				throw Exception_1 { };
+			}
+			memcpy(buf_ptr, &channel._request, sizeof(channel._request));
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void Ft_resizing::_drop_completed_request(Module_request &req)
+{
+	unsigned long id { 0 };
+	id = req.dst_request_id();
+	if (id >= NR_OF_CHANNELS) {
+		class Exception_1 { };
+		throw Exception_1 { };
+	}
+	Channel &chan { _channels[id] };
+	if (chan._request._type == Request::INVALID ||
+	    chan._state != Channel::COMPLETED) {
+
+		class Exception_2 { };
+		throw Exception_2 { };
+	}
+	chan._request._type = Request::INVALID;
+}
+
+
+bool Ft_resizing::_peek_generated_request(uint8_t *buf_ptr,
+                                          size_t   buf_size)
+{
+	for (uint32_t id { 0 }; id < NR_OF_CHANNELS; id++) {
+
+		Channel &chan { _channels[id] };
+		Request &req { chan._request };
+		if (req._type == Request::INVALID)
+			continue;
+
+		switch (chan._state) {
+		case Channel::WRITE_ROOT_NODE_PENDING:
+		case Channel::WRITE_INNER_NODE_PENDING:
+
+			construct_in_buf<Block_io_request>(
+				buf_ptr, buf_size, FT_RESIZING, id,
+				Block_io_request::WRITE, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1,
+				&chan._t1_blks.items[chan._lvl_idx], nullptr);
+
+			return true;
+
+		case Channel::READ_ROOT_NODE_PENDING:
+		case Channel::READ_INNER_NODE_PENDING:
+
+			construct_in_buf<Block_io_request>(
+				buf_ptr, buf_size, FT_RESIZING, id,
+				Block_io_request::READ, 0, 0, 0,
+				chan._generated_prim.blk_nr, 0, 1,
+				&chan._t1_blks.items[chan._lvl_idx], nullptr);
+
+			return true;
+
+		default: break;
+		}
+	}
+	return false;
+}
+
+
+void Ft_resizing::_drop_generated_request(Module_request &mod_req)
+{
+	unsigned long const id { mod_req.src_request_id() };
+	if (id >= NR_OF_CHANNELS) {
+		class Exception_1 { };
+		throw Exception_1 { };
+	}
+	Channel &chan { _channels[id] };
+	switch (chan._state) {
+	case Channel::READ_ROOT_NODE_PENDING: chan._state = Channel::READ_ROOT_NODE_IN_PROGRESS; break;
+	case Channel::READ_INNER_NODE_PENDING: chan._state = Channel::READ_INNER_NODE_IN_PROGRESS; break;
+	case Channel::WRITE_ROOT_NODE_PENDING: chan._state = Channel::WRITE_ROOT_NODE_IN_PROGRESS; break;
+	case Channel::WRITE_INNER_NODE_PENDING: chan._state = Channel::WRITE_INNER_NODE_IN_PROGRESS; break;
+	default:
+		class Exception_2 { };
+		throw Exception_2 { };
+	}
+}
+
+
+void Ft_resizing::generated_request_complete(Module_request &mod_req)
+{
+	unsigned long const id { mod_req.src_request_id() };
+	if (id >= NR_OF_CHANNELS) {
+		class Exception_1 { };
+		throw Exception_1 { };
+	}
+	Channel &chan { _channels[id] };
+	switch (mod_req.dst_module_id()) {
+	case BLOCK_IO:
+	{
+		Block_io_request &blk_io_req { *static_cast<Block_io_request *>(&mod_req) };
+		chan._generated_prim.succ = blk_io_req.success();
+		switch (chan._state) {
+		case Channel::READ_ROOT_NODE_IN_PROGRESS: chan._state = Channel::READ_ROOT_NODE_COMPLETED; break;
+		case Channel::READ_INNER_NODE_IN_PROGRESS: chan._state = Channel::READ_INNER_NODE_COMPLETED; break;
+		case Channel::WRITE_ROOT_NODE_IN_PROGRESS: chan._state = Channel::WRITE_ROOT_NODE_COMPLETED; break;
+		case Channel::WRITE_INNER_NODE_IN_PROGRESS: chan._state = Channel::WRITE_INNER_NODE_COMPLETED; break;
+		default:
+			class Exception_4 { };
+			throw Exception_4 { };
+		}
+		break;
+	}
+	default:
+		class Exception_5 { };
+		throw Exception_5 { };
+	}
+}
+
+
+bool Ft_resizing::ready_to_submit_request()
+{
+	for (Channel &channel : _channels) {
+		if (channel._request._type == Request::INVALID)
+			return true;
+	}
+	return false;
+}
+
+
+void Ft_resizing::submit_request(Module_request &mod_req)
+{
+	for (unsigned long id { 0 }; id < NR_OF_CHANNELS; id++) {
+		Channel &chan { _channels[id] };
+		if (chan._request._type == Request::INVALID) {
+			mod_req.dst_request_id(id);
+			chan._request = *static_cast<Request *>(&mod_req);
+			chan._state = Channel::SUBMITTED;
+			return;
+		}
+	}
+	class Invalid_call { };
+	throw Invalid_call { };
 }

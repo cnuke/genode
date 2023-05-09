@@ -20,6 +20,7 @@
 #include <block_io.h>
 #include <trust_anchor.h>
 #include <virtual_block_device.h>
+#include <ft_resizing.h>
 #include <sha256_4k_hash.h>
 
 using namespace Genode;
@@ -432,6 +433,7 @@ void Superblock_control::_execute_tree_ext_step(Channel          &chan,
 			_mark_req_failed(chan, progress, "check new first unused pba");
 			break;
 		}
+
 		_sb.nr_of_pbas = _sb.nr_of_pbas + nr_of_added_pbas;
 		_sb.resizing_nr_of_pbas = req._nr_of_blks;
 		_sb.resizing_nr_of_leaves += chan._nr_of_leaves;
@@ -1736,8 +1738,17 @@ bool Superblock_control::_peek_generated_request(uint8_t *buf_ptr,
 
 		case Channel::FT_EXT_STEP_IN_FT_PENDING:
 
-			class Exception_1 { };
-			throw Exception_1 { };
+			construct_in_buf<Ft_resizing_request>(
+				buf_ptr, buf_size, SUPERBLOCK_CONTROL, id,
+				Ft_resizing_request::FT_EXTENSION_STEP, _curr_gen,
+				Type_1_node { _sb.free_number, _sb.free_gen, _sb.free_hash },
+				(Tree_level_index)_sb.free_max_level,
+				(Number_of_leaves)_sb.free_leaves,
+				(Tree_degree)_sb.free_degree,
+				_sb.first_pba + _sb.nr_of_pbas,
+				(Number_of_blocks)_sb.resizing_nr_of_pbas);
+
+			return 1;
 
 		default: break;
 		}
@@ -1925,6 +1936,26 @@ void Superblock_control::generated_request_complete(Module_request &mod_req)
 		default:
 			class Exception_6 { };
 			throw Exception_6 { };
+		}
+		break;
+	}
+	case FT_RESIZING:
+	{
+		Ft_resizing_request &gen_req { *static_cast<Ft_resizing_request*>(&mod_req) };
+		chan._generated_prim.succ = gen_req.success();
+		switch (chan._state) {
+		case Channel::FT_EXT_STEP_IN_FT_IN_PROGRESS:
+			chan._state = Channel::TREE_EXT_STEP_IN_TREE_COMPLETED;
+			chan._ft_root = gen_req.ft_root();
+			chan._ft_max_lvl = gen_req.ft_max_lvl();
+			chan._ft_nr_of_leaves = gen_req.ft_nr_of_leaves();
+			chan._pba = gen_req.pba();
+			chan._request._nr_of_blks = gen_req.nr_of_pbas();
+			chan._nr_of_leaves = gen_req.nr_of_leaves();
+			break;
+		default:
+			class Exception_16 { };
+			throw Exception_16 { };
 		}
 		break;
 	}
