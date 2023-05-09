@@ -484,6 +484,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 					                                    : Rekeying::Result::FAILED;
 
 					_rekey_fs_trigger_watch_response();
+					_rekey_progress_fs_trigger_watch_response();
 					break;
 				}
 
@@ -1125,6 +1126,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 				/* update user-facing state */
 				_rekey_obj.percent_done =
 					_rekey_obj.rekeying_vba * 100 / _rekey_obj.max_vba;
+				_rekey_progress_fs_trigger_watch_response();
 			}
 		}
 
@@ -1157,6 +1159,7 @@ class Vfs_cbe::Wrapper : public Cbe::Module
 			_rekey_obj.max_vba      = _sb_control->max_vba();
 			_rekey_obj.rekeying_vba = _sb_control->rekeying_vba();
 			_rekey_fs_trigger_watch_response();
+			_rekey_progress_fs_trigger_watch_response();
 
 			// XXX kick-off rekeying
 			handle_frontend_request();
