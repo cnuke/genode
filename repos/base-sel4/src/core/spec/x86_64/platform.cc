@@ -81,24 +81,24 @@ void Platform::_init_core_page_table_registry()
 		Vcpu_kobj::SIZE_LOG2, max_pd_mem);
 
 	log(":phys_mem_16k:     ",  phys_alloc_16k());
+}
 
-	/*
-	 * Register initial page frames
-	 * - actually we don't use them in core -> skip
-	 */
-#if 0
-	addr_t const modules_start = reinterpret_cast<addr_t>(&_boot_modules_binaries_begin);
-	addr_t const modules_end   = reinterpret_cast<addr_t>(&_boot_modules_binaries_end);
 
-	virt_addr = (addr_t)(&_prog_img_beg);
-	for (unsigned sel = bi.userImageFrames.start;
-	     sel < bi.userImageFrames.end;
-	     sel++, virt_addr += get_page_size()) {
-		/* skip boot modules */
-		if (modules_start <= virt_addr && virt_addr <= modules_end)
-			continue;
+void Platform::_init_io_ports()
+{
+	enum { PORTS = 0x10000, PORT_FIRST = 0, PORT_LAST = PORTS - 1 };
 
-		_core_page_table_registry.insert_page_table_entry(virt_addr, sel);
-	}
-#endif
+	/* I/O port allocator (only meaningful for x86) */
+	_io_port_alloc.add_range(PORT_FIRST, PORTS);
+
+	/* create I/O port capability used by io_port_session_support.cc */
+	auto const root   = _core_cnode.sel().value();
+	auto const index  = Core_cspace::io_port_sel();
+	auto const depth  = CONFIG_ROOT_CNODE_SIZE_BITS;
+
+	auto const result = seL4_X86_IOPortControl_Issue(seL4_CapIOPortControl,
+	                                                 PORT_FIRST, PORT_LAST,
+	                                                 root, index, depth);
+	if (result != 0)
+		error("IO Port access not available");
 }

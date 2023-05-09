@@ -122,3 +122,8 @@ void Platform_pd::_deinit_page_directory(addr_t phys_addr) const
 
 	Untyped_memory::free_page(phys_alloc_16k(), phys_addr);
 }
+
+
+void Platform::_init_io_ports()
+{
+}
