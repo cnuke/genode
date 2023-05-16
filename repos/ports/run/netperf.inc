@@ -163,7 +163,7 @@ append_if $use_wifi_driver  packages " [depot_user]/src/platform_drv            
 
 import_from_depot $packages
 
-build { app/netperf }
+build { app/netperf drivers/wifi lib/pc_wifi }
 
 #
 # Generate config
@@ -263,7 +263,7 @@ append  config { </wifi_config>
 	<start name="nic_drv" caps="300">
 		<binary name="wifi_drv"/>
 		<resource name="RAM" quantum="32M"/>
-		<config>
+		<config ld_verbose="yes">
 			<libc stdout="/dev/null" stderr="/dev/log" rtc="/dev/rtc"/>
 			<vfs>
 				<dir name="dev">
@@ -450,7 +450,7 @@ if { $use_usb_driver } {
 	close $fd
 }
 
-set boot_modules { netserver }
+set boot_modules { netserver wifi_drv pc_wifi.lib.so }
 build_boot_image $boot_modules
 
 #
