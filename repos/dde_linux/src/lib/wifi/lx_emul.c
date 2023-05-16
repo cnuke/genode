@@ -583,9 +583,6 @@ unsigned long __FIXADDR_TOP = 0xfffff000;
 
 void __crypto_xor(u8 *dst, const u8 *src1, const u8 *src2, unsigned int len)
 {
-	printk("%s:%d\n", __func__, __LINE__);
 	while (len--)
 		*dst++ = *src1++ ^ *src2++;
-
-	printk("%s:%d\n", __func__, __LINE__);
 }
