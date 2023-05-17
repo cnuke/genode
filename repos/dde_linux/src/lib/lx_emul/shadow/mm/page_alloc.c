@@ -53,7 +53,10 @@ static void lx_free_pages(struct page *page, unsigned const num_pages)
 	for (i = 0; i < num_pages; i++)
 		lx_emul_disassociate_page_from_virt_addr(page[i].virtual);
 
+	// printk("%s: p: %px virtual: %px\n", __func__, page, page->virtual);
 	lx_emul_mem_free(virt_addr);
+	/* catch use-after-free */
+	memset(page, 0xa5, sizeof(*page));
 	lx_emul_mem_free(page);
 }
 
@@ -75,7 +78,7 @@ static struct page * lx_alloc_pages(unsigned const nr_pages)
 	void const  *ptr  = lx_emul_mem_alloc_aligned(PAGE_SIZE*nr_pages, PAGE_SIZE);
 	struct page *page = lx_emul_virt_to_pages(ptr, nr_pages);
 
-	atomic_set(&page->_refcount, 1);
+	// atomic_set(&page->_refcount, 1);
 
 	return page;
 }
@@ -108,10 +111,11 @@ void free_pages(unsigned long addr,unsigned int order)
 
 unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 {
-	struct page *page = alloc_pages(gfp_mask & ~__GFP_HIGHMEM, order);
+	return (unsigned long)lx_alloc_pages(1u << order)->virtual;
+	// struct page *page = alloc_pages(gfp_mask & ~__GFP_HIGHMEM, order);
 
-	if (!page)
-		return 0;
+	// if (!page)
+	// 	return 0;
 
-	return (unsigned long)page_address(page);
+	// return (unsigned long)page_address(page);
 }

@@ -572,7 +572,7 @@ int kmem_cache_alloc_bulk(struct kmem_cache * s,gfp_t flags,size_t nr,void ** p)
 
 void * kmem_cache_alloc_lru(struct kmem_cache * cachep,struct list_lru * lru,gfp_t flags)
 {
-	return kmalloc(cachep->size, flags);
+	return kmem_cache_alloc(cachep, flags);
 }
 
 
