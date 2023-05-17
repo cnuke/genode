@@ -111,10 +111,11 @@ void free_pages(unsigned long addr,unsigned int order)
 
 unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 {
-	struct page *page = alloc_pages(gfp_mask & ~__GFP_HIGHMEM, order);
+	return (unsigned long)lx_alloc_pages(1u << order)->virtual;
+	// struct page *page = alloc_pages(gfp_mask & ~__GFP_HIGHMEM, order);
 
-	if (!page)
-		return 0;
+	// if (!page)
+	// 	return 0;
 
-	return (unsigned long)page_address(page);
+	// return (unsigned long)page_address(page);
 }
