@@ -32,6 +32,7 @@ struct page *lx_emul_virt_to_pages(void const *virt, unsigned long count)
 			p->virtual = (void*)((uintptr_t)page_aligned_virt + i*PAGE_SIZE);
 			init_page_count(p);
 			lx_emul_associate_page_with_virt_addr(p, p->virtual);
+			// printk("%s: p: %px virtual: %px\n", __func__, p, p->virtual);
 		}
 
 	}
@@ -51,7 +52,15 @@ void lx_emul_forget_pages(void const *virt, unsigned long size)
 		if (!page)
 			return;
 
+		if (atomic_read(&page->_refcount)
+		    && !atomic_dec_and_test(&page->_refcount))
+			return;
+
+		// printk("%s: p: %px virtual: %px\n", __func__, page, page->virtual);
+
 		lx_emul_disassociate_page_from_virt_addr(page->virtual);
+		/* catch use-after-free */
+		memset(page, 0xb5, sizeof(*page));
 		kfree(page);
 	}
 }
