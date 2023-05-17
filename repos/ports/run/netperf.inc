@@ -463,7 +463,7 @@ set force_ports "-P [server_data_port],[server_data_port]"
 if {[have_spec linux]} {
 	run_genode_until {.*family AF_INET.*\n} 60
 } else {
-	run_genode_until $ip_match_string 60
+	run_genode_until $ip_match_string 120
 }
 
 set serial_id [output_spawn_id]

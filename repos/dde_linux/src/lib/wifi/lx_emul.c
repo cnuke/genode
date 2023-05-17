@@ -583,6 +583,10 @@ unsigned long __FIXADDR_TOP = 0xfffff000;
 
 void __crypto_xor(u8 *dst, const u8 *src1, const u8 *src2, unsigned int len)
 {
+	if (!dst || !src1 || !src2) {
+		lx_emul_backtrace();
+		BUG();
+	}
 	while (len--)
 		*dst++ = *src1++ ^ *src2++;
 }
