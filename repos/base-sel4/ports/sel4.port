@@ -13,5 +13,8 @@ $(call check_python_module,future)
 $(call check_python_module,jinja2)
 $(call check_python_module,ply)
 $(call check_python_module,six)
+# required for ARM
+$(call check_python_module,pyfdt)
+$(call check_python_module,jsonschema)
 
 PATCHES   := $(sort $(wildcard $(REP_DIR)/patches/*.patch))
