@@ -52,6 +52,9 @@ void lx_emul_forget_pages(void const *virt, unsigned long size)
 		if (!page)
 			return;
 
+		/* we free nothing, john snow */
+		return;
+
 		if (atomic_read(&page->_refcount)
 		    && !atomic_dec_and_test(&page->_refcount))
 			return;
