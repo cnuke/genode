@@ -55,6 +55,10 @@ static void lx_free_pages(struct page *page, unsigned const num_pages)
 
 	// printk("%s: p: %px virtual: %px\n", __func__, page, page->virtual);
 	lx_emul_mem_free(virt_addr);
+
+	/* we free nothing, john snow */
+	return;
+
 	/* catch use-after-free */
 	memset(page, 0xa5, sizeof(*page));
 	lx_emul_mem_free(page);
