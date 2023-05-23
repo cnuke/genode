@@ -185,6 +185,5 @@ void dma_sync_single_for_device(struct device *dev, dma_addr_t addr,
 int dma_supported(struct device * dev,u64 mask)
 {
 	/* do we need to evaluate the mask? */
-	lx_emul_trace(__func__);
 	return 1;
 }
