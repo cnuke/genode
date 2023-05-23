@@ -1,0 +1,919 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 23.05
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+Goa tool updated to Sculpt OS 23.04, initial support for Rust
+#############################################################
+
+; @jschlatow, @ssumpf, @atopia
+
+; Suggested storyline:
+; - Sculpt for both PC and mobile (link to "What's new" article, screenshot
+;   of mobile UI)
+; - Mobile apps -> growing need for SDK
+; - Leverage Goa -> moving the tool under the umbrella of Genode Labs
+; - Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
+;   (link to Sebastian's SDK article)
+; - Broadening the developer audience by integrating Rust's cargo with Goa
+
+
+Uniform Wifi stack across PC and ARM platforms
+##############################################
+
+; @cnuke
+
+commit 23cc96e661d2ef6b9b17bcfabad686598231c6f2
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Mar 2 18:22:45 2023 +0100
+
+    wifi/pc: add firmware for the Intel AX210
+
+commit 118fff04728d14a852b7f3b0ca03affdff28e844
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Apr 3 11:37:45 2023 +0200
+
+    iwlwifi: limit rx bufs to 2048
+    
+    Recent devices are configured with 4096 RX pages that lead to an
+    increased memory usage. For the moment lower the amount to 2048
+    and treat in potientially lower throughput for more conservative
+    memory consumption.
+    
+    Fixes #4801.
+
+commit 1041ed87734f08ab781f5a4c6e408a66b4d9bc31
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Apr 6 14:13:49 2023 +0200
+
+    wifi: use latest available firmware
+    
+    This commit updates the used firmware images for the iwlwifi device
+    to latest available ones (supported by the current 6.1.x driver).
+    It also removes old firmware images that by now are not used anymore.
+    
+    Fixes #4807.
+
+commit 56d366995c0737962a29e13becc0d4eb305d8c25
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Wed Jan 11 17:16:36 2023 +0000
+
+    wifi/pc: add ath9k driver
+    
+    The driver was only tested with an "Atheros AR9462 Rev:2" [168c:0034]
+    device using the 'wifi.run' run script.
+    
+    Note: for it to work MSI may not be used as otherwise interrupts do not
+    work. Using an IOMMU leads to the following fault:
+    
+    [ 0] IOMMU:0xffffffff817eb0b0 FRR:0 FR:0x22 BDF:4:0:0 FI:0xb0000000000000 (0)
+    
+    Issue #4813
+
+commit 8ae5ae76fb7ff6bf2e4d62f38adf72b05ea661e1
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jan 25 14:53:00 2023 +0100
+
+    wifi: support building for ARM64
+    
+    This commit introduces support for building the WLAN driver for ARM
+    platforms. It makes the WPA supplicant and its support libraries
+    available for all platforms. It also seperates the PCI parts to
+    accommodate platforms where other bus protocols are used.
+    
+    Issue #4813
+
+commit 0b08ae09c40fa0a50d50cb575b9a7e072877788c
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Feb 28 14:33:14 2023 +0100
+
+    wifi: check 'lx_get_mac_addr' before reporting
+    
+    The MAC address device report should be published once the device is
+    available. Since this may happen at a later time we have to check the
+    call.
+    
+    Issue #4813
+
+commit eaaedb6ae892d90afcce57655742a79a48249cc3
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Mar 10 16:53:35 2023 +0100
+
+    wifi: defer supplicant start-up
+    
+    The SDIO connected wireless device on the PinePhone is not available
+    on start-up, which leads to the supplicant failing to initalize
+    'wlan0'. Normally the supplicant would be used in a way that handling
+    devices that appear at run-time happens gracefully.
+    
+    Rather than supporting this behavior we defer the start-up of the
+    supplicant until the device could be openend successfully for now.
+    
+    Issue #4813
+
+commit e6ee7d3d4ae9cca5c6c22dfd0f83a734ba37e40b
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Mar 10 16:53:01 2023 +0100
+
+    wifi: provide platform specific DTB access
+    
+    The device-tree binary is normally required on ARM-based platforms
+    where as on x86 it is omitted. The platform-specific DTB helper
+    provides a generic interface for accssing the DTB and needs to be
+    implemented on each platform.
+    
+    Issue #4813
+
+commit 0b28c9ae6f506b1e7873b6b73b3447880a08130b
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Apr 12 09:17:22 2023 +0200
+
+    lib/vfs/wifi: remove dependency on wifi library
+    
+    The wifi VFS plugin is solely there to provide a hook for calling
+    'Lx_kit::initialize()' prior to the static ctors. As the corresponding
+    symbol can be resolved at run-time there is no need to add the
+    library as a build-time dependency.
+    
+    Issue #4813
+
+commit 6c36a58bb73731250508bee20bdc3fdbdf1bf468
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Apr 12 13:37:17 2023 +0200
+
+    lib/wifi: remove unused symbols from symbol.map
+    
+    Remove symboles that are no longer required.
+    
+    Issue #4813
+
+commit 2b4246c59be466094789796d1adfdfaec69f3b44
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Apr 12 13:39:38 2023 +0200
+
+    lib/symbols/wifi: add symbols file for ABI so
+    
+    Add symbols file for the wifi shared-object.
+    
+    Issue #4813
+
+commit 8f91f119b88cdce4915fedc81fe6163388179423
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Apr 12 13:56:12 2023 +0200
+
+    wifi: remove firmware library
+    
+    The library is merely an historical artifact and the raw archive is
+    better used in its place.
+    
+    Issue #4813
+
+commit 1d376717c1653c5ed455ee3a8bae975aa96e52b4
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Apr 13 15:26:00 2023 +0200
+
+    net/netaddress: make copy member function const
+    
+    As the function does not alter the internal state of the
+    object allow for using it in r/o contexts.
+    
+    Issue #4813
+
+
+commit d81fbaa4d40d2eaf3a0a34b53bf8112b30ba41c4
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Mar 30 16:59:35 2023 +0200
+
+    (allwinner) wifi/a64: add driver for rtl8723cs
+    
+    This commit adds a driver component for the PinePhone's RTL8723CS based
+    WLAN device. It is port from Linux (orange-pi-5.14-20211103-1304) and
+    behaves similar to the PC driver.
+    
+    Issue #17.
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+New tool chain based on GCC 12.3, C++20 enabled by default
+==========================================================
+
+; @cproc
+
+commit f223191dfc5cb1076ee67661d03b59a58b786d44
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon Apr 3 14:21:01 2023 +0200
+
+    binutils: update to version 2.40
+    
+    Issue #4827
+
+commit 445398a7ddfeaa85b835cbde430f1c8d37843d37
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon May 8 10:18:46 2023 +0200
+
+    gdb: update to version 13.1
+    
+    Issue #4827
+
+commit b602b52f2986f13d2fdddec5e6af411aefaf9c35
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Apr 26 18:30:01 2023 +0200
+
+    tool_chain: update gprbuild to version 23.0.0
+    
+    Issue #4827
+
+commit b6ed05df0c4f819b17a142c589faaf55bd457b52
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 9 12:08:32 2023 +0200
+
+    gcc: update to version 12.3.0
+    
+    Issue #4827
+
+commit 1c4f443e61b7b4cee4251e5620be0b025de23857
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 9 12:09:44 2023 +0200
+
+    stdcxx: update to version 12.3.0
+    
+    Issue #4827
+
+commit ce39c21383be2a0dbc18681a81a8eb5ddb388f64
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 9 12:10:12 2023 +0200
+
+    gcov: update to version 12.3.0
+    
+    Issue #4827
+
+commit c32ded99dcbb55becc3261d375283a03ee54ecda
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 9 12:10:41 2023 +0200
+
+    sanitizer: update to version 12.3.0
+    
+    Issue #4827
+
+commit 4c2a1c009a258670025cc19c535ad3b1353cbd62
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Mon May 15 14:29:26 2023 +0200
+
+    Enable -std=gnu++20 by default
+    
+    Issue #4827
+
+; Maybe highlight the typical build issues?
+; (arithmetics with enums, incrementing volatile variables, ...)
+
+commit 54462dff74ec1e872075236c4064f01ef3770cb5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun May 21 08:24:24 2023 +0200
+
+    binutils: support Genode lib name patterns with '-l' option
+    
+    Issue #4827
+
+
+Base-API and internal changes
+=============================
+
+; @nfeske
+
+commit fb66e733b5f4b72e97397137d52b0d74911b0784
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 3 09:45:12 2023 +0100
+
+    base: add 'Connection' constructor accepting args
+    
+    The new 'Connection' constructor accepts the session label, affinity,
+    and args as constructor arguments. The session arguments are passed as a
+    'Genode::String'. This allows for side-stepping the need for rendering a
+    format string passed to 'Env::session'.
+    
+    Issue #2064
+
+commit 9debad4e9139fa4593043d3b86c92bfe23e9d5f9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 3 12:07:28 2023 +0100
+
+    Remove format strings from connection types
+    
+    Issue #2064
+
+commit 915adcd0ddbd89319877e39d249aff42bcbce075
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 6 10:57:13 2023 +0100
+
+    base: remove internal use of format strings
+    
+    Issue #2064
+
+commit ecd0066e806741c39e72f7f274d5626dbe6ef1f3
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 6 17:19:29 2023 +0100
+
+    os: remove use of format strings
+    
+    Issue #2064
+
+commit 36c00cc294dfc9d2d788b0f463614cc282233eea
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 6 12:06:44 2023 +0100
+
+    gems: remove use of format strings
+    
+    Issue #2064
+
+commit 9ef0f1b6cbc30d8c4cc7ca71d532a751b95d4419
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 6 14:39:26 2023 +0100
+
+    libports: freestanding 'format' string library
+    
+    This little library implements rudimentary format-string support. It is
+    useful for porting 3rd-party code that ought not depend on a full libc.
+    
+    Issue #2064
+
+commit d727d18871e92832314b73aef79ab40b63a184b4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 6 16:09:08 2023 +0100
+
+    base: remove format strings from API
+    
+    This patch ultimatedly removes format strings from Genode's base API.
+    Users of the former base/snprintf.h and base/console.h headers may
+    use the free-standing 'format' library hosted in the ports repository.
+    
+    Fixes #2064
+    Fixes #3869
+
+commit 2c32e9ee18f727116439e768c2e8e01e8b2f48e0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 10 09:20:25 2023 +0100
+
+    base: remove util/avl_string.h
+    
+    The use case is covered by util/dictionary.h now.
+    
+    Fixes #4780
+
+commit 83f78e7fe6c7464d969422cbfb7a12f5fad77c2a
+Author: Timo Nicolai <timo.nicolai@gapfruit.com>
+Date:   Wed Apr 19 14:11:39 2023 +0200
+
+    base: add Xml_node::for_each_attribute
+    
+    Adds a function that allows iterating over an XML node's attributes
+    without relying on `Xml_node::Nonexistent_attribute`.
+    
+    Issue #4817
+
+
+Towards kernel-agnostic DMA protection
+======================================
+
+; @jschlatow
+
+
+Revision of Genode's custom block-encryption infrastructure
+===========================================================
+
+; @m-stein
+
+
+Custom virtual machine monitor on ARM
+=====================================
+
+; @skalk
+
+commit cb3b6c4b8859ea27df751f66074bb9e5b41da673
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Mar 13 11:37:16 2023 +0100
+
+    vmm: distinguish virtio interrupts
+    
+    VirtIO device models can assert interrupts to notify about
+    buffer and configuration changes. By now, we could only assert
+    buffer notification interrupts, but no configuration changes.
+    The latter is needed, e.g. to notify about GPU mode changes.
+    
+    Ref genodelabs/genode#4783
+
+commit 61454178c0d8f455207f9efaaaa6aa393e354dfe
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Mar 13 11:52:51 2023 +0100
+
+    vmm: support mode change in virtio gpu
+    
+    Fix genodelabs/genode#4783
+
+
+NetBSD rump kernel on RISC-V
+============================
+
+; @ssumpf
+
+commit e27737a0a5d365892558e34550b87552150f2d31
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Mar 29 12:43:50 2023 +0200
+
+    dde_rump: add RISC-V support
+    
+    This commit adds RISC-V file-system support through the backport
+    originally provided by ARMv8.
+    
+    fixes #4800
+
+
+Strengthened fault tolerance of on-target package management
+============================================================
+
+; @nfeske
+
+commit f8fd202a1c0ae0bbae7bf782d76d90a65f7ca805
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 24 17:14:41 2023 +0100
+
+    depot_download: option for unverified downloads
+    
+    This patch equips the depot_download subsystem with the option to
+    explicitly skip the signature verification for downloads by specifying
+    the attribute 'verify="no"' for an <installation> item. This is useful
+    in scenarios where the lack of integrity of downloaded content does not
+    pose a risk, e.g., for untrusted applications that are rigidly
+    sandboxed, or during development.
+    
+    Note that this option does not entirely discarge the signature checking.
+    Whenever an download has dependencies that are verifyable - for
+    which the public key exists in the depot - the dependencies are still
+    verified. This allows untrusted content to depend of verifyable content
+    while protecting the integrity the verifyable content.
+    
+    Issue #4804
+
+commit 9e42c94e306db6ab2b7e1918de16e020a3c01456
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 19 14:08:30 2023 +0200
+
+    sculpt: handle deploy downloads by download queue
+    
+    By managing downloads issued by the deploy subsystem via the
+    'Download_queue', failed downloads (e.g., due to HTTP error 404) are
+    properly tracked and don't cause infinite re-attempts.
+    
+    Issue #4818
+
+commit bb6a189589785a42d7b20dc87e9bb853c969bea6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 19 15:07:30 2023 +0200
+
+    sculpt: show failed downloads in diagnostics
+    
+    This patch complements the diagnostics view with the failure state
+    tracked by the download queue.
+    
+    Issue #4818
+
+commit 1c160d23668142bc217f7adedb9f7d621352fd89
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 19 17:29:42 2023 +0200
+
+    sculpt: "Reattempt Install" option in popup dialog
+    
+    Issue #4818
+
+commit cec8a401aeda938d612f52b761d2378ae231deb4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 19 17:26:50 2023 +0200
+
+    depot_deploy: check ROMs as deploy precondition
+    
+    This patch marks a child as incomplete if one of the ROM modules listed
+    in its blueprint is missing. This, in turn, triggers the update system
+    in Sculpt, which then tries to download the missing pieces.
+    
+    Issue #4818
+
+
+Libraries and applications
+##########################
+
+Qt5 reorg
+=========
+
+; @cproc
+
+commit 80038ad936fdaa0a57cadf864f15c67ef4102a3f
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Mar 15 09:12:19 2023 +0100
+
+    qt5: split qt5 api
+    
+    Split api into 'qt5', 'qt5_qml', and 'qt5_webkit'. This makes it
+    possible to link Qt5 apps more fine grained. Needed by Goa.
+    
+    fixes #4793
+
+commit b7d1d8d09173eb6e136f22c323acc2f9e5ac1de4
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Apr 21 15:27:22 2023 +0200
+
+    qt5: create 'bin' directory in test run scripts
+    
+    Fixes #4822
+
+commit 5080e88a7af6fd7cd9443f4edb401896bff2b217
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Apr 21 15:27:45 2023 +0200
+
+    qt5: split api recipes with Qt module granularity
+    
+    Fixes #4823
+
+commit c9cb2b9de2d9a245623610bf193f760ca685c883
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu May 11 15:21:51 2023 +0200
+
+    qt5: reduce external dependencies of host tools
+    
+    Fixes #4868
+
+commit a15c6e0fd6c0e173b218e90d2ec0fd65d5c7f0e5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 16 06:58:45 2023 +0200
+
+    qt5: install host tools in /usr/local/genode/tool/23.05
+    
+    Issue #4868
+
+commit b34cc1a698c71b43680691ffdc05f8fe11fba343
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Mar 16 09:50:41 2023 +0100
+
+    (world) qt5: split qt5 api
+    
+    Adjust to api split into 'qt5', 'qt5_qml', and 'qt5_webkit'.
+    
+    issue genodelabs/genode#4793
+
+
+commit 9efcf284dfef11213a9cd39987bd8b09fae73931
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Mar 16 15:22:40 2023 +0100
+
+    (world) receipe: meta package for ubuntu-ui-toolkit
+    
+    This pulls in all dependencies for the Ubuntu UI toolkit, including a
+    runtime with the required ROMs.
+    
+    fixes #318
+
+commit 23ba08b885825fc5e7a3abd31c5f08abda4c2b43
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Apr 21 20:27:38 2023 +0200
+
+    (world) qt5: split api recipes with Qt module granularity
+    
+    Fixes #323
+
+
+WireGuard improvements
+======================
+
+; @m-stein, @chelmuth
+
+commit 86259b998e85f34fa42be64e19e89f1b75708f14
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed May 18 12:45:21 2022 +0200
+
+    wireguard: support removing peers
+    
+    Support removing peers by removing them from the component configuration.
+    This commit also introduces the wg_reconfig run script that tests adding and
+    removing single peers.
+    
+    Ref #4520
+
+commit 3a9ef487215ea7597b3ec7c165892848377fc90f
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Jan 27 16:04:29 2023 +0100
+
+    dde_linux: separate virt_linux from wireguard
+    
+    Preparation to support further hardware-agnostic dde_linux components
+    (incl. lxip and tests).
+    
+    Fixes #4774
+
+
+Updated or removed 3rd-party software
+=====================================
+
+VirtualBox updated to version 6.1.44
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+; @chelmuth
+
+commit 37421a7879ff47b6c64f249f91a9352b4260ff72
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Oct 27 09:25:07 2022 +0200
+
+    vbox6: bump version from 6.1.26 to 6.1.44
+    
+    Fixes most of the GCC 12 problems.
+    
+    issue #4666
+
+commit 7be915a185a442b14f66ccfe5715787a3758d659
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Wed Sep 21 09:28:19 2022 +0200
+
+    vbox6: disable RDTSC exit
+    
+    For Windows guests, it's crucial to configure the paravirtualization
+    provider in .vbox6 like follows. Otherwise, the TSC calibration fails
+    (issue #4726) and the CPU frequency (in task manager) is bogus.
+    
+      <Paravirt provider="HyperV"/>
+    
+    Fixes #4726
+
+commit 7e06aa13c17293eeb651d24610f3d99478a62dc5
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Apr 20 15:41:31 2023 +0200
+
+    vbox6: disable GSO in e1000 model
+    
+    Commit "vbox: avoid uncaught nic Empty_ack_queue exception" introduced a
+    performance regression due to packet retransmission because of faulty
+    GSO segment handling. As fixing the GSO handling is fairly complex, we
+    disable GSO until a fix was developed.
+    
+    Issue #4820
+    Issue #4821
+
+commit a1eb94535d774322bb3b8a1176a231e9050c93f3
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue May 16 19:30:56 2023 +0200
+
+    qemu-usb: support read/write of unused IO ranges
+    
+    The XHCI model reserves 0x4000 of IO memory but uses only 0x530.
+    Implement read (0) and write (nop) for these regions as real hardware
+    does.
+    
+    fixes #4902
+
+
+Removed ports of pcre16 and icu libraries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+; @cproc
+
+commit 7fcd2f64db61ccdd31ad2e91b1cdeb6d535c13dd
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri May 19 06:27:39 2023 +0200
+
+    libports: remove pcre16
+    
+    Fixes #4903
+
+commit dffdc5817f4feef7f259ca6e80bebe8ff57c87e3
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue May 16 08:17:53 2023 +0200
+
+    libport: remove icu library
+    
+    This was required by QtWebKit in the past, the QtWebEngine ships its own
+    version. No other code depends on this. Revive if needed.
+    
+    fixes #4870
+
+
+Device drivers
+##############
+
+Linux device driver environment updated to Linux 6.1.20
+=======================================================
+
+; @skalk
+
+commit 2269f42e1757a031609b334707ef5aa9f5d1d388
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Mar 23 11:20:43 2023 +0100
+
+    lx_emul: update Linux port to 6.1.20
+    
+    Fix genodelabs/genode#4798
+
+
+Intel display driver
+====================
+
+; @alex-ab
+
+commit e1533be6849b26ffab178c52afbbcad4a8a81751
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Mar 24 16:01:48 2023 +0100
+
+    intel/display: replace intel_fbdev with drm/kms
+    
+    Fixes #4806
+
+
+USB
+===
+
+; @skalk
+
+commit 3c45f5c7ab6e2c15e22dcaef05dbee0fc81edc49
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Mar 23 16:45:12 2023 +0100
+
+    usb: support 32 in-flight packets
+    
+    - move metadata specific to isochronous transfers from the descriptor
+      into the content of USB-session packets
+    - restore support for 32 in-flight packets in the USB C API
+    
+    Fixes #4749
+
+commit bcc454aa8908e754f3d1e522b0ae4cfb193a481f
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Apr 27 11:37:53 2023 +0200
+
+    drivers/usb_block: treat SYNC as barrier
+    
+    The commit implements the SYNC and TRIM as successful NOP, while
+    the former is handled as an barrier to all other out-standing
+    requests.
+    
+    Fixes #4825.
+
+commit 19e2b5b8b2f1a3ec4c02a3904f875dbf0c2fabb5
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Apr 20 16:17:05 2023 +0200
+
+    usb_net_drv: ensure freeing packets in destructor
+    
+    Ref genodelabs/genode#4795
+
+commit f079d1f7c3a2087f96376cc42645a1808e8a79cb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Apr 20 16:17:20 2023 +0200
+
+    usb_hid_drv: ensure freeing packets in destructor
+    
+    Ref genodelabs/genode#4795
+
+commit 97e3572844bd8aabf91f83be3f7fc96b2d06121f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Apr 18 11:51:41 2023 +0200
+
+    lx_emul: use devio API for USB driver operations
+    
+    Fix genodelabs/genode#4795
+commit 19e2b5b8b2f1a3ec4c02a3904f875dbf0c2fabb5
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Apr 20 16:17:05 2023 +0200
+
+    usb_net_drv: ensure freeing packets in destructor
+    
+    Ref genodelabs/genode#4795
+
+commit f079d1f7c3a2087f96376cc42645a1808e8a79cb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Apr 20 16:17:20 2023 +0200
+
+    usb_hid_drv: ensure freeing packets in destructor
+    
+    Ref genodelabs/genode#4795
+
+commit 97e3572844bd8aabf91f83be3f7fc96b2d06121f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Apr 18 11:51:41 2023 +0200
+
+    lx_emul: use devio API for USB driver operations
+    
+    Fix genodelabs/genode#4795
+
+commit c4a723135752ab5b0531476574cf1f0652d305f5
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed May 3 17:23:25 2023 +0200
+
+    (allwinner) a64_usb_host_drv: use devio API for USB
+    
+    Ref genodelabs/genode#4795
+
+commit 5bdd80412cc84e4703d38582b98ad8336e29fedb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed May 3 14:25:56 2023 +0200
+
+    (imx) imx8mq_usb_host_drv: use devio API for USB
+    
+    Ref genodelabs/genode#4795
+
+
+NVMe storage
+============
+
+; @cnuke
+
+commit ae0e0c118ea07eca66022d8b2cca2d50594a62c3
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Sun Nov 13 20:10:43 2022 +0000
+
+    nvme_drv: add support for host-memory-buffer
+    
+    This commit introduces support for the HMB feature and will setup the
+    buffer during start-up. The host-memory-buffer (HMB) feature is mostly
+    used on NVMe devices that do not make use of an DRAM cache to store its
+    translation tables amongst other operational data. Not using HMB can
+    impair the performance on such devices.
+    
+    The memory is allocated in 2 MiB chunks of DMA-capable memory and its
+    total size in bytes is configurable via the 'hmb_size' config attribute.
+    The driver always checks the minimal and preferred size of the HMB and
+    issues a warning in case it is not enabled via the configuration.
+    Moreover, if the configured size is less than the minimal amount
+    required by the device the HMB is not configured at all and a warning
+    is issued also. If the configured size is more than the preferred size
+    it will be capped to that amount.
+    
+    Fixes #4715.
+
+commit 280724e6b5b68e32135b40632ff44c10581d6d3e
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Apr 28 17:38:10 2023 +0200
+
+    nvme_drv: read proper FLBAS value
+    
+    Bit 0:3 indicate which of the (up to) 16 supported LBA formats is
+    used for this namespace. Instead of only looking at those bits the
+    driver looked at the complete 0:7 bits. Those, however, also include
+    information on how metadata may be transferred. That leads to using
+    the wrong index for reading the LBA format.
+    
+    Fixes #4832.
+
+
+Audio-driver update
+===================
+
+; @cnuke
+
+commit 1b552d594b6591874db83ba7236b65cb39dda0e2
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu May 4 14:25:34 2023 +0200
+
+    dde_bsd: update audio driver to OpenBSD 7.3
+    
+    Fixes #4857.
+
+
+Platforms
+#########
+
+Base-HW microkernel
+===================
+
+Principle x86 virtualization support (on Qemu)
+----------------------------------------------
+
+; @atopia
+
+Boot-time RAM detection on the PinePhone
+----------------------------------------
+
+; @ssumpf
+
+commit 8c6f41915c4a0abfad1147b222ce8f42ade8cf53
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Apr 26 22:04:20 2023 +0200
+
+    bootstrap/pine_a64lts: detect RAM size
+    
+    Read and parse values from DRAM controller programmed by U-Boot.
+    
+    fixes genodelabs/genode-allwinner#18
+
+
+Updated seL4 microkernel
+========================
+
+; @alex-ab
+
+
