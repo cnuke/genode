@@ -391,8 +391,69 @@ Towards kernel-agnostic DMA protection
 Revision of Genode's custom block-encryption infrastructure
 ===========================================================
 
-; @m-stein
+Tresor library
+~~~~~~~~~~~~~~
 
+For about two years, our Ada/SPARK-based CBE block encryption and its GUI
+front-end, the File Vault, served us well with rather manageable workloads
+(like configuration and credential files) in x86 Sculpt. However, with the
+rise of mobile Sculpt on the PinePhone, the CBE ecosystem faced a crisis.
+At first, we realized that there was a list of requirements coming up with the
+new target platform:
+
+* Mobile platforms are usually less forgiving when it comes to performance and
+  the CBE still exhibited a lot of potential for optimization.
+
+* In mobile Sculpt, our block encryption will be an integral part of the base
+  system (the "appliance role"), which marks a big step in the ongoing
+  role shift from a mere experiment towards a central system component. With
+  this role shift, however, maintainability becomes increasingly important.
+
+* Now, that we decided to settle on this approach to block encryption and
+  will increasingly expose it to real workloads, we can expect new requirements
+  to pop up more frequently and with higher priority.
+
+* And, last but not least, our SPARK/Ada runtime, so far, simply lacks ARM
+  support.
+
+This prospect forced us to carefully re-think our relation to the existing CBE
+approach, and especially to the fact that it's core logic and crypto back-end
+were entirely written in Ada/SPARK. When we started developing the CBE in
+Ada/SPARK, we considered the possibility that the language could become popular
+among the core developers of Genode and that, eventually, other, especially
+critical parts of the framework could benefit from it as well. But this idea
+didn't come true. Only a few of us came in touch with the new language and of
+those even fewer acquired profound experience with it. As a consequence,
+maintenance of the Ada/SPARK codebase that emerged with the CBE approach became
+a bottle neck, effectively inhibiting growth of our block-encryption stack.
+
+This fact in mind, and the above mentioned challenges in sight, we decided to
+drop the CBE library and create a new implementation strongly inspired by the
+CBE design but in C++, our "mother tongue". The new library is called Tresor,
+brings the same feature set like the CBE and can also drive encrypted
+containers that were created with the CBE. The File Vault has been adapted to
+run with Tresor, so, File Vault users can continue using their containers as
+usual without further ado. The entire Tresor-based ecosystem is
+architecture-agnostic - the former restriction to x86 has been removed.
+
+File Vault
+~~~~~~~~~~
+
+There are some new features to the File Vault. For instance, the component can
+now be driven with one of two available user interfaces: The usual graphical
+front-end via Menu View or the new text-based interface that receives commands
+via configuration file and provides feedback through a report file. This allows
+for the integration of the File Vault with automated controls respectively
+lower- or higher-level UI's. The default remains the legacy interface, but one
+can replace it with the text-based UI using the new "user_interface"
+configuration flag (not re-configurable). A good example on how to use the
+test-based UI is provided in the new "file_vault_cfg_report" run script.
+
+Another, rather small but handy feature is that a File Vault can now be locked
+and unlocked without having to restart the component. In the "locked" state,
+all key material is removed from the cryptographic back-end and the driver for
+the encrypted driver is shut down. The user is then prompted to provide the
+correct credentials in order to re-accomplish access to the container.
 
 Custom virtual machine monitor on ARM
 =====================================
