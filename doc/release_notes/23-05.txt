@@ -654,31 +654,25 @@ Date:   Fri Apr 21 20:27:38 2023 +0200
 WireGuard improvements
 ======================
 
-; @m-stein, @chelmuth
+There are two smaller changes related to Genode's port of WireGuard. First,
+peers can now be removed from WireGuard at runtime by removing the
+corresponding <peer> tags from the component configuration. This operation
+enforces the same assurances as removing a peer from a native WireGuard driver
+in Linux.
 
-commit 86259b998e85f34fa42be64e19e89f1b75708f14
-Author: Martin Stein <martin.stein@genode-labs.com>
-Date:   Wed May 18 12:45:21 2022 +0200
+The second change has to do with the nature of the port. The WireGuard port is
+one of the rare examples where we use our Linux device driver environment
+(dde_linux) for porting something that is not exactly a driver. The component
+does not depend on a specific hardware configuration and therefore, the
+emulated Linux kernel can be platform-agnostic. Consequently, while porting, we
+created such a variant of the Linux emulation specifically for WireGuard.
 
-    wireguard: support removing peers
-    
-    Support removing peers by removing them from the component configuration.
-    This commit also introduces the wg_reconfig run script that tests adding and
-    removing single peers.
-    
-    Ref #4520
-
-commit 3a9ef487215ea7597b3ec7c165892848377fc90f
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Fri Jan 27 16:04:29 2023 +0100
-
-    dde_linux: separate virt_linux from wireguard
-    
-    Preparation to support further hardware-agnostic dde_linux components
-    (incl. lxip and tests).
-    
-    Fixes #4774
-
+However, we realized that this variant can come in handy for ports of other
+hardware-agnostic kernel parts (for instance, lxip) as well. Therefore, we now
+cut it out of the WireGuard port in order to make it a self-contained version
+of the 'lx_emul' library. The new library is called 'virt_lx_emul' and is
+accompanied by the 'virt_linux' target that can be used to build the
+corresponding Linux kernel and run it in Qemu.
 
 Updated or removed 3rd-party software
 =====================================
