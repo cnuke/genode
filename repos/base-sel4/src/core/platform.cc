@@ -103,18 +103,20 @@ void Platform::_init_allocators()
 
 	/* turn remaining untyped memory ranges into untyped pages */
 	_initial_untyped_pool.turn_into_untyped_object(Core_cspace::TOP_CNODE_UNTYPED_4K,
-		[&] (addr_t const phys, addr_t const size, bool const device) {
+		[&] (addr_t const phys, addr_t const size, bool const device_memory) {
 			/* register to physical or iomem memory allocator */
 
 			addr_t const phys_addr = trunc_page(phys);
 			size_t const phys_size = round_page(phys - phys_addr + size);
 
-			if (device)
+			if (device_memory)
 				_io_mem_alloc.add_range(phys_addr, phys_size);
 			else
 				_core_mem_alloc.phys_alloc().add_range(phys_addr, phys_size);
 
 			_unused_phys_alloc.remove_range(phys_addr, phys_size);
+
+			return true; /* range used by this functor */
 		});
 
 	/*
