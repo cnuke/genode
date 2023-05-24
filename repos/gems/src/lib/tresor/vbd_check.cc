@@ -184,6 +184,16 @@ void Vbd_check::_execute_leaf_child(Channel           &chan,
 					    "    lvl ", lvl, " child ", child_idx, ": expectedly invalid");
 			}
 
+		} else if (child.gen == INITIAL_GENERATION) {
+
+			req._nr_of_leaves--;
+			child_state = Channel::DONE;
+			progress = true;
+
+			if (VERBOSE_CHECK)
+				log(Level_indent { lvl, req._max_lvl },
+				    "    lvl ", lvl, " child ", child_idx, ": uninitialized");
+
 		} else if (!chan._gen_prim.valid()) {
 
 			chan._gen_prim = {
@@ -216,17 +226,7 @@ void Vbd_check::_execute_leaf_child(Channel           &chan,
 
 	} else if (child_state == Channel::CHECK_HASH) {
 
-		if (child.gen == INITIAL_GENERATION) {
-
-			req._nr_of_leaves--;
-			child_state = Channel::DONE;
-			progress = true;
-
-			if (VERBOSE_CHECK)
-				log(Level_indent { lvl, req._max_lvl },
-				    "    lvl ", lvl, " child ", child_idx, ": uninitialized");
-
-		} else if (check_sha256_4k_hash(&child_lvl, &child.hash)) {
+		if (check_sha256_4k_hash(&child_lvl, &child.hash)) {
 
 			req._nr_of_leaves--;
 			child_state = Channel::DONE;
