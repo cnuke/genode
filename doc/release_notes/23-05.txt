@@ -286,100 +286,35 @@ Date:   Sun May 21 08:24:24 2023 +0200
     Issue #4827
 
 
-Base-API and internal changes
-=============================
+API changes
+===========
 
-; @nfeske
+As part of Genode's
+[https://genode.org/documentation/release-notes/16.08#Cultivation_of_the_new_text-output_API - great API revision]
+in 2016, we largely *abolished* the use of *format strings* throughout the
+framework. This is desirable because a code base without format strings cannot
+have format-string vulnerabilities. Still, a few occurrences, specifically the
+interface for passing session-construction arguments, remained untouched since
+then. With version 23.04 we finally wrap up the transition.
 
-commit fb66e733b5f4b72e97397137d52b0d74911b0784
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Mar 3 09:45:12 2023 +0100
+The revised 'Genode::Connection' accepts the session label, affinity,
+and session-specific parameters as constructor arguments, whereas the
+parameters are passed as a 'Genode::String'. This eliminates the need for
+rendering a format string. Given this new interface, we were able to remove
+format strings from all connection types, updated all components that
+still happened to rely on format strings, and ultimately removed format
+string from Genode's base API.
 
-    base: add 'Connection' constructor accepting args
-    
-    The new 'Connection' constructor accepts the session label, affinity,
-    and args as constructor arguments. The session arguments are passed as a
-    'Genode::String'. This allows for side-stepping the need for rendering a
-    format string passed to 'Env::session'.
-    
-    Issue #2064
+Format strings still play a role to accommodate 3rd-party code ported
+to Genode. Whenever the 3rd-party code targets the C runtime, format
+strings are readily available via the libc. For free-standing ports that
+avoid the dependency from the full C runtime, e.g., ported device drivers,
+a new 'format' library based on Genode's former _base/snprintf.h_ and
+_base/console.h_ provides rudimentary format-string support.
 
-commit 9debad4e9139fa4593043d3b86c92bfe23e9d5f9
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Mar 3 12:07:28 2023 +0100
-
-    Remove format strings from connection types
-    
-    Issue #2064
-
-commit 915adcd0ddbd89319877e39d249aff42bcbce075
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Mar 6 10:57:13 2023 +0100
-
-    base: remove internal use of format strings
-    
-    Issue #2064
-
-commit ecd0066e806741c39e72f7f274d5626dbe6ef1f3
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Mar 6 17:19:29 2023 +0100
-
-    os: remove use of format strings
-    
-    Issue #2064
-
-commit 36c00cc294dfc9d2d788b0f463614cc282233eea
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Mar 6 12:06:44 2023 +0100
-
-    gems: remove use of format strings
-    
-    Issue #2064
-
-commit 9ef0f1b6cbc30d8c4cc7ca71d532a751b95d4419
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Mar 6 14:39:26 2023 +0100
-
-    libports: freestanding 'format' string library
-    
-    This little library implements rudimentary format-string support. It is
-    useful for porting 3rd-party code that ought not depend on a full libc.
-    
-    Issue #2064
-
-commit d727d18871e92832314b73aef79ab40b63a184b4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Mar 6 16:09:08 2023 +0100
-
-    base: remove format strings from API
-    
-    This patch ultimatedly removes format strings from Genode's base API.
-    Users of the former base/snprintf.h and base/console.h headers may
-    use the free-standing 'format' library hosted in the ports repository.
-    
-    Fixes #2064
-    Fixes #3869
-
-commit 2c32e9ee18f727116439e768c2e8e01e8b2f48e0
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Mar 10 09:20:25 2023 +0100
-
-    base: remove util/avl_string.h
-    
-    The use case is covered by util/dictionary.h now.
-    
-    Fixes #4780
-
-commit 83f78e7fe6c7464d969422cbfb7a12f5fad77c2a
-Author: Timo Nicolai <timo.nicolai@gapfruit.com>
-Date:   Wed Apr 19 14:11:39 2023 +0200
-
-    base: add Xml_node::for_each_attribute
-    
-    Adds a function that allows iterating over an XML node's attributes
-    without relying on `Xml_node::Nonexistent_attribute`.
-    
-    Issue #4817
+As another matter of house keeping, we removed the _util/avl_string.h_
+utility. The use case of organizing objects by using strings as keys is
+covered by the _util/dictionary.h_ now.
 
 
 Towards kernel-agnostic DMA protection
