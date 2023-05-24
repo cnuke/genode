@@ -437,71 +437,53 @@ Date:   Wed Mar 29 12:43:50 2023 +0200
 Strengthened fault tolerance of on-target package management
 ============================================================
 
-; @nfeske
+Genode's way of safely installing and deploying packages on-target - as introduced in
+[https://genode.org/documentation/release-notes/18.02#On-target_package_installation_and_deployment - version 18.02] -
+is a corner stone of Sculpt OS. The recent move of Sculpt OS to mobile devices,
+however, revealed a couple of limitations that we addressed with the current
+release.
 
-commit f8fd202a1c0ae0bbae7bf782d76d90a65f7ca805
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Mar 24 17:14:41 2023 +0100
+First, in contrast to the PC version of Sculpt OS that allows for the
+straight-forward management and editing of files using a regular command-line
+interface, a touch-based user interface as present on the phone is far more
+constrained. Problems that can be solved by manual intervention on the PC
+without a second thought can become insurmountable showstoppers on the phone.
+The most prominent problem is the recovery from the situation where package
+dependencies remained incomplete due to an interruption of the installation
+process or due to packaging mistakes. On the PC, the situation can be cleaned
+up by simply clearing the depot using a single terminal command, followed by a
+reinstall of the package. On the phone, the user was left out in the cold
+with the message "package installed but incomplete" but with no obvious or
+non-obvious way of recovery. The new version gracefully handles this failure
+state by offering the retry of the package installation.
 
-    depot_download: option for unverified downloads
-    
-    This patch equips the depot_download subsystem with the option to
-    explicitly skip the signature verification for downloads by specifying
-    the attribute 'verify="no"' for an <installation> item. This is useful
-    in scenarios where the lack of integrity of downloaded content does not
-    pose a risk, e.g., for untrusted applications that are rigidly
-    sandboxed, or during development.
-    
-    Note that this option does not entirely discarge the signature checking.
-    Whenever an download has dependencies that are verifyable - for
-    which the public key exists in the depot - the dependencies are still
-    verified. This allows untrusted content to depend of verifyable content
-    while protecting the integrity the verifyable content.
-    
-    Issue #4804
+Second, network connectivity is far more fluctuating on mobile devices,
+which increases the chance for download errors. The previous version that
+regarded download errors as rare and sporadic issues, responded to such
+errors by repeated and silent retrying. We found that a mobile phone demands
+more graceful way to reflect such failure situations to the user, and to limit
+the rate of futile download attempts. The new version preserves information
+about download failures for user inspection and re-issues new downloads only
+if not already flagged as unavailable.
 
-commit 9e42c94e306db6ab2b7e1918de16e020a3c01456
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Apr 19 14:08:30 2023 +0200
+Finally, we encountered the manual addition of software providers to the
+system as a hurdle on the phone. On the PC, a new software provider can be
+added by manually placing the provider's _download_ and _pubkey_ files the
+local depot directory, which is straight-forward when using a shell. However,
+on a touch-screen device, there is no obvious and simple way to supplement the
+system with such information. To still accommodate the user's desire to
+download and install software from arbitrary providers, we added the option to
+explicitly skip the signature verification for downloads. This is useful in
+scenarios where the lack of integrity of downloaded content does not pose a
+risk, e.g., for untrusted applications that are rigidly sandboxed, or during
+development.
 
-    sculpt: handle deploy downloads by download queue
-    
-    By managing downloads issued by the deploy subsystem via the
-    'Download_queue', failed downloads (e.g., due to HTTP error 404) are
-    properly tracked and don't cause infinite re-attempts.
-    
-    Issue #4818
-
-commit bb6a189589785a42d7b20dc87e9bb853c969bea6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Apr 19 15:07:30 2023 +0200
-
-    sculpt: show failed downloads in diagnostics
-    
-    This patch complements the diagnostics view with the failure state
-    tracked by the download queue.
-    
-    Issue #4818
-
-commit 1c160d23668142bc217f7adedb9f7d621352fd89
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Apr 19 17:29:42 2023 +0200
-
-    sculpt: "Reattempt Install" option in popup dialog
-    
-    Issue #4818
-
-commit cec8a401aeda938d612f52b761d2378ae231deb4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Apr 19 17:26:50 2023 +0200
-
-    depot_deploy: check ROMs as deploy precondition
-    
-    This patch marks a child as incomplete if one of the ROM modules listed
-    in its blueprint is missing. This, in turn, triggers the update system
-    in Sculpt, which then tries to download the missing pieces.
-    
-    Issue #4818
+Whenever the depot-download subsystem encounters the attribute 'verify="no"'
+for an '<installation>' item, it accepts the installation even if no key is
+available. It still applies verification for dependencies whenever possible.
+E.g., if a package of the provider "jon" gets installed via 'verify="no"' and
+the package depends on an archive by "genodelabs", for which the public key is
+known, the integrity of the content originating from "genodelabs" is verified.
 
 
 Libraries and applications
