@@ -107,176 +107,177 @@ Initial Rust support
 Uniform Wifi stack across PC and ARM platforms
 ##############################################
 
-; @cnuke
-
-commit 23cc96e661d2ef6b9b17bcfabad686598231c6f2
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Mar 2 18:22:45 2023 +0100
-
-    wifi/pc: add firmware for the Intel AX210
-
-commit 118fff04728d14a852b7f3b0ca03affdff28e844
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Apr 3 11:37:45 2023 +0200
-
-    iwlwifi: limit rx bufs to 2048
-    
-    Recent devices are configured with 4096 RX pages that lead to an
-    increased memory usage. For the moment lower the amount to 2048
-    and treat in potientially lower throughput for more conservative
-    memory consumption.
-    
-    Fixes #4801.
-
-commit 1041ed87734f08ab781f5a4c6e408a66b4d9bc31
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Apr 6 14:13:49 2023 +0200
-
-    wifi: use latest available firmware
-    
-    This commit updates the used firmware images for the iwlwifi device
-    to latest available ones (supported by the current 6.1.x driver).
-    It also removes old firmware images that by now are not used anymore.
-    
-    Fixes #4807.
-
-commit 56d366995c0737962a29e13becc0d4eb305d8c25
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Wed Jan 11 17:16:36 2023 +0000
-
-    wifi/pc: add ath9k driver
-    
-    The driver was only tested with an "Atheros AR9462 Rev:2" [168c:0034]
-    device using the 'wifi.run' run script.
-    
-    Note: for it to work MSI may not be used as otherwise interrupts do not
-    work. Using an IOMMU leads to the following fault:
-    
-    [ 0] IOMMU:0xffffffff817eb0b0 FRR:0 FR:0x22 BDF:4:0:0 FI:0xb0000000000000 (0)
-    
-    Issue #4813
-
-commit 8ae5ae76fb7ff6bf2e4d62f38adf72b05ea661e1
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jan 25 14:53:00 2023 +0100
-
-    wifi: support building for ARM64
-    
-    This commit introduces support for building the WLAN driver for ARM
-    platforms. It makes the WPA supplicant and its support libraries
-    available for all platforms. It also seperates the PCI parts to
-    accommodate platforms where other bus protocols are used.
-    
-    Issue #4813
-
-commit 0b08ae09c40fa0a50d50cb575b9a7e072877788c
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Feb 28 14:33:14 2023 +0100
-
-    wifi: check 'lx_get_mac_addr' before reporting
-    
-    The MAC address device report should be published once the device is
-    available. Since this may happen at a later time we have to check the
-    call.
-    
-    Issue #4813
-
-commit eaaedb6ae892d90afcce57655742a79a48249cc3
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Mar 10 16:53:35 2023 +0100
-
-    wifi: defer supplicant start-up
-    
-    The SDIO connected wireless device on the PinePhone is not available
-    on start-up, which leads to the supplicant failing to initalize
-    'wlan0'. Normally the supplicant would be used in a way that handling
-    devices that appear at run-time happens gracefully.
-    
-    Rather than supporting this behavior we defer the start-up of the
-    supplicant until the device could be openend successfully for now.
-    
-    Issue #4813
-
-commit e6ee7d3d4ae9cca5c6c22dfd0f83a734ba37e40b
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Mar 10 16:53:01 2023 +0100
-
-    wifi: provide platform specific DTB access
-    
-    The device-tree binary is normally required on ARM-based platforms
-    where as on x86 it is omitted. The platform-specific DTB helper
-    provides a generic interface for accssing the DTB and needs to be
-    implemented on each platform.
-    
-    Issue #4813
-
-commit 0b28c9ae6f506b1e7873b6b73b3447880a08130b
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Apr 12 09:17:22 2023 +0200
-
-    lib/vfs/wifi: remove dependency on wifi library
-    
-    The wifi VFS plugin is solely there to provide a hook for calling
-    'Lx_kit::initialize()' prior to the static ctors. As the corresponding
-    symbol can be resolved at run-time there is no need to add the
-    library as a build-time dependency.
-    
-    Issue #4813
-
-commit 6c36a58bb73731250508bee20bdc3fdbdf1bf468
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Apr 12 13:37:17 2023 +0200
-
-    lib/wifi: remove unused symbols from symbol.map
-    
-    Remove symboles that are no longer required.
-    
-    Issue #4813
-
-commit 2b4246c59be466094789796d1adfdfaec69f3b44
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Apr 12 13:39:38 2023 +0200
-
-    lib/symbols/wifi: add symbols file for ABI so
-    
-    Add symbols file for the wifi shared-object.
-    
-    Issue #4813
-
-commit 8f91f119b88cdce4915fedc81fe6163388179423
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Wed Apr 12 13:56:12 2023 +0200
-
-    wifi: remove firmware library
-    
-    The library is merely an historical artifact and the raw archive is
-    better used in its place.
-    
-    Issue #4813
-
-commit 1d376717c1653c5ed455ee3a8bae975aa96e52b4
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Apr 13 15:26:00 2023 +0200
-
-    net/netaddress: make copy member function const
-    
-    As the function does not alter the internal state of the
-    object allow for using it in r/o contexts.
-    
-    Issue #4813
+Support for wireless LAN was mostly focused on the
+[https://genode.org/documentation/release-notes/14.11#Intel_wireless_stack - PC platform]
+as it was the platform predominately used for using Genode and in extension
+Sculpt on a daily basis. In the last couple of years, however, this focus
+includes ARM-based platforms, namely the MNT Reform 2 and PinePhone, as well
+and thoroughly supporting such systems becomes desirable. We took the
+opportunity to introduce a way for reusing the existing wireless stack on different
+platforms with minimal effort.
 
 
-commit d81fbaa4d40d2eaf3a0a34b53bf8112b30ba41c4
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Mar 30 16:59:35 2023 +0200
+Making the wireless stack globally accessible
+=============================================
 
-    (allwinner) wifi/a64: add driver for rtl8723cs
-    
-    This commit adds a driver component for the PinePhone's RTL8723CS based
-    WLAN device. It is port from Linux (orange-pi-5.14-20211103-1304) and
-    behaves similar to the PC driver.
-    
-    Issue #17.
+The
+[https://genode.org/documentation/release-notes/23.02#Realtek_Wifi - last release]
+already featured added support for a different
+wireless LAN device driver - the rtlwifi driver that supports Realtek-based
+devices - giving us a good impression on how easy it has become to extended
+even a complex Linux-based driver component stack such as the 'wifi_drv'.
+
+The first step was making it less x86-centric. We started by making the various
+ingredients of the driver available on the ARM platforms.
+
+On the one hand that includes the 'wpa_supplicant' and its dependencies like
+the 'nl80211' driver that in return depends on 'libnl'. Enabling them was
+straight-forward because they are already pretty platform independent and
+the platform dependet portions, e.g. libcrypto, are readily available for ARM.
+
+On the other hand, the wireless stack was slightly more complicated as we had
+to accommadate for the various ways peripherals are integrated on the various
+platforms. In case of the MNT Reform 2 and PC the integrated wireless devices
+are normally connected via PCIe where as on the PinePhone SDIO is used. We
+separated the code to allow for a “mix-and-match” way of selecting the
+necessary compilation-units as the used Linux configuration might differ
+between each target and could result in compilation issues otherwise.
+
+The next step was to make the wireless stack globally accessible by moving it
+from the _pc_ to the _dde_linux_ repository. This move was motivated by the
+fact that the _dde_linux_ repository is already available in all platform or
+rather board-specific repositories while the _pc_ repository is not. It is
+in itself a board-specific repository and therefor having it appear as
+dependency for other such repositories feels unnatural.
+
+So the bulk of the driver code now lives in the 'dde_linux' repository from
+where it can be referenced by other repositories.
+
+While moving the code we noticed that in contrast to all other Linux-based
+drivers the 'wifi_drv' is special. Since the binary itself is a libc component,
+care was taken to isolate the application code, the 'wpa_supplicant', from
+the driver code, the library containing the Linux wireless stack and drivers.
+On all platforms the binary stays the same while the driver library contains
+all the platform specific code.
+For this reason the 'wifi_drv' binary is now delegated to be a generic harness
+that includes all configuration and management functionality shared by all
+wireless device driver components, e.g., the wpa_supplicant. The code of the
+device driver emulation environment is located in
+_repos/dde_linux/src/lib/wifi_. It is referenced by the platform-specific
+driver library that resides in the corresponding platform repository. The
+runtime configuration needs to point the driver to a proper driver library.
+
+The platform-specific library is in charge of orchestrating the contrib sources
+utilized by the driver as well as providing the 'source.list' and 'dep.list'
+files. It must include the generic library snippet
+_repos/dde_linux/lib/wifi.inc_ that deals with managing the emulation
+environment code. The amount of code added by the platform-specific
+libraries is unimposing as it mostly consists of the dummy implementations
+needed by the Linux configuration.
+
+; [image wifi_drv_architecture]
+
+For the moment all recipes for the depot archives are prefixed to the specific
+driver, for example 'pkg/pc_wifi' contains a reference to 'src/pc_wifi_drv' as
+well as to 'raw/pc_wifi_firmware'. The 'src/pc_wifi_drv' recipe could be split
+into 'src/wifi_drv' and 'src/pc_wifi' to accommodate referencing the driver
+binary from other different driver libraries, e.g. USB or even SDIO on x86-based
+tablets, but is left for future endeavors.
+
+All in all we now have three different wireless LAN drivers, one for the
+PinePhone, one for the MNT Reform 2 and one for the PC, that follow the same
+approach.
+
+
+New firmware loading mechanism
+==============================
+
+Additionally to making it easier to enable the driver for new platforms and use
+it from existing ones we also refined how the driver loads its firmware images.
+In the past the driver contained a list of well-known working firmware images
+that needed to be updated every now and then when new devices where enabled or
+the firmware version changed due to a Linux update. In particular using the
+driver with new devices was cumbersome as the driver itself already supported
+the device most of the time but it solely missed the corresponding entry in the
+firmware list and adding that required recompiling the driver.
+
+; [image wifi_firmware_loading]
+
+So instead, the driver now loads the firmware images via its local VFS rather
+than requesting a predetermined ROM module. Since the platform-specific driver
+library has no direct access to the VFS - after all both worlds are
+intentionally isolated from each other - a request/response interface was
+added. The library submits a request to the _wifi_drv_ binary and will suspend
+its execution waiting for the completion of the request. The binary will
+acquire the firmware image and notify the driver library in return. Streamling
+the firmware acquisition in such a manner allows for the using the original
+probing mechanism available in Linux. Rather than following the firmware list
+the actual driver code is now free to probe as it sees fit, exactly pointing to
+the required uAPI revision in case the firmware is missing.
+
+The following snippets illustrates the configuration of the driver on the
+PinePhone (omitting any integration related routes for the config ROM as well as
+state and scan reports):
+
+!<start name="wifi_drv" caps="250" priority="-1">
+!  <resource name="RAM" quantum="32M"/>
+!  <config ld_verbose="yes">
+!    <report mac_address="true"/>
+!    <libc stdout="/dev/log" stderr="/dev/log"
+!          rtc="/dev/rtc" rng="/dev/urandom"/>
+!    <vfs>
+!      <dir name="dev"> <log/> <null/> <rtc/>
+!        <jitterentropy name="random"/>
+!        <jitterentropy name="urandom"/>
+!        <wifi/>
+!      </dir>
+!      <dir name="firmware">
+!        <tar name="wifi_firmware.tar"/>
+!      </dir>
+!    </vfs>
+!  </config>
+!  <route>
+!    <service name="ROM" label="wifi.lib.so">
+!      <parent label="a64_wifi.lib.so"/>
+!    </service>
+!    <service name="ROM" label="wifi_firmware.tar">
+!      <parent label="a64_wifi_firmware.tar"/>
+!    </service>
+!    <service name="ROM" label="dtb">
+!      <parent label="wifi-pinephone.dtb"/>
+!    </service>
+!    […]
+!    <any-services> <parent/> <any->child/> </service>
+!  </route>
+!</start>
+
+In this configuration the firmware images are provided as _.tar_ archive that
+itself is requested via a ROM connection and that is how it is currently
+integrated into Sculpt. The driver will always look into the '/firmware'
+directory to access any firmware related files. How the directory is populated
+is up to the integrator of the driver.
+
+At the same time we got rid of the firmware library that got used in the past
+to assemble the firmware image files. It is superseded by using the raw depot
+archive, e.g., 'raw/pc_wifi_firmware'.
+
+
+Additional device support and updates
+=====================================
+
+We updated the firmware images to the most recent ones supported by the
+currently used with Linux version 6.1.20.
+
+We enabled the ath9k PCIe driver that can by used on the MNT Reform 2 and the
+PC. As the ath9k device [168c:0034] used to test the driver on the PC exhibited
+problems when using MSIs we disable their usage in the 'pci_decoder'. Similar
+treatment might be necessary other ath9k-based device we have not yet tested.
+
+The device support in the 'rtlwifi' driver got extended by additionally
+enabling support for RTL8192CE devices.
+
+Furthermore we updated the _wpa_supplicant_ to its latest v2.10 release and
+introduce preliminary support for joining networks secured by WPA3.
 
 
 Base framework and OS-level infrastructure
@@ -752,7 +753,7 @@ Audio-driver update
 
 We updated the ported audio driver for HDA devices to OpenBSD version 7.3.
 The functional changes are minimal but the new version allows for the driver
-being used on more recent PC platforms and recognizes newer codecs.
+being used on more recent PC platforms and recognizes more codecs.
 
 
 Platforms
