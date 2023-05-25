@@ -520,28 +520,12 @@ correct credentials in order to re-accomplish access to the container.
 Custom virtual machine monitor on ARM
 =====================================
 
-; @skalk
-
-commit cb3b6c4b8859ea27df751f66074bb9e5b41da673
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Mar 13 11:37:16 2023 +0100
-
-    vmm: distinguish virtio interrupts
-    
-    VirtIO device models can assert interrupts to notify about
-    buffer and configuration changes. By now, we could only assert
-    buffer notification interrupts, but no configuration changes.
-    The latter is needed, e.g. to notify about GPU mode changes.
-    
-    Ref genodelabs/genode#4783
-
-commit 61454178c0d8f455207f9efaaaa6aa393e354dfe
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Mar 13 11:52:51 2023 +0100
-
-    vmm: support mode change in virtio gpu
-    
-    Fix genodelabs/genode#4783
+With the last release interactive graphical VMs got introduced on ARM systems.
+Genode's custom virtual machine monitor was enhanced by VirtIO device models for
+input events and GPU. However, dynamic changes of the virtual GPU's framebuffer
+resolution weren't handled appropriatedly.
+With this release these restrictions got removed. Now, you are able to resize
+the window of a VM without any trouble.
 
 
 NetBSD rump kernel on RISC-V
@@ -799,16 +783,27 @@ Device drivers
 Linux device driver environment updated to Linux 6.1.20
 =======================================================
 
-; @skalk
+According to the roadmap, the update of Genode's Linux device driver environment
+to a more recent 6.x Linux version was planned for release 23.08. Now, we
+decided to bring this update forward.
 
-commit 2269f42e1757a031609b334707ef5aa9f5d1d388
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Mar 23 11:20:43 2023 +0100
+Not all drivers dependent on this special runtime got updated at once. The
+existing drivers for the Allwinner and i.MX 8MQ SoC still use older 5.x Linux
+kernel versions as base. However, the Linux device driver environment was
+tweaked carefully to support a range of Linux kernel versions from 5.11 till
+6.1.20.
 
-    lx_emul: update Linux port to 6.1.20
-    
-    Fix genodelabs/genode#4798
+Beside the Wireguard port to Genode, the following ported drivers already use
+the latest Linux kernel 6.1.20 version:
 
+* Zynq SD-card driver
+* PCI Wifi driver for i.MX 8MQ
+* all PC drivers (USB, Wifi, Intel display)
+
+While doing the update work, we investigated a more sustainable link in between
+the Linux kernel drivers for USB and display drivers (DRM/KMS) one the one hand,
+and the Genode API on the other. The outcome is explained in the upcoming two
+sections.
 
 Intel display driver
 ====================
@@ -827,95 +822,22 @@ Date:   Fri Mar 24 16:01:48 2023 +0100
 USB
 ===
 
-; @skalk
-
-commit 3c45f5c7ab6e2c15e22dcaef05dbee0fc81edc49
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Mar 23 16:45:12 2023 +0100
-
-    usb: support 32 in-flight packets
-    
-    - move metadata specific to isochronous transfers from the descriptor
-      into the content of USB-session packets
-    - restore support for 32 in-flight packets in the USB C API
-    
-    Fixes #4749
-
-commit bcc454aa8908e754f3d1e522b0ae4cfb193a481f
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Apr 27 11:37:53 2023 +0200
-
-    drivers/usb_block: treat SYNC as barrier
-    
-    The commit implements the SYNC and TRIM as successful NOP, while
-    the former is handled as an barrier to all other out-standing
-    requests.
-    
-    Fixes #4825.
-
-commit 19e2b5b8b2f1a3ec4c02a3904f875dbf0c2fabb5
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Apr 20 16:17:05 2023 +0200
-
-    usb_net_drv: ensure freeing packets in destructor
-    
-    Ref genodelabs/genode#4795
-
-commit f079d1f7c3a2087f96376cc42645a1808e8a79cb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Apr 20 16:17:20 2023 +0200
-
-    usb_hid_drv: ensure freeing packets in destructor
-    
-    Ref genodelabs/genode#4795
-
-commit 97e3572844bd8aabf91f83be3f7fc96b2d06121f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Apr 18 11:51:41 2023 +0200
-
-    lx_emul: use devio API for USB driver operations
-    
-    Fix genodelabs/genode#4795
-commit 19e2b5b8b2f1a3ec4c02a3904f875dbf0c2fabb5
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Apr 20 16:17:05 2023 +0200
-
-    usb_net_drv: ensure freeing packets in destructor
-    
-    Ref genodelabs/genode#4795
-
-commit f079d1f7c3a2087f96376cc42645a1808e8a79cb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Apr 20 16:17:20 2023 +0200
-
-    usb_hid_drv: ensure freeing packets in destructor
-    
-    Ref genodelabs/genode#4795
-
-commit 97e3572844bd8aabf91f83be3f7fc96b2d06121f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Apr 18 11:51:41 2023 +0200
-
-    lx_emul: use devio API for USB driver operations
-    
-    Fix genodelabs/genode#4795
-
-commit c4a723135752ab5b0531476574cf1f0652d305f5
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed May 3 17:23:25 2023 +0200
-
-    (allwinner) a64_usb_host_drv: use devio API for USB
-    
-    Ref genodelabs/genode#4795
-
-commit 5bdd80412cc84e4703d38582b98ad8336e29fedb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed May 3 14:25:56 2023 +0200
-
-    (imx) imx8mq_usb_host_drv: use devio API for USB
-    
-    Ref genodelabs/genode#4795
-
+Connecting different USB clients to an USB host controller driver is a crucial
+task anyway. When using a Linux kernel driver port it becomes error-prone
+quickly, because the USB driver API in the Linux kernel is complex and contains
+some semantic dependencies, for instance regarding synchronization, which are
+not always obvious.
+However, the Linux kernel offers an USB device I/O API to the user-land that is
+used for instance by the libusb. This API has to guard the USB subsystem against
+wrong usage, and implements the necessary semantics regarding synchronization
+and dynamic changes of clients and devices.
+In the past we encountered repeatedly corner-case issues, if clients or devices
+vanished and appeared heavily. For the sake of robustness we decided to re-new
+our internal linking in between the Genode USB API and Linux to use the
+user-level device I/O API of the latter.
+Moreover, we extended the capacity of USB packets in-flight that can be handled
+by the controller in parallel to 32, to enhance the throughput for some USB
+devices.
 
 NVMe storage
 ============
