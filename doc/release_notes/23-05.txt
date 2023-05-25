@@ -724,58 +724,35 @@ devices.
 NVMe storage
 ============
 
-; @cnuke
+First we added 'host-memory-buffer' (HMB) support to the driver, which is a
+performance optimization for NVMe devices that do not make use of a DRAM
+cache for its operatinal data.
 
-commit ae0e0c118ea07eca66022d8b2cca2d50594a62c3
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Sun Nov 13 20:10:43 2022 +0000
+The amount of memory used for the HMB can be set by adding the 'max_hmb_size'
+attribute to the '<config>' node of the driver. This value is checked against
+the constraints imposed by the device. Should the value be less than the
+minimal required amount of memory it will not be used and a warning is issued.
+On the other hand, if the specified value is larger than the preferred amount
+of memory as favored by the device it will be capped to that instead.
 
-    nvme_drv: add support for host-memory-buffer
-    
-    This commit introduces support for the HMB feature and will setup the
-    buffer during start-up. The host-memory-buffer (HMB) feature is mostly
-    used on NVMe devices that do not make use of an DRAM cache to store its
-    translation tables amongst other operational data. Not using HMB can
-    impair the performance on such devices.
-    
-    The memory is allocated in 2 MiB chunks of DMA-capable memory and its
-    total size in bytes is configurable via the 'hmb_size' config attribute.
-    The driver always checks the minimal and preferred size of the HMB and
-    issues a warning in case it is not enabled via the configuration.
-    Moreover, if the configured size is less than the minimal amount
-    required by the device the HMB is not configured at all and a warning
-    is issued also. If the configured size is more than the preferred size
-    it will be capped to that amount.
-    
-    Fixes #4715.
+Naturally, when using the HMB, the required RAM quota of the driver component
+increases by that amount.
 
-commit 280724e6b5b68e32135b40632ff44c10581d6d3e
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Apr 28 17:38:10 2023 +0200
-
-    nvme_drv: read proper FLBAS value
-    
-    Bit 0:3 indicate which of the (up to) 16 supported LBA formats is
-    used for this namespace. Instead of only looking at those bits the
-    driver looked at the complete 0:7 bits. Those, however, also include
-    information on how metadata may be transferred. That leads to using
-    the wrong index for reading the LBA format.
-    
-    Fixes #4832.
+Secondily we fixed a problem detecting the block size (LBA format) of a given
+namespace. The lower 4 bits of the 'FLABS' register indicate which of the
+(up to) 16 supported LBA formats is used by the namespace. However, instead of
+only making use of those bits the driver looked at whole register that also
+includes other information. That led to using the wrong index for reading the
+LBA format and on certain devices rendered the driver unsable as the assumed
+block size was wrong.
 
 
 Audio-driver update
 ===================
 
-; @cnuke
-
-commit 1b552d594b6591874db83ba7236b65cb39dda0e2
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu May 4 14:25:34 2023 +0200
-
-    dde_bsd: update audio driver to OpenBSD 7.3
-    
-    Fixes #4857.
+We updated the ported audio driver for HDA devices to OpenBSD version 7.3.
+The functional changes are minimal but the new version allows for the driver
+being used on more recent PC platforms and recognizes newer codecs.
 
 
 Platforms
