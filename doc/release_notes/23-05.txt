@@ -15,20 +15,45 @@
 Goa tool updated to Sculpt OS 23.04, initial support for Rust
 #############################################################
 
-; @jschlatow, @ssumpf, @atopia
+Last month, we released Sculpt OS 23.04 for PC and PinePhone. The new release
+comes with various
+[http://genodians.org/nfeske/2023-05-11-sculpt-os - usability improvements]
+such as presets and on-target system updates.
 
-; Suggested storyline:
-; - Sculpt for both PC and mobile (link to "What's new" article, screenshot
-;   of mobile UI)
+; Screenshot(s) mobile UI
+
+In particular, with Sculpt OS 23.04 running on the PinePhone, we have carved out
+the base for hosting mobile apps on a Genode-based system. Yet, there are
+only very few apps available right now. Since an OS is of no practical use
+without apps, this urgently called for an SDK to simplify (mobile) app
+development. After careful investigation, we opted for porting the
+Ubuntu-Touch-UI toolkit to Genode and integrate it into Goa (Section
+[Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode]),
+our streamlined workflow tool for application development.
+In addition, we integrated initial support for Rust's _cargo_ to make Goa
+palatable to a broader developer audience (Section [Initial Rust support]).
+
+The growing attention of the Goa tool prompted us to move it under the umbrella
+of Genode Labs as we are increasing our development and maintenance efforts for
+the tool. Aligned with the Sculpt release, the Goa tool has been updated with
+the corresponding depot archive versions.
+With this Genode release, we put a cherry on top and added bash completion to
+improve the user experience even further. Having Goa installed, bash completion
+is enabled by the following commands:
+
+! goa update-goa master
+! GOA_DIR=$(realpath $(which goa) | sed s#bin/goa##)
+! echo "${GOA_DIR}/share/bash-completion/goa" >> ~/.bashrc
+
+:Goa tool:
+
+  [https://github.com/genodelabs/goa/]
 
 
-Mobile apps
-===========
+Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
+==========================================================================
 
-With most of the essential components to run Genode on the PinePhone in place,
-the question arises of how to handle application development on Genode. Because
-Genode Labs is a very small team, we are not able to handle this task on our
-own. While writing a system clock, might be fun, it is not our fundamental
+While writing a system clock, might be fun, it is not our fundamental
 expertise. Therefore, we have looked into ways of supporting established
 open-source SDKs for app development on Genode. We investigated two possible
 options in depth, namely Ubuntu Touch's UI toolkit now called
@@ -36,16 +61,9 @@ options in depth, namely Ubuntu Touch's UI toolkit now called
 [https://docs.sailfishos.org/Tools/Sailfish_SDK - Sailfish SDK]. We have tried
 to port applications for both stacks and after many iterations settled with the UI
 toolkit. The full story can be read
-[https://docs.sailfishos.org/Tools/Sailfish_SDK - here]. Therefore, a port of
+[http://genodians.org/ssumpf/2023-05-06-ubunutu_ui - here]. Therefore, a port of
 the Ubuntu UI toolkit is available on Genode right now and support for it has been
-added to the Goa tool (Section
-[Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode])
-which hopefully makes it fairly easy to develop or port apps on Genode's Linux
-version and be able to deploy them on the PinePhone.
-
-
-Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
-==========================================================================
+added to the Goa tool.
 
 Writing an app for the PinePhone using the Goa tool should be a straight forward
 experience:
@@ -78,10 +96,13 @@ experience:
 Examples using QML, Qt5, and C++ can be found
 [https://github.com/ssumpf/goa-projects - here]
 
-; - Leverage Goa -> moving the tool under the umbrella of Genode Labs
-; - Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
-;   (link to Sebastian's SDK article)
-; - Broadening the developer audience by integrating Rust's cargo with Goa
+
+Initial Rust support
+====================
+
+; @atopia
+
+
 
 
 Uniform Wifi stack across PC and ARM platforms
