@@ -27,7 +27,15 @@ using namespace Core;
 seL4_Word Untyped_memory::smallest_page_type() { return seL4_X86_4K; }
 
 
-void Platform::init_sel4_ipc_buffer() { }
+void Platform::init_sel4_ipc_buffer()
+{
+	/*
+	 * Setup tls pointer such, that it points to the (kernel created) core
+	 * main thread IPC buffer. The fs register is used in seL4_GetIPCBuffer().
+	 */
+	seL4_BootInfo const &bi = sel4_boot_info();
+	seL4_SetTLSBase((unsigned long)&bi.ipcBuffer);
+}
 
 
 long Platform::_unmap_page_frame(Cap_sel const &sel) {
