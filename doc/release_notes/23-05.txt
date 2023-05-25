@@ -20,7 +20,64 @@ Goa tool updated to Sculpt OS 23.04, initial support for Rust
 ; Suggested storyline:
 ; - Sculpt for both PC and mobile (link to "What's new" article, screenshot
 ;   of mobile UI)
-; - Mobile apps -> growing need for SDK
+
+
+Mobile apps
+===========
+
+With most of the essential components to run Genode on the PinePhone in place,
+the question arises of how to handle application development on Genode. Because
+Genode Labs is a very small team, we are not able to handle this task on our
+own. While writing a system clock, might be fun, it is not our fundamental
+expertise. Therefore, we have looked into ways of supporting established
+open-source SDKs for app development on Genode. We investigated two possible
+options in depth, namely Ubuntu Touch's UI toolkit now called
+[https://lomiri.com - Lomiri] and the
+[https://docs.sailfishos.org/Tools/Sailfish_SDK - Sailfish SDK]. We have tried
+to port applications for both stacks and after many iterations settled with the UI
+toolkit. The full story can be read
+[https://docs.sailfishos.org/Tools/Sailfish_SDK - here]. Therefore, a port of
+the Ubuntu UI toolkit is available on Genode right now and support for it has been
+added to the Goa tool (Section
+[Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode])
+which hopefully makes it fairly easy to develop or port apps on Genode's Linux
+version and be able to deploy them on the PinePhone.
+
+
+Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
+==========================================================================
+
+Writing an app for the PinePhone using the Goa tool should be a straight forward
+experience:
+
+* Since the UI toolkit depends on Qt5 add "genodelabs/api/qt5" to your
+  _used_apis_ [http://genodians.org/nfeske/2019-11-25-goa - file]
+
+* Add "ssumpf/pkg/ubuntu_ui_toolkit" to your _archives_
+  [http://genodians.org/nfeske/2019-11-25-goa - file] to have the UI toolkit
+  available within your package
+
+* In order to have your QML code within your packet installed, add
+  "<packet-name>.tar: install/" to your _artifacts_
+  file [http://genodians.org/nfeske/2019-11-25-goa]
+
+* Configure your _runtime_
+  [http://genodians.org/nfeske/2019-12-19-goa-unix-terminal - file]
+
+* Use
+  ! goa run
+  to execute your scenario on Linux for development
+
+* Use
+  ! goa build --arch arm_v8a
+  in order to build for the PinePhone
+
+* [http://genodians.org/nfeske/2020-01-16-goa-publish - Publish] your packet
+  ! goa publish --depot-user john --depot-overwrite
+
+Examples using QML, Qt5, and C++ can be found
+[https://github.com/ssumpf/goa-projects - here]
+
 ; - Leverage Goa -> moving the tool under the umbrella of Genode Labs
 ; - Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
 ;   (link to Sebastian's SDK article)
@@ -420,18 +477,9 @@ Date:   Mon Mar 13 11:52:51 2023 +0100
 NetBSD rump kernel on RISC-V
 ============================
 
-; @ssumpf
-
-commit e27737a0a5d365892558e34550b87552150f2d31
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Mar 29 12:43:50 2023 +0200
-
-    dde_rump: add RISC-V support
-    
-    This commit adds RISC-V file-system support through the backport
-    originally provided by ARMv8.
-    
-    fixes #4800
+With release 23.05 we have added RISC-V to our port of the
+[https://wiki.netbsd.org/rumpkernel - rump kernel].
+This enables RISC-V based devices to have file-system access on Genode.
 
 
 Strengthened fault tolerance of on-target package management
@@ -870,17 +918,9 @@ Principle x86 virtualization support (on Qemu)
 Boot-time RAM detection on the PinePhone
 ----------------------------------------
 
-; @ssumpf
-
-commit 8c6f41915c4a0abfad1147b222ce8f42ade8cf53
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Apr 26 22:04:20 2023 +0200
-
-    bootstrap/pine_a64lts: detect RAM size
-    
-    Read and parse values from DRAM controller programmed by U-Boot.
-    
-    fixes genodelabs/genode-allwinner#18
+On the PinePhone we implemented dynamic detection of the system RAM size by
+parsing the values of the DRAM controller as programmed by U-Boot. This way, 2
+and 3 GB models of the PinePhone are supported by Genode.
 
 
 Updated seL4 microkernel
