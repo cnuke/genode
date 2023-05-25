@@ -286,82 +286,36 @@ Base framework and OS-level infrastructure
 New tool chain based on GCC 12.3, C++20 enabled by default
 ==========================================================
 
-; @cproc
+Like about every two years, we updated our tool chain to recent
+versions again, this time in particular to GCC 12.3.0,
+binutils 2.40 and GDB 13.1, and we also enabled C++20 by default.
 
-commit f223191dfc5cb1076ee67661d03b59a58b786d44
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Mon Apr 3 14:21:01 2023 +0200
+A noticeable change with GCC 12 is that auto-vectorization with
+the -ftree-vectorize option is now enabled by default when
+building with the -O2 optimization level. This has the effect
+that SIMD instructions are generated more often and we had to
+adapt the code base accordingly (for example by making sure that
+memory allocations in ported Linux drivers have a suitable
+address alignment and by saving and restoring ARMv8 FPU registers
+in the dynamic linker).
 
-    binutils: update to version 2.40
-    
-    Issue #4827
+In addition to that, GCC 12 reports new errors which we
+had to fix at various places, the most common ones being:
 
-commit 445398a7ddfeaa85b835cbde430f1c8d37843d37
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Mon May 8 10:18:46 2023 +0200
+* deprecated arithmetic between different enumeration types
 
-    gdb: update to version 13.1
-    
-    Issue #4827
+* deprecated use of ++/-- operators with volatile variables
 
-commit b602b52f2986f13d2fdddec5e6af411aefaf9c35
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Wed Apr 26 18:30:01 2023 +0200
+* undefined reference to 'strlen` inside custom implementations
+  of 'strlen'-like functions, related to the
+  -ftree-loop-distribute-patterns option
 
-    tool_chain: update gprbuild to version 23.0.0
-    
-    Issue #4827
-
-commit b6ed05df0c4f819b17a142c589faaf55bd457b52
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue May 9 12:08:32 2023 +0200
-
-    gcc: update to version 12.3.0
-    
-    Issue #4827
-
-commit 1c4f443e61b7b4cee4251e5620be0b025de23857
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue May 9 12:09:44 2023 +0200
-
-    stdcxx: update to version 12.3.0
-    
-    Issue #4827
-
-commit ce39c21383be2a0dbc18681a81a8eb5ddb388f64
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue May 9 12:10:12 2023 +0200
-
-    gcov: update to version 12.3.0
-    
-    Issue #4827
-
-commit c32ded99dcbb55becc3261d375283a03ee54ecda
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue May 9 12:10:41 2023 +0200
-
-    sanitizer: update to version 12.3.0
-    
-    Issue #4827
-
-commit 4c2a1c009a258670025cc19c535ad3b1353cbd62
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Mon May 15 14:29:26 2023 +0200
-
-    Enable -std=gnu++20 by default
-    
-    Issue #4827
-
-; Maybe highlight the typical build issues?
-; (arithmetics with enums, incrementing volatile variables, ...)
-
-commit 54462dff74ec1e872075236c4064f01ef3770cb5
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Sun May 21 08:24:24 2023 +0200
-
-    binutils: support Genode lib name patterns with '-l' option
-    
-    Issue #4827
+As an extra feature, we added the Genode library name patterns
+to 'ld', so that the '-l' option now can find the corresponding
+libraries. This is useful when 'configure' checks of GNU
+applications try to detect dependency libraries by linking
+a test program with this option and removes the need to create
+dummy libraries as a workaround.
 
 
 API changes
@@ -594,80 +548,22 @@ Libraries and applications
 Qt5 reorg
 =========
 
-; @cproc
+When the Goa tool is used to build an application, all libraries
+of the used API packages get linked to the application and the
+single Qt5 API package with big libraries like QtWebEngine was
+a bit too much for simple Qt applications. For this reason we
+split the Qt5 API into smaller packages according to the
+corresponding Qt modules.
 
-commit 80038ad936fdaa0a57cadf864f15c67ef4102a3f
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Mar 15 09:12:19 2023 +0100
+As preparation for the release of a binary version of the
+Qt5 host tools, we also reduced the external dependencies of
+these tools for improved compatibility with different host
+systems and changed their install location to the location of
+the other Genode host tools.
 
-    qt5: split qt5 api
-    
-    Split api into 'qt5', 'qt5_qml', and 'qt5_webkit'. This makes it
-    possible to link Qt5 apps more fine grained. Needed by Goa.
-    
-    fixes #4793
-
-commit b7d1d8d09173eb6e136f22c323acc2f9e5ac1de4
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Fri Apr 21 15:27:22 2023 +0200
-
-    qt5: create 'bin' directory in test run scripts
-    
-    Fixes #4822
-
-commit 5080e88a7af6fd7cd9443f4edb401896bff2b217
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Fri Apr 21 15:27:45 2023 +0200
-
-    qt5: split api recipes with Qt module granularity
-    
-    Fixes #4823
-
-commit c9cb2b9de2d9a245623610bf193f760ca685c883
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Thu May 11 15:21:51 2023 +0200
-
-    qt5: reduce external dependencies of host tools
-    
-    Fixes #4868
-
-commit a15c6e0fd6c0e173b218e90d2ec0fd65d5c7f0e5
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue May 16 06:58:45 2023 +0200
-
-    qt5: install host tools in /usr/local/genode/tool/23.05
-    
-    Issue #4868
-
-commit b34cc1a698c71b43680691ffdc05f8fe11fba343
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Mar 16 09:50:41 2023 +0100
-
-    (world) qt5: split qt5 api
-    
-    Adjust to api split into 'qt5', 'qt5_qml', and 'qt5_webkit'.
-    
-    issue genodelabs/genode#4793
-
-
-commit 9efcf284dfef11213a9cd39987bd8b09fae73931
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Mar 16 15:22:40 2023 +0100
-
-    (world) receipe: meta package for ubuntu-ui-toolkit
-    
-    This pulls in all dependencies for the Ubuntu UI toolkit, including a
-    runtime with the required ROMs.
-    
-    fixes #318
-
-commit 23ba08b885825fc5e7a3abd31c5f08abda4c2b43
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Fri Apr 21 20:27:38 2023 +0200
-
-    (world) qt5: split api recipes with Qt module granularity
-    
-    Fixes #323
+And finally, we added a 'ubuntu-ui-toolkit' meta package in the
+genode-world repository which pulls in all dependencies for the
+Ubuntu UI toolkit, including a runtime with the required ROMs.
 
 
 WireGuard improvements
@@ -755,26 +651,9 @@ Date:   Tue May 16 19:30:56 2023 +0200
 Removed ports of pcre16 and icu libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-; @cproc
-
-commit 7fcd2f64db61ccdd31ad2e91b1cdeb6d535c13dd
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Fri May 19 06:27:39 2023 +0200
-
-    libports: remove pcre16
-    
-    Fixes #4903
-
-commit dffdc5817f4feef7f259ca6e80bebe8ff57c87e3
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue May 16 08:17:53 2023 +0200
-
-    libport: remove icu library
-    
-    This was required by QtWebKit in the past, the QtWebEngine ships its own
-    version. No other code depends on this. Revive if needed.
-    
-    fixes #4870
+The pcre16 and icu libraries had been used by Qt5 in the
+past, but were not used anymore since the last Qt updates,
+so we removed them from the 'libports' repository.
 
 
 Device drivers
