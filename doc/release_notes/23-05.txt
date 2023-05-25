@@ -377,7 +377,56 @@ covered by the _util/dictionary.h_ now.
 Towards kernel-agnostic DMA protection
 ======================================
 
-; @jschlatow
+As sketched in our [https://genode.org/about/road-map - road map], we plan
+having a feature-complete PC version of Sculpt OS based on base-hw by the end of
+this year. One of the reasons why we are still sticking to base-nova for the PC
+version is the fact that we are relying on NOVA's IOMMU support. One necessary
+step to decouple Sculpt OS from base-nova is to integrated the IOMMU handling
+into the platform driver.
+
+Motivated by our
+[https://genode.org/documentation/release-notes/23.02#Custom_IP_block_for_DMA_protection_on_AMD_Xilinx_Zynq - custom IP block for DMA protection on AMD/Xilinx Zynq],
+we integrated the notion of IOMMU-like devices into the platform driver with
+this release as a preparatory step. The platform driver automatically acquires
+known IOMMU-like devices for itself by looking at the device types. Other
+devices can then reference these devices by using '<io_mmu>' nodes. This is best
+illustrated by looking at the devices ROM for the Zynq's dma_guard IP block:
+
+! <devices>
+!
+!   <device type="dma_guard" name="dma_guard_0">
+!     <!-- [...] -->
+!   </device>
+!
+!   <device type="axi_dma" name="axi_dma_0">
+!     <io_mmu name="dma_guard_0"/>
+!     <!-- [...] -->
+!   </device>
+!
+! </devices>
+
+This tells the platform driver that, whenever a DMA buffer is allocated/freed
+for the session owning the 'axi_dma_0' device, the 'dma_guard_0' must be
+configured accordingly in order to allow/deny access to the corresponding memory
+ranges. With the structural changes to the platform driver, the support for
+dma_guard devices is simply added by implementing specific 'Io_mmu' and
+'Io_mmu_factory' objects. You can find the code in the _dma_guard.h_ within
+the
+[https://github.com/genodelabs/genode-zynq/blob/master/src/drivers/platform/zynq/dma_guard.h - genode-zynq repo].
+
+For the PC version of the platform driver, we implemented a _kernel_iommu_
+device that still uses device PDs to pass IOMMU configuration to the NOVA kernel.
+The _kernel_iommu_ is automatically instantiated and used as a default for each
+device until we replaced this by a kernel-agnostic implementation in a future
+release.
+
+With these preparations, we paved the way for implementing configuration logic
+for arbitrary IOMMU-like devices within the platform driver. In particular, the
+platform driver has been made capable of managing multiple IOMMU-like devices
+at the same time. However, there is one limitation that comes from the fact that
+DMA buffers are not device-specific but allocated per session: All IOMMU-like
+devices must either operate as MMU (virtual addressing) or as MPU
+(physical addressing).
 
 
 Revision of Genode's custom block-encryption infrastructure
