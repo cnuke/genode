@@ -658,7 +658,7 @@ set default_test_pkgs {
 	test-entrypoint
 	test-expat
 	test-fault_detection
-	test-file_vault_cfg_report
+	test-file_vault_config_report
 	test-fs_packet
 	test-fs_report
 	test-fs_rom_update

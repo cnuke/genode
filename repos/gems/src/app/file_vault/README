@@ -150,8 +150,8 @@ configuration and one Report session for UI reports.
 Further resources
 ~~~~~~~~~~~~~~~~~
 
-The test scripts _gems/recipes/pkg/test-file_vault_cfg_report_,
-_gems/run/file_vault_cfg_report.run_, and _gems/run/file_vault_cfg_report.run_
+The test scripts _gems/recipes/pkg/test-file_vault_config_report_,
+_gems/run/file_vault.run_, and_gems/run/file_vault_config_report.run_
 provide examples on how to manually integrate the file vault. The latter can
 also be used for analyzing and developing the vault - when targeting native
 Linux execution even with a persistent storage back-end. The file vault was
