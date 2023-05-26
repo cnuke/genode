@@ -99,9 +99,37 @@ Examples using QML, Qt5, and C++ can be found
 Initial Rust support
 ====================
 
-; @atopia
+Actually, the Genode OS Framework had support for the Rust programming language
+before, contributed to Genode release 16.05 by Waylon Cude. However, as an
+on-off contribution it never got traction and the support was eventually
+removed with release 20.05.
+While the original support focussed on some low-level runtime libraries and
+integration into the Genode build system, our new attempt has a somewhat
+different objective, which is to facilitate the use of the existing Rust
+ecosystem on the Genode OS Framework. The removal note already envisioned a
+possible comeback using the Goa tool and Rust's cargo build system, for which
+we have added initial support with this release.
 
+Our objective led to the following guidelines for Rust integration:
 
+# Make use of the native build system, cargo, to make the existing ecosystem
+  accessible.
+# Aim for a seamless integration into the Genode OS Framework using the Goa
+  build tool.
+# Instead of introducing our own Genode
+  [https://doc.rust-lang.org/nightly/rustc/platform-support.html - target triples], leverage Genode's FreeBSD based C library interface to use existing
+  supported standard library targets like 'x86_64-unknown-freebsd'.
+# Strive to use the upstream toolchain, or at least stay as close to upstream
+  as possible.
+
+While we largely succeeded in following these guidelines, our initial proof of
+concept support relies on marginally adapted toolchain to work around missing
+support for versioned library symbols in our linker. We are exploring avenues
+to overcome these limitations and expand the support to cover more complex use
+cases in the next release.
+
+To learn more about our Rust support, head over to the
+[https://genodians.org/atopia/2023-05-30-bringing-rust-back-to-genode - article on Genodians.org].
 
 
 Uniform Wifi stack across PC and ARM platforms
