@@ -18,6 +18,8 @@
 #include <util/arg_string.h>
 #include <util/xml_generator.h>
 
+#include <os/backtrace.h>
+
 /* OpenSSL includes */
 #include <openssl/sha.h>
 
@@ -1380,6 +1382,7 @@ error("vfs ta: ", __func__, __LINE__);
 						_state = State::NONE;
 						out_count = src.num_bytes;
 error("vfs ta: ", __func__, __LINE__, " ", cr.success, " ", Byte_range { (uint8_t const*)src.start, src.num_bytes });
+Genode::backtrace();
 						return cr.success ? READ_OK : READ_ERR_IO;
 					} catch (...) {
 error("vfs ta: ", __func__, __LINE__);

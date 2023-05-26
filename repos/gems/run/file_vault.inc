@@ -171,7 +171,7 @@ append_if [ui_is config_and_report] config {
 						<ui_config version="step_1_wait"/>
 
 					</inline>
-					<sleep milliseconds="5000"/>
+					<sleep milliseconds="15000"/>
 					<inline>
 
 						<ui_config version="step_2_init" passphrase="abcdefgh"
@@ -179,25 +179,25 @@ append_if [ui_is config_and_report] config {
 						                                 journaling_buf_size="1M"/>
 
 					</inline>
-					<sleep milliseconds="5000"/>
+					<sleep milliseconds="15000"/>
 					<inline>
 
 						<ui_config version="step_3_lock"/>
 
 					</inline>
-					<sleep milliseconds="3000"/>
+					<sleep milliseconds="13000"/>
 					<inline>
 
 						<ui_config version="step_4_bad_unlock" passphrase="0123456789"/>
 
 					</inline>
-					<sleep milliseconds="5000"/>
+					<sleep milliseconds="15000"/>
 					<inline>
 
 						<ui_config version="step_5_good_unlock" passphrase="abcdefgh"/>
 
 					</inline>
-					<sleep milliseconds="3000"/>
+					<sleep milliseconds="13000"/>
 					<inline>
 
 						<ui_config version="step_6_lock"/>

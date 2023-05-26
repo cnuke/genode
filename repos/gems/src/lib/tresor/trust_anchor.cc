@@ -282,6 +282,8 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
 		Read_result const result {
 			file.fs().complete_read(&file, dst, nr_of_read_bytes) };
 
+		error(__func__, ": result: ", (unsigned) result);
+
 		switch (result) {
 		case Read_result::READ_QUEUED:
 		case Read_result::READ_ERR_WOULD_BLOCK:

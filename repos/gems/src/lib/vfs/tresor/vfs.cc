@@ -1063,6 +1063,7 @@ error("vfs_tresor: deinit complete");
 
 		void handle_frontend_request()
 		{
+			// Genode::error(__func__, ":", __LINE__);
 			bool progress { true };
 			while (progress) {
 

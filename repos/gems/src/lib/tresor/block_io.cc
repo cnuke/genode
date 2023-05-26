@@ -467,6 +467,8 @@ void Block_io::_execute_write(Channel &channel,
 		Result const result =
 			_vfs_handle.fs().write(
 				&_vfs_handle, src, nr_of_written_bytes);
+		if (result != Result::WRITE_OK)
+			error("Block_io: ", __func__, ":", __LINE__, " result: ", (unsigned)result);
 
 		switch (result) {
 		case Result::WRITE_ERR_WOULD_BLOCK:

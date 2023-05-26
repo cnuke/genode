@@ -291,6 +291,7 @@ class Vfs_ram::File : public Vfs_ram::Node
 			if (read_len < dst.num_bytes)
 				memset(dst.start + read_len, 0, len - read_len);
 
+			// Genode::error(__func__, ":", __LINE__, ": name: '", name(), "' len: ", len);
 			return len;
 		}
 
@@ -320,6 +321,7 @@ class Vfs_ram::File : public Vfs_ram::Node
 			 */
 			_length = max(_length, at + len);
 
+			Genode::error(__func__, ":", __LINE__, ": name: '", name(), "' len: ", len);
 			return len;
 		}
 
@@ -698,7 +700,7 @@ class Vfs::Ram_file_system : public Vfs::File_system
 			if (!parent)
 				return OPENLINK_ERR_LOOKUP_FAILED;
 
-			char const * const name = basename(path);
+			char const * const name = basename(path);	
 
 			Symlink *link;
 
