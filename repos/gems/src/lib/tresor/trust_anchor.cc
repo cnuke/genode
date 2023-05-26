@@ -210,7 +210,6 @@ void Trust_anchor::_execute_write_operation(Vfs::Vfs_handle   &file,
 	Request &req { channel._request };
 	switch (channel._state) {
 	case Channel::WRITE_PENDING:
-error("ta: ", __func__, __LINE__);
 
 		file.seek(channel._file_offset);
 		channel._state = Channel::WRITE_IN_PROGRESS;
@@ -219,7 +218,6 @@ error("ta: ", __func__, __LINE__);
 
 	case Channel::WRITE_IN_PROGRESS:
 	{
-error("ta: ", __func__, __LINE__);
 		size_t nr_of_written_bytes { 0 };
 
 		Const_byte_range_ptr src {
@@ -307,6 +305,7 @@ error("ta: ", __func__, __LINE__);
 				req._success = true;
 
 			channel._state = Channel::COMPLETE;
+log("1");
 			progress = true;
 			return;
 

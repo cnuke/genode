@@ -1254,6 +1254,50 @@ class Trust_anchor
 		}
 };
 
+using namespace Genode;
+struct Byte_range
+{
+	uint8_t const *ptr;
+	size_t         size;
+
+	void print(Output &out) const
+	{
+		using Genode::print;
+
+		enum { MAX_BYTES_PER_LINE = 64 };
+		enum { MAX_BYTES_PER_WORD = 4 };
+
+		if (size > 0xffff) {
+			class Exception_1 { };
+			throw Exception_1 { };
+		}
+		if (size > MAX_BYTES_PER_LINE) {
+
+			for (size_t idx { 0 }; idx < size; idx++) {
+
+				if (idx % MAX_BYTES_PER_LINE == 0)
+					print(out, "\n  ",
+					      Hex((uint16_t)idx, Hex::PREFIX, Hex::PAD), ": ");
+
+				else if (idx % MAX_BYTES_PER_WORD == 0)
+					print(out, " ");
+
+				print(out, Hex(ptr[idx], Hex::OMIT_PREFIX, Hex::PAD));
+			}
+
+		} else {
+
+			for (size_t idx { 0 }; idx < size; idx++) {
+
+				if (idx % MAX_BYTES_PER_WORD == 0 && idx != 0)
+					print(out, " ");
+
+				print(out, Hex(ptr[idx], Hex::OMIT_PREFIX, Hex::PAD));
+			}
+		}
+	}
+};
+
 
 class Vfs_tresor_trust_anchor::Hashsum_file_system : public Vfs::Single_file_system
 {
@@ -1335,6 +1379,7 @@ error("vfs ta: ", __func__, __LINE__);
 
 						_state = State::NONE;
 						out_count = src.num_bytes;
+error("vfs ta: ", __func__, __LINE__, " ", cr.success, " ", Byte_range { (uint8_t const*)src.start, src.num_bytes });
 						return cr.success ? READ_OK : READ_ERR_IO;
 					} catch (...) {
 error("vfs ta: ", __func__, __LINE__);
@@ -1368,7 +1413,7 @@ error("vfs ta: ", __func__, __LINE__);
 error("vfs ta: ", __func__, __LINE__);
 					return WRITE_ERR_INVALID;
 				}
-error("vfs ta: ", __func__, __LINE__);
+error("vfs ta: ", __func__, __LINE__, " ", Byte_range { (uint8_t const*)src.start, src.num_bytes });
 
 				_trust_anchor.execute();
 				out_count = src.num_bytes;

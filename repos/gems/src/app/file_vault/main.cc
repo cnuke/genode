@@ -942,7 +942,6 @@ void Main::_handle_resizing_fs_query_listing(Xml_node const &node)
 
 void Main::_handle_lock_fs_query_listing(Xml_node const &node)
 {
-log("handle ", node, " ", _state == State::LOCK_WAIT_TILL_DEINIT_REQUEST_IS_DONE);
 	switch (_state) {
 	case State::LOCK_WAIT_TILL_DEINIT_REQUEST_IS_DONE:
 
