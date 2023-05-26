@@ -691,16 +691,21 @@ sections.
 Intel display driver
 ====================
 
-; @alex-ab
-
-commit e1533be6849b26ffab178c52afbbcad4a8a81751
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Fri Mar 24 16:01:48 2023 +0100
-
-    intel/display: replace intel_fbdev with drm/kms
-    
-    Fixes #4806
-
+During the update of dde_linux to the Linux 6.1.20 version, the
+dependency on internal structures of the Intel framebuffer driver (intel_fbdev)
+became a hassle. Although the update was successful finally, we decided to
+remove the direct usage of intel_fbdev in our ported Intel display
+driver, in order to ease future updates. Nevertheless, the same functionality
+of intel_fbdev is required to manage the framebuffer memory to provide a
+working Genode GUI interface by the driver. For that we investigated in the
+usage of the
+[https://www.kernel.org/doc/html/v5.0/gpu/drm-kms.html - Linux DRM/KMS]
+interface, specifically to allocate and manage so called
+[https://www.kernel.org/doc/html/v5.0/gpu/drm-kms.html#dumb-buffer-objects - dumb buffer objects].
+As described in the article, the dumb buffers are a standardized and more
+easy way to make early boot graphics easily possible driven by user tools.
+We adjusted our port along the ioctl's of the dumb buffer functionality to
+manage the framebuffer in our ported display driver.
 
 USB
 ===
@@ -778,6 +783,12 @@ and 3 GB models of the PinePhone are supported by Genode.
 Updated seL4 microkernel
 ========================
 
-; @alex-ab
+With this release we updated the support of the seL4 kernel from 9.0.1 to
+12.1.0 for i.MX6 Sabrelite board and x86_64 PC. The support for 32bit PC got
+removed, since it is unused, and the i.MX7 Sabrelite support got removed,
+since it is not supported by the new seL4 kernel anymore.
 
-
+The updated seL4 kernel requires additional host tools installed,
+namely cmake, ninja and additional python3 modules, jinja2, jschonschema and
+pyfdt. Depending on the distribution the modules are available as distribution
+package or needs to be installed with the python pip3 tool.
