@@ -891,7 +891,7 @@ class Trust_anchor
 			}
 
 			_hash_io_job.construct(*_hash_handle, Util::Io_job::Operation::WRITE,
-			                      _hash_io_job_buffer, 0);
+			                       _hash_io_job_buffer, 0);
 
 			if (_hash_io_job->execute() && _hash_io_job->completed()) {
 				_start_sync_at_hash_io_job();
@@ -1279,30 +1279,37 @@ class Vfs_tresor_trust_anchor::Hashsum_file_system : public Vfs::Single_file_sys
 
 			Read_result read(Byte_range_ptr const &src, size_t &out_count) override
 			{
+error("vfs ta: ", __func__, __LINE__);
 				_trust_anchor.execute();
 
 				if (_state == State::NONE) {
+error("vfs ta: ", __func__, __LINE__);
 					try {
 						bool const ok =
 							_trust_anchor.queue_read_last_hash();
 						if (!ok) {
+error("vfs ta: ", __func__, __LINE__);
 							return READ_ERR_IO;
 						}
 						_state = State::PENDING_READ;
 					} catch (...) {
+error("vfs ta: ", __func__, __LINE__);
 						return READ_ERR_INVALID;
 					}
 
 					_trust_anchor.execute();
+error("vfs ta: ", __func__, __LINE__);
 					return READ_QUEUED;
 				} else
 
 				if (_state == State::PENDING_READ) {
+error("vfs ta: ", __func__, __LINE__);
 					try {
 						Trust_anchor::Complete_request const cr =
 							_trust_anchor.complete_read_last_hash(src);
 						if (!cr.valid) {
 							_trust_anchor.execute();
+error("vfs ta: ", __func__, __LINE__);
 							return READ_QUEUED;
 						}
 
@@ -1310,16 +1317,19 @@ class Vfs_tresor_trust_anchor::Hashsum_file_system : public Vfs::Single_file_sys
 						out_count = src.num_bytes;
 						return cr.success ? READ_OK : READ_ERR_IO;
 					} catch (...) {
+error("vfs ta: ", __func__, __LINE__);
 						return READ_ERR_INVALID;
 					}
 				} else
 
 				if (_state == State::PENDING_WRITE_ACK) {
+error("vfs ta: ", __func__, __LINE__);
 					try {
 						Trust_anchor::Complete_request const cr =
 							_trust_anchor.complete_update_last_hash();
 						if (!cr.valid) {
 							_trust_anchor.execute();
+error("vfs ta: ", __func__, __LINE__);
 							return READ_QUEUED;
 						}
 
@@ -1327,30 +1337,38 @@ class Vfs_tresor_trust_anchor::Hashsum_file_system : public Vfs::Single_file_sys
 						out_count = src.num_bytes;
 						return cr.success ? READ_OK : READ_ERR_IO;
 					} catch (...) {
+error("vfs ta: ", __func__, __LINE__);
 						return READ_ERR_INVALID;
 					}
 				}
 
+error("vfs ta: ", __func__, __LINE__);
 				return READ_ERR_IO;
 			}
 
 			Write_result write(Const_byte_range_ptr const &src, size_t &out_count) override
 			{
+error("vfs ta: ", __func__, __LINE__);
 				_trust_anchor.execute();
 
 				if (_state != State::NONE) {
+error("vfs ta: ", __func__, __LINE__);
 					return WRITE_ERR_IO;
 				}
 
+error("vfs ta: ", __func__, __LINE__);
 				try {
 					bool const ok = _trust_anchor.queue_update_last_hash(src);
 					if (!ok) {
+error("vfs ta: ", __func__, __LINE__);
 						return WRITE_ERR_IO;
 					}
 					_state = State::PENDING_WRITE_ACK;
 				} catch (...) {
+error("vfs ta: ", __func__, __LINE__);
 					return WRITE_ERR_INVALID;
 				}
+error("vfs ta: ", __func__, __LINE__);
 
 				_trust_anchor.execute();
 				out_count = src.num_bytes;

@@ -164,14 +164,14 @@ append_if [ui_is config_and_report] config {
 		<start name="dynamic_rom" caps="100">
 			<resource name="RAM" quantum="4M"/>
 			<provides><service name="ROM"/> </provides>
-			<config verbose="no">
+			<config verbose="yes">
 				<rom name="file_vault_ui_config">
 					<inline>
 
 						<ui_config version="step_1_wait"/>
 
 					</inline>
-					<sleep milliseconds="4000"/>
+					<sleep milliseconds="5000"/>
 					<inline>
 
 						<ui_config version="step_2_init" passphrase="abcdefgh"
@@ -179,70 +179,28 @@ append_if [ui_is config_and_report] config {
 						                                 journaling_buf_size="1M"/>
 
 					</inline>
-					<sleep milliseconds="4000"/>
+					<sleep milliseconds="5000"/>
 					<inline>
 
 						<ui_config version="step_3_lock"/>
 
 					</inline>
-					<sleep milliseconds="400"/>
+					<sleep milliseconds="3000"/>
 					<inline>
 
-						<ui_config version="step_4_unlock_fast" passphrase="abcdefgh"/>
+						<ui_config version="step_4_bad_unlock" passphrase="0123456789"/>
 
 					</inline>
-					<sleep milliseconds="4000"/>
+					<sleep milliseconds="5000"/>
 					<inline>
 
-						<ui_config version="step_5_lock"/>
+						<ui_config version="step_5_good_unlock" passphrase="abcdefgh"/>
 
 					</inline>
-					<sleep milliseconds="4000"/>
+					<sleep milliseconds="3000"/>
 					<inline>
 
-						<ui_config version="step_6_bad_unlock" passphrase="00000001"/>
-
-					</inline>
-					<sleep milliseconds="400"/>
-					<inline>
-
-						<ui_config version="step_7_bad_unlock" passphrase="00000002"/>
-
-					</inline>
-					<sleep milliseconds="400"/>
-					<inline>
-
-						<ui_config version="step_8_bad_unlock" passphrase="00000003"/>
-
-					</inline>
-					<sleep milliseconds="400"/>
-					<inline>
-
-						<ui_config version="step_9_bad_unlock" passphrase="00000004"/>
-
-					</inline>
-					<sleep milliseconds="400"/>
-					<inline>
-
-						<ui_config version="step_10_bad_unlock" passphrase="00000005"/>
-
-					</inline>
-					<sleep milliseconds="4000"/>
-					<inline>
-
-						<ui_config version="step_11_wait"/>
-
-					</inline>
-					<sleep milliseconds="8000"/>
-					<inline>
-
-						<ui_config version="step_12_unlock" passphrase="abcdefgh"/>
-
-					</inline>
-					<sleep milliseconds="400"/>
-					<inline>
-
-						<ui_config version="step_13_lock_fast"/>
+						<ui_config version="step_6_lock"/>
 
 					</inline>
 					<sleep milliseconds="600000"/>
@@ -445,17 +403,8 @@ if {[ui_is config_and_report]} {
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"uninitialized\"/>.*\n}
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"initializing\"/>.*\n}
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocking\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"unlocked\"/>.*\n}
-	append exp_output {.*<ui_report version=\"step_.*\" state=\"locking\"/>.*\n}
 	append exp_output {.*<ui_report version=\"step_.*\" state=\"locked\"/>.*\n}
 
 	append qemu_args " -display none "

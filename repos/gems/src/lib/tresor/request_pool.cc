@@ -538,6 +538,7 @@ void Request_pool::_execute_deinitialize(Channel &channel, Index_queue &indices,
 {
 	switch (channel._state) {
 	case Channel::State::SUBMITTED:
+error("tresor: deinit in progress");
 
 		channel._prim = {
 			.op     = Channel::Generated_prim::Type::READ,
@@ -560,6 +561,7 @@ void Request_pool::_execute_deinitialize(Channel &channel, Index_queue &indices,
 			throw Deinitialize_primitive_not_successfull { };
 		}
 
+error("tresor: deinit complete");
 		channel._request.success(true);
 		channel._state = Channel::State::COMPLETE;
 		indices.dequeue(idx);

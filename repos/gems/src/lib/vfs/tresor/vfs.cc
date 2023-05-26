@@ -434,6 +434,7 @@ class Vfs_tresor::Wrapper
 				}
 
 				if (tresor_request.operation() == Tresor::Request::Operation::DEINITIALIZE) {
+error("vfs_tresor: deinit complete");
 					bool const req_sucess = tresor_request.success();
 					if (_verbose) {
 						log("Complete request: backend request (", tresor_request, ")");
@@ -1202,6 +1203,7 @@ class Vfs_tresor::Wrapper
 
 			// XXX kick-off deinitialize
 			handle_frontend_request();
+error("vfs_tresor: deinit in progress");
 			return true;
 		}
 
@@ -2346,11 +2348,13 @@ class Vfs_tresor::Deinitialize_file_system : public Vfs::Single_file_system
 				out_count = dst.num_bytes > length_without_nul - 1 ?
 				            length_without_nul : dst.num_bytes;
 
+log("read ", Cstring { dst.start, dst.num_bytes });
 				return READ_OK;
 			}
 
 			Write_result write(Const_byte_range_ptr const &src, size_t &out_count) override
 			{
+log("write ", Cstring { src.start, src.num_bytes });
 				using State = Wrapper::Deinitialize::State;
 				if (_w.deinitialize_progress().state != State::IDLE) {
 					return WRITE_ERR_IO;

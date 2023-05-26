@@ -1225,6 +1225,8 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 	switch (channel._state) {
 	case Channel::State::SUBMITTED:
 
+error(__func__, __LINE__);
+
 		_discard_disposable_snapshots(sb.snapshots, sb.last_secured_generation,
 		                              curr_gen);
 
@@ -1247,6 +1249,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::ENCRYPT_CURRENT_KEY_COMPLETED:
+error(__func__, __LINE__);
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_encrypt_current_key_error { };
 			throw Deinitialize_encrypt_current_key_error { };
@@ -1286,6 +1289,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::ENCRYPT_PREVIOUS_KEY_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_encrypt_previous_key_error { };
@@ -1305,6 +1309,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::SYNC_CACHE_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_sync_cache_error { };
@@ -1324,6 +1329,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::WRITE_SB_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_write_sb_error { };
@@ -1343,6 +1349,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::SYNC_BLK_IO_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_sync_blk_io_error { };
@@ -1372,6 +1379,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::SECURE_SB_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_secure_sb_error { };
@@ -1397,6 +1405,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::REMOVE_CURRENT_KEY_AT_CRYPTO_MODULE_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_remove_current_key_error { };
@@ -1438,6 +1447,7 @@ void Superblock_control::_execute_deinitialize(Channel           &channel,
 
 		break;
 	case Channel::State::REMOVE_PREVIOUS_KEY_AT_CRYPTO_MODULE_COMPLETED:
+error(__func__, __LINE__);
 
 		if (!channel._generated_prim.succ) {
 			class Deinitialize_remove_previous_key_error { };
