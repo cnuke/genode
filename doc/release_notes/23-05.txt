@@ -15,12 +15,12 @@
 Goa tool updated to Sculpt OS 23.04, initial support for Rust
 #############################################################
 
-Last month, we released Sculpt OS 23.04 for PC and PinePhone. The new release
-comes with various
-[http://genodians.org/nfeske/2023-05-11-sculpt-os - usability improvements]
+Last month, we [https://genode.org/news/sculpt-os-release-23.04 - released]
+Sculpt OS 23.04 for PC and PinePhone. The new release comes with various
+[https://genodians.org/nfeske/2023-05-11-sculpt-os - usability improvements]
 such as presets and on-target system updates.
 
-; Screenshot(s) mobile UI
+[image mobile_sculpt_23_04]
 
 In particular, with Sculpt OS 23.04 running on the PinePhone, we have carved out
 the base for hosting mobile apps on a Genode-based system. Yet, there are
@@ -33,8 +33,9 @@ our streamlined workflow tool for application development.
 In addition, we integrated initial support for Rust's _cargo_ to make Goa
 palatable to a broader developer audience (Section [Initial Rust support]).
 
-The growing attention of the Goa tool prompted us to move it under the umbrella
-of Genode Labs as we are increasing our development and maintenance efforts for
+The growing attention of the Goa tool prompted us to move it under the
+[https://genodians.org/nfeske/2023-05-02-goa-genode-labs - umbrella of Genode Labs]
+as we are increasing our development and maintenance efforts for
 the tool. Aligned with the Sculpt release, the Goa tool has been updated with
 the corresponding depot archive versions.
 With this Genode release, we put a cherry on top and added bash completion to
@@ -53,7 +54,7 @@ is enabled by the following commands:
 Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
 ==========================================================================
 
-While writing a system clock, might be fun, it is not our fundamental
+While writing a stop watch app might be fun, it is outside our core
 expertise. Therefore, we have looked into ways of supporting established
 open-source SDKs for app development on Genode. We investigated two possible
 options in depth, namely Ubuntu Touch's UI toolkit now called
@@ -65,32 +66,30 @@ toolkit. The full story can be read
 the Ubuntu UI toolkit is available on Genode right now and support for it has been
 added to the Goa tool.
 
-Writing an app for the PinePhone using the Goa tool should be a straight forward
-experience:
+The workflow for crafting an app for the PinePhone using the Goa tool is a
+fairly streamlined experience now:
 
-* Since the UI toolkit depends on Qt5 add "genodelabs/api/qt5" to your
-  _used_apis_ [http://genodians.org/nfeske/2019-11-25-goa - file]
+# Since the UI toolkit depends on Qt5 add "genodelabs/api/qt5" to your
+  _used_apis_ [https://genodians.org/nfeske/2019-11-25-goa - file]
 
-* Add "ssumpf/pkg/ubuntu_ui_toolkit" to your _archives_
-  [http://genodians.org/nfeske/2019-11-25-goa - file] to have the UI toolkit
+# Add "ssumpf/pkg/ubuntu_ui_toolkit" to your _archives_
+  [https://genodians.org/nfeske/2019-11-25-goa - file] to have the UI toolkit
   available within your package
 
-* In order to have your QML code within your packet installed, add
+# In order to have your QML code within your packet installed, add
   "<packet-name>.tar: install/" to your _artifacts_
-  file [http://genodians.org/nfeske/2019-11-25-goa]
+  file [https://genodians.org/nfeske/2019-11-25-goa]
 
-* Configure your _runtime_
-  [http://genodians.org/nfeske/2019-12-19-goa-unix-terminal - file]
+# Configure your _runtime_
+  [https://genodians.org/nfeske/2019-12-19-goa-unix-terminal - file]
 
-* Use
+# Execute your scenario on Linux for development
   ! goa run
-  to execute your scenario on Linux for development
 
-* Use
+# Build for the PinePhone
   ! goa build --arch arm_v8a
-  in order to build for the PinePhone
 
-* [http://genodians.org/nfeske/2020-01-16-goa-publish - Publish] your packet
+# [https://genodians.org/nfeske/2020-01-16-goa-publish - Publish] your packet
   ! goa publish --depot-user john --depot-overwrite
 
 Examples using QML, Qt5, and C++ can be found
@@ -286,36 +285,36 @@ Base framework and OS-level infrastructure
 New tool chain based on GCC 12.3, C++20 enabled by default
 ==========================================================
 
-Like about every two years, we updated our tool chain to recent
+Following our regular cycle of two years, we updated our tool chain to recent
 versions again, this time in particular to GCC 12.3.0,
-binutils 2.40 and GDB 13.1, and we also enabled C++20 by default.
+binutils 2.40, and GDB 13.1 while taking the opportunity to enable C++20 by default.
 
 A noticeable change with GCC 12 is that auto-vectorization with
-the -ftree-vectorize option is now enabled by default when
-building with the -O2 optimization level. This has the effect
-that SIMD instructions are generated more often and we had to
-adapt the code base accordingly (for example by making sure that
-memory allocations in ported Linux drivers have a suitable
+the '-ftree-vectorize' option is now enabled by default when
+building with the '-O2' optimization level. This has the effect
+that SIMD instructions are generated more, which required adaptations
+throughout our code base, for example by making sure that
+memory allocations in ported Linux drivers adhere a suitable
 address alignment and by saving and restoring ARMv8 FPU registers
-in the dynamic linker).
+in the dynamic linker.
 
-In addition to that, GCC 12 reports new errors which we
+In addition to that, GCC 12 reports new warnings and errors, which we
 had to fix at various places, the most common ones being:
 
-* deprecated arithmetic between different enumeration types
+* Deprecated arithmetics between different enumeration types,
 
-* deprecated use of ++/-- operators with volatile variables
+* Deprecated use of ++/-- operators with volatile variables, and
 
-* undefined reference to 'strlen` inside custom implementations
+* Undefined references to 'strlen' inside custom implementations
   of 'strlen'-like functions, related to the
-  -ftree-loop-distribute-patterns option
+  '-ftree-loop-distribute-patterns' option.
 
-As an extra feature, we added the Genode library name patterns
-to 'ld', so that the '-l' option now can find the corresponding
-libraries. This is useful when 'configure' checks of GNU
-applications try to detect dependency libraries by linking
-a test program with this option and removes the need to create
-dummy libraries as a workaround.
+As an extra feature, we added Genode's library name patterns
+to the linker so that the '-l' option has become able to find the corresponding
+libraries. This is useful while porting 3rd-party software based on Autoconf,
+whenever a 'configure' script checks for a library dependency by linking
+a test program with this option. This change thereby removes the need for
+dummy libraries that were formerly used to satisfy the probing.
 
 
 API changes
@@ -327,13 +326,14 @@ in 2016, we largely *abolished* the use of *format strings* throughout the
 framework. This is desirable because a code base without format strings cannot
 have format-string vulnerabilities. Still, a few occurrences, specifically the
 interface for passing session-construction arguments, remained untouched since
-then. With version 23.04 we finally wrap up the transition.
+then. With version 23.04 we finally attained our initial goal by wrapping up
+the transition.
 
-The revised 'Genode::Connection' accepts the session label, affinity,
-and session-specific parameters as constructor arguments, whereas the
-parameters are passed as a 'Genode::String'. This eliminates the need for
-rendering a format string. Given this new interface, we were able to remove
-format strings from all connection types, updated all components that
+In particular, we revised 'Genode::Connection', which now accepts the session
+label, affinity, and session-specific parameters as constructor arguments,
+whereas the parameters are passed as a 'Genode::String'. This eliminates the
+need for rendering a format string. Given this new interface, we were able to
+remove format strings from all connection types, updated all components that
 still happened to rely on format strings, and ultimately removed format
 string from Genode's base API.
 
@@ -342,7 +342,8 @@ to Genode. Whenever the 3rd-party code targets the C runtime, format
 strings are readily available via the libc. For free-standing ports that
 avoid the dependency from the full C runtime, e.g., ported device drivers,
 a new 'format' library based on Genode's former _base/snprintf.h_ and
-_base/console.h_ provides rudimentary format-string support.
+_base/console.h_ provides rudimentary format-string support. The library
+is hosted in the libports repository.
 
 As another matter of house keeping, we removed the _util/avl_string.h_
 utility. The use case of organizing objects by using strings as keys is
@@ -356,7 +357,7 @@ As sketched in our [https://genode.org/about/road-map - road map], we plan
 having a feature-complete PC version of Sculpt OS based on base-hw by the end of
 this year. One of the reasons why we are still sticking to base-nova for the PC
 version is the fact that we are relying on NOVA's IOMMU support. One necessary
-step to decouple Sculpt OS from base-nova is to integrated the IOMMU handling
+step to decouple Sculpt OS from base-nova is to integrate the IOMMU handling
 into the platform driver.
 
 Motivated by our
@@ -411,83 +412,85 @@ Tresor library
 ~~~~~~~~~~~~~~
 
 For about two years, our Ada/SPARK-based CBE block encryption and its GUI
-front-end, the File Vault, served us well with rather manageable workloads
-(like configuration and credential files) in x86 Sculpt. However, with the
-rise of mobile Sculpt on the PinePhone, the CBE ecosystem faced a crisis.
-At first, we realized that there was a list of requirements coming up with the
-new target platform:
+front-end, the file vault, served us well with rather manageable workloads
+such as configuration and credential files in Sculpt OS in the PC. However, with the
+rise of mobile Sculpt on the PinePhone, the CBE ecosystem was suddenly
+confronted with new challenges and requirements.
 
 * Mobile platforms are usually less forgiving when it comes to performance and
   the CBE still exhibited a lot of potential for optimization.
 
-* In mobile Sculpt, our block encryption will be an integral part of the base
-  system (the "appliance role"), which marks a big step in the ongoing
-  role shift from a mere experiment towards a central system component. With
-  this role shift, however, maintainability becomes increasingly important.
+* We envision encrypted storage to become an integral part of the base
+  system - the "appliance role" of mobile Sculpt OS - which shifts the role
+  of the component from an optional feature to a foundational mechanism.
+  With this role shift, however, maintainability becomes increasingly important.
 
-* Now, that we decided to settle on this approach to block encryption and
+* Now that we decided to settle on this approach to block encryption and
   will increasingly expose it to real workloads, we can expect new requirements
   to pop up more frequently and with higher priority.
 
-* And, last but not least, our SPARK/Ada runtime, so far, simply lacks ARM
-  support.
+* And, last but not least, our SPARK/Ada runtime, so far, lacks ARM support.
 
-This prospect forced us to carefully re-think our relation to the existing CBE
-approach, and especially to the fact that it's core logic and crypto back-end
+This prospect forced us to carefully reconsider our relation to the existing CBE
+approach, and especially to the fact that its core logic and crypto back-end
 were entirely written in Ada/SPARK. When we started developing the CBE in
-Ada/SPARK, we considered the possibility that the language could become popular
+Ada/SPARK, we were positive that the language might become popular
 among the core developers of Genode and that, eventually, other, especially
 critical parts of the framework could benefit from it as well. But this idea
-didn't come true. Only a few of us came in touch with the new language and of
-those even fewer acquired profound experience with it. As a consequence,
-maintenance of the Ada/SPARK codebase that emerged with the CBE approach became
-a bottle neck, effectively inhibiting growth of our block-encryption stack.
+didn't come to fruition. Only a few of us came in touch with the new language
+and, of those, even fewer acquired profound experience with it. We ultimately
+realized that the friction caused by the added language boundary that emerged
+with the CBE approach became a bottleneck, inhibiting the further evolution
+of our block-encryption stack with a strong sense of collective code ownership.
 
-This fact in mind, and the above mentioned challenges in sight, we decided to
+This observation in mind, and the above mentioned challenges in sight, we decided to
 drop the CBE library and create a new implementation strongly inspired by the
-CBE design but in C++, our "mother tongue". The new library is called Tresor,
-brings the same feature set like the CBE and can also drive encrypted
-containers that were created with the CBE. The File Vault has been adapted to
-run with Tresor, so, File Vault users can continue using their containers as
-usual without further ado. The entire Tresor-based ecosystem is
-architecture-agnostic - the former restriction to x86 has been removed.
+CBE design but in C++, our "mother tongue". The new library is called tresor,
+brings the same feature set as the CBE and is compatible with
+containers created with the CBE. The file vault has been adapted to
+run with the tresor library. So file-vault users can continue using their containers as
+usual without further ado. The entire tresor-based ecosystem is
+architecture-agnostic, which lifts the former restriction to x86.
+
 
 File Vault
 ~~~~~~~~~~
 
-There are some new features to the File Vault. For instance, the component can
+There are some new features to the file vault. For instance, the component can
 now be driven with one of two available user interfaces: The usual graphical
-front-end via Menu View or the new text-based interface that receives commands
-via configuration file and provides feedback through a report file. This allows
-for the integration of the File Vault with automated controls respectively
-lower- or higher-level UI's. The default remains the legacy interface, but one
-can replace it with the text-based UI using the new "user_interface"
-configuration flag (not re-configurable). A good example on how to use the
-test-based UI is provided in the new "file_vault_cfg_report" run script.
+front-end or the new non-interactive interface that is driven by a textual
+configuration and provides feedback through a report. This allows
+for the integration of the file vault with automated controls respectively
+lower or higher-level UIs. The interactive interface remains the default but one
+can replace it with the text-based variant using the new "user_interface"
+configuration flag (not re-configurable). An example of operating the
+test-based interface is provided by the new _file_vault_config_report.run_ script.
 
-Another, rather small but handy feature is that a File Vault can now be locked
-and unlocked without having to restart the component. In the "locked" state,
-all key material is removed from the cryptographic back-end and the driver for
-the encrypted driver is shut down. The user is then prompted to provide the
-correct credentials in order to re-accomplish access to the container.
+Another rather small but handy feature is that a file vault can now be locked
+and unlocked without having to restart the component. In the locked state,
+all key material is removed from the cryptographic back end and the
+block-encryption driver is shut down. The user is then prompted to provide the
+correct credentials in order to re-establish access to the container.
+
 
 Custom virtual machine monitor on ARM
 =====================================
 
-With the last release interactive graphical VMs got introduced on ARM systems.
+With the
+[https://genode.org/documentation/release-notes/23.02#Interactive_graphical_VMs_on_ARM - previous release], interactive graphical VMs got introduced on ARM systems.
 Genode's custom virtual machine monitor was enhanced by VirtIO device models for
 input events and GPU. However, dynamic changes of the virtual GPU's framebuffer
-resolution weren't handled appropriatedly.
-With this release these restrictions got removed. Now, you are able to resize
-the window of a VM without any trouble.
+resolution weren't yet handled by the initial version.
+With current release, these restrictions got removed. Now, the user is able to
+resize the window of a virtual machine as expected.
 
 
 NetBSD rump kernel on RISC-V
 ============================
 
-With release 23.05 we have added RISC-V to our port of the
+We have added RISC-V to our port of the
 [https://wiki.netbsd.org/rumpkernel - rump kernel].
-This enables RISC-V based devices to have file-system access on Genode.
+This enables Genode to access commodity file-systems on RISC-V based devices.
 
 
 Strengthened fault tolerance of on-target package management
@@ -506,15 +509,15 @@ constrained. Problems that can be solved by manual intervention on the PC
 without a second thought can become insurmountable showstoppers on the phone.
 The most prominent problem is the recovery from the situation where package
 dependencies remained incomplete due to an interruption of the installation
-process or due to packaging mistakes. On the PC, the situation can be cleaned
-up by simply clearing the depot using a single terminal command, followed by a
+process or due to packaging mistakes. On the PC, such a situation can be resolved
+by simply clearing the depot using a single terminal command, followed by a
 reinstall of the package. On the phone, the user was left out in the cold
 with the message "package installed but incomplete" but with no obvious or
 non-obvious way of recovery. The new version gracefully handles this failure
 state by offering the retry of the package installation.
 
 Second, network connectivity is far more fluctuating on mobile devices,
-which increases the chance for download errors. The previous version that
+which increases the likelihood for download errors. The previous version that
 regarded download errors as rare and sporadic issues, responded to such
 errors by repeated and silent retrying. We found that a mobile phone demands
 more graceful way to reflect such failure situations to the user, and to limit
