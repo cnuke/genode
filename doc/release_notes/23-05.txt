@@ -756,7 +756,27 @@ Base-HW microkernel
 Principle x86 virtualization support (on Qemu)
 ----------------------------------------------
 
-; @atopia
+This release brings limited support for AMD's Secure Virtual Machine (SVM)
+vCPUs on base-hw.
+As we currently lack AMD hardware, the release has only been tested on the
+rather ancient qemu 4.2, since that had known working SVM emulation support that
+we could use to cross-test our implementation against other hypervisors.
+
+Implementing principle vCPU support revealed points of friction between
+base-hw's kernel interface, which had been designed for the needs of our custom
+ARM VMM, and our kernel-agnostic VM interface on x86 that has been carefully
+crafted to support a range of 3rd party hypervisors, but relies on more logic
+in the kernel-specific VMM library to manage the vCPU state.
+
+The current implementation is able to run our test VM workloads (the simple
+'vmm_x86' test and our seoul VMM run scripts with Linux and - of course -
+Genode VMs on one vCPU) and will serve as a starting point for our goal of
+supporting VirtualBox on Intel hardware.
+
+Having shown that base-hw can support the generic x86 VM interface, we will
+mature our implementation and may adapt our interface to make it a better fit
+to base-hw's vCPU execution model in the future.
+
 
 Boot-time RAM detection on the PinePhone
 ----------------------------------------
