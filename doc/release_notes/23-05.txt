@@ -599,58 +599,16 @@ Updated or removed 3rd-party software
 VirtualBox updated to version 6.1.44
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-; @chelmuth
+With the tool chain update to GCC 12 it became necessary to update VirtualBox
+6.1 to keep up with the tool-chain changes. While the update fixes many bugs
+from Oracle's side, Genode also improved the performance by disabling the RDTSC
+exits, which caused trouble on SMP systems and improved the stability of the
+E1000 NIC and XHCI USB device models. For Windows guests it has become crucial to
+add
 
-commit 37421a7879ff47b6c64f249f91a9352b4260ff72
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Oct 27 09:25:07 2022 +0200
+! <Paravirt provider="HyperV"/>
 
-    vbox6: bump version from 6.1.26 to 6.1.44
-    
-    Fixes most of the GCC 12 problems.
-    
-    issue #4666
-
-commit 7be915a185a442b14f66ccfe5715787a3758d659
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Wed Sep 21 09:28:19 2022 +0200
-
-    vbox6: disable RDTSC exit
-    
-    For Windows guests, it's crucial to configure the paravirtualization
-    provider in .vbox6 like follows. Otherwise, the TSC calibration fails
-    (issue #4726) and the CPU frequency (in task manager) is bogus.
-    
-      <Paravirt provider="HyperV"/>
-    
-    Fixes #4726
-
-commit 7e06aa13c17293eeb651d24610f3d99478a62dc5
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Apr 20 15:41:31 2023 +0200
-
-    vbox6: disable GSO in e1000 model
-    
-    Commit "vbox: avoid uncaught nic Empty_ack_queue exception" introduced a
-    performance regression due to packet retransmission because of faulty
-    GSO segment handling. As fixing the GSO handling is fairly complex, we
-    disable GSO until a fix was developed.
-    
-    Issue #4820
-    Issue #4821
-
-commit a1eb94535d774322bb3b8a1176a231e9050c93f3
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue May 16 19:30:56 2023 +0200
-
-    qemu-usb: support read/write of unused IO ranges
-    
-    The XHCI model reserves 0x4000 of IO memory but uses only 0x530.
-    Implement read (0) and write (nop) for these regions as real hardware
-    does.
-    
-    fixes #4902
-
+to the _machine.vbox6_ file.
 
 Removed ports of pcre16 and icu libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
