@@ -196,6 +196,10 @@ static void handle_absolute(input_dev *dev, unsigned code, int value)
 		/* ignore unused multi-touch events */
 		return;
 
+	case ABS_MISC:
+		/* ignore misc events */
+		return;
+
 	default:
 		Genode::warning("unknown absolute event code ", code, " not handled");
 		return;
