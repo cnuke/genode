@@ -125,7 +125,7 @@ Our objective led to the following guidelines for Rust integration:
   as possible.
 
 While we largely succeeded in following these guidelines, our initial proof of
-concept support relies on a marginally adapted tool chain to work around missing
+concept implementation relies on a marginally adapted tool chain to work around missing
 support for versioned library symbols in our linker. We are exploring avenues
 to overcome these limitations and expand the support to cover more complex use
 cases in the next release.
@@ -153,7 +153,7 @@ Making the wireless stack globally accessible
 
 The
 [https://genode.org/documentation/release-notes/23.02#Realtek_Wifi - previous release]
-already featured the added support for a different
+already featured additional support for a different
 wireless LAN device driver - the rtlwifi driver that supports Realtek-based
 devices - giving us a good intuition on how easy it has become to extended
 even a complex Linux-based driver component stack such as our wifi-driver
@@ -301,7 +301,7 @@ Linux version 6.1.20.
 We enabled the ath9k PCIe driver that can by used on the MNT Reform 2 and the
 PC. As the ath9k device [168c:0034] used to test the driver on the PC exhibited
 problems when using MSIs, we disable their usage in the 'pci_decoder'. Similar
-treatment might be necessary other ath9k-based device we have not yet tested.
+treatment might be necessary if other ath9k-based devices are used.
 
 The device support in the 'rtlwifi' driver got extended by additionally
 enabling support for RTL8192CE devices.
@@ -323,8 +323,8 @@ binutils 2.40, and GDB 13.1 while taking the opportunity to enable C++20 by defa
 A noticeable change with GCC 12 is that auto-vectorization with
 the '-ftree-vectorize' option is now enabled by default when
 building with the '-O2' optimization level. This has the effect
-that SIMD instructions have become much more prominent in the generated code,
-which required adaptations throughout our code base, for example by making sure that
+that more SIMD instructions are generated, which required adaptations
+throughout our code base, for example by making sure that
 memory allocations in ported Linux drivers adhere a suitable
 address alignment and by saving and restoring ARMv8 FPU registers
 in the dynamic linker.
@@ -737,7 +737,7 @@ increases by that amount.
 Second, we fixed a problem detecting the block size (LBA format) of a given
 namespace. The lower 4 bits of the 'FLABS' register indicate which of the
 (up to) 16 supported LBA formats is used by the namespace. However, instead of
-only making use of those bits the driver looked at whole register that also
+only making use of those bits the driver looked at the whole register that also
 includes other information. That led to using the wrong index for reading the
 LBA format and on certain devices rendered the driver unusable as the assumed
 block size was detected wrong.
