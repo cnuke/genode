@@ -149,7 +149,7 @@ platforms.
 
 
 Making the wireless stack globally accessible
-=============================================
+---------------------------------------------
 
 The
 [https://genode.org/documentation/release-notes/23.02#Realtek_Wifi - previous release]
@@ -208,7 +208,7 @@ environment code. The amount of code added by the platform-specific
 libraries is unimposing as it mostly consists of the dummy implementations
 needed by the Linux configuration.
 
-; [image wifi_drv_architecture]
+[image wifi_drv_architecture]
 
 All recipes for the depot archives are prefixed to the specific
 driver, for example 'pkg/pc_wifi' contains a reference to 'src/pc_wifi_drv' as
@@ -220,7 +220,7 @@ that nicely follow the same approach.
 
 
 New firmware loading mechanism
-==============================
+------------------------------
 
 Additionally to making it easier to enable and use the driver for new platforms,
 we also refined how the driver loads its firmware images.
@@ -231,7 +231,7 @@ driver with new devices was cumbersome as the driver itself already supported
 the device most of the time but it solely missed the corresponding entry in the
 firmware list and adding that required recompiling the driver.
 
-; [image wifi_firmware_loading]
+[image wifi_firmware_loading]
 
 So instead, the driver now loads the firmware images via its local VFS rather
 than requesting a predetermined ROM module. Since the platform-specific driver
@@ -293,7 +293,7 @@ depot archive, e.g., _raw/pc_wifi_firmware_.
 
 
 Additional device support and updates
-=====================================
+-------------------------------------
 
 We updated the firmware images to the most recent ones supported by
 Linux version 6.1.20.
