@@ -105,7 +105,7 @@ Actually, the Genode OS Framework had support for the Rust programming language
 before, contributed to Genode release 16.05 by Waylon Cude. However, as an
 on-off contribution it never got traction and the support was eventually
 removed with release 20.05.
-While the original support focussed on some low-level runtime libraries and
+While the original support focused on some low-level runtime libraries and
 integration into the Genode build system, our new attempt has a somewhat
 different objective, which is to facilitate the use of the existing Rust
 ecosystem on the Genode OS Framework. The removal note already envisioned a
@@ -119,13 +119,13 @@ Our objective led to the following guidelines for Rust integration:
 # Aim for a seamless integration into the Genode OS Framework using the Goa
   build tool.
 # Instead of introducing our own Genode
-  [https://doc.rust-lang.org/nightly/rustc/platform-support.html - target triples], leverage Genode's FreeBSD based C library interface to use existing
+  [https://doc.rust-lang.org/nightly/rustc/platform-support.html - target triples], leverage Genode's FreeBSD-based C library interface to use existing
   supported standard library targets like 'x86_64-unknown-freebsd'.
-# Strive to use the upstream toolchain, or at least stay as close to upstream
+# Strive to use the upstream tool chain, or at least stay as close to upstream
   as possible.
 
-While we largely succeeded in following these guidelines, our initial proof of
-concept implementation relies on a marginally adapted tool chain to work around missing
+While we largely succeeded in following these guidelines, our initial proof-of-concept
+implementation relies on a marginally adapted tool chain to work around missing
 support for versioned library symbols in our linker. We are exploring avenues
 to overcome these limitations and expand the support to cover more complex use
 cases in the next release.
@@ -139,7 +139,7 @@ Uniform Wifi stack across PC and ARM platforms
 
 Support for wireless LAN was mostly focused on the
 [https://genode.org/documentation/release-notes/14.11#Intel_wireless_stack - PC platform]
-as it was the platform predominately used for using Genode and in extension
+as it was the platform predominately used for using Genode and, in extension,
 Sculpt on a daily basis. In the last couple of years, however, we started to
 embrace ARM-based platforms like the MNT Reform 2 and the PinePhone as well,
 longing for the thorough support of Sculpt OS on such systems. Thanks to
@@ -165,7 +165,7 @@ ingredients of the driver available on the ARM platforms.
 On the one hand, that includes the WPA supplicant and its dependencies like
 the 'nl80211' driver that in turn depends on 'libnl'. Enabling them was
 straight-forward because they are already pretty platform independent and
-the platform dependent portions, e.g. libcrypto, are readily available for ARM.
+the platform-dependent portions, e.g. libcrypto, are readily available for ARM.
 
 On the other hand, the wireless stack was slightly more complicated because
 the hardware integration of wireless networking devices on ARM platforms
@@ -190,8 +190,8 @@ While moving the code, we noticed that in contrast to all other Linux-based
 drivers the 'wifi_drv' is special. Since the binary itself is a libc component,
 care was taken to isolate the application code, the 'wpa_supplicant', from
 the driver code, the library containing the Linux wireless stack and drivers.
-On all platforms the binary stays the same while the driver library contains
-all the platform specific code.
+On all platforms, the binary stays the same while the driver library contains
+all the platform-specific code.
 For this reason, the 'wifi_drv' binary is now delegated to be a generic harness
 that includes all configuration and management functionality shared by all
 wireless device driver components, e.g., the WPA supplicant. The code of the
@@ -228,7 +228,7 @@ In the past, the driver contained a list of well-known working firmware images
 that needed to be updated every now and then when new devices where enabled or
 the firmware version changed due to a Linux update. In particular using the
 driver with new devices was cumbersome as the driver itself already supported
-the device most of the time but it solely missed the corresponding entry in the
+the device most of the time, but it solely missed the corresponding entry in the
 firmware list and adding that required recompiling the driver.
 
 [image wifi_firmware_loading]
@@ -245,8 +245,8 @@ probing mechanism available in Linux. Rather than following the firmware list
 the actual driver code is now free to probe as it sees fit, exactly pointing to
 the required uAPI revision in case the firmware is missing.
 
-The following snippets illustrates the configuration of the driver on the
-PinePhone (omitting any integration related routes for the config ROM as well as
+The following snippet illustrates the configuration of the driver on the
+PinePhone (omitting any integration-related routes for the config ROM as well as
 state and scan reports):
 
 !<start name="wifi_drv" caps="250" priority="-1">
@@ -298,7 +298,7 @@ Additional device support and updates
 We updated the firmware images to the most recent ones supported by
 Linux version 6.1.20.
 
-We enabled the ath9k PCIe driver that can by used on the MNT Reform 2 and the
+We enabled the ath9k PCIe driver that can be used on the MNT Reform 2 and the
 PC. As the ath9k device [168c:0034] used to test the driver on the PC exhibited
 problems when using MSIs, we disable their usage in the 'pci_decoder'. Similar
 treatment might be necessary if other ath9k-based devices are used.
@@ -306,7 +306,7 @@ treatment might be necessary if other ath9k-based devices are used.
 The device support in the 'rtlwifi' driver got extended by additionally
 enabling support for RTL8192CE devices.
 
-Furthermore we updated the WPA supplicant to its latest v2.10 release and
+Furthermore, we updated the WPA supplicant to its latest v2.10 release and
 introduce preliminary support for joining networks secured by WPA3.
 
 
@@ -376,7 +376,7 @@ a new 'format' library based on Genode's former _base/snprintf.h_ and
 _base/console.h_ provides rudimentary format-string support. The library
 is hosted in the libports repository.
 
-As another matter of house keeping, we removed the _util/avl_string.h_
+As another matter of housekeeping, we removed the _util/avl_string.h_
 utility. The use case of organizing objects by using strings as keys is
 covered by the _util/dictionary.h_ now.
 
@@ -455,9 +455,9 @@ system - the "appliance role" of mobile Sculpt OS - which shifts the role
 of the component from an optional feature to a foundational mechanism.
 With this role shift, however, maintainability becomes increasingly important.
 Third, now that we decided to settle on this approach to block encryption and
-will increasingly expose it to real workloads, we can expect new requirements
+are going to increasingly expose it to real workloads, we can expect new requirements
 to pop up more frequently and with higher priority.
-Last but not least, our SPARK/Ada runtime, so far, lacks ARM support.
+Last but not least, our Ada/SPARK runtime, so far, lacks ARM support.
 
 This prospect forced us to carefully reconsider our relation to the existing CBE
 approach, and especially to the fact that its core logic and crypto back-end
@@ -471,7 +471,7 @@ realized that the friction caused by the added language boundary that emerged
 with the CBE approach became a bottleneck, inhibiting the further evolution
 of our block-encryption stack with a strong sense of collective code ownership.
 
-This observation in mind, and the above mentioned challenges in sight, we decided to
+This observation in mind, and the above-mentioned challenges in sight, we decided to
 drop the CBE library and create a new implementation strongly inspired by the
 CBE design but in C++, our "mother tongue". The new library is called tresor,
 brings the same feature set as the CBE and is compatible with
@@ -489,7 +489,7 @@ now be driven with one of two available user interfaces: The usual graphical
 front-end or the new non-interactive interface that is driven by a textual
 configuration and provides feedback through a report. This allows
 for the integration of the file vault with automated controls respectively
-lower or higher-level UIs. The interactive interface remains the default but one
+lower or higher-level UIs. The interactive interface remains the default, but one
 can replace it with the text-based variant using the new "user_interface"
 configuration attribute. An example of operating the
 test-based interface is provided by the new _file_vault_config_report.run_ script.
@@ -509,7 +509,7 @@ With the
 Genode's custom virtual machine monitor was enhanced by VirtIO device models for
 input events and GPU. However, dynamic changes of the virtual GPU's framebuffer
 resolution weren't yet handled by the initial version.
-With current release, these restrictions got removed. Now, the user is able to
+With the current release, these restrictions got removed. Now, the user is able to
 resize the window of a virtual machine as expected.
 
 
@@ -547,7 +547,7 @@ state by offering the retry of the package installation.
 Second, network connectivity is far more fluctuating on mobile devices,
 which increases the likelihood for download errors. The previous version that
 regarded download errors as rare and sporadic issues, responded to such
-errors by repeated and silent retrying. We found that a mobile phone demands
+errors by repeated and silent retrying. We found that a mobile phone demands a
 more graceful way to reflect such failure situations to the user, and to limit
 the rate of futile download attempts. The new version preserves information
 about download failures for user inspection and re-issues new downloads only
@@ -684,7 +684,7 @@ became a hassle. Although the update was successful finally, we decided to
 remove the direct usage of intel_fbdev in our ported Intel display
 driver, in order to ease future updates. Nevertheless, the functionality
 of intel_fbdev is required to manage the framebuffer memory to provide a
-working Genode GUI interface by the driver. For that we investigated the
+working Genode GUI interface by the driver. For that, we investigated the
 use of the
 [https://www.kernel.org/doc/html/v5.0/gpu/drm-kms.html - Linux DRM/KMS]
 interface, specifically to allocate and manage so called
@@ -698,16 +698,16 @@ manage the framebuffer in our ported display driver.
 USB
 ===
 
-Connecting different USB clients to an USB host controller driver is a delicate
+Connecting different USB clients to a USB host controller driver is a delicate
 task. When using a port of a Linux kernel driver, it can quickly become brittle
 because the USB driver API in the Linux kernel is complex and contains
 some semantic dependencies, for instance regarding synchronization, which are
 not always obvious.
-However, the Linux kernel offers an USB device I/O API to the user-land that is
+However, the Linux kernel offers a USB device I/O API to the user-land that is
 used for instance by the libusb. This API has to guard the USB subsystem against
 wrong usage, and implements the necessary semantics regarding synchronization
 and dynamic changes of clients and devices.
-In the past, we encountered repeatedly corner-case issues, if clients or devices
+In the past, we repeatedly encountered corner-case issues, if clients or devices
 vanished and appeared at a high rate. For the sake of robustness, we decided
 to redesign our internal linking in between the Genode USB API and Linux to use the
 user-level device I/O API of the latter.
@@ -729,7 +729,7 @@ attribute to the '<config>' node of the driver. This value is checked against
 the constraints imposed by the device. Should the value be less than the
 minimal required amount of memory, it will not be used and a warning is issued.
 On the other hand, if the specified value is larger than the preferred amount
-of memory as favored by the device it will be capped to the useful amount instead.
+of memory as favored by the device, it will be capped to the useful amount instead.
 
 Naturally, when using the HMB, the required RAM quota of the driver component
 increases by that amount.
@@ -737,9 +737,9 @@ increases by that amount.
 Second, we fixed a problem detecting the block size (LBA format) of a given
 namespace. The lower 4 bits of the 'FLABS' register indicate which of the
 (up to) 16 supported LBA formats is used by the namespace. However, instead of
-only making use of those bits the driver looked at the whole register that also
-includes other information. That led to using the wrong index for reading the
-LBA format and on certain devices rendered the driver unusable as the assumed
+only making use of those bits, the driver looked at the whole register that also
+includes other information. This led to using the wrong index for reading the
+LBA format and, on certain devices, rendered the driver unusable as the assumed
 block size was detected wrong.
 
 
@@ -747,7 +747,7 @@ Audio-driver update
 ===================
 
 We updated the audio driver for HDA devices ported from OpenBSD to version 7.3.
-The functional changes are minimal but the new version supports more recent
+The functional changes are minimal, but the new version supports more recent
 PC platforms and recognizes more codecs.
 
 
@@ -778,7 +778,7 @@ in the kernel-specific VMM library to manage the vCPU state.
 
 The current implementation is able to run several test VM workloads like the
 artificial 'vmm_x86' test, our seoul VMM run scripts with Linux, and - of course -
-Genode VMs on one vCPU. It have thereby reached an important stepping stone
+Genode VMs on one vCPU. It has thereby reached an important stepping stone
 towards our actual goal of hosting VirtualBox on Intel hardware.
 
 Having shown that base-hw can support the generic x86 VM interface, we will
@@ -805,4 +805,4 @@ since it is not supported by the new seL4 kernel anymore.
 The updated seL4 kernel requires additional host tools installed,
 namely CMake, Ninja and additional Python3 modules, jinja2, jschonschema, and
 pyfdt. Depending on the distribution, the modules are available as distribution
-package or needs to be installed with the python pip3 tool.
+package or need to be installed with the python pip3 tool.
