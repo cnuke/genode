@@ -21,6 +21,7 @@ Sculpt OS 23.04 for PC and PinePhone. The new release comes with various
 such as presets and on-target system updates.
 
 [image mobile_sculpt_23_04]
+  Interactive software management on the mobile variant of Sculpt OS
 
 In particular, with Sculpt OS 23.04 running on the PinePhone, we have carved out
 the base for hosting mobile apps on a Genode-based system. Yet, there are
@@ -624,7 +625,7 @@ Updated or removed 3rd-party software
 =====================================
 
 VirtualBox updated to version 6.1.44
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------
 
 With the tool chain updated to GCC 12, it became necessary to update VirtualBox
 6.1 to keep up with the tool-chain changes. While the update fixes many bugs
@@ -637,7 +638,7 @@ to add the following line to the _machine.vbox6_ file.
 
 
 Removed ports of pcre16 and icu libraries
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------------
 
 The pcre16 and icu libraries had been used by Qt5 in the
 past but were not used anymore since the last Qt updates.
