@@ -54,7 +54,7 @@ is enabled by the following commands:
 Using Goa for bringing apps based on the Ubuntu-Touch-UI toolkit to Genode
 ==========================================================================
 
-While writing a stop watch app might be fun, it is outside our core
+While writing mobile apps might be fun, it is outside our core
 expertise. Therefore, we have looked into ways of supporting established
 open-source SDKs for app development on Genode. We investigated two possible
 options in depth, namely Ubuntu Touch's UI toolkit now called
@@ -99,6 +99,7 @@ Examples using QML, Qt5, and C++ can be found
 Initial Rust support
 ====================
 
+The Rust programming language has grown in popularity in the recent years.
 Actually, the Genode OS Framework had support for the Rust programming language
 before, contributed to Genode release 16.05 by Waylon Cude. However, as an
 on-off contribution it never got traction and the support was eventually
@@ -123,7 +124,7 @@ Our objective led to the following guidelines for Rust integration:
   as possible.
 
 While we largely succeeded in following these guidelines, our initial proof of
-concept support relies on marginally adapted toolchain to work around missing
+concept support relies on a marginally adapted tool chain to work around missing
 support for versioned library symbols in our linker. We are exploring avenues
 to overcome these limitations and expand the support to cover more complex use
 cases in the next release.
@@ -138,65 +139,68 @@ Uniform Wifi stack across PC and ARM platforms
 Support for wireless LAN was mostly focused on the
 [https://genode.org/documentation/release-notes/14.11#Intel_wireless_stack - PC platform]
 as it was the platform predominately used for using Genode and in extension
-Sculpt on a daily basis. In the last couple of years, however, this focus
-includes ARM-based platforms, namely the MNT Reform 2 and PinePhone, as well
-and thoroughly supporting such systems becomes desirable. We took the
-opportunity to introduce a way for reusing the existing wireless stack on different
-platforms with minimal effort.
+Sculpt on a daily basis. In the last couple of years, however, we started to
+embrace ARM-based platforms like the MNT Reform 2 and the PinePhone as well,
+longing for the thorough support of Sculpt OS on such systems. Thanks to
+our Linux device-driver environment, we have now taken the
+opportunity to reuse the existing wireless stack on vastly different
+platforms.
 
 
 Making the wireless stack globally accessible
 =============================================
 
 The
-[https://genode.org/documentation/release-notes/23.02#Realtek_Wifi - last release]
-already featured added support for a different
+[https://genode.org/documentation/release-notes/23.02#Realtek_Wifi - previous release]
+already featured the added support for a different
 wireless LAN device driver - the rtlwifi driver that supports Realtek-based
-devices - giving us a good impression on how easy it has become to extended
-even a complex Linux-based driver component stack such as the 'wifi_drv'.
+devices - giving us a good intuition on how easy it has become to extended
+even a complex Linux-based driver component stack such as our wifi-driver
+component ('wifi_drv').
 
 The first step was making it less x86-centric. We started by making the various
 ingredients of the driver available on the ARM platforms.
 
-On the one hand that includes the 'wpa_supplicant' and its dependencies like
-the 'nl80211' driver that in return depends on 'libnl'. Enabling them was
+On the one hand, that includes the WPA supplicant and its dependencies like
+the 'nl80211' driver that in turn depends on 'libnl'. Enabling them was
 straight-forward because they are already pretty platform independent and
-the platform dependet portions, e.g. libcrypto, are readily available for ARM.
+the platform dependent portions, e.g. libcrypto, are readily available for ARM.
 
-On the other hand, the wireless stack was slightly more complicated as we had
-to accommadate for the various ways peripherals are integrated on the various
-platforms. In case of the MNT Reform 2 and PC the integrated wireless devices
-are normally connected via PCIe where as on the PinePhone SDIO is used. We
-separated the code to allow for a “mix-and-match” way of selecting the
-necessary compilation-units as the used Linux configuration might differ
+On the other hand, the wireless stack was slightly more complicated because
+the hardware integration of wireless networking devices on ARM platforms
+varies from platform to platform.
+In case of the MNT Reform 2 and PC, the integrated wireless devices
+are normally connected via PCIe. In contrast, the PinePhone relies on SDIO.
+We separated the code to allow for a "mix-and-match" way of selecting the
+necessary compilation units as the used Linux configuration might differ
 between each target and could result in compilation issues otherwise.
 
 The next step was to make the wireless stack globally accessible by moving it
 from the _pc_ to the _dde_linux_ repository. This move was motivated by the
 fact that the _dde_linux_ repository is already available in all platform or
 rather board-specific repositories while the _pc_ repository is not. It is
-in itself a board-specific repository and therefor having it appear as
+in itself a board-specific repository and therefore having it appear as
 dependency for other such repositories feels unnatural.
 
-So the bulk of the driver code now lives in the 'dde_linux' repository from
+So the bulk of the driver code now lives in the _dde_linux_ repository from
 where it can be referenced by other repositories.
 
-While moving the code we noticed that in contrast to all other Linux-based
+While moving the code, we noticed that in contrast to all other Linux-based
 drivers the 'wifi_drv' is special. Since the binary itself is a libc component,
 care was taken to isolate the application code, the 'wpa_supplicant', from
 the driver code, the library containing the Linux wireless stack and drivers.
 On all platforms the binary stays the same while the driver library contains
 all the platform specific code.
-For this reason the 'wifi_drv' binary is now delegated to be a generic harness
+For this reason, the 'wifi_drv' binary is now delegated to be a generic harness
 that includes all configuration and management functionality shared by all
-wireless device driver components, e.g., the wpa_supplicant. The code of the
+wireless device driver components, e.g., the WPA supplicant. The code of the
 device driver emulation environment is located in
 _repos/dde_linux/src/lib/wifi_. It is referenced by the platform-specific
 driver library that resides in the corresponding platform repository. The
 runtime configuration needs to point the driver to a proper driver library.
 
-The platform-specific library is in charge of orchestrating the contrib sources
-utilized by the driver as well as providing the 'source.list' and 'dep.list'
+The platform-specific library is in charge of orchestrating the 3rd-party sources
+utilized by the driver as well as providing the _source.list_ and _dep.list_
 files. It must include the generic library snippet
 _repos/dde_linux/lib/wifi.inc_ that deals with managing the emulation
 environment code. The amount of code added by the platform-specific
@@ -205,24 +209,21 @@ needed by the Linux configuration.
 
 ; [image wifi_drv_architecture]
 
-For the moment all recipes for the depot archives are prefixed to the specific
+All recipes for the depot archives are prefixed to the specific
 driver, for example 'pkg/pc_wifi' contains a reference to 'src/pc_wifi_drv' as
-well as to 'raw/pc_wifi_firmware'. The 'src/pc_wifi_drv' recipe could be split
-into 'src/wifi_drv' and 'src/pc_wifi' to accommodate referencing the driver
-binary from other different driver libraries, e.g. USB or even SDIO on x86-based
-tablets, but is left for future endeavors.
+well as to 'raw/pc_wifi_firmware'.
 
-All in all we now have three different wireless LAN drivers, one for the
-PinePhone, one for the MNT Reform 2 and one for the PC, that follow the same
-approach.
+Thanks to steps outlined above, we now have three different wireless LAN
+drivers, one for the PinePhone, one for the MNT Reform 2, and one for the PC
+that nicely follow the same approach.
 
 
 New firmware loading mechanism
 ==============================
 
-Additionally to making it easier to enable the driver for new platforms and use
-it from existing ones we also refined how the driver loads its firmware images.
-In the past the driver contained a list of well-known working firmware images
+Additionally to making it easier to enable and use the driver for new platforms,
+we also refined how the driver loads its firmware images.
+In the past, the driver contained a list of well-known working firmware images
 that needed to be updated every now and then when new devices where enabled or
 the firmware version changed due to a Linux update. In particular using the
 driver with new devices was cumbersome as the driver itself already supported
@@ -237,8 +238,8 @@ library has no direct access to the VFS - after all both worlds are
 intentionally isolated from each other - a request/response interface was
 added. The library submits a request to the _wifi_drv_ binary and will suspend
 its execution waiting for the completion of the request. The binary will
-acquire the firmware image and notify the driver library in return. Streamling
-the firmware acquisition in such a manner allows for the using the original
+acquire the firmware image and notify the driver library in return. Streamlining
+the firmware acquisition in such a manner allows for using the original
 probing mechanism available in Linux. Rather than following the firmware list
 the actual driver code is now free to probe as it sees fit, exactly pointing to
 the required uAPI revision in case the firmware is missing.
@@ -279,32 +280,32 @@ state and scan reports):
 !  </route>
 !</start>
 
-In this configuration the firmware images are provided as _.tar_ archive that
-itself is requested via a ROM connection and that is how it is currently
-integrated into Sculpt. The driver will always look into the '/firmware'
+In this configuration, the firmware images are provided as _.tar_ archive that
+itself is requested via a ROM connection.
+The driver will always look into the _/firmware_
 directory to access any firmware related files. How the directory is populated
 is up to the integrator of the driver.
 
-At the same time we got rid of the firmware library that got used in the past
-to assemble the firmware image files. It is superseded by using the raw depot
-archive, e.g., 'raw/pc_wifi_firmware'.
+As a further simplification step, we removed the need for the firmware library
+used to contain firmware images. It is superseded by the use of a plain data
+depot archive, e.g., _raw/pc_wifi_firmware_.
 
 
 Additional device support and updates
 =====================================
 
-We updated the firmware images to the most recent ones supported by the
-currently used with Linux version 6.1.20.
+We updated the firmware images to the most recent ones supported by
+Linux version 6.1.20.
 
 We enabled the ath9k PCIe driver that can by used on the MNT Reform 2 and the
 PC. As the ath9k device [168c:0034] used to test the driver on the PC exhibited
-problems when using MSIs we disable their usage in the 'pci_decoder'. Similar
+problems when using MSIs, we disable their usage in the 'pci_decoder'. Similar
 treatment might be necessary other ath9k-based device we have not yet tested.
 
 The device support in the 'rtlwifi' driver got extended by additionally
 enabling support for RTL8192CE devices.
 
-Furthermore we updated the _wpa_supplicant_ to its latest v2.10 release and
+Furthermore we updated the WPA supplicant to its latest v2.10 release and
 introduce preliminary support for joining networks secured by WPA3.
 
 
@@ -314,25 +315,25 @@ Base framework and OS-level infrastructure
 New tool chain based on GCC 12.3, C++20 enabled by default
 ==========================================================
 
-Following our regular cycle of two years, we updated our tool chain to recent
+Following a regular cycle of two years, we updated our tool chain to recent
 versions again, this time in particular to GCC 12.3.0,
 binutils 2.40, and GDB 13.1 while taking the opportunity to enable C++20 by default.
 
 A noticeable change with GCC 12 is that auto-vectorization with
 the '-ftree-vectorize' option is now enabled by default when
 building with the '-O2' optimization level. This has the effect
-that SIMD instructions are generated more, which required adaptations
-throughout our code base, for example by making sure that
+that SIMD instructions have become much more prominent in the generated code,
+which required adaptations throughout our code base, for example by making sure that
 memory allocations in ported Linux drivers adhere a suitable
 address alignment and by saving and restoring ARMv8 FPU registers
 in the dynamic linker.
 
 In addition to that, GCC 12 reports new warnings and errors, which we
-had to fix at various places, the most common ones being:
+had to rectify at various places, the most common ones being:
 
 * Deprecated arithmetics between different enumeration types,
 
-* Deprecated use of ++/-- operators with volatile variables, and
+* Deprecated use of '++' and '--' operators with volatile variables, and
 
 * Undefined references to 'strlen' inside custom implementations
   of 'strlen'-like functions, related to the
@@ -355,7 +356,7 @@ in 2016, we largely *abolished* the use of *format strings* throughout the
 framework. This is desirable because a code base without format strings cannot
 have format-string vulnerabilities. Still, a few occurrences, specifically the
 interface for passing session-construction arguments, remained untouched since
-then. With version 23.04 we finally attained our initial goal by wrapping up
+then. With version 23.04, we finally attained our initial goal by wrapping up
 the transition.
 
 In particular, we revised 'Genode::Connection', which now accepts the session
@@ -446,19 +447,16 @@ such as configuration and credential files in Sculpt OS in the PC. However, with
 rise of mobile Sculpt on the PinePhone, the CBE ecosystem was suddenly
 confronted with new challenges and requirements.
 
-* Mobile platforms are usually less forgiving when it comes to performance and
-  the CBE still exhibited a lot of potential for optimization.
-
-* We envision encrypted storage to become an integral part of the base
-  system - the "appliance role" of mobile Sculpt OS - which shifts the role
-  of the component from an optional feature to a foundational mechanism.
-  With this role shift, however, maintainability becomes increasingly important.
-
-* Now that we decided to settle on this approach to block encryption and
-  will increasingly expose it to real workloads, we can expect new requirements
-  to pop up more frequently and with higher priority.
-
-* And, last but not least, our SPARK/Ada runtime, so far, lacks ARM support.
+First, mobile platforms are usually less forgiving when it comes to performance and
+the CBE still exhibited a lot of potential for optimization.
+Second, we envision encrypted storage to become an integral part of the base
+system - the "appliance role" of mobile Sculpt OS - which shifts the role
+of the component from an optional feature to a foundational mechanism.
+With this role shift, however, maintainability becomes increasingly important.
+Third, now that we decided to settle on this approach to block encryption and
+will increasingly expose it to real workloads, we can expect new requirements
+to pop up more frequently and with higher priority.
+Last but not least, our SPARK/Ada runtime, so far, lacks ARM support.
 
 This prospect forced us to carefully reconsider our relation to the existing CBE
 approach, and especially to the fact that its core logic and crypto back-end
@@ -492,10 +490,10 @@ configuration and provides feedback through a report. This allows
 for the integration of the file vault with automated controls respectively
 lower or higher-level UIs. The interactive interface remains the default but one
 can replace it with the text-based variant using the new "user_interface"
-configuration flag (not re-configurable). An example of operating the
+configuration attribute. An example of operating the
 test-based interface is provided by the new _file_vault_config_report.run_ script.
 
-Another rather small but handy feature is that a file vault can now be locked
+As another rather small but handy feature, a file vault can now be locked
 and unlocked without having to restart the component. In the locked state,
 all key material is removed from the cryptographic back end and the
 block-encryption driver is shut down. The user is then prompted to provide the
@@ -583,7 +581,7 @@ Qt5 reorg
 When the Goa tool is used to build an application, all libraries
 of the used API packages get linked to the application and the
 single Qt5 API package with big libraries like QtWebEngine was
-a bit too much for simple Qt applications. For this reason we
+a bit too much for simple Qt applications. For this reason, we
 split the Qt5 API into smaller packages according to the
 corresponding Qt modules.
 
@@ -603,13 +601,13 @@ WireGuard improvements
 
 There are two smaller changes related to Genode's port of WireGuard. First,
 peers can now be removed from WireGuard at runtime by removing the
-corresponding <peer> tags from the component configuration. This operation
+corresponding '<peer>' tags from the component configuration. This operation
 enforces the same assurances as removing a peer from a native WireGuard driver
 in Linux.
 
 The second change has to do with the nature of the port. The WireGuard port is
 one of the rare examples where we use our Linux device driver environment
-(dde_linux) for porting something that is not exactly a driver. The component
+(dde_linux) for porting software that is not exactly a driver. The component
 does not depend on a specific hardware configuration and therefore, the
 emulated Linux kernel can be platform-agnostic. Consequently, while porting, we
 created such a variant of the Linux emulation specifically for WireGuard.
@@ -621,29 +619,29 @@ of the 'lx_emul' library. The new library is called 'virt_lx_emul' and is
 accompanied by the 'virt_linux' target that can be used to build the
 corresponding Linux kernel and run it in Qemu.
 
+
 Updated or removed 3rd-party software
 =====================================
 
 VirtualBox updated to version 6.1.44
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With the tool chain update to GCC 12 it became necessary to update VirtualBox
+With the tool chain updated to GCC 12, it became necessary to update VirtualBox
 6.1 to keep up with the tool-chain changes. While the update fixes many bugs
 from Oracle's side, Genode also improved the performance by disabling the RDTSC
 exits, which caused trouble on SMP systems and improved the stability of the
-E1000 NIC and XHCI USB device models. For Windows guests it has become crucial to
-add
+E1000 NIC and XHCI USB device models. For Windows guests, it has become crucial
+to add the following line to the _machine.vbox6_ file.
 
 ! <Paravirt provider="HyperV"/>
 
-to the _machine.vbox6_ file.
 
 Removed ports of pcre16 and icu libraries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The pcre16 and icu libraries had been used by Qt5 in the
-past, but were not used anymore since the last Qt updates,
-so we removed them from the 'libports' repository.
+past but were not used anymore since the last Qt updates.
+So we removed them from the _libports_ repository.
 
 
 Device drivers
@@ -652,99 +650,104 @@ Device drivers
 Linux device driver environment updated to Linux 6.1.20
 =======================================================
 
-According to the roadmap, the update of Genode's Linux device driver environment
-to a more recent 6.x Linux version was planned for release 23.08. Now, we
-decided to bring this update forward.
+According to [https://genode.org/about/road-map - our roadmap],
+the update of Genode's Linux device driver environment (DDE)
+to a more recent 6.x Linux version was planned for release 23.08.
+Now, we decided to tackle this update with this version already.
 
-Not all drivers dependent on this special runtime got updated at once. The
-existing drivers for the Allwinner and i.MX 8MQ SoC still use older 5.x Linux
-kernel versions as base. However, the Linux device driver environment was
-tweaked carefully to support a range of Linux kernel versions from 5.11 till
-6.1.20.
-
-Beside the Wireguard port to Genode, the following ported drivers already use
-the latest Linux kernel 6.1.20 version:
+Besides the Wireguard port to Genode, the following ported drivers use
+the latest Linux kernel 6.1.20 version now:
 
 * Zynq SD-card driver
 * PCI Wifi driver for i.MX 8MQ
 * all PC drivers (USB, Wifi, Intel display)
 
+Note that a few drivers are not listed above. The
+existing drivers for the Allwinner and i.MX 8MQ SoC still use older 5.x Linux
+kernel versions as base. However, the Linux device driver environment was
+tweaked carefully to support a range of Linux kernel versions from 5.11 till
+6.1.20.
+
 While doing the update work, we investigated a more sustainable link in between
-the Linux kernel drivers for USB and display drivers (DRM/KMS) one the one hand,
-and the Genode API on the other. The outcome is explained in the upcoming two
+the Linux kernel drivers for USB and display drivers (DRM/KMS) on the one hand,
+and the Genode API on the other. The outcome is explained in the next two
 sections.
+
 
 Intel display driver
 ====================
 
-During the update of dde_linux to the Linux 6.1.20 version, the
+During the update of DDE Linux to the Linux 6.1.20 version, the
 dependency on internal structures of the Intel framebuffer driver (intel_fbdev)
 became a hassle. Although the update was successful finally, we decided to
 remove the direct usage of intel_fbdev in our ported Intel display
-driver, in order to ease future updates. Nevertheless, the same functionality
+driver, in order to ease future updates. Nevertheless, the functionality
 of intel_fbdev is required to manage the framebuffer memory to provide a
-working Genode GUI interface by the driver. For that we investigated in the
-usage of the
+working Genode GUI interface by the driver. For that we investigated the
+use of the
 [https://www.kernel.org/doc/html/v5.0/gpu/drm-kms.html - Linux DRM/KMS]
 interface, specifically to allocate and manage so called
 [https://www.kernel.org/doc/html/v5.0/gpu/drm-kms.html#dumb-buffer-objects - dumb buffer objects].
-As described in the article, the dumb buffers are a standardized and more
-easy way to make early boot graphics easily possible driven by user tools.
+As described in the linked article, the dumb buffers are a standardized and
+streamlined way to make early boot graphics possible driven by user-land tools.
 We adjusted our port along the ioctl's of the dumb buffer functionality to
 manage the framebuffer in our ported display driver.
+
 
 USB
 ===
 
-Connecting different USB clients to an USB host controller driver is a crucial
-task anyway. When using a Linux kernel driver port it becomes error-prone
-quickly, because the USB driver API in the Linux kernel is complex and contains
+Connecting different USB clients to an USB host controller driver is a delicate
+task. When using a port of a Linux kernel driver, it can quickly become brittle
+because the USB driver API in the Linux kernel is complex and contains
 some semantic dependencies, for instance regarding synchronization, which are
 not always obvious.
 However, the Linux kernel offers an USB device I/O API to the user-land that is
 used for instance by the libusb. This API has to guard the USB subsystem against
 wrong usage, and implements the necessary semantics regarding synchronization
 and dynamic changes of clients and devices.
-In the past we encountered repeatedly corner-case issues, if clients or devices
-vanished and appeared heavily. For the sake of robustness we decided to re-new
-our internal linking in between the Genode USB API and Linux to use the
+In the past, we encountered repeatedly corner-case issues, if clients or devices
+vanished and appeared at a high rate. For the sake of robustness, we decided
+to redesign our internal linking in between the Genode USB API and Linux to use the
 user-level device I/O API of the latter.
 Moreover, we extended the capacity of USB packets in-flight that can be handled
 by the controller in parallel to 32, to enhance the throughput for some USB
 devices.
 
+
 NVMe storage
 ============
 
+Our custom NVMe driver received the following improvements.
 First we added 'host-memory-buffer' (HMB) support to the driver, which is a
 performance optimization for NVMe devices that do not make use of a DRAM
-cache for its operatinal data.
+cache for its operational data.
 
 The amount of memory used for the HMB can be set by adding the 'max_hmb_size'
 attribute to the '<config>' node of the driver. This value is checked against
 the constraints imposed by the device. Should the value be less than the
-minimal required amount of memory it will not be used and a warning is issued.
+minimal required amount of memory, it will not be used and a warning is issued.
 On the other hand, if the specified value is larger than the preferred amount
-of memory as favored by the device it will be capped to that instead.
+of memory as favored by the device it will be capped to the useful amount instead.
 
 Naturally, when using the HMB, the required RAM quota of the driver component
 increases by that amount.
 
-Secondily we fixed a problem detecting the block size (LBA format) of a given
+Second, we fixed a problem detecting the block size (LBA format) of a given
 namespace. The lower 4 bits of the 'FLABS' register indicate which of the
 (up to) 16 supported LBA formats is used by the namespace. However, instead of
 only making use of those bits the driver looked at whole register that also
 includes other information. That led to using the wrong index for reading the
-LBA format and on certain devices rendered the driver unsable as the assumed
-block size was wrong.
+LBA format and on certain devices rendered the driver unusable as the assumed
+block size was detected wrong.
 
 
 Audio-driver update
 ===================
 
-We updated the ported audio driver for HDA devices to OpenBSD version 7.3.
-The functional changes are minimal but the new version allows for the driver
-being used on more recent PC platforms and recognizes more codecs.
+We updated the audio driver for HDA devices ported from OpenBSD to version 7.3.
+The functional changes are minimal but the new version supports more recent
+PC platforms and recognizes more codecs.
 
 
 Platforms
@@ -757,21 +760,25 @@ Principle x86 virtualization support (on Qemu)
 ----------------------------------------------
 
 This release brings limited support for AMD's Secure Virtual Machine (SVM)
-vCPUs on base-hw.
-As we currently lack AMD hardware, the release has only been tested on the
-rather ancient qemu 4.2, since that had known working SVM emulation support that
-we could use to cross-test our implementation against other hypervisors.
+vCPUs to Genode's custom base-hw microkernel.
+Supporting SVM is meant as an intermediate step towards enabling advanced
+virtualization workloads using VirtualBox on Intel VMX later this year.
+The approach allows us to craft the kernel's virtualization infrastructure using
+Qemu - which is able to emulate SVM in software - and cross-test our
+implementation against other hypervisors in a tightly controlled setting.
+For reference, we used the time-tested Qemu version 4.2 for this line of
+work.
 
-Implementing principle vCPU support revealed points of friction between
+Implementing principle vCPU support revealed a few points of friction between
 base-hw's kernel interface, which had been designed for the needs of our custom
 ARM VMM, and our kernel-agnostic VM interface on x86 that has been carefully
 crafted to support a range of 3rd party hypervisors, but relies on more logic
 in the kernel-specific VMM library to manage the vCPU state.
 
-The current implementation is able to run our test VM workloads (the simple
-'vmm_x86' test and our seoul VMM run scripts with Linux and - of course -
-Genode VMs on one vCPU) and will serve as a starting point for our goal of
-supporting VirtualBox on Intel hardware.
+The current implementation is able to run several test VM workloads like the
+artificial 'vmm_x86' test, our seoul VMM run scripts with Linux, and - of course -
+Genode VMs on one vCPU. It have thereby reached an important stepping stone
+towards our actual goal of hosting VirtualBox on Intel hardware.
 
 Having shown that base-hw can support the generic x86 VM interface, we will
 mature our implementation and may adapt our interface to make it a better fit
@@ -781,7 +788,7 @@ to base-hw's vCPU execution model in the future.
 Boot-time RAM detection on the PinePhone
 ----------------------------------------
 
-On the PinePhone we implemented dynamic detection of the system RAM size by
+For the PinePhone, we implemented dynamic detection of the system RAM size by
 parsing the values of the DRAM controller as programmed by U-Boot. This way, 2
 and 3 GB models of the PinePhone are supported by Genode.
 
@@ -789,12 +796,12 @@ and 3 GB models of the PinePhone are supported by Genode.
 Updated seL4 microkernel
 ========================
 
-With this release we updated the support of the seL4 kernel from 9.0.1 to
-12.1.0 for i.MX6 Sabrelite board and x86_64 PC. The support for 32bit PC got
-removed, since it is unused, and the i.MX7 Sabrelite support got removed,
+With this release, we updated the support of the seL4 kernel from 9.0.1 to
+12.1.0 for i.MX6 Sabrelite board and x86_64 PC. The support for 32-bit PC got
+removed since it is unused, and the i.MX7 Sabrelite support got removed
 since it is not supported by the new seL4 kernel anymore.
 
 The updated seL4 kernel requires additional host tools installed,
-namely cmake, ninja and additional python3 modules, jinja2, jschonschema and
-pyfdt. Depending on the distribution the modules are available as distribution
+namely CMake, Ninja and additional Python3 modules, jinja2, jschonschema, and
+pyfdt. Depending on the distribution, the modules are available as distribution
 package or needs to be installed with the python pip3 tool.
