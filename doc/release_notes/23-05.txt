@@ -208,7 +208,8 @@ environment code. The amount of code added by the platform-specific
 libraries is unimposing as it mostly consists of the dummy implementations
 needed by the Linux configuration.
 
-[image wifi_drv_architecture]
+[image wifi_drv_lib]
+  Composition of the wireless LAN driver component
 
 All recipes for the depot archives are prefixed to the specific
 driver, for example 'pkg/pc_wifi' contains a reference to 'src/pc_wifi_drv' as
@@ -231,7 +232,8 @@ driver with new devices was cumbersome as the driver itself already supported
 the device most of the time, but it solely missed the corresponding entry in the
 firmware list and adding that required recompiling the driver.
 
-[image wifi_firmware_loading]
+[image wifi_drv_fw_img_seq]
+  Firmware image loading sequence
 
 So instead, the driver now loads the firmware images via its local VFS rather
 than requesting a predetermined ROM module. Since the platform-specific driver
@@ -357,7 +359,7 @@ in 2016, we largely *abolished* the use of *format strings* throughout the
 framework. This is desirable because a code base without format strings cannot
 have format-string vulnerabilities. Still, a few occurrences, specifically the
 interface for passing session-construction arguments, remained untouched since
-then. With version 23.04, we finally attained our initial goal by wrapping up
+then. With version 23.05, we finally attained our initial goal by wrapping up
 the transition.
 
 In particular, we revised 'Genode::Connection', which now accepts the session
@@ -568,7 +570,7 @@ development.
 Whenever the depot-download subsystem encounters the attribute 'verify="no"'
 for an '<installation>' item, it accepts the installation even if no key is
 available. It still applies verification for dependencies whenever possible.
-E.g., if a package of the provider "jon" gets installed via 'verify="no"' and
+E.g., if a package of the provider "john" gets installed via 'verify="no"' and
 the package depends on an archive by "genodelabs", for which the public key is
 known, the integrity of the content originating from "genodelabs" is verified.
 
@@ -576,8 +578,8 @@ known, the integrity of the content originating from "genodelabs" is verified.
 Libraries and applications
 ##########################
 
-Qt5 reorg
-=========
+Qt5 reorganization
+==================
 
 When the Goa tool is used to build an application, all libraries
 of the used API packages get linked to the application and the
@@ -631,7 +633,7 @@ With the tool chain updated to GCC 12, it became necessary to update VirtualBox
 6.1 to keep up with the tool-chain changes. While the update fixes many bugs
 from Oracle's side, Genode also improved the performance by disabling the RDTSC
 exits, which caused trouble on SMP systems and improved the stability of the
-E1000 NIC and XHCI USB device models. For Windows guests, it has become crucial
+E1000 NIC and xHCI USB device models. For Windows guests, it has become crucial
 to add the following line to the _machine.vbox6_ file.
 
 ! <Paravirt provider="HyperV"/>
@@ -661,7 +663,7 @@ the latest Linux kernel 6.1.20 version now:
 
 * Zynq SD-card driver
 * PCI Wifi driver for i.MX 8MQ
-* all PC drivers (USB, Wifi, Intel display)
+* all PC drivers (USB host, Wifi, Intel display)
 
 Note that a few drivers are not listed above. The
 existing drivers for the Allwinner and i.MX 8MQ SoC still use older 5.x Linux
