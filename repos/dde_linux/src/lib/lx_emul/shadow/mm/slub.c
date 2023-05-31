@@ -114,8 +114,10 @@ void * kmem_cache_alloc(struct kmem_cache * s, gfp_t flags)
 {
 	unsigned long align;
 
-	if (!s)
+	if (!s) {
+		printk("%s:%d: kmem_cache is NULL\n", __func__, __LINE__);
 		lx_emul_trace_and_stop(__func__);
+	}
 
 	align = max(s->align, (unsigned int)ARCH_KMALLOC_MINALIGN);
 	return lx_emul_mem_alloc_aligned(s->size, align);
