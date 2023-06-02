@@ -8,6 +8,8 @@ else ifeq ($(filter-out $(SPECS),arm_v7),)
 	TARGET_CPUARCH=arm_v7
 else ifeq ($(filter-out $(SPECS),arm_v8),)
 	TARGET_CPUARCH=arm_v8
+else ifeq ($(filter-out $(SPECS),riscv),)
+	TARGET_CPUARCH=riscv
 endif
 
 JITTERENTROPY_DIR := $(call select_from_ports,jitterentropy)
