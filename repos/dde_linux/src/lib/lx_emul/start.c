@@ -62,7 +62,7 @@ static int kernel_init(void * args)
 	platform_bus_init();
 
 	/* enable for debugging */
-	// no_hash_pointers_enable(NULL);
+	no_hash_pointers_enable(NULL);
 
 	lx_emul_initcalls();
 
