@@ -29,9 +29,6 @@ SRC_C   += lx_emul.c
 SRC_C   += lx_user.c
 SRC_C   += uplink.c
 
-CC_OPT_dummies           += -DKBUILD_MODNAME='"dummies"'
-CC_OPT_generated_dummies += -DKBUILD_MODNAME='"generated_dummies"'
-
 CC_OPT_lx_socket_call += -DKBUILD_MODNAME='"lx_socket_call"'
 SRC_C   += lx_socket_call.c
 
