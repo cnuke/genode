@@ -56,7 +56,11 @@ class Lx_kit::Scheduler
 		void add(Task & task);
 		void remove(Task & task);
 
-		void schedule() { _execute_schedule.local_submit(); }
+		void schedule()
+		{
+			Genode::error(__func__, ": call from: ", __builtin_return_address(0));
+			_execute_schedule.local_submit();
+		}
 
 		void unblock_irq_handler();
 		void unblock_time_handler();
