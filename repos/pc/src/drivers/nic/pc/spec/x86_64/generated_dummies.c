@@ -171,6 +171,11 @@ void bust_spinlocks(int yes)
 }
 
 
+#include <linux/bitrev.h>
+
+u8 const byte_rev_table[256] = {};
+
+
 #include <linux/console.h>
 
 void console_flush_on_panic(enum con_flush_mode mode)
@@ -254,6 +259,30 @@ asmlinkage __visible void dump_stack(void)
 #include <linux/reboot.h>
 
 void emergency_restart(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool_netlink.h>
+
+int ethnl_cable_test_alloc(struct phy_device * phydev,u8 cmd)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool_netlink.h>
+
+void ethnl_cable_test_finished(struct phy_device * phydev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/ethtool_netlink.h>
+
+void ethnl_cable_test_free(struct phy_device * phydev)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -371,6 +400,38 @@ int gnet_stats_copy_queue(struct gnet_dump * d,struct gnet_stats_queue __percpu 
 }
 
 
+#include <linux/gpio/consumer.h>
+
+int gpiod_get_value_cansleep(const struct gpio_desc * desc)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gpio/consumer.h>
+
+void gpiod_put(struct gpio_desc * desc)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gpio/consumer.h>
+
+int gpiod_set_consumer_name(struct gpio_desc * desc,const char * name)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/gpio/consumer.h>
+
+void gpiod_set_value_cansleep(struct gpio_desc * desc,int value)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/pseudo_fs.h>
 
 struct pseudo_fs_context * init_pseudo(struct fs_context * fc,unsigned long magic)
@@ -419,14 +480,6 @@ long __sched io_schedule_timeout(long timeout)
 #include <linux/swiotlb.h>
 
 struct io_tlb_mem io_tlb_default_mem;
-
-
-#include <linux/iommu.h>
-
-void iommu_device_unuse_default_domain(struct device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
 
 
 #include <linux/irq_work.h>
@@ -640,7 +693,23 @@ int pci_set_power_state(struct pci_dev * dev,pci_power_t state)
 
 #include <linux/pci.h>
 
+int pci_status_get_and_clear_errors(struct pci_dev * pdev)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
 int pci_wake_from_d3(struct pci_dev * dev,bool enable)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int pci_write_config_byte(const struct pci_dev * dev,int where,u8 val)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -657,6 +726,14 @@ int pcie_capability_clear_and_set_word(struct pci_dev * dev,int pos,u16 clear,u1
 #include <linux/pci.h>
 
 int pcie_capability_write_word(struct pci_dev * dev,int pos,u16 val)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/pci.h>
+
+int pcie_set_readrq(struct pci_dev * dev,int rq)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -721,6 +798,14 @@ void proc_free_inum(unsigned int inum)
 #include <linux/reboot.h>
 
 enum reboot_mode reboot_mode;
+
+
+#include <linux/firmware.h>
+
+void release_firmware(const struct firmware * fw)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/rhashtable.h>
