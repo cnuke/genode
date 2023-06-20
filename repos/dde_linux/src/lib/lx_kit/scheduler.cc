@@ -74,11 +74,24 @@ void Scheduler::remove(Task & task)
 }
 
 
-void Scheduler::unblock_irq_handler()
+void Scheduler::unblock_irq_handler(Pending_irq &pirq)
 {
+	_pending_irqs.enqueue(pirq);
+
 	for (Task * t = _present_list.first(); t; t = t->next()) {
 		if (t->type() == Task::IRQ_HANDLER) t->unblock();
 	}
+}
+
+
+int Scheduler::pending_irq()
+{
+	int irq = -1;
+	_pending_irqs.dequeue([&] (Pending_irq const &pirq) {
+		irq = pirq.value;
+	});
+
+	return irq;
 }
 
 
