@@ -26,6 +26,9 @@ namespace Lx_kit {
 }
 
 
+extern "C" int __lx_emul_sched__;
+
+
 class Lx_kit::Scheduler
 {
 	private:
@@ -56,7 +59,10 @@ class Lx_kit::Scheduler
 		void add(Task & task);
 		void remove(Task & task);
 
-		void schedule() { _execute_schedule.local_submit(); }
+		void schedule() {
+			if (__lx_emul_sched__)
+				Genode::error(__func__, __builtin_return_address(0));
+			_execute_schedule.local_submit(); }
 
 		void execute();
 

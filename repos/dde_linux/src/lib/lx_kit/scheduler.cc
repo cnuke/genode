@@ -154,6 +154,9 @@ void Scheduler::_schedule()
 			if (!t->runnable())
 				continue;
 
+			if (__lx_emul_sched__)
+				Genode::error(__func__, ": run: ", t->name());
+
 			/* update current before running task */
 			_current = t;
 			t->run();
@@ -171,4 +174,6 @@ void Scheduler::_schedule()
 
 	/* clear current as no task is running */
 	_current = nullptr;
+
+	// Genode::error(__func__);
 }
