@@ -60,7 +60,7 @@ class Lx_kit::Scheduler
 		void remove(Task & task);
 
 		void schedule() {
-			if (__lx_emul_sched__)
+			// if (__lx_emul_sched__)
 				Genode::error(__func__, __builtin_return_address(0));
 			_execute_schedule.local_submit(); }
 

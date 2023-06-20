@@ -183,7 +183,9 @@ int lx_emul_irq_task_function(void * data)
 			ack_bad_irq(irq);
 			WARN_ONCE(true, "Unexpected interrupt %d received!\n", lx_emul_irq_last());
 		} else {
-			generic_handle_irq(irq);
+			int const err = generic_handle_irq(irq);
+			// if (err)
+				printk("%s: generic_handle_irq: %d\n", __func__, err);
 		}
 
 		irq_exit();

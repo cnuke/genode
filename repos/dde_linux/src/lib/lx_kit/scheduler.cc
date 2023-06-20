@@ -124,6 +124,7 @@ void Scheduler::execute()
  */
 void Scheduler::_schedule()
 {
+	// Genode::error(__func__, ":", __LINE__);
 	_idle_pre_post_process();
 
 	/*
@@ -151,11 +152,14 @@ void Scheduler::_schedule()
 
 		for (Task * t = _present_list.first(); t; t = t->next()) {
 
+			if (t->name() == "kirqd")
+				Genode::error(t->name(), " ", t->runnable());
+
 			if (!t->runnable())
 				continue;
 
-			if (__lx_emul_sched__)
-				Genode::error(__func__, ": run: ", t->name());
+			// if (__lx_emul_sched__)
+				Genode::error(__func__, ": run: ", t->name(), " ", __builtin_return_address(0));
 
 			/* update current before running task */
 			_current = t;
@@ -175,5 +179,5 @@ void Scheduler::_schedule()
 	/* clear current as no task is running */
 	_current = nullptr;
 
-	// Genode::error(__func__);
+	// Genode::error(__func__, ":", __LINE__);
 }

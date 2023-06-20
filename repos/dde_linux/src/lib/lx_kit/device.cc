@@ -58,6 +58,7 @@ void Device::Irq::handle()
 
 	env().last_irq = number;
 	env().scheduler.unblock_irq_handler();
+	Genode::error(__func__, ": ", number);
 }
 
 
