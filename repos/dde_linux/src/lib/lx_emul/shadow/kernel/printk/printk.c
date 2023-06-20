@@ -21,6 +21,9 @@
 #include <lx_emul/debug.h>
 
 
+extern void lx_emul_print_current_task_name(void);
+
+
 static char print_string[2048];
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
@@ -34,6 +37,7 @@ asmlinkage __visible int _printk(const char * fmt,...)
 	vsnprintf(print_string, sizeof(print_string), fmt, args);
 	va_end(args);
 
+	lx_emul_print_current_task_name();
 	lx_emul_print_string(print_string);
 	return 0;
 }
