@@ -89,6 +89,12 @@ extern "C" void lx_emul_task_name(struct task_struct * t, const char * name)
 }
 
 
+extern "C" void lx_emul_print_current_task_name(void)
+{
+	Genode::log(Lx_kit::env().scheduler.current().name());
+}
+
+
 extern "C" void * lx_emul_task_stack(struct task_struct const * t)
 {
 	void * ret = nullptr;
