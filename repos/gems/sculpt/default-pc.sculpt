@@ -7,11 +7,11 @@ gpu_drv: intel
 import: pkg/drivers_managed-pc pkg/pc_wifi src/pc_nic_drv
 
 # selection of launcher-menu entries
-launcher: vm_fs shared_fs usb_devices_rom
+launcher: vm_fs shared_fs usb_devices_rom audio
 
 # selection of accepted depot-package providers
 depot: genodelabs cnuke alex-ab mstein nfeske cproc chelmuth jschlatow
 depot: ssumpf skalk
 
 # preconfigured example scenarios
-presets: empty nano3d window_manager falkon_web_browser
+presets: empty nano3d window_manager audio
