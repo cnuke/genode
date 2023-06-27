@@ -570,7 +570,7 @@ void Driver_manager::Main::_handle_devices_update()
 			if (vendor_id == VENDOR_VBOX)
 				_use_ohci = false;
 
-			if (vendor_id == VENDOR_INTEL && class_code == CLASS_AHCI) {
+			if (class_code == CLASS_AHCI) {
 				bool already_constructed = false;
 				for (auto & driver : _ahci_driver)
 					if (driver.constructed() && driver->name() == device_name)
