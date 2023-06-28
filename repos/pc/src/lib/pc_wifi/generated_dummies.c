@@ -290,22 +290,6 @@ const struct cpumask * cpu_clustergroup_mask(int cpu)
 }
 
 
-#include <linux/netdevice.h>
-
-int dev_ifconf(struct net * net,struct ifconf __user * uifc)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/netdevice.h>
-
-int dev_ioctl(struct net * net,unsigned int cmd,struct ifreq * ifr,void __user * data,bool * need_copyout)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/property.h>
 
 int device_create_managed_software_node(struct device * dev,const struct property_entry * properties,const struct software_node * parent)
