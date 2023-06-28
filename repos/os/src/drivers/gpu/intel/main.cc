@@ -2358,41 +2358,68 @@ class Gpu::Root : public Gpu::Root_component
 
 struct Initialization_failed : Genode::Exception { };
 
+#define DD(x, y) x ## y
+#define DDD(x, y) DD(x, y)
+
+struct D { D(int line) { Genode::error(line); } };
+
+#define D struct D DDD(d, __LINE__) { __LINE__ }
+
 
 struct Main : Irq_ack_handler, Gpu_reset_handler
 {
 	Env                   & _env;
+	D;
+
 	Sliced_heap             _root_heap      { _env.ram(), _env.rm()         };
+	D;
 	Gpu::Root               _gpu_root       { _env, _root_heap              };
+	D;
 	Attached_rom_dataspace  _config_rom     { _env, "config"                };
+	D;
 	Heap                    _md_alloc       { _env.ram(), _env.rm()         };
+	D;
 	Platform::Connection    _platform       { _env                          };
+	D;
 	Platform::Device        _device         { _platform                     };
+	D;
 	Platform::Device::Irq   _irq            { _device                       };
+	D;
 	Igd::Mmio               _mmio           { _device, _env                 };
+	D;
 	Platform::Device::Mmio  _gmadr          { _device, { 1 }                };
+	D;
 	Rm_connection           _rm             { _env                          };
+	D;
 	Io_signal_handler<Main> _irq_dispatcher { _env.ep(), *this,
 	                                          &Main::handle_irq             };
+	D;
 	Signal_handler<Main>    _config_sigh    { _env.ep(), *this,
 	                                          &Main::_handle_config_update  };
 
+	D;
 	Platform::Root _platform_root { _env, _md_alloc, _platform, *this, *this,
 	                                _mmio, _gmadr, _rm };
 
+	D;
 	Genode::Constructible<Igd::Device> _igd_device { };
 
+	D;
 	Main(Genode::Env &env)
 	:
 		_env(env)
 	{
+		Genode::error(__func__, ":", __LINE__);
 		_config_rom.sigh(_config_sigh);
 
+		Genode::error(__func__, ":", __LINE__);
 		/* IRQ */
 		_irq.sigh(_irq_dispatcher);
 
+		Genode::error(__func__, ":", __LINE__);
 		/* GPU */
 		_handle_config_update();
+		Genode::error(__func__, ":", __LINE__);
 	}
 
 	void _create_device()
@@ -2413,10 +2440,13 @@ struct Main : Irq_ack_handler, Gpu_reset_handler
 		});
 
 		try {
+		Genode::error(__func__, ":", __LINE__);
 			_igd_device.construct(_env, _md_alloc, _platform, _rm, _mmio,
 			                      _gmadr, _config_rom.xml(), device_id,
 			                      revision, gmch_ctl);
+		Genode::error(__func__, ":", __LINE__);
 			_gpu_root.manage(*_igd_device);
+		Genode::error(__func__, ":", __LINE__);
 			_env.parent().announce(_env.ep().manage(_gpu_root));
 		} catch (Igd::Device::Unsupported_device) {
 			Genode::warning("No supported Intel GPU detected - no GPU service");
@@ -2431,10 +2461,12 @@ struct Main : Irq_ack_handler, Gpu_reset_handler
 
 		if (!_config_rom.valid()) { return; }
 
+		Genode::error(__func__, ":", __LINE__);
 		if (_igd_device.constructed()) {
 			Genode::log("gpu device already initialized - ignore");
 			return;
 		}
+		Genode::error(__func__, ":", __LINE__);
 
 		_create_device();
 	}
@@ -2442,14 +2474,17 @@ struct Main : Irq_ack_handler, Gpu_reset_handler
 	void handle_irq()
 	{
 		bool display_irq = false;
+		Genode::error(__func__, ":", __LINE__);
 		if (_igd_device.constructed())
 			display_irq = _igd_device->handle_irq();
 		/* GPU not present forward all IRQs to platform client */
 		else {
+		Genode::error(__func__, ":", __LINE__);
 			_platform_root.handle_irq();
 			return;
 		}
 
+		Genode::error(__func__, ":", __LINE__);
 		/*
 		 * GPU present check for display engine related IRQs before calling platform
 		 * client
@@ -2457,6 +2492,7 @@ struct Main : Irq_ack_handler, Gpu_reset_handler
 		if (display_irq && _platform_root.handle_irq()) {
 			return;
 		}
+		Genode::error(__func__, ":", __LINE__);
 
 		ack_irq();
 	}
@@ -2464,14 +2500,17 @@ struct Main : Irq_ack_handler, Gpu_reset_handler
 	void ack_irq() override
 	{
 		if (_igd_device.constructed()) {
+		Genode::error(__func__, ":", __LINE__);
 			_igd_device->enable_master_irq();
 		}
 
+		Genode::error(__func__, ":", __LINE__);
 		_irq.ack();
 	}
 
 	void reset() override
 	{
+		Genode::error(__func__, ":", __LINE__);
 		addr_t const base = _mmio.base() + (_mmio.size() / 2);
 		Igd::Ggtt(_platform, _mmio, base, Igd::GTT_RESERVED, 0, 0);
 	}

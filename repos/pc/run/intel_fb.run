@@ -72,7 +72,7 @@ append config {
 			<service name="ROM" />
 			<service name="Report" />
 		</provides>
-		<config>
+		<config verbose="yes">
 			<policy label="pci_decode -> system"    report="acpi_drv -> acpi"/>
 			<policy label="intel_fb_drv -> intel_opregion" report="acpi_drv -> intel_opregion"/>
 			<policy label="platform_drv -> devices" report="pci_decode -> devices"/>
