@@ -130,12 +130,10 @@ append config {
 		</route>
 		<config>
 			<policy label_prefix="intel_fb_drv" info="yes">
-				<pci class="VGA"/>
-				<pci class="ISABRIDGE"/>
+				<device name="08:00.0"/>
 			</policy>
 			<policy label_prefix="intel_gpu_drv" info="yes">
-				<pci class="VGA"/>
-				<pci class="ISABRIDGE"/>
+				<device name="08:00.0"/>
 			</policy>
 		</config>
 	</start>
