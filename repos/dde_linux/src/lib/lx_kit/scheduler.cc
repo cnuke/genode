@@ -120,6 +120,9 @@ void Scheduler::execute()
 }
 
 
+extern "C" void genode_uplink_notify_peers(void);
+
+
 /*
  * This signal handler function must only be called from within an EP
  * context, see check in 'execute()'.
@@ -173,4 +176,6 @@ void Scheduler::_schedule()
 
 	/* clear current as no task is running */
 	_current = nullptr;
+
+	genode_uplink_notify_peers();
 }
