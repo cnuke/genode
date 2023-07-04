@@ -398,6 +398,7 @@ install_config {
 		<resource name="CPU" quantum="10"/>
 		<binary name="init"/>
 		<route>
+			<service name="LOG" label="on-target"> <child name="log"/> </service>
 			} [log_route] {
 			<service name="ROM" label="config">
 				<child name="config_fs_rom" label="drivers"/> </service>
