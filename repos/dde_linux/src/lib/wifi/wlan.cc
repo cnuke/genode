@@ -308,6 +308,8 @@ struct Wlan
 
 	Wlan(Env &env) : _env { env }
 	{
+		Lx_kit::initialize(env);
+
 		genode_mac_address_reporter_init(env, Lx_kit::env().heap);
 
 		{

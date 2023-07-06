@@ -71,7 +71,6 @@ void Sculpt::gen_wifi_drv_start_content(Xml_generator &xml)
 		gen_parent_rom_route(xml, "libc.lib.so");
 		gen_parent_rom_route(xml, "libm.lib.so");
 		gen_parent_rom_route(xml, "vfs_jitterentropy.lib.so");
-		gen_parent_rom_route(xml, "vfs_wifi.lib.so");
 		gen_parent_rom_route(xml, "libssl.lib.so");
 		gen_parent_rom_route(xml, "wifi.lib.so");
 		gen_parent_rom_route(xml, "wifi_firmware.tar");
