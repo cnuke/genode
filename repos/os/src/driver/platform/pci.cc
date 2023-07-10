@@ -140,6 +140,25 @@ struct Config_helper
 		Driver::pci_hd_audio_quirks(_cfg, _config);
 
 		_config.write<Config::Command>(cmd_old);
+
+		enum {
+			OTHER_NETWORK_CLASS_CODE = 0x28000,
+			USB3_CLASS_CODE          = 0xc0330,
+		};
+
+		if ((_cfg.class_code & 0xffff00) == OTHER_NETWORK_CLASS_CODE
+			|| (_cfg.class_code == USB3_CLASS_CODE)) {
+
+			Config::Command::access_t cmd =
+				_config.read<Config::Command>();
+			Config::Command::Io_space_enable::set(cmd, 0);
+			Config::Command::Memory_space_enable::set(cmd, 0);
+			Config::Command::Bus_master_enable::set(cmd, 0);
+			Config::Command::Interrupt_enable::set(cmd, 0);
+			_config.write<Config::Command>(cmd);
+
+			_config.power_off();
+		}
 	}
 };
 
