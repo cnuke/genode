@@ -29,11 +29,24 @@ namespace Black_hole {
 
 class Black_hole::Log_session : public Rpc_object<Genode::Log_session>
 {
+	Session_label const _label;
+
 	public:
 
-		Log_session() { }
+		Log_session(Session_label const &label)
+		:
+			_label { label }
+		{ }
 
-		void write(String const &) override { }
+		void write(String const &) override
+		{
+			static bool once = false;
+			if (once)
+				return;
+
+			Genode::log("Silent LOG session for '", _label, "'");
+			once = true;
+		}
 };
 
 
@@ -45,9 +58,10 @@ class Black_hole::Log_root : public Root_component<Log_session>
 
 	protected:
 
-		Log_session *_create_session(const char *) override
+		Log_session *_create_session(const char *args) override
 		{
-			return new (md_alloc()) Log_session();
+			return new (md_alloc())
+				Log_session { session_label_from_args(args) };
 		}
 
 	public:
