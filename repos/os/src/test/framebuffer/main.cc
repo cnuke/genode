@@ -51,7 +51,7 @@ struct Test::Capture_session : Rpc_object<Capture::Session>
 
 	Constructible<Attached_ram_dataspace> _ds { };
 
-	State _state = STRIPES;
+	State _state = COLORED;
 
 	unsigned long _sync_cnt = 0;
 
@@ -198,7 +198,7 @@ void Test::Capture_session::_draw()
 				fb_base[o] = Pixel(i>>16, i>>8, i);
 
 			_draw_frame(fb_base, WHITE, _size);
-			_state = STRIPES;
+			_state = COLORED;
 		}
 	};
 }
