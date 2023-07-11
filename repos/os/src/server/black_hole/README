@@ -13,6 +13,7 @@ in the configuration of the component:
 * ROM
 * Gpu
 * Usb
+* Log
 
 <config>
 	<audio_in/>
@@ -24,4 +25,5 @@ in the configuration of the component:
 	<rom/>
 	<gpu/>
 	<usb/>
+	<log/>
 </config>

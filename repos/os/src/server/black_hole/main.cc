@@ -31,6 +31,7 @@
 #include "rom.h"
 #include "gpu.h"
 #include "usb.h"
+#include "log.h"
 
 
 /***************
@@ -55,6 +56,7 @@ struct Black_hole::Main
 	Genode::Constructible<Rom_root>        rom_root       { };
 	Genode::Constructible<Gpu_root>        gpu_root       { };
 	Genode::Constructible<Usb_root>        usb_root       { };
+	Genode::Constructible<Log_root>        log_root       { };
 
 	Main(Genode::Env &env) : env(env)
 	{
@@ -99,6 +101,10 @@ struct Black_hole::Main
 		if (_config_rom.xml().has_sub_node("usb")) {
 			usb_root.construct(env, heap);
 			env.parent().announce(env.ep().manage(*usb_root));
+		}
+		if (_config_rom.xml().has_sub_node("log")) {
+			log_root.construct(env, heap);
+			env.parent().announce(env.ep().manage(*log_root));
 		}
 	}
 };
