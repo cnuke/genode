@@ -205,10 +205,47 @@ void *wifi_get_buffer(void)
  * finished our initialization (Lx_kit::Env include).
  */
 
+
+struct Local_allocator : Genode::Allocator
+{
+
+	Genode::Heap _heap;
+
+	Local_allocator(Genode::Env &env)
+	:
+		_heap { env.ram(), env.rm() }
+	{ }
+
+	/*************************
+	 ** Allocator interface **
+	 *************************/
+
+	Alloc_result try_alloc(size_t size) override
+	{
+		Alloc_result result = _heap.try_alloc(size);
+		result.with_result([&] (void *ptr) {
+			Genode::error("try_alloc", ": size: ", size, " ptr: ", ptr);
+		},
+		[&] (Allocator::Alloc_error) { });
+		return result;
+	}
+
+	void free(void *ptr, size_t size) override
+	{
+		Genode::error(__func__, ": size: ", size, " ptr: ", ptr);
+		_heap.free(ptr, size);
+	}
+	size_t consumed() const override { return _heap.consumed(); }
+	size_t overhead(size_t size) const override { return _heap.overhead(size); }
+	bool need_size_for_free() const override { return _heap.need_size_for_free(); }
+};
+
+
 void Component::construct(Genode::Env &env)
 {
 	try {
-		Genode::Heap shared_obj_heap(env.ram(), env.rm());
+		// Genode::Heap shared_obj_heap(env.ram(), env.rm());
+		Local_allocator shared_obj_heap(env);
 
 		Shared_object shared_obj(env, shared_obj_heap, "libc.lib.so",
 		                         Shared_object::BIND_LAZY,
