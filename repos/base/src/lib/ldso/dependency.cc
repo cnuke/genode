@@ -29,7 +29,9 @@ Linker::Dependency::Dependency(Env &env, Allocator &md_alloc,
 	_md_alloc(&md_alloc)
 {
 	deps.enqueue(*this);
+	Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
 	load_needed(env, *_md_alloc, deps, keep);
+	Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
 }
 
 
@@ -64,12 +66,16 @@ bool Linker::Dependency::in_dep(char const *file, Fifo<Dependency> const &dep)
 void Linker::Dependency::_load(Env &env, Allocator &alloc, char const *path,
                                Fifo<Dependency> &deps, Keep keep)
 {
-	if (!in_dep(Linker::file(path), deps))
+	if (!in_dep(Linker::file(path), deps)) {
+		Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
 		new (alloc) Dependency(env, alloc, path, _root, deps, keep);
+	}
 
 	/* re-order initializer list, if needed object has been already added */
-	else if (Object *o = Init::list()->contains(Linker::file(path)))
+	else if (Object *o = Init::list()->contains(Linker::file(path))) {
+		Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
 		Init::list()->reorder(o);
+	}
 }
 
 
@@ -104,10 +110,14 @@ Linker::Root_object::Root_object(Env &env, Allocator &md_alloc,
 	 * The life time of 'Dependency' objects is managed via reference
 	 * counting. Hence, we don't need to remember them here.
 	 */
+	Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
 	new (md_alloc) Dependency(env, md_alloc, path, this, _deps, keep);
-
+	Genode::error(__func__, ":", __LINE__, ": path: '", path, "'");
+	
+	Genode::error(__func__, ":", __LINE__, ": path: '", linker_name(), "'");
 	/* provide Genode base library access */
 	new (md_alloc) Dependency(env, md_alloc, linker_name(), this, _deps, DONT_KEEP);
+	Genode::error(__func__, ":", __LINE__, ": path: '", linker_name(), "'");
 
 	/* relocate and call constructors */
 	try {

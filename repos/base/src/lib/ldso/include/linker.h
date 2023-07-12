@@ -360,7 +360,10 @@ class Linker::Root_object
 		{
 			_deps.dequeue_all([&] (Dependency &d) {
 				if (!d.obj().keep())
-					destroy(_md_alloc, &d); });
+					destroy(_md_alloc, &d);
+				else
+					Genode::error("keep: ", d.obj().name());
+				});
 		}
 
 		Link_map const &link_map() const

@@ -59,10 +59,12 @@ Genode::Shared_object::Shared_object(Env &env, Allocator &md_alloc,
 	try {
 		Mutex::Guard guard(Linker::shared_object_mutex());
 
+		log("1 LD: open '", file ? file : "binary", "'");
 		Root_object *root  = new (md_alloc)
 			Root_object(env, md_alloc, file ? file : binary_name(),
 			            bind == BIND_NOW ? Linker::BIND_NOW : Linker::BIND_LAZY,
 			            keep == KEEP     ? Linker::KEEP     : Linker::DONT_KEEP);
+		log("2 LD: open '", file ? file : "binary", "'");
 
 		_handle = root;
 
