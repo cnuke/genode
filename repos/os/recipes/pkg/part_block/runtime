@@ -14,6 +14,8 @@
 		<policy label="7" partition="7" writeable="yes"/>
 		<policy label="8" partition="8" writeable="yes"/>
 		<policy label="9" partition="9" writeable="yes"/>
+		<policy label="10" partition="10" writeable="yes"/>
+		<policy label="11" partition="11" writeable="yes"/>
 	</config>
 
 	<content>
