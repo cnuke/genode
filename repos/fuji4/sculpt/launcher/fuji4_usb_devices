@@ -2,9 +2,7 @@
 	<config>
 		<output node="devices">
 			<inline>
-<!--
-				<device label="LABEL"/>
--->
+				<device label="jabra"/>
 			</inline>
 		</output>
 	</config>

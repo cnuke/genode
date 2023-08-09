@@ -137,9 +137,9 @@
 	<start name="fuji4_fs"/>
 <!--
 	<start name="fuji4_vbox6_cpu1"/>
-	<start name="fuji4_vbox6_cpu2"/>
 	<start name="fuji4_vbox6_cpu4"/>
 -->
+	<start name="fuji4_vbox6_cpu2"/>
 
 </config>
 
