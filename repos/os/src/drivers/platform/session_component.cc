@@ -42,6 +42,7 @@ Session_component::_acquire(Device & device)
 							new (heap()) Io_mmu_domain(_domain_registry,
 							                           io_mmu_dev,
 							                           heap(),
+							                           _env_ram,
 							                           _dma_allocator.buffer_registry(),
 							                           _ram_quota_guard(),
 							                           _cap_quota_guard());

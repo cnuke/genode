@@ -141,9 +141,12 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 
 		/* Create a Io_mmu::Domain object */
 		virtual Domain & create_domain(Allocator &,
+		                               Ram_allocator &,
 		                               Registry<Dma_buffer> const &,
 		                               Ram_quota_guard &,
 		                               Cap_quota_guard &) = 0;
+
+		virtual void generate(Xml_generator &) { };
 
 		Io_mmu(Io_mmu_devices      & io_mmu_devices,
 		       Device::Name  const & name)

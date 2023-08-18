@@ -45,6 +45,7 @@ class Driver::Common : Device_reporter,
 
 		Constructible<Expanding_reporter> _cfg_reporter { };
 		Constructible<Expanding_reporter> _dev_reporter { };
+		Constructible<Expanding_reporter> _iommu_reporter { };
 
 		void _handle_devices();
 
@@ -124,6 +125,10 @@ void Driver::Common::update_report()
 	if (_dev_reporter.constructed())
 		_dev_reporter->generate([&] (Xml_generator & xml) {
 			_devices.generate(xml); });
+	if (_iommu_reporter.constructed())
+		_iommu_reporter->generate([&] (Xml_generator & xml) {
+			_io_mmu_devices.for_each([&] (Io_mmu & io_mmu) {
+				io_mmu.generate(xml); }); });
 }
 
 
@@ -143,6 +148,8 @@ void Driver::Common::handle_config(Xml_node config)
 		                          _env, "devices", "devices");
 		_cfg_reporter.conditional(node.attribute_value("config", false),
 		                          _env, "config", "config");
+		_iommu_reporter.conditional(node.attribute_value("iommu", false),
+		                            _env, "iommu", "iommu");
 	});
 
 	_root.update_policy();
