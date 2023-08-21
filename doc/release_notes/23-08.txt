@@ -1,0 +1,1054 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 23.08
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+
+Multi-component debug monitor
+#############################
+
+; @nfeske, @cproc
+
+; reuse parts of the issue text and README?
+
+commit 6a57683e52ff923623910ee020586d01f547010b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon May 8 16:57:57 2023 +0200
+
+    New debug monitor
+    
+    The new monitor component at os/src/monitor is the designated successor
+    of the gdb_monitor. This initial version, however, implements only the
+    subset needed to inspect the memory of the monitored component(s).
+    
+    In contrast to the gdb_monitor, the new component supports the monitoring
+    of multiple components, leveraging the sandbox API. It can therefore be
+    used as a drop-in replacement for the init component. Like the gdb_monitor,
+    the new monitor speaks the GDB protocol over Genode's terminal session.
+    But the protocol implementation does not re-use any gdbserver code,
+    sidestepping the complexities of POSIX.
+    
+    There exist two run scripts illustrating the new component. The
+    os/run/monitor.run script exercises memory inspection via the 'm' command
+    by letting a test program monitor itself. The os/run/monitor_gdb.run
+    script allows for the interactive use of GDB to interact with monitored
+    components.
+    
+    Issue #4917
+
+
+commit 02209e5455634f7c2afd8034ce13e384d626e14c
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu Jun 29 16:01:06 2023 +0200
+
+    monitor: add memory write support
+    
+    Fixes #4947
+
+commit f3b03fa01b7bec757b38356f857eaf5625af0ad5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon Aug 7 15:47:46 2023 +0200
+
+    ports: add `gdb_arm_64` variant
+    
+    Fixes #4980
+
+commit 4213d148b97e9ec6ba40dce59bb61fa315e90f48
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue Aug 8 07:20:32 2023 +0200
+
+    hw: send exception signals and support single-stepping
+    
+    Fixes #4975
+
+commit 7571996d5a3273d5d8f230ecf1eff19983ed51af
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue Aug 8 14:17:36 2023 +0200
+
+    monitor: add more debugging features
+    
+    Fixes #4977
+
+commit 53366b3073c16f2e6a3983ba99437d8e7848040b
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue Aug 15 13:41:20 2023 +0200
+
+    acpica: fix download link
+    
+    Fixes #4982
+
+
+Streamlined application development via Goa
+###########################################
+
+; Find a better section title to distinguish from previous release?
+
+; @jschlatow
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+Internal core and base-framework modernization
+==============================================
+
+; @nfeske
+
+commit f47c64e246ce68bd26893ded53e5b19332f497d1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 25 16:49:13 2023 +0200
+
+    core: allow offset-attached managed dataspaces
+    
+    This patch adds the missing application of the region offset to the
+    resolution of page faults inside managed dataspaces, which resulted in
+    an unexpected "invalid mapping" message after attaching a managed
+    dataspace with an offset.
+    
+    This limitation could be observed during the implementation of the debug
+    monitor that locally maps a portion of the debugging target's address
+    space, e.g., a view port of 16 MiB. All traditional uses of managed
+    dataspaces (e.g., stack area, linker area) happened to attach the
+    managed dataspaces from their beginning.
+    
+    Issue #4917
+
+commit 30b70da6c1278e3ece8c566f352ab8c092eaedc0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 10 11:39:15 2023 +0200
+
+    base/child.h: Child_policy::with_address_space
+    
+    This patch replaces the former 'address_space' accessor by a new
+    'with_address_space' interface that grants access to the region map of
+    the child's address space, but limits the interface lifetime to the
+    scope of the caller.
+    
+    Issue #4917
+
+commit a4c59c03e31d846c966d8a5f7e8e3a4acd355b90
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jun 9 18:08:47 2023 +0200
+
+    core: rework page-fault resolution
+    
+    The change "core: allow offset-attached managed dataspaces" addressed a
+    corner case of the use of nested region maps. Apparently, this change
+    negatively affects other scenarios (tool_chain_auto).
+    
+    In order to confidently cover all the differnt situations, this patch
+    reworks the page-fault resolution code for improved clarity and safety,
+    by introducing dedicated result types, reducing the use of basic types,
+    choosing expressive names, and fostering constness.
+    
+    It also introduces a number of 'print' hooks that greatly ease manual
+    instrumentation and streamlines the error messages printed by core.
+    Those messages no longer appear when a user-level page-fault handler
+    is reistered for the faulted-at region map. So the monitor component
+    produces less noise on the attempt to dump non-existing memory.
+    
+    Issue #4917
+    Fixes #4920
+
+commit 3c5d27506f216e38108d81ff07b0a12c25f773aa
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Jun 10 01:12:30 2023 +0200
+
+    base: stricter distinction between rx and rwx
+    
+    This patch restricts 'Region_map::attach_executable' to create read-only
+    mappings, while offering the option to map the full rights using a new
+    'attach_rwx' method.
+    
+    The 'attach_rwx' method is now used by the dynamic linker to explicitly
+    attach the linker area with full rwx rights. With the old page-fault
+    handling code, the execute flag was evaluated only for leaf dataspaces,
+    not for managed dataspaces while traversing region-map hierarchies.
+    With the new page-fault handling code, the execute bit is downgraded
+    to no-execute when passing a managed dataspace that is not attached
+    as executable.
+    
+    Issue #4920
+
+commit 3489672bc00d006f0e5185385dcdf855ddebf082
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jun 20 13:45:33 2023 +0200
+
+    base: remove env_deprecated from thread-start code
+    
+    This patch replaces the internal use 'env_deprecated()' from the
+    implementation of the thread API in the base library. It also
+    replaces the global accessor 'main_thread_cap' by the explicit
+    propagation of the main-thread's capability to the single point of
+    use via a new 'init_thread_bootstap' function.
+    
+    Issue #4784
+
+commit 6e30d00eefe0bf70e45ce2b1b4271b16468b7e9d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jun 20 14:46:54 2023 +0200
+
+    base: remove env_deprecated from signalling code
+    
+    Issue #4784
+
+commit 0ab69a2bb835d242a4bb07e2294b28f04eb59a32
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jun 20 17:53:41 2023 +0200
+
+    base: de-duplicate src/lib/base/platform.cc
+    
+    By splitting the 'init_capability_slab()' implementation to a separate
+    compilation unit 'capability_slab.cc', base-hw no longer needs a
+    customized version of 'lib/base/platform.cc'.
+    
+    Related to issue #4784
+
+commit 415d4ab23d0935d44be7e499a61694716292c1c1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 21 17:08:42 2023 +0200
+
+    startup: merge init_main_thread.cc into _main.cc
+    
+    This makes the interplay of 'init_main_thread', 'init_platform',
+    '_main', and 'bootstrap_component' easier to follow.
+    
+    Issue #4784
+
+commit de99945af05f182aed86d67768c63c8cd88ab84a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 21 17:25:44 2023 +0200
+
+    base: pass 'Platform &' to 'bootstrap_component'
+    
+    This eliminates the need of component.cc to pull the platform resources
+    out of thin air (calling 'env_deprecated()').
+    
+    Issue #4784
+
+commit 7e1a2ac684b94e4ab79306c2e6315dd75310b8ac
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 21 17:51:04 2023 +0200
+
+    base: remove internal use of 'env_deprecated'
+    
+    Fixes #4784
+
+commit e2836bf68a009906a2468ea03c58109dda9336a0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 28 14:27:34 2023 +0200
+
+    ldso: remove deprecated support for legacy 'main'
+    
+    Besides the removal of the legacy 'main' support, this patch simplifies
+    the lib/startup/_main.cc.
+    
+    Issue #2199
+
+commit 1fd1786122ca735841535ed53c07d8354c1998b7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 28 15:46:04 2023 +0200
+
+    test/lx_hybrid: don't call glibc exit
+    
+    This patch removes the use of the Entrypoint::schedule_suspend mechanism
+    and the call of glibc's exit from the lx_hybrid tests, for two reasons.
+    
+    First, the interplay of atexit handlers executed by the glibc and
+    Genode's lx_hybrid library is complicated while bringing no benefits in
+    practice as lx_hybrid applications are usually servers that don't exit
+    anyway.
+    
+    Second, the Entrypoint::schedule_suspend mechanism in not used by any
+    other component. By removing its use from the lx_hybrid tests, we can
+    remove this mechanism from the base library.
+    
+    Issue #4940
+
+commit 1139492c4f53b1612647070459eaa98284270098
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jun 28 15:57:45 2023 +0200
+
+    base: remove Entrypoint::schedule_suspend
+    
+    Fixes #4940
+
+
+API changes
+===========
+
+; @nfeske
+
+Register framework update
+-------------------------
+
+commit c907e44a024c31b338f72158d02fb0f7c7a0a84d
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Jun 7 19:14:04 2023 +0200
+
+    register framework: read bitfields to fitting uint
+    
+    * Replaces bool access types with uint8_t access types
+    * Ensures, that the framework always uses the smalles possible uint type
+      for the return value wherever a bitfield is read and returned to the user.
+    
+    Ref #4924
+
+commit bf18ffbbdda6c05e16efdc643be3780cce07aefb
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Tue Jun 13 14:32:35 2023 +0200
+
+    lib/net: enable strict warnings
+    
+    Enables strict warnings in the net lib and fixes all related compile errors.
+    
+    Fixes #4924
+
+
+Hex-dump utility
+----------------
+
+commit 8bad3d08d70b9284e53b7ca25a3783ace13390bf
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Thu Jul 20 15:29:42 2023 +0200
+
+    util/formatted_output.h: hex-dump utility
+    
+    Adds Genode::Hex_dump class to the formatted_output.h header. This class can be
+    used to print a hexadecimal dump of a byte range. The data is printed in a
+    format similar to that used by Linux's 'xxd'. In addition to the 'xxd' format,
+    consecutive duplicate lines are replaced with a single "*\n" as done also by
+    Linux's 'hexdump'.
+    
+    Ref #4966
+
+
+Libraries and applications
+##########################
+
+New NIC server for raw uplink connectivity
+==========================================
+
+; @m-stein
+
+commit c23491ef3ce831553395c2ea450f59cad9a5619a
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Wed Jul 12 11:41:31 2023 +0200
+
+    nic_uplink: connect a Nic to an Uplink session
+    
+    * Adds a new component server/nic_uplink that forwards packets unmodified
+      between one Uplink session at one side and potentially multiple Nic sessions
+      at the other side.
+    * Adds a new run script nic_uplink.run that does a basic test with multiple
+      Nic clients on this component and adds it to the autopilot list.
+    * Adds a new depot recipe src/nic_uplink for this component.
+    * Adds a new depot recipe pkg/pc_nic for deploying the pc_nic_driver together
+      with a nic_uplink server. This allows for raw access to the network connected
+      to the Nic of the system in contrast to the commonly used routed and NAT'd
+      access via NIC router. That said, it enables the use of network protocols
+      not yet supported by the NIC router at the cost of less protection.
+    
+    Ref #4966
+
+
+New depot-remove component
+==========================
+
+; @nfeske
+
+commit fb0e8fffa26303550dd53538e91964d32689e149
+Author: Alice Domage <alice.domage@gapfruit.com>
+Date:   Tue Mar 14 14:18:13 2023 +0100
+
+    New depot_remove component
+    
+    The depot_remove component can delete PKG archives with
+    automatically resolving dependencies and deleting archives that are not
+    required on the system anymore.
+    
+    Issue genodelabs#4866
+
+
+DDE-Linux changes
+=================
+
+; @cnuke
+
+commit caac994da848bcafe1425e0aaeca3fd677953fff
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Jun 15 12:57:03 2023 +0200
+
+    lx_kit: decouple schedule execution
+    
+    Prior to this commit, whenever an external event occurred, for example
+    timer or interrupt, the corresponding I/O signal handler was triggered.
+    This handler unblocked the task waiting for the event and initiated the
+    immediate execution of all unblocked tasks. Since these tasks may hit
+    serialization points, e.g. synchronously waiting for packet stream
+    operations, that require handling of other I/O signals this leads to
+    nested execution. This, however, is not supported and mixes application
+    and I/O level signal handling.
+    
+    The flagging of the scheduling intent is now decoupled from its
+    execution by using an application level signal handler that is run in
+    the context of the components main entrypoint. The I/O signal handler
+    now triggers the scheduling execution by sending a local signal to
+    the EP.
+    
+    Since it might be necessary to execute a pending schedule from the EP
+    directly the scheduler is extended with the 'execute' member function
+    that performs the check that the scheduler is called from within the
+    EP and triggers the execution afterwards.
+    
+    Issue #4927.
+
+commit 1cac1340301e722025c29e888b0e417c06dc725c
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Jun 20 16:17:19 2023 +0200
+
+    lx_kit: support multiple pending IRQs
+    
+    Decoupling the scheduler execution can lead to missed interrupts
+    because the current implementation only handles one pending
+    interrupt and requires immediate processing.
+    
+    This commit introduces a helper object that is used to capture
+    any occuring interrupts that are then handled consecutively.
+    
+    Issue #4927.
+
+commit e18c02991e5239f19ad92e7787d96a109888e062
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Jul 6 13:02:04 2023 +0200
+
+    lx_kit: use central signal handler for scheduling
+    
+    This commit extends the Lx_kit initialization function by passing in
+    a signal handler that is used to perform the normally occurring
+    scheduler execution and is a follow-up change for the decoupling
+    scheduler execution commit.
+    
+    Instead of burying the signal handler in the 'Lx_kit::Scheduler'
+    object it is provided by the main object where the driver is free
+    to perform any additional step before or after executing the scheduler.
+    
+    Issue #4927
+    Fixes #4952
+
+
+Tresor block encryptor
+======================
+
+; @m-stein
+
+; Not sure how far we should go into detail...
+
+commit dea53f635fe21ead98864cad93a560edc4cc7e55
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Thu Jun 1 15:56:07 2023 +0200
+
+    Refine tresor tests
+    
+    * Use jitterentropy only if supported.
+      On certain targets like pbxa9 or zynq_qemu, the performance counter always
+      yields 0, which renders jitterentropy unusable. On these platforms, the
+      Tresor tests now use a static value as entropy source instead.
+    
+    * Adds a new package test-file_vault_config_report_no_entropy that is used by
+      the Depot Autopilot on targets without jitterentropy support instead of
+      test-file_vault_config_report. The only difference between the two packages
+      is the value of the above described new config attribute of the File Vault.
+    
+    * Circumvent alignment fault.
+      The Tresor lib for now has the deficiency of using on-disc data structures
+      directly in code instead of decoding them first to unpacked, naturally
+      aligned structures. This causes problems with memory-access alignment on
+      several platforms (rpi, imx6q_sabrelite, imx53_qsb, imx7d_sabre). As fixing
+      this properly is a bit of work, the commit disables the tresor_tester and
+      file_vault_config_report test on the affected platforms in autopilot mode for
+      now.
+    
+    * Further adjustments
+      * Make benchmarks optional
+      * Use a smaller tresor for rekeying
+      * Clean up image parameters
+      * No use implicit routes/resources
+      * Reduce ram consumption
+      * Reduce test timeout
+      * Raise cap quota, required for sel4 x86_64.
+    
+    Ref #4819
+
+commit abe163c3356855e56ab62cef61c97d52e49b9f9c
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Fri Jun 9 13:50:34 2023 +0200
+
+    tresor: do not use on-disc-layouted structs
+    
+    * Removes all previous structs that represented an on-disc block layout
+      and were therfore subject to a number of layout restrictions (packed,
+      padding members, enum representations, etc.).
+    * Adds a replacement struct without any layout restrictions for each of the
+      removed structs. The new structs are named similar to the old structs.
+    * Adds block encoding and decoding utilities for easily converting from the
+      new structs to on-disc blocks and vice-versa (Block_scanner, Block_generator,
+      T::decode_to_blk, T::encode_from_blk)
+    * Adapts all affected places in the library to encode and decode proberly
+      instead of simply casting pointers.
+    * Thereby cleans up the hashing utilities to use typed-reference args instead
+      of void pointers.
+    * Re-enables run/tresor_tester and test-file_vault_vonfig_report for platforms
+      rpi, imx53_qsb, imx53_qsb_tz, imx6q_sabrelite, imx7d_sabre.
+    
+    Ref #4819
+
+
+
+Device drivers
+##############
+
+Intel GPU
+=========
+
+@ssumpf
+
+commit e3c2fdf414135aa9e8f84b7767ca0c3d7a0c7098
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon May 22 21:57:22 2023 +0200
+
+    gpu/intel: enable GPU reset for GEN(8)/9/12
+    
+    * add semaphore command to ring in order to be able to stop ring
+      execution before reset (Wa KabyLake)
+    * implement reset sequence as done by the Linux driver
+    * reset ring and cancel job of vgpu causing hang
+    * lower watchdog timeout 1000ms -> 200ms
+    * improve scheduling of vgpus so progress after reset is made
+    * improve the generation chaos a little
+    * tested on Skylake, Kaby Lake, Tiger Lake
+    
+    issue #4916
+
+
+Intel display
+=============
+
+; @alex-ab
+
+commit 1f1fafb0cf0955beafeff6f2af430abd28df104c
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Jun 29 15:18:18 2023 +0200
+
+    intel_fb: disable encoders of disconnected ports
+    
+    On disconnect of displays, e.g. seen with Type-C connectors, the encoder was
+    not properly disabled due to a missing drm_client_modeset_commit. In order that
+    the commit succeed, however a fb must be assigned to the modeset. Missing to
+    do so leads to an -EINVAL by the drm_client_modeset_commit.
+    
+    Fixes #4948
+
+
+New PC network driver based on DDE-Linux
+========================================
+
+; @chelmuth
+
+commit 36c1dc16d404ffbe950f988b0edb8447e002c789
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Jun 1 09:02:26 2023 +0200
+
+    pc_linux: enable e1000, e1000e, pcnet32
+    
+    Issue #4921
+
+commit 8de0d8d4e0532a1e7f19e6df0818fdf3c8377cbb
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Jun 1 09:02:11 2023 +0200
+
+    pc_linux: update initcall order for pc_nic_drv
+    
+    Issue #4921
+
+commit d258422c344e0a70ffd4b6e643f5ff494a7ba789
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Jun 1 09:00:29 2023 +0200
+
+    pc_nic_drv: ethernet NIC driver based on Linux 6.1
+    
+    Fixes #4921
+
+commit 48cc8fb657e00c67f43f956fa16ed4bef09d02ce
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Jun 1 09:01:38 2023 +0200
+
+    drivers_nic-pc: replace ipxe_nic_drv by pc_nic_drv
+    
+    Also, the configuration enables MAC-address reporting and includes a
+    verbose mac_report_rom.
+    
+    Issue #4921
+
+commit 8ecbc48211acaa1127ba01cd83234487a2f9bc24
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Mon Jun 5 11:29:01 2023 +0200
+
+    sculpt: replace ipxe_nic_drv by pc_nic_drv
+    
+    Issue #4921
+
+commit ee564125df014063ca553fe364f53b9cd15dfcc7
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Tue Jun 20 14:07:26 2023 +0200
+
+    Replace ipxe_nic_drv by pc_nic_drv in run scripts
+    
+    Issue #4921
+
+commit afaabb3121a391ada3737dc963ebd1e5d19a320b
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Wed Jun 21 06:42:49 2023 +0000
+
+    pc_nic_drv: add R8169 driver
+    
+    This commits enables the R8169 driver and was tested with two
+    RTL8168h/8111h (10ec:8168 rev 0x15 sub 1462:7a38 / 1d05:109f) and
+    two equal RTL8125B (10ec:8125 rev 0x5 sub 1458:e000) devices
+    running Sculpt.
+    
+    Firmware loading is for now not implemented but specific Linux
+    commits suggest it could be necessary. However, doing so will be
+    post-poned until we have gathered more experience with the driver.
+    
+    Restarting the driver might lead to the following IOMMU error
+    messages but the device seems to work anyway:
+    
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x8a00000000002500 FI:0xfffffffdf8d30000 type:0x8 BDF:25:00.0
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x2000004200002500 FI:0x000c21b0 type:0x2 BDF:25:00.0
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004200002500 FI:0x000c21a0 type:0x2 BDF:25:00.0
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004200002500 FI:0x00138000 type:0x2 BDF:25:00.0
+    […]
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x8a00000000002500 FI:0xfffffffdf8d30000 type:0x8 BDF:25:00.0
+    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004300002500 FI:0x00124000 type:0x2 BDF:25:00.0
+    
+    Issue #4921.
+
+
+USB host controller
+===================
+
+; @skalk
+
+commit cccb76373787c47c57d0930e6853d85fd26bb378
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Jul 6 15:40:44 2023 +0200
+
+    lx_emul usb: handle RPC calls after async-URBS
+    
+    Prevent missing new RPC calls handed over to a Linux task
+    of a corresponding usb-device, while that task blocked
+    during enqueuing of asynchronous URBs.
+    
+    Fixed genodelabs/genode#4955
+
+commit ec60ad3a80077f5d0c0f55308131c3f25f637a88
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jul 12 17:24:24 2023 +0200
+
+    dde_linux: remove legacy_rpi_usb_host_drv
+    
+    * Cleanup the dde_linux port
+    
+    Fix genodelabs/genode#4965
+
+commit 8f4903ca8643524f35069dbad09d362a19a2ac05
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jul 19 16:43:41 2023 +0200
+
+    lx_emul usb: make reset ep effective
+    
+    * Within flush_transfer of the USB session a given entrypoint gets
+      resetted, to be effective al related URBs need to be discarded first
+    * Discarding URBs shall be done in reverse order, like libusb is doing it,
+      where it warns about potential races otherwise
+    
+    Ref genodelabs/genode#4969
+
+commit 4277bdd3cdf6414ba1edcad6fc9b4ffc216be004
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Jul 17 14:42:11 2023 +0200
+
+    lx_emul usb: solve session close races
+    
+    * During a session-close, the device-specific usb task and driver data
+      gets freed. Part of it was the RPC data. To prevent use-after-free
+      turn it into a pointer and leave it on the stack of the caller thread
+    * During a device release, URBs discards, and reset operation the Linux task
+      might get blocked, and then a RPC caller task might return if the RPC
+      operation was marked as finished already, although it hasn't succeeded yet
+    * USB devio RESET has to be done before a device release to be effective
+    
+    Fix genodelabs/genode#4969
+
+commit fc6e954f379118297af2ee645795a4475ea412a9
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 18:04:54 2023 +0200
+
+    Add i.MX USB host driver for ARMv7 platforms
+    
+    * Add necessary clocks to platform driver for i.MX6 Quad
+    * Add necessary devices (including PHYs) to devices file
+    * Change USB test recipe to use the new driver
+    
+    Fix genodelabs/genode#4942
+
+; genode-rpi:
+
+commit 7d86f53af11e52b3e9e11659ec5fcbac182cf7d3
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jul 12 16:43:41 2023 +0200
+
+    Add rpi_linux port, lx_emul, and api package
+
+commit 07af2b283ae5b59feb3cb7158f7dd0d46f80c9a6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jul 12 16:46:20 2023 +0200
+
+    usb_host: add driver based on rpi_linux port
+
+
+PC audio refinements
+====================
+
+; @cnuke
+
+commit ff0ba89e917d5adf3aa072f3d3ebca80da966780
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Apr 28 11:21:56 2023 +0200
+
+    dde_bsd: update mixer state report on HP sense
+    
+    Issue #4946.
+
+commit 317c5429d21e78dc9cf8bb5a8b78a2357b943b64
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Thu Jun 22 20:42:41 2023 +0000
+
+    dde_bsd: decrease overall memory consumption
+    
+    The initial memory backend implementation was brought over from DDE
+    Linux and was geared towards use-cases where a high-performing
+    allocator is useful. In case of the audio driver this is overkill
+    and since no other driver that could benefit from such an
+    implementation was ported in the meantime rather use a simpler
+    implementation that keeps the overhead down.
+    
+    Fixes #4946.
+
+commit 93d6d71a1de0bf56e866524780053dcb28aecb5f
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Jul 11 11:30:42 2023 +0200
+
+    dde_bsd: add patch to limit internal buffer size
+    
+    Decreasing the internal buffer size will implicitly limit the number
+    of blocks provisioned for recording and brings them in line with
+    the number of blocks used for playback (2).
+    
+    Note that this patch also sets an upper-bound on the number of
+    samples in 'Audio_*::PERIOD'.
+
+
+Wifi
+====
+
+; @cnuke
+
+commit fc24ffcdb823c47b240385bed0ec0c96e3f1f177
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Jul 6 16:25:41 2023 +0200
+
+    wifi: use mac address reporter
+    
+    Remove the handcrafted MAC address reporter in favour the Genode
+    C API utility (cf. #4918).
+    
+    Issue #4927
+    Issue #4918
+
+commit dd1b8a106fd9ef5388da8d03af15a3bcfa4ba0b2
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Jul 7 11:46:39 2023 +0200
+
+    drivers/wifi: perform multi-staged construction
+    
+    Since the wireless LAN driver is actually a 'Libc::Component' due to
+    its incorporation of the 'wpa_spplicant' application, we have to
+    intercept its construction because we have to initialize the Lx_kit
+    environment before any static ctors are executed. Most Linux initcalls
+    are implemented as ctors that will be otherwise implicitly executed
+    before the controll is given to us in 'Libc::Component::construct'.
+    
+    Issue #4927.
+
+
+PinePhone support for buttons and screensaver
+=============================================
+
+; @nfeske
+
+commit 1ae9dc799668d10de6c9b09850783ecd790e5134
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Jun 15 16:03:57 2023 +0200
+
+    Volume-button driver for the PinePhone
+    
+    Issue #22
+
+commit 2abda7ccb59f7fa9de6840586db1bb6faa3a64af
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jun 16 15:42:32 2023 +0200
+
+    power/pinephone: detect power-button state
+    
+    This patch adds support for sensing the power button. The power button
+    is attached to the PMIC, which is accessed via the SCP. To detect state
+    changes, the PMIC's IRQ (routed through the R_INTC to the GIC) is now
+    handled by the power driver. This has the added benefit that also other
+    interesting PMIC events (like connecting AC) get immediately reported.
+    
+    Issue #22
+
+commit e8f6c573cc423f0fd9a8e9b02c2f25176d7ecd76
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jun 16 16:18:55 2023 +0200
+
+    sculpt/pinephone: integrate button driver(s)
+    
+    Issue #22
+
+commit f4fb37ae8236c82969f1d1c75c67e859b19b8c79
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jun 30 14:00:54 2023 +0200
+
+    sculpt/phone: screensaver
+    
+    This patch adds a screensaver that kicks in after ten seconds of user
+    inactivity in the administrative user interface. It also can be manually
+    activated by pressing the power button. While the screen is blanked, a
+    press of the power button enables the display again.
+    
+    Under the hood, Sculpt completely removes the drivers for the display
+    and the touchscreen while the screen is blanked, which considerably
+    reduces the power draw. The system also switches the CPU to economic
+    mode while the screen is blanked. Here are some illustrative data
+    points:
+    
+    Max brightness in performance mode: 2.8 W
+    Max brightness in economic mode:    2.6 W
+    Low brightness in economic mode:    1.7 W
+    Screensaver:                        1.1 W
+    
+    Issue genodelabs/genode#4950
+
+
+Platforms
+#########
+
+NXP i.MX SoC family
+===================
+
+; @skalk
+
+commit 5e7e6514be925a8bd3694ef2cbb647f3a29dc583
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 16:18:35 2023 +0200
+
+    Remove i.MX6 platforms from base repositories
+    
+    Fix genodelabs/genode#4941
+
+commit 3d5ec9ea3f97f5164b82399d851ed2cc6a79d2b0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 16:31:15 2023 +0200
+
+    dde_linux: remove legacy imx6 usb host driver
+    
+    Ref genodelabs/genode#4942
+
+commit 13e0710d20e760083bd175ccc89560754b61ac22
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 17:24:42 2023 +0200
+
+    os: remove i.MX GPIO drivers
+    
+    Ref genodelabs/genode#4945
+
+commit 65114704905d22fbee432dfe5a2abb016a83ade8
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 16:44:50 2023 +0200
+
+    Add support for imx6q_sabrelite and nit6_solox
+    
+    Fix genodelabs/genode#4941
+
+commit 082135fc8677f49e7f33bea7e9f394a385a9b0ab
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 17:30:05 2023 +0200
+
+    Add GPIO driver for i.MX to repository, unify recipe
+    
+    Fix genodelabs/genode#4945
+
+commit 3c034c16e23adde4a2d1dc45bdde08dc4489deec
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Jun 28 17:49:40 2023 +0200
+
+    imx_linux: add base support for ARMv7
+    
+    Add imx_linux support for imx53_qsb, imx6q_sabrelite, and imx7d_sabre.
+    
+    Ref genodelabs/genode#4942
+
+
+Sculpt OS image creation for MNT Reform2
+----------------------------------------
+
+commit 15b30f3547e5ed22423cde462336f2eda75124f0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Jun 5 17:19:45 2023 +0200
+
+    sculpt_image: add MNT Reform2 as target board
+    
+    Fix genodelabs/genode#4936
+
+commit cc2d5819a2c3adae5ae16d763648b4fcf535975f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Jun 5 17:06:11 2023 +0200
+
+    sculpt: add presets to sculpt for MNT Reform2
+    
+    Remove developer ressources that do not provide
+    ARMv8 packages for Sculpt 23.04 anyway.
+
+
+seL4 microkernel
+================
+
+; @alex-ab
+
+commit b349dd9c0a3fec42473a9cd321d955cf8b9c9774
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue May 30 16:44:03 2023 +0200
+
+    sel4: convert io memory on demand
+    
+    instead all during boot. On x86 and qemu this takes quite a while until
+    the system is booted.
+    
+    Fixes #4913
+
+commit b599f4e106000f50dbb4ad3fbd65bce66d2606ea
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Jun 6 13:07:25 2023 +0200
+
+    sel4: stop thread on alignment fault
+    
+    by not replying to the IPC. Otherwise, endless alignment faults are triggered,
+    seen on imx6q Sabrelite and usb_hid_raw.
+
+
+Build system and tools
+######################
+
+Depot autopilot on-target test orchestrator
+===========================================
+
+; @m-stein
+
+; Maybe reuse parts of the issue text (for the rationale)?
+
+commit c47a6b0830afe17b57e9587cc1eaa006b743e228
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Sat Jun 24 16:57:19 2023 +0200
+
+    depot_autopilot: simplify success-criterion syntax
+    
+    * Removes the <event> tag from all test package runtime files and replaces the
+      contained <timeout> and <log> sub-tags with the new tags <succeed> and
+      <fail>. If a <succeed> or <fail> tag has a content, it defines a log pattern
+      that should be recognized and render the test failed or successful. If a
+      <succeed> or <fail> tag has an attribute after_seconds that is not set to 0,
+      it defines a timeout after which the test should be rendered failed or
+      successful.
+    
+    * Adapts the Depot Autopilot to support the new syntax in the test-package
+      runtime files. However, for now, the Depot Autopilot is kept compatible to
+      the old syntax as well. If the <events> tag is present, it is prioritized
+      over the new syntax.
+    
+    Fixes #4922
+
+commit 987dea5f7f006319aec9dd27670cca55424224de
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Tue Jun 27 12:13:42 2023 +0200
+
+    depot_autiopilot: consider log_prefix attribute
+    
+    The new 'log_prefix' attribute is effective when used in a tests runtime in
+    <succeed> or <fail> tags that have a non-empty content string. When matching
+    the log against the pattern given in the affected <succeed> or <fail> tag, the
+    Depot Autopilot will consider only those test-log lines that start with the
+    given prefix.
+    
+    Ref #4922
+
+commit d8c51656d7d391f5cec0c1c920fe9bf39b798333
+Author: Martin Stein <martin.stein@genode-labs.com>
+Date:   Fri Jun 30 11:48:16 2023 +0200
+
+    depot_autopilot: forward tabs and color sequences
+    
+    The Depot Autopilot used to filter out tabs and color sequences before
+    forwarding the test log to the own log. This commit prevents this and further
+    cleans up the string-filters code.
+    
+    Ref #4922
+
+
+Updated run-tool defaults for x86_64
+====================================
+
+; @alex-ab
+
+commit ceaa02230ee359339556a09b14d18736ac90eb12
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Jun 2 09:05:50 2023 +0200
+
+    qemu: set default cpu model for x86_64 explicitly
+    
+    With the update to sel4 and the gcc 12, assembly instructions are generated
+    and used, like POPCNT. The instruction is available on our native hardware,
+    but not emulated by the default cpu model necessarily, which leads to
+    undefined opcode exceptions (Qemu 4.2.1 && seL4). Additionally, the features
+    of the default Qemu cpu model may vary between Qemu releases and makes it
+    harder to correlate effects.
+
+commit 530ec3115f70df2aef76ebc843aa0c51558aec94
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Jun 7 11:35:24 2023 +0200
+
+    sel4/x86: remove Nehalem kernel config adjustment
+    
+    since the used Genode Qemu model now supports it.
+
