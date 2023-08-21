@@ -647,85 +647,15 @@ Date:   Wed Jun 21 06:42:49 2023 +0000
 USB host controller
 ===================
 
-; @skalk
+The USB host controller driver ports for Raspberry Pi 1 and i.MX 6 Quad got
+updated to Linux kernel version 6.1.37 resp. 6.1.20. Both driver ports share the
+renewed device driver environment approach for Linux introduced in release 21.08.
 
-commit cccb76373787c47c57d0930e6853d85fd26bb378
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Jul 6 15:40:44 2023 +0200
-
-    lx_emul usb: handle RPC calls after async-URBS
-    
-    Prevent missing new RPC calls handed over to a Linux task
-    of a corresponding usb-device, while that task blocked
-    during enqueuing of asynchronous URBs.
-    
-    Fixed genodelabs/genode#4955
-
-commit ec60ad3a80077f5d0c0f55308131c3f25f637a88
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jul 12 17:24:24 2023 +0200
-
-    dde_linux: remove legacy_rpi_usb_host_drv
-    
-    * Cleanup the dde_linux port
-    
-    Fix genodelabs/genode#4965
-
-commit 8f4903ca8643524f35069dbad09d362a19a2ac05
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jul 19 16:43:41 2023 +0200
-
-    lx_emul usb: make reset ep effective
-    
-    * Within flush_transfer of the USB session a given entrypoint gets
-      resetted, to be effective al related URBs need to be discarded first
-    * Discarding URBs shall be done in reverse order, like libusb is doing it,
-      where it warns about potential races otherwise
-    
-    Ref genodelabs/genode#4969
-
-commit 4277bdd3cdf6414ba1edcad6fc9b4ffc216be004
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Jul 17 14:42:11 2023 +0200
-
-    lx_emul usb: solve session close races
-    
-    * During a session-close, the device-specific usb task and driver data
-      gets freed. Part of it was the RPC data. To prevent use-after-free
-      turn it into a pointer and leave it on the stack of the caller thread
-    * During a device release, URBs discards, and reset operation the Linux task
-      might get blocked, and then a RPC caller task might return if the RPC
-      operation was marked as finished already, although it hasn't succeeded yet
-    * USB devio RESET has to be done before a device release to be effective
-    
-    Fix genodelabs/genode#4969
-
-commit fc6e954f379118297af2ee645795a4475ea412a9
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 18:04:54 2023 +0200
-
-    Add i.MX USB host driver for ARMv7 platforms
-    
-    * Add necessary clocks to platform driver for i.MX6 Quad
-    * Add necessary devices (including PHYs) to devices file
-    * Change USB test recipe to use the new driver
-    
-    Fix genodelabs/genode#4942
-
-; genode-rpi:
-
-commit 7d86f53af11e52b3e9e11659ec5fcbac182cf7d3
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jul 12 16:43:41 2023 +0200
-
-    Add rpi_linux port, lx_emul, and api package
-
-commit 07af2b283ae5b59feb3cb7158f7dd0d46f80c9a6
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jul 12 16:46:20 2023 +0200
-
-    usb_host: add driver based on rpi_linux port
-
+Beside the update of the last remaining outdated USB host controller drivers, we
+have reworked the common C/C++ Linux to Genode USB backend used by all USB
+host controller driver incarnations. The internal changes were necessary to
+target issues regarding races during USB session close attempts, resets
+of USB endpoints, and potential stalls during synchronous USB RPC calls.
 
 PC audio refinements
 ====================
@@ -868,79 +798,22 @@ Platforms
 NXP i.MX SoC family
 ===================
 
-; @skalk
-
-commit 5e7e6514be925a8bd3694ef2cbb647f3a29dc583
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 16:18:35 2023 +0200
-
-    Remove i.MX6 platforms from base repositories
-    
-    Fix genodelabs/genode#4941
-
-commit 3d5ec9ea3f97f5164b82399d851ed2cc6a79d2b0
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 16:31:15 2023 +0200
-
-    dde_linux: remove legacy imx6 usb host driver
-    
-    Ref genodelabs/genode#4942
-
-commit 13e0710d20e760083bd175ccc89560754b61ac22
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 17:24:42 2023 +0200
-
-    os: remove i.MX GPIO drivers
-    
-    Ref genodelabs/genode#4945
-
-commit 65114704905d22fbee432dfe5a2abb016a83ade8
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 16:44:50 2023 +0200
-
-    Add support for imx6q_sabrelite and nit6_solox
-    
-    Fix genodelabs/genode#4941
-
-commit 082135fc8677f49e7f33bea7e9f394a385a9b0ab
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 17:30:05 2023 +0200
-
-    Add GPIO driver for i.MX to repository, unify recipe
-    
-    Fix genodelabs/genode#4945
-
-commit 3c034c16e23adde4a2d1dc45bdde08dc4489deec
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Jun 28 17:49:40 2023 +0200
-
-    imx_linux: add base support for ARMv7
-    
-    Add imx_linux support for imx53_qsb, imx6q_sabrelite, and imx7d_sabre.
-    
-    Ref genodelabs/genode#4942
-
+Certain parts of i.MX specific code, like the base-support for the hw-kernel,
+and the GPIO driver for i.MX got moved from Genode's main repository to the
+corresponding genode-imx repository.
 
 Sculpt OS image creation for MNT Reform2
 ----------------------------------------
 
-commit 15b30f3547e5ed22423cde462336f2eda75124f0
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Jun 5 17:19:45 2023 +0200
+With this release we introduce mainline support for Sculpt OS on the MNT
+Reform2. To build a Sculpt OS image for this board you can use the common
+sculpt_image.run script, like the following:
 
-    sculpt_image: add MNT Reform2 as target board
-    
-    Fix genodelabs/genode#4936
+! make run/sculpt_image KERNEL=hw BOARD=mnt_reform2 DEPOT=omit
 
-commit cc2d5819a2c3adae5ae16d763648b4fcf535975f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Mon Jun 5 17:06:11 2023 +0200
+To be effective you need to extend your RUN_OPT variable accordingly:
 
-    sculpt: add presets to sculpt for MNT Reform2
-    
-    Remove developer ressources that do not provide
-    ARMv8 packages for Sculpt 23.04 anyway.
-
+! RUN_OPT += --include image/imx8mq_mmc
 
 seL4 microkernel
 ================
