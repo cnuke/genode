@@ -31,8 +31,10 @@ launcher: fuji4_fs fuji4_usb_devices
 launcher: fuji4_vbox6_cpu1 fuji4_vbox6_cpu2 fuji4_vbox6_cpu4
 launcher: fuji4_vbox5_cpu2
 launcher: trace_logger
+launcher: trace_recorder
 
 build: virtualbox6
 build: virtualbox5/nova
 build: app/top
 build: lib/qemu-usb
+#build: trace_recorder

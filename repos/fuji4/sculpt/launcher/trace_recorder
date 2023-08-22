@@ -1,0 +1,26 @@
+<launcher pkg="trace_recorder" ram="1G" caps="2000">
+	<config period_ms="10000" enable="yes">
+		<vfs> <fs label="target"/> </vfs>
+
+		<policy label_prefix="init -> runtime -> fuji4_vbox6_cpu2 -> " policy="ctf0" buffer="32M">
+			<ctf/>
+		</policy>
+		<policy label_prefix="init -> runtime -> fuji4_vbox5_cpu2 -> " policy="ctf0" buffer="32M">
+			<ctf/>
+		</policy>
+	</config>
+	<route>
+		<service name="File_system" label="target">
+			<child name="nvme-0.5.fs"/>
+		</service>
+		<service name="TRACE">
+			<parent/>
+		</service>
+		<service name="Rtc">
+			<child name="system_clock-pc"/>
+		</service>
+		<service name="ROM" label="platform_info">
+			<parent label="platform_info"/>
+		</service>
+	</route>
+</launcher>
