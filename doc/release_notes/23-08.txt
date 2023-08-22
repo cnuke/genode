@@ -345,25 +345,21 @@ Device drivers
 Intel GPU
 =========
 
-@ssumpf
-
-commit e3c2fdf414135aa9e8f84b7767ca0c3d7a0c7098
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Mon May 22 21:57:22 2023 +0200
-
-    gpu/intel: enable GPU reset for GEN(8)/9/12
-    
-    * add semaphore command to ring in order to be able to stop ring
-      execution before reset (Wa KabyLake)
-    * implement reset sequence as done by the Linux driver
-    * reset ring and cancel job of vgpu causing hang
-    * lower watchdog timeout 1000ms -> 200ms
-    * improve scheduling of vgpus so progress after reset is made
-    * improve the generation chaos a little
-    * tested on Skylake, Kaby Lake, Tiger Lake
-    
-    issue #4916
-
+The handling of GPUs is somewhat special within the driver world. A GPU is a
+standalone execution unit that can be programmed much like a CPU. In the past
+there were fixed function GPUs which have been gradually replaced by dynamically
+programmable units that execute compiled machine code (think shader compilers
+like GLSL or general purpose computing like CUDA or OpenCL). This leads to a
+situation where a GPU driver cannot trust the client that sends its machine code
+to be executed by the GPU. There exists no sufficient way of inspecting the
+complied machine code for malicious behavior by the GPU driver. Therefore, the
+only reasonable solution for a GPU driver is to send the code to the GPU and
+hope for the best. In case the code execution is not successful, GPUs tend to
+just hang and the only thing a driver can do is to make sure via an IOMMU that
+the code does not access arbitrary memory and  program a watchdog timer and
+reset the GPU to a graceful state in case there is no proper response. With the
+current Genode release we have implemented this behavior for GEN9 (HD graphics)
+and GEN12 (Intel Iris Xe).
 
 Intel display
 =============
