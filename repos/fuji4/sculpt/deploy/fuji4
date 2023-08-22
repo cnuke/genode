@@ -131,6 +131,7 @@
 		</route>
 	</start>
 
+<!--
 	<start name="trace_logger" pkg="trace_logger">
 		<route>
 			<service name="TRACE">
@@ -148,15 +149,17 @@
 			<policy label_prefix="kernel" thread="idle"/>
 		</config>
 	</start>
+-->
 
 	<start name="shared_fs"/>
 	<start name="fuji4_usb_devices"/>
 	<start name="fuji4_fs"/>
+	<start name="fuji4_vbox6_cpu2"/>
 <!--
+	<start name="fuji4_vbox5_cpu2"/>
 	<start name="fuji4_vbox6_cpu1"/>
 	<start name="fuji4_vbox6_cpu4"/>
 -->
-	<start name="fuji4_vbox6_cpu2"/>
 
 </config>
 
