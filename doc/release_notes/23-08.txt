@@ -633,61 +633,41 @@ Date:   Fri Jul 7 11:46:39 2023 +0200
 PinePhone support for buttons and screensaver
 =============================================
 
-; @nfeske
+To equip the mobile version of Sculpt OS on the PinePhone with a proper
+screensaver, we added drivers for detecting user interactions with the
+PinePhone's physical buttons, namely the volume buttons and the power button.
 
-commit 1ae9dc799668d10de6c9b09850783ecd790e5134
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Jun 15 16:03:57 2023 +0200
+The volume buttons are connected via cascaded resistors to a single ADC of the
+A64 SoC. The corresponding driver has been added to the genode-allwinner
+repository at _src/drivers/button/pinephone/_ and is accompanied by the
+_button_pinephone.run_ script.
 
-    Volume-button driver for the PinePhone
-    
-    Issue #22
+Sensing the power button has been a slightly more delicate issue because the
+power button is connected to the power-management IC (PMIC), which shall only
+be accessed via the system-control processor (SCP). To detect state changes,
+the PMIC's IRQ (routed through the R_INTC to the GIC) is now handled by the
+power driver. This has the added benefit that also other interesting PMIC
+events (like connecting AC) get immediately reported.
 
-commit 2abda7ccb59f7fa9de6840586db1bb6faa3a64af
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jun 16 15:42:32 2023 +0200
+With the button drivers in place, we finally equipped Sculpt OS with a
+screensaver as a crucial battery-conserving feature. The screensaver
+kicks in after the user remained inactive in the administrative user interface
+for some time. It also can be manually activated by pressing the power button.
+While the screen is blanked, a press of the power button enables the display
+again.
 
-    power/pinephone: detect power-button state
-    
-    This patch adds support for sensing the power button. The power button
-    is attached to the PMIC, which is accessed via the SCP. To detect state
-    changes, the PMIC's IRQ (routed through the R_INTC to the GIC) is now
-    handled by the power driver. This has the added benefit that also other
-    interesting PMIC events (like connecting AC) get immediately reported.
-    
-    Issue #22
+Under the hood, Sculpt completely removes the drivers for the display and the
+touchscreen while the screen is blanked, which considerably reduces the power
+draw. The system also switches the CPU to economic mode while the screen is
+blanked. Here are some illustrative data points:
 
-commit e8f6c573cc423f0fd9a8e9b02c2f25176d7ecd76
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jun 16 16:18:55 2023 +0200
+!    Max brightness in performance mode: 2.8 W
+!    Max brightness in economic mode:    2.6 W
+!    Low brightness in economic mode:    1.7 W
+!    Screensaver:                        1.1 W
 
-    sculpt/pinephone: integrate button driver(s)
-    
-    Issue #22
-
-commit f4fb37ae8236c82969f1d1c75c67e859b19b8c79
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jun 30 14:00:54 2023 +0200
-
-    sculpt/phone: screensaver
-    
-    This patch adds a screensaver that kicks in after ten seconds of user
-    inactivity in the administrative user interface. It also can be manually
-    activated by pressing the power button. While the screen is blanked, a
-    press of the power button enables the display again.
-    
-    Under the hood, Sculpt completely removes the drivers for the display
-    and the touchscreen while the screen is blanked, which considerably
-    reduces the power draw. The system also switches the CPU to economic
-    mode while the screen is blanked. Here are some illustrative data
-    points:
-    
-    Max brightness in performance mode: 2.8 W
-    Max brightness in economic mode:    2.6 W
-    Low brightness in economic mode:    1.7 W
-    Screensaver:                        1.1 W
-    
-    Issue genodelabs/genode#4950
+You can find the screensaver feature integrated in the latest Sculpt OS
+image published by _nfeske_.
 
 
 Platforms
