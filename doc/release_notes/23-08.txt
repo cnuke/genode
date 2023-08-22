@@ -101,186 +101,42 @@ Base framework and OS-level infrastructure
 Internal core and base-framework modernization
 ==============================================
 
-; @nfeske
+Genode's API received multiple rounds on modernization in the past years. But
+some of the framework's deepest internals remained largely unchanged over that
+time. Even though one can argue that mature and battle-tested code should
+better not be disrupted, our programming practices are not carved in stone.
+To make Genode's internal code a delight for reviewers, auditors, and future
+maintainers, we revisited the following areas.
 
-commit f47c64e246ce68bd26893ded53e5b19332f497d1
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu May 25 16:49:13 2023 +0200
+Core's page-fault resolution code got reworked for improved clarity and
+safety, by introducing dedicated result types, reducing the use of basic
+types, choosing expressive names, and fostering constness. Along the way, we
+introduces a number of 'print' hooks that greatly ease manual instrumentation
+and streamlines the error messages printed by core. Those messages no longer
+appear when a user-level page-fault handler is registered for the faulted-at
+region map. So the monitor component produces less noise on the attempt to
+dump non-existing memory.
 
-    core: allow offset-attached managed dataspaces
-    
-    This patch adds the missing application of the region offset to the
-    resolution of page faults inside managed dataspaces, which resulted in
-    an unexpected "invalid mapping" message after attaching a managed
-    dataspace with an offset.
-    
-    This limitation could be observed during the implementation of the debug
-    monitor that locally maps a portion of the debugging target's address
-    space, e.g., a view port of 16 MiB. All traditional uses of managed
-    dataspaces (e.g., stack area, linker area) happened to attach the
-    managed dataspaces from their beginning.
-    
-    Issue #4917
+Closely related to the page-fault handling, we tightened the distinction
+between rx and rwx inside core by restricting 'Region_map::attach_executable'
+to create read-only mappings, while offering the option to map the full rights
+using a new 'attach_rwx' method. The 'attach_rwx' method is now used by the
+dynamic linker to explicitly attach the linker area with full rwx rights. With
+the old page-fault handling code, the execute flag was evaluated only for leaf
+dataspaces, not for managed dataspaces while traversing region-map
+hierarchies. With the new page-fault handling code, the execute bit is
+downgraded to no-execute when passing a managed dataspace that is not attached
+as executable.
 
-commit 30b70da6c1278e3ece8c566f352ab8c092eaedc0
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed May 10 11:39:15 2023 +0200
-
-    base/child.h: Child_policy::with_address_space
-    
-    This patch replaces the former 'address_space' accessor by a new
-    'with_address_space' interface that grants access to the region map of
-    the child's address space, but limits the interface lifetime to the
-    scope of the caller.
-    
-    Issue #4917
-
-commit a4c59c03e31d846c966d8a5f7e8e3a4acd355b90
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Jun 9 18:08:47 2023 +0200
-
-    core: rework page-fault resolution
-    
-    The change "core: allow offset-attached managed dataspaces" addressed a
-    corner case of the use of nested region maps. Apparently, this change
-    negatively affects other scenarios (tool_chain_auto).
-    
-    In order to confidently cover all the differnt situations, this patch
-    reworks the page-fault resolution code for improved clarity and safety,
-    by introducing dedicated result types, reducing the use of basic types,
-    choosing expressive names, and fostering constness.
-    
-    It also introduces a number of 'print' hooks that greatly ease manual
-    instrumentation and streamlines the error messages printed by core.
-    Those messages no longer appear when a user-level page-fault handler
-    is reistered for the faulted-at region map. So the monitor component
-    produces less noise on the attempt to dump non-existing memory.
-    
-    Issue #4917
-    Fixes #4920
-
-commit 3c5d27506f216e38108d81ff07b0a12c25f773aa
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Jun 10 01:12:30 2023 +0200
-
-    base: stricter distinction between rx and rwx
-    
-    This patch restricts 'Region_map::attach_executable' to create read-only
-    mappings, while offering the option to map the full rights using a new
-    'attach_rwx' method.
-    
-    The 'attach_rwx' method is now used by the dynamic linker to explicitly
-    attach the linker area with full rwx rights. With the old page-fault
-    handling code, the execute flag was evaluated only for leaf dataspaces,
-    not for managed dataspaces while traversing region-map hierarchies.
-    With the new page-fault handling code, the execute bit is downgraded
-    to no-execute when passing a managed dataspace that is not attached
-    as executable.
-    
-    Issue #4920
-
-commit 3489672bc00d006f0e5185385dcdf855ddebf082
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jun 20 13:45:33 2023 +0200
-
-    base: remove env_deprecated from thread-start code
-    
-    This patch replaces the internal use 'env_deprecated()' from the
-    implementation of the thread API in the base library. It also
-    replaces the global accessor 'main_thread_cap' by the explicit
-    propagation of the main-thread's capability to the single point of
-    use via a new 'init_thread_bootstap' function.
-    
-    Issue #4784
-
-commit 6e30d00eefe0bf70e45ce2b1b4271b16468b7e9d
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jun 20 14:46:54 2023 +0200
-
-    base: remove env_deprecated from signalling code
-    
-    Issue #4784
-
-commit 0ab69a2bb835d242a4bb07e2294b28f04eb59a32
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Jun 20 17:53:41 2023 +0200
-
-    base: de-duplicate src/lib/base/platform.cc
-    
-    By splitting the 'init_capability_slab()' implementation to a separate
-    compilation unit 'capability_slab.cc', base-hw no longer needs a
-    customized version of 'lib/base/platform.cc'.
-    
-    Related to issue #4784
-
-commit 415d4ab23d0935d44be7e499a61694716292c1c1
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 21 17:08:42 2023 +0200
-
-    startup: merge init_main_thread.cc into _main.cc
-    
-    This makes the interplay of 'init_main_thread', 'init_platform',
-    '_main', and 'bootstrap_component' easier to follow.
-    
-    Issue #4784
-
-commit de99945af05f182aed86d67768c63c8cd88ab84a
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 21 17:25:44 2023 +0200
-
-    base: pass 'Platform &' to 'bootstrap_component'
-    
-    This eliminates the need of component.cc to pull the platform resources
-    out of thin air (calling 'env_deprecated()').
-    
-    Issue #4784
-
-commit 7e1a2ac684b94e4ab79306c2e6315dd75310b8ac
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 21 17:51:04 2023 +0200
-
-    base: remove internal use of 'env_deprecated'
-    
-    Fixes #4784
-
-commit e2836bf68a009906a2468ea03c58109dda9336a0
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 28 14:27:34 2023 +0200
-
-    ldso: remove deprecated support for legacy 'main'
-    
-    Besides the removal of the legacy 'main' support, this patch simplifies
-    the lib/startup/_main.cc.
-    
-    Issue #2199
-
-commit 1fd1786122ca735841535ed53c07d8354c1998b7
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 28 15:46:04 2023 +0200
-
-    test/lx_hybrid: don't call glibc exit
-    
-    This patch removes the use of the Entrypoint::schedule_suspend mechanism
-    and the call of glibc's exit from the lx_hybrid tests, for two reasons.
-    
-    First, the interplay of atexit handlers executed by the glibc and
-    Genode's lx_hybrid library is complicated while bringing no benefits in
-    practice as lx_hybrid applications are usually servers that don't exit
-    anyway.
-    
-    Second, the Entrypoint::schedule_suspend mechanism in not used by any
-    other component. By removing its use from the lx_hybrid tests, we can
-    remove this mechanism from the base library.
-    
-    Issue #4940
-
-commit 1139492c4f53b1612647070459eaa98284270098
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Jun 28 15:57:45 2023 +0200
-
-    base: remove Entrypoint::schedule_suspend
-    
-    Fixes #4940
+We ultimately removed the last traces of the global 'env_deprecated()'
+interface that was still relied-on within core and parts of the base library.
+Nowadays, we no longer use global accessors but generally employ
+dependency-injection patterns. Since the 'env_deprecated()' interface is
+closely related to initialization code, the startup code of core and regular
+components got largely refactored, eliminating the reliance on global side
+effects. As a collateral change, the legacy 'main' support for native Genode
+component as well as the now-obsolete 'Entrypoint::schedule_suspend' mechanism
+got removed.
 
 
 API changes
