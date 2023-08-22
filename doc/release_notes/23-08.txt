@@ -562,86 +562,27 @@ Date:   Thu Jun 29 15:18:18 2023 +0200
 New PC network driver based on DDE-Linux
 ========================================
 
-; @chelmuth
+Since 2010, we use Ethernet drivers ported from the iPXE project in a tiny
+emulation layer on Genode. While those drivers did a good job for the common
+cases, they always had some rough edges that may not hurt in the original
+network-booting use case but had become a nuisance in Sculpt OS and Genode
+in general. Most prominently the dropped link speed with Intel E1000e cards
+on cable unplug/plug and the moderate throughput on GBit links had to be
+addressed.
 
-commit 36c1dc16d404ffbe950f988b0edb8447e002c789
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Jun 1 09:02:26 2023 +0200
+Our new DDE Linux approach introduced this year makes the porting of drivers
+from the Linux kernel much easier and less labor intensive as in the past.
+Also, Linux is a very tempting Ethernet driver donor because of the variety
+of supported devices and the well known excellent performance (especially on
+Intel devices). Moreover, the Intel E1000e driver addresses all issues we
+had with the iPXE implementation and promises a smooth interplay with Intel
+AMT/ME. Note, Intel AMT Serial-over-LAN is still an important debug console
+while deploying Genode on Intel-based notebooks.
 
-    pc_linux: enable e1000, e1000e, pcnet32
-    
-    Issue #4921
-
-commit 8de0d8d4e0532a1e7f19e6df0818fdf3c8377cbb
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Jun 1 09:02:11 2023 +0200
-
-    pc_linux: update initcall order for pc_nic_drv
-    
-    Issue #4921
-
-commit d258422c344e0a70ffd4b6e643f5ff494a7ba789
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Jun 1 09:00:29 2023 +0200
-
-    pc_nic_drv: ethernet NIC driver based on Linux 6.1
-    
-    Fixes #4921
-
-commit 48cc8fb657e00c67f43f956fa16ed4bef09d02ce
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Jun 1 09:01:38 2023 +0200
-
-    drivers_nic-pc: replace ipxe_nic_drv by pc_nic_drv
-    
-    Also, the configuration enables MAC-address reporting and includes a
-    verbose mac_report_rom.
-    
-    Issue #4921
-
-commit 8ecbc48211acaa1127ba01cd83234487a2f9bc24
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Mon Jun 5 11:29:01 2023 +0200
-
-    sculpt: replace ipxe_nic_drv by pc_nic_drv
-    
-    Issue #4921
-
-commit ee564125df014063ca553fe364f53b9cd15dfcc7
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Tue Jun 20 14:07:26 2023 +0200
-
-    Replace ipxe_nic_drv by pc_nic_drv in run scripts
-    
-    Issue #4921
-
-commit afaabb3121a391ada3737dc963ebd1e5d19a320b
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Wed Jun 21 06:42:49 2023 +0000
-
-    pc_nic_drv: add R8169 driver
-    
-    This commits enables the R8169 driver and was tested with two
-    RTL8168h/8111h (10ec:8168 rev 0x15 sub 1462:7a38 / 1d05:109f) and
-    two equal RTL8125B (10ec:8125 rev 0x5 sub 1458:e000) devices
-    running Sculpt.
-    
-    Firmware loading is for now not implemented but specific Linux
-    commits suggest it could be necessary. However, doing so will be
-    post-poned until we have gathered more experience with the driver.
-    
-    Restarting the driver might lead to the following IOMMU error
-    messages but the device seems to work anyway:
-    
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x8a00000000002500 FI:0xfffffffdf8d30000 type:0x8 BDF:25:00.0
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x2000004200002500 FI:0x000c21b0 type:0x2 BDF:25:00.0
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004200002500 FI:0x000c21a0 type:0x2 BDF:25:00.0
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004200002500 FI:0x00138000 type:0x2 BDF:25:00.0
-    […]
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x8a00000000002500 FI:0xfffffffdf8d30000 type:0x8 BDF:25:00.0
-    [ 0] IOMMU:0xffffffff817ec040 FR:0x2020004300002500 FI:0x00124000 type:0x2 BDF:25:00.0
-    
-    Issue #4921.
+Hence, the current release brings the new _pc_nic_drv_ for Intel
+e1000/e1000e, Realtek 8169, and AMD PCnet32 (Qemu) devices on PC and is
+fully integrated into Sculpt OS. Performance-wise the driver easily
+saturates 1 GBit links in our throughput tests.
 
 
 USB host controller
