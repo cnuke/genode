@@ -35,6 +35,23 @@
 		</route>
 	</start>
 
+	<start name="top_view" pkg="top_view" priority="-1">
+		<route>
+			<service name="Gui" label="focus">
+				<parent label="focus"/>
+			</service>
+			<service name="Gui">
+				<parent/>
+			</service>
+			<service name="TRACE">
+				<parent/>
+			</service>
+			<service name="File_system" label="fonts">
+				<child name="fonts_fs"/>
+			</service>
+		</route>
+	</start>
+
 	<start name="system_clock-pc" pkg="system_clock-pc" priority="-1">
 		<route>
 			<service name="IRQ">
