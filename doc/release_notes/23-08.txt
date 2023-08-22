@@ -95,6 +95,24 @@ Streamlined application development via Goa
 ; @jschlatow
 
 
+Support for the mainline Rust toolchain
+=======================================
+
+When we reintroduced Rust on Genode in the last release, our implementation
+relied on a slightly adapted Rust toolchain to work around missing support for
+versioned library symbols in our linker. With this release, we are now able to
+use the mainline 'x86_64-unknown-freebsd' target provided by Rust project,
+eliminating the need for a custom toolchain.
+
+On top of the streamlined Rust support, we created a Goa package for a popular
+Rust command line application, which will be published along with updated
+system packages in the upcoming Sculpt release.
+
+For details on the mainline Rust toolchain support and the ported package,
+take a look at the 
+[https://genodians.org/atopia/2023-08-24-enabling-the-upstream-rust-toolchain.txt - update blog post on Genodians.org].
+
+
 Base framework and OS-level infrastructure
 ##########################################
 
