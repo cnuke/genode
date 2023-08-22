@@ -16,75 +16,75 @@
 Multi-component debug monitor
 #############################
 
-; @nfeske, @cproc
+The existing GDB monitor has a number of limitations that we need to overcome
+to make on-target debugging a regular feature of Genode and Sculpt OS.
 
-; reuse parts of the issue text and README?
+The most visible problems are:
 
-commit 6a57683e52ff923623910ee020586d01f547010b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon May 8 16:57:57 2023 +0200
+* The GDB monitor supports only one component as debugging target, which makes
+  the debugging of scenarios where components closely interact difficult.
 
-    New debug monitor
-    
-    The new monitor component at os/src/monitor is the designated successor
-    of the gdb_monitor. This initial version, however, implements only the
-    subset needed to inspect the memory of the monitored component(s).
-    
-    In contrast to the gdb_monitor, the new component supports the monitoring
-    of multiple components, leveraging the sandbox API. It can therefore be
-    used as a drop-in replacement for the init component. Like the gdb_monitor,
-    the new monitor speaks the GDB protocol over Genode's terminal session.
-    But the protocol implementation does not re-use any gdbserver code,
-    sidestepping the complexities of POSIX.
-    
-    There exist two run scripts illustrating the new component. The
-    os/run/monitor.run script exercises memory inspection via the 'm' command
-    by letting a test program monitor itself. The os/run/monitor_gdb.run
-    script allows for the interactive use of GDB to interact with monitored
-    components.
-    
-    Issue #4917
+* The existing implementation re-uses the gdbserver code and thereby inherits
+  many POSIX peculiarities that must be stubbed for Genode, yet make the
+  overall implementation complex.
 
+Given these limitations, two key ideas motivated a new approach for the
+revision of Genode's GDB support for this release:
 
-commit 02209e5455634f7c2afd8034ce13e384d626e14c
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Thu Jun 29 16:01:06 2023 +0200
+First, by using Genode's sandbox API as foundation for a new debug monitor,
+we would become able to use the monitor as drop-in replacement for 'init',
+potentially going as far as using the monitor for Sculpt's runtime subsystem.
 
-    monitor: add memory write support
-    
-    Fixes #4947
+And second, GDB supports the debugging of multiple processes (called inferiors)
+within one session, which would in principle allow us to inspect and debug
+component compositions.
 
-commit f3b03fa01b7bec757b38356f857eaf5625af0ad5
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Mon Aug 7 15:47:46 2023 +0200
+The result of these ideas is the new 'monitor' component at 'os/src/monitor'
+as the designated successor of the 'gdb_monitor'. By leveraging the sandbox API
+it can be used as a drop-in replacement for the 'init' component and monitor
+multiple components. In real-world scenarios like Sculpt's runtime, we
+deliberately want/need to restrict the debugging to a few selected components,
+however, which calls for the support of a mix of monitored and regular
+components hosted side by side. Given this requirement, the sandbox API had to
+be enhanced to support the selective interception of PD and CPU sessions.
 
-    ports: add `gdb_arm_64` variant
-    
-    Fixes #4980
+Like the 'gdb_monitor', the new monitor speaks the GDB remote serial protocol
+over Genode's terminal session. But the protocol implementation does not re-use
+any gdbserver code, sidestepping the complexities of POSIX.
 
-commit 4213d148b97e9ec6ba40dce59bb61fa315e90f48
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue Aug 8 07:20:32 2023 +0200
+The monitor supports the essential GDB remote protocol commands for reading and
+writing of memory and registers, for stopping and resuming of threads including
+single-stepping, and it reports the occurrence of page faults and exceptions to
+GDB. Breakpoints are managed by GDB using software breakpoint instructions.
 
-    hw: send exception signals and support single-stepping
-    
-    Fixes #4975
+The monitor operates in GDB's 'non-stop' mode, which means that threads of
+multiple inferiors can be stopped and resumed individually or in groups,
+depending on the GDB commands issued by the user.
 
-commit 7571996d5a3273d5d8f230ecf1eff19983ed51af
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue Aug 8 14:17:36 2023 +0200
+As a secondary functionality, the monitor wipes all RAM dataspaces allocated
+by the monitored components when the RAM is freed. This is useful as a possible
+defense against cold-boot attacks.
 
-    monitor: add more debugging features
-    
-    Fixes #4977
+Supported debugging target platforms as of now are NOVA/x86_64, hw/x86_64 and
+hw/arm_64.
 
-commit 53366b3073c16f2e6a3983ba99437d8e7848040b
-Author: Christian Prochaska <christian.prochaska@genode-labs.com>
-Date:   Tue Aug 15 13:41:20 2023 +0200
+For the hw platforms, we extended the low-level debugging support in the hw
+kernel as needed and the hw/arm_64 support also required a change in Genode's
+customized GDB port to enable shared library support for this architecture.
+So, in order to use Genode's host GDB with the monitor on hw/arm_64, the Genode
+tool chain needs to be rebuilt with the 'tool/tool_chain' script. Rebuilding
+GDB also fixes a potential failed assertion in GDB if at least two threads are
+initially stopped when GDB connects to the monitor.
 
-    acpica: fix download link
-    
-    Fixes #4982
+There exist three run scripts illustrating the new component. The
+'os/run/monitor.run' script exercises memory inspection via the 'm' command
+and memory modification via the 'M' command by letting a test program monitor
+itself. The 'os/run/monitor_gdb.run' script performs automated tests of various
+GDB commands and the 'os/run/monitor_gdb_interactive.run' script allows for the
+interactive use of GDB to interact with monitored components.
+
+There's also a 'README' file in the 'os/src/monitor' directory with more
+details regarding the configuration of the monitor component.
 
 
 Streamlined application development via Goa
