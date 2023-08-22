@@ -362,22 +362,40 @@ us is the planned enablement of IPv6 on different layers of Genodes network
 stack. More specifically, the tool will allow us to work at IPv6 support in
 both Genodes ported TCP/IP stacks and the NIC router at the same time.
 
+
 New depot-remove component
 ==========================
 
-; @nfeske
+_The work described in this section was contributed by Alice Domage._
+_Thanks for this welcome addition._
 
-commit fb0e8fffa26303550dd53538e91964d32689e149
-Author: Alice Domage <alice.domage@gapfruit.com>
-Date:   Tue Mar 14 14:18:13 2023 +0100
+Genode's on-target package management allows for the installation of multiple
+versions of the same package side by side, which is useful to roll
+back the system to an earlier state, or to accommodate software depending on
+an older library version. Software is installed into the so-called _depot_
+stored on the target and populated with downloads on demand. Until now,
+however, the on-target depot could only grow, not shrink. Even though this
+limitation hasn't been a pressing concern for Sculpt OS on the PC, it impeded
+embedded use cases.
 
-    New depot_remove component
-    
-    The depot_remove component can delete PKG archives with
-    automatically resolving dependencies and deleting archives that are not
-    required on the system anymore.
-    
-    Issue genodelabs#4866
+The new depot-remove component lifts this limitation by providing an
+orderly way to remove depot content and orphaned dependencies.
+It operates by reading its configuration and
+processes delete operations based on the provided rules.
+A typical configuration looks as follows.
+
+! <config arch="x86_64" report="yes">
+!     <remove user="alice" pkg="nano3d"/>
+!     <remove user="bob"   pkg="wm" version="2042-42-42"/>
+!     <remove-all>
+!         <keep user="alice" pkg="fonts_fs"/>
+!     </remove-all>
+! </config>
+
+For more details about the configuration options, please refer to the README
+file at _/gems/src/app/depot_remove/_. Furthermore, the
+_gems/run/depot_remove.run_ script illustrates the component by exercising
+several practical use cases.
 
 
 DDE-Linux changes
