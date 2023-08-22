@@ -286,50 +286,31 @@ Date:   Wed Jun 28 15:57:45 2023 +0200
 API changes
 ===========
 
-; @nfeske
-
 Register framework update
 -------------------------
 
-commit c907e44a024c31b338f72158d02fb0f7c7a0a84d
-Author: Martin Stein <martin.stein@genode-labs.com>
-Date:   Wed Jun 7 19:14:04 2023 +0200
+The register framework has been updated to ease its use with '-Wconversion'
+warnings enabled, which is the default for Genode components.
+When reading from a bitfield, the new version returns the value in the
+smallest possible integer type, not the register-access type. This way,
+the user of the bitfield value can appropriate types without the need for
+casting. The update also replaces 'bool' access types with 'uint8_t' access
+types.
 
-    register framework: read bitfields to fitting uint
-    
-    * Replaces bool access types with uint8_t access types
-    * Ensures, that the framework always uses the smalles possible uint type
-      for the return value wherever a bitfield is read and returned to the user.
-    
-    Ref #4924
-
-commit bf18ffbbdda6c05e16efdc643be3780cce07aefb
-Author: Martin Stein <martin.stein@genode-labs.com>
-Date:   Tue Jun 13 14:32:35 2023 +0200
-
-    lib/net: enable strict warnings
-    
-    Enables strict warnings in the net lib and fixes all related compile errors.
-    
-    Fixes #4924
+Thanks to this change, the net lib - used by Genode's low-level network
+routing components for parsing protocol headers via the register API - has
+been made compliant to strict conversion warnings.
 
 
 Hex-dump utility
 ----------------
 
-commit 8bad3d08d70b9284e53b7ca25a3783ace13390bf
-Author: Martin Stein <martin.stein@genode-labs.com>
-Date:   Thu Jul 20 15:29:42 2023 +0200
-
-    util/formatted_output.h: hex-dump utility
-    
-    Adds Genode::Hex_dump class to the formatted_output.h header. This class can be
-    used to print a hexadecimal dump of a byte range. The data is printed in a
-    format similar to that used by Linux's 'xxd'. In addition to the 'xxd' format,
-    consecutive duplicate lines are replaced with a single "*\n" as done also by
-    Linux's 'hexdump'.
-    
-    Ref #4966
+To aid the monitoring, implementation, and debugging of binary protocols, a
+handy hex-dump utility got added to _util/formatted_output.h_. The new
+'Genode::Hex_dump' class can be used to print a hexadecimal dump of a byte
+range. The data is printed in a format similar to that used by the 'xxd'
+utility. In addition to the 'xxd' format, consecutive duplicate lines are
+replaced with a single "*\n".
 
 
 Libraries and applications
