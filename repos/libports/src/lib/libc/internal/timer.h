@@ -39,11 +39,6 @@ struct Libc::Timer
 		return _timer.curr_time();
 	}
 
-	static Microseconds microseconds(uint64_t timeout_ms)
-	{
-		return Microseconds(1000*timeout_ms);
-	}
-
 	static uint64_t max_timeout()
 	{
 		return ~0UL/1000;
@@ -80,12 +75,12 @@ struct Libc::Timeout
 	::Timer::One_shot_timeout<Timeout>  _timeout;
 
 	bool     _expired             = true;
-	uint64_t _absolute_timeout_ms = 0;
+	uint64_t _absolute_timeout_us = 0;
 
 	void _handle(Duration now)
 	{
 		_expired             = true;
-		_absolute_timeout_ms = 0;
+		_absolute_timeout_us = 0;
 		_handler.handle_timeout();
 	}
 
@@ -96,24 +91,24 @@ struct Libc::Timeout
 		_timeout(_timer_accessor.timer()._timer, *this, &Timeout::_handle)
 	{ }
 
-	void start(uint64_t timeout_ms)
+	void start(Genode::Microseconds const timeout)
 	{
-		Milliseconds const now = _timer_accessor.timer().curr_time().trunc_to_plain_ms();
+		Microseconds const now = _timer_accessor.timer().curr_time().trunc_to_plain_us();
 
 		_expired             = false;
-		_absolute_timeout_ms = now.value + timeout_ms;
+		_absolute_timeout_us = now.value + timeout.value;
 
-		_timeout.schedule(_timer_accessor.timer().microseconds(timeout_ms));
+		_timeout.schedule(timeout);
 	}
 
-	uint64_t duration_left() const
+	Microseconds duration_left() const
 	{
-		Milliseconds const now = _timer_accessor.timer().curr_time().trunc_to_plain_ms();
+		Microseconds const now = _timer_accessor.timer().curr_time().trunc_to_plain_us();
 
-		if (_expired || _absolute_timeout_ms < now.value)
-			return 0;
+		if (_expired || _absolute_timeout_us < now.value)
+			return Microseconds { 0 };
 
-		return _absolute_timeout_ms - now.value;
+		return Microseconds { _absolute_timeout_us - now.value };
 	}
 };
 

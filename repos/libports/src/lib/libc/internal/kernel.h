@@ -55,8 +55,8 @@ class Libc::Main_blockade : public Blockade
 {
 	private:
 
-		uint64_t   _timeout_ms;
-		bool const _timeout_valid { _timeout_ms != 0 };
+		Genode::Microseconds _timeout;
+		bool const _timeout_valid { _timeout.value != 0 };
 
 		struct Check : Suspend_functor
 		{
@@ -69,7 +69,7 @@ class Libc::Main_blockade : public Blockade
 
 	public:
 
-		Main_blockade(uint64_t timeout_ms) : _timeout_ms(timeout_ms) { }
+		Main_blockade(Genode::Microseconds timeout) : _timeout(timeout) { }
 
 		void block() override;
 		void wakeup() override;
@@ -84,8 +84,8 @@ class Libc::Main_job : public Monitor::Job
 
 	public:
 
-		Main_job(Monitor::Function &fn, uint64_t timeout_ms)
-		: Job(fn, _blockade), _blockade(timeout_ms)
+		Main_job(Monitor::Function &fn, Genode::Microseconds timeout)
+		: Job(fn, _blockade), _blockade(timeout)
 		{ }
 };
 
@@ -265,13 +265,13 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 			: _timer_accessor(timer_accessor), _kernel(kernel)
 			{ }
 
-			void timeout(uint64_t timeout_ms)
+			void timeout(Genode::Microseconds timeout)
 			{
 				_construct_timeout_once();
-				_timeout->start(timeout_ms);
+				_timeout->start(timeout);
 			}
 
-			uint64_t duration_left()
+			Genode::Microseconds duration_left()
 			{
 				_construct_timeout_once();
 				return _timeout->duration_left();
@@ -321,7 +321,7 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 
 			kernel->_app_code->execute();
 			kernel->_app_returned = true;
-			kernel->_suspend_main(check, 0);
+			kernel->_suspend_main(check, Genode::Microseconds { 0 });
 		}
 
 		bool _main_context() const { return &_myself == Thread::myself(); }
@@ -354,7 +354,7 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 			_longjmp(_user_context, 1);
 		}
 
-		uint64_t _suspend_main(Suspend_functor &check, uint64_t timeout_ms)
+		Genode::Microseconds _suspend_main(Suspend_functor &check, Genode::Microseconds timeout)
 		{
 			/* check that we're not running on libc kernel context */
 			if (Thread::mystack().top == _kernel_stack) {
@@ -364,10 +364,10 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 			}
 
 			if (!check.suspend())
-				return timeout_ms;
+				return timeout;
 
-			if (timeout_ms > 0)
-				_main_timeout.timeout(timeout_ms);
+			if (timeout.value > 0)
+				_main_timeout.timeout(timeout);
 
 			if (!_setjmp(_user_context)) {
 				_valid_user_context = true;
@@ -396,7 +396,7 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 				_longjmp(_kernel_context, 1);
 			}
 
-			return timeout_ms > 0 ? _main_timeout.duration_left() : 0;
+			return timeout.value > 0 ? _main_timeout.duration_left() : Genode::Microseconds { 0 };
 		}
 
 		void _init_file_descriptors();
@@ -542,29 +542,29 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 		/**
 		 * Suspend interface
 		 */
-		uint64_t suspend(Suspend_functor &check, uint64_t timeout_ms) override
+		Genode::Microseconds suspend(Suspend_functor &check, Genode::Microseconds timeout) override
 		{
-			if (timeout_ms > 0
-			 && timeout_ms > _timer_accessor.timer().max_timeout()) {
+			if (timeout.value > 0
+			 && timeout.value > _timer_accessor.timer().max_timeout()) {
 				warning("libc: limiting exceeding timeout of ",
-				        timeout_ms, " ms to maximum of ",
-				        _timer_accessor.timer().max_timeout(), " ms");
+				        timeout.value, " us to maximum of ",
+				        _timer_accessor.timer().max_timeout(), " us");
 
-				timeout_ms = min(timeout_ms, _timer_accessor.timer().max_timeout());
+				timeout.value = min(timeout.value, _timer_accessor.timer().max_timeout());
 			}
 
-			return _main_context() ? _suspend_main(check, timeout_ms)
-			                       : _pthreads.suspend_myself(check, timeout_ms);
+			return _main_context() ? _suspend_main(check, timeout)
+			                       : _pthreads.suspend_myself(check, timeout);
 		}
 
 		/**
 		 * Monitor interface
 		 */
-		Monitor::Result _monitor(Function &fn, uint64_t timeout_ms) override
+		Monitor::Result _monitor(Function &fn, Genode::Microseconds timeout) override
 		{
 			if (_main_context()) {
 
-				_main_monitor_job.construct(fn, timeout_ms);
+				_main_monitor_job.construct(fn, timeout);
 
 				_monitors.monitor(*_main_monitor_job);
 
@@ -576,7 +576,7 @@ struct Libc::Kernel final : Vfs::Read_ready_response_handler,
 				return job_result;
 
 			} else {
-				Pthread_job job { fn, _timer_accessor, timeout_ms };
+				Pthread_job job { fn, _timer_accessor, timeout };
 
 				_monitors.monitor(job);
 				return job.completed() ? Monitor::Result::COMPLETE

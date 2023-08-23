@@ -130,13 +130,13 @@ struct sem : Genode::Noncopyable
 		 *
 		 * Return true if down was successful, false on timeout expiration.
 		 */
-		bool _apply_for_semaphore(Libc::uint64_t timeout_ms)
+		bool _apply_for_semaphore(Genode::Microseconds timeout)
 		{
 			if (Libc::Kernel::kernel().main_context()) {
-				Main_blockade blockade { timeout_ms };
+				Main_blockade blockade { timeout };
 				return _applicant_for_semaphore(blockade);
 			} else {
-				Pthread_blockade blockade { _timer_accessor(), timeout_ms };
+				Pthread_blockade blockade { _timer_accessor(), timeout };
 				return _applicant_for_semaphore(blockade);
 			}
 		}
@@ -173,7 +173,7 @@ struct sem : Genode::Noncopyable
 			if (_try_down() == 0)
 				return 0;
 
-			_apply_for_semaphore(0);
+			_apply_for_semaphore(Genode::Microseconds { 0 });
 
 			return 0;
 		}
@@ -189,12 +189,12 @@ struct sem : Genode::Noncopyable
 			timespec abs_now;
 			clock_gettime(_clock_id, &abs_now);
 
-			Libc::uint64_t const timeout_ms =
-				calculate_relative_timeout_ms(abs_now, abs_timeout);
-			if (!timeout_ms)
+			Libc::uint64_t const timeout =
+				calculate_relative_timeout_us(abs_now, abs_timeout);
+			if (!timeout)
 				return ETIMEDOUT;
 
-			if (_apply_for_semaphore(timeout_ms))
+			if (_apply_for_semaphore(Genode::Microseconds { timeout }))
 				return 0;
 			else
 				return ETIMEDOUT;

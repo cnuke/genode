@@ -32,7 +32,7 @@ namespace Libc {
 		/**
 		 * Suspend the execution of the calling user context
 		 *
-		 * \param timeout_ms  maximum time to stay suspended in milliseconds,
+		 * \param timeout_ms  maximum time to stay suspended in microseconds,
 		 *                    0 for infinite suspend
 		 *
 		 * \return            remaining duration until timeout,
@@ -42,7 +42,7 @@ namespace Libc {
 		 * or as separate pthread. This function returns after the libc kernel
 		 * resumed the user context execution.
 		 */
-		virtual uint64_t suspend(Suspend_functor &, uint64_t timeout_ms = 0) = 0;
+		virtual Genode::Microseconds suspend(Suspend_functor &, Genode::Microseconds timeout = Genode::Microseconds { 0 }) = 0;
 	};
 }
 

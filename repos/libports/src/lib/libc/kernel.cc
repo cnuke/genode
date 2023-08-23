@@ -31,8 +31,8 @@ inline void Libc::Main_blockade::block()
 	Check check { _woken_up };
 
 	do {
-		_timeout_ms = Kernel::kernel().suspend(check, _timeout_ms);
-		_expired    = _timeout_valid && !_timeout_ms;
+		_timeout = Kernel::kernel().suspend(check, _timeout);
+		_expired = _timeout_valid && !_timeout.value;
 	} while (!woken_up() && !expired());
 }
 

@@ -38,16 +38,16 @@ struct Libc::Pthread_pool
 				_timeout.construct(_timer_accessor, *this);
 		}
 
-		Pthread(Timer_accessor &timer_accessor, uint64_t timeout_ms)
+		Pthread(Timer_accessor &timer_accessor, Genode::Microseconds timeout)
 		: _timer_accessor(timer_accessor)
 		{
-			if (timeout_ms > 0) {
+			if (timeout.value > 0) {
 				_construct_timeout_once();
-				_timeout->start(timeout_ms);
+				_timeout->start(timeout);
 			}
 		}
 
-		uint64_t duration_left()
+		Genode::Microseconds duration_left()
 		{
 			_construct_timeout_once();
 			return _timeout->duration_left();
@@ -75,9 +75,9 @@ struct Libc::Pthread_pool
 			p->blockade.wakeup();
 	}
 
-	uint64_t suspend_myself(Suspend_functor & check, uint64_t timeout_ms)
+	Genode::Microseconds suspend_myself(Suspend_functor & check, Genode::Microseconds timeout)
 	{
-		Pthread myself { timer_accessor, timeout_ms };
+		Pthread myself { timer_accessor, timeout };
 		{
 			Mutex::Guard g(mutex);
 
@@ -100,7 +100,7 @@ struct Libc::Pthread_pool
 			}
 		}
 
-		return timeout_ms > 0 ? myself.duration_left() : 0;
+		return timeout.value > 0 ? myself.duration_left() : Genode::Microseconds { 0 };
 	}
 };
 

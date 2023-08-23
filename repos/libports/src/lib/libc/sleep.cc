@@ -31,14 +31,14 @@ void Libc::init_sleep(Monitor &monitor)
 }
 
 
-static void millisleep(Genode::uint64_t timeout_ms)
+static void microsleep(Genode::Microseconds timeout)
 {
 	struct Missing_call_of_init_sleep : Genode::Exception { };
 	if (!_monitor_ptr)
 		throw Missing_call_of_init_sleep();
 
 	_monitor_ptr->monitor([&] { return Libc::Monitor::Function_result::INCOMPLETE; },
-	                      timeout_ms);
+	                      timeout);
 }
 
 
@@ -51,12 +51,12 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
 	 */
 	if (!req->tv_sec && !req->tv_nsec) return 0;
 
-	Genode::uint64_t sleep_ms = (Genode::uint64_t)req->tv_sec*1000;
+	Genode::uint64_t sleep_us = (Genode::uint64_t)req->tv_sec*1000'000;
 	if (req->tv_nsec)
-		sleep_ms += req->tv_nsec / 1000000;
+		sleep_us += req->tv_nsec / 1000;
 
-	/* sleep at least 1 ms */
-	millisleep(sleep_ms ? : 1);
+	/* sleep at least 100 us */
+	microsleep(Genode::Microseconds { sleep_us ? : 100 });
 
 	if (rem)
 		*rem = { 0, 0 };
@@ -107,10 +107,10 @@ unsigned int sleep(unsigned int seconds)
 	 */
 	if (!seconds) return 0;
 
-	Libc::uint64_t const sleep_ms = (Libc::uint64_t)seconds*1000;
+	Libc::uint64_t const sleep_us = (Libc::uint64_t)seconds*1000'000;
 
 	/* sleep at least 1 ms */
-	millisleep(sleep_ms ? : 1);
+	microsleep(Genode::Microseconds { sleep_us ? : 1000 });
 	return 0;
 }
 
@@ -124,10 +124,10 @@ int usleep(useconds_t useconds)
 	 */
 	if (!useconds) return 0;
 
-	Libc::uint64_t const sleep_ms = (Libc::uint64_t)useconds/1000;
+	Libc::uint64_t const sleep_us = (Libc::uint64_t)useconds;
 
-	/* sleep at least 1 ms */
-	millisleep(sleep_ms ? : 1);
+	/* sleep at least 100 us */
+	microsleep(Genode::Microseconds { sleep_us ? : 100 });
 	return 0;
 }
 

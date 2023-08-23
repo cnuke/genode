@@ -22,6 +22,8 @@
 
 namespace Libc {
 	inline uint64_t calculate_relative_timeout_ms(timespec abs_now, timespec abs_timeout);
+
+	inline uint64_t calculate_relative_timeout_us(timespec abs_now, timespec abs_timeout);
 }
 
 /**
@@ -66,6 +68,47 @@ Libc::uint64_t Libc::calculate_relative_timeout_ms(timespec abs_now, timespec ab
 		return 1;
 
 	return diff_ms;
+}
+
+
+/**
+ * Calculate relative timeout in us from 'abs_now' to 'abs_timeout'
+ *
+ * Returns 0 if timeout already expired.
+ */
+Libc::uint64_t Libc::calculate_relative_timeout_us(timespec abs_now, timespec abs_timeout)
+{
+	enum { S_IN_US = 1000 * 1000ULL, S_IN_NS = 1000 * 1000 * 1000ULL };
+
+	if (abs_now.tv_nsec >= S_IN_NS) {
+		abs_now.tv_sec  += abs_now.tv_nsec / S_IN_NS;
+		abs_now.tv_nsec  = abs_now.tv_nsec % S_IN_NS;
+	}
+	if (abs_timeout.tv_nsec >= S_IN_NS) {
+		abs_timeout.tv_sec  += abs_timeout.tv_nsec / S_IN_NS;
+		abs_timeout.tv_nsec  = abs_timeout.tv_nsec % S_IN_NS;
+	}
+
+	uint64_t diff_us = (abs_timeout.tv_sec - abs_now.tv_sec) * S_IN_US;
+	uint64_t diff_ns = 0;
+
+	if (abs_timeout.tv_nsec >= abs_now.tv_nsec)
+		diff_ns = abs_timeout.tv_nsec - abs_now.tv_nsec;
+	else {
+		/* check whether absolute timeout is in the past */
+		if (diff_us == 0)
+			return 0;
+		diff_ns  = S_IN_NS - abs_now.tv_nsec + abs_timeout.tv_nsec;
+		diff_us -= S_IN_US;
+	}
+
+	diff_us += diff_ns / 1000;
+
+	/* if there is any diff then let the timeout be at least 100 US */
+	if (diff_us == 0 && diff_ns != 0)
+		return 100;
+
+	return diff_us;
 }
 
 

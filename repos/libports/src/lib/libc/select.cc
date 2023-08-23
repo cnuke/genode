@@ -258,8 +258,8 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 
 	using Genode::uint64_t;
 
-	uint64_t const timeout_ms = (tv != nullptr)
-	                          ? (uint64_t)tv->tv_sec*1000 + tv->tv_usec/1000
+	uint64_t const timeout_us = (tv != nullptr)
+	                          ? (uint64_t)tv->tv_sec*1000'000 + tv->tv_usec
 	                          : 0UL;
 	{
 		struct Missing_call_of_init_select : Exception { };
@@ -288,7 +288,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	};
 
 	Monitor::Result const monitor_result =
-		_monitor_ptr->monitor(monitor_fn, timeout_ms);
+		_monitor_ptr->monitor(monitor_fn, Genode::Microseconds { timeout_us });
 
 	select_cb_list().remove(&(*select_cb));
 

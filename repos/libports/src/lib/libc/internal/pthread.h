@@ -313,11 +313,11 @@ class Libc::Pthread_blockade : public Blockade, public Timeout_handler
 
 	public:
 
-		Pthread_blockade(Timer_accessor &timer_accessor, uint64_t timeout_ms)
+		Pthread_blockade(Timer_accessor &timer_accessor, Genode::Microseconds timeout)
 		{
-			if (timeout_ms) {
+			if (timeout.value) {
 				_timeout.construct(timer_accessor, *this);
-				_timeout->start(timeout_ms);
+				_timeout->start(timeout);
 			}
 		}
 
@@ -349,10 +349,10 @@ struct Libc::Pthread_job : Monitor::Job
 	public:
 
 		Pthread_job(Monitor::Function &fn,
-		            Timer_accessor &timer_accessor, uint64_t timeout_ms)
+		            Timer_accessor &timer_accessor, Genode::Microseconds timeout)
 		:
 			Job(fn, _blockade),
-			_blockade(timer_accessor, timeout_ms)
+			_blockade(timer_accessor, timeout)
 		{ }
 };
 

@@ -17,6 +17,7 @@
 
 /* Genode includes */
 #include <base/registry.h>
+#include <base/duration.h>
 
 /* libc-internal includes */
 #include <internal/types.h>
@@ -59,7 +60,7 @@ class Libc::Monitor : Interface
 
 	protected:
 
-		virtual Result _monitor(Function &, uint64_t) = 0;
+		virtual Result _monitor(Function &, Genode::Microseconds) = 0;
 		virtual void _trigger_monitor_examination() = 0;
 
 	public:
@@ -70,7 +71,7 @@ class Libc::Monitor : Interface
 		 * Returns true if execution completed, false on timeout.
 		 */
 		template <typename FN>
-		Result monitor(FN const &fn, uint64_t timeout_ms = 0)
+		Result monitor(FN const &fn, Genode::Microseconds timeout = Genode::Microseconds { 0 })
 		{
 			struct _Function : Function
 			{
@@ -79,7 +80,7 @@ class Libc::Monitor : Interface
 				_Function(FN const &fn) : fn(fn) { }
 			} function { fn };
 
-			return _monitor(function, timeout_ms);
+			return _monitor(function, timeout);
 		}
 
 		/**
