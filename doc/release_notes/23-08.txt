@@ -16,75 +16,81 @@
 Multi-component debug monitor
 #############################
 
-The existing GDB monitor has a number of limitations that we need to overcome
-to make on-target debugging a regular feature of Genode and Sculpt OS.
+The debugging of Genode components using the GNU debugger (GDB) was already
+an anticipated feature when we introduces the first version of the GDB monitor
+component in version
+[https://genode.org/documentation/release-notes/11.05#GDB_monitor_experiment - 11.05]
+and refined it in the subsequent releases
+[https://genode.org/documentation/release-notes/12.02#GDB_monitor_refinements_and_automated_test - 12.02],
+[https://genode.org/documentation/release-notes/13.11#GNU_Debugger - 13.11 (on-target GDB)], and
+[https://genode.org/documentation/release-notes/16.05#Enhanced_GDB_support_on_NOVA - 16.05 (supporting NOVA)].
+Despite these efforts, the feature remained rarely used in practice.
+In most situations, manual instrumentation with debug messages or the use
+of GDB with the Linux version of Genode remain to be the instruments of choice.
+Driven by the vision of easy on-target debugging on Sculpt OS, we identified
+the following limitations of the existing GDB monitor that stand in the way.
 
-The most visible problems are:
-
-* The GDB monitor supports only one component as debugging target, which makes
+# The GDB monitor supports only one component as debugging target, which makes
   the debugging of scenarios where components closely interact difficult.
 
-* The existing implementation re-uses the gdbserver code and thereby inherits
+# The existing implementation re-uses the gdbserver code and thereby inherits
   many POSIX peculiarities that must be stubbed for Genode, yet make the
-  overall implementation complex.
+  overall implementation complex. Genode is not POSIX after all.
 
-Given these limitations, two key ideas motivated a new approach for the
-revision of Genode's GDB support for this release:
+# The integration of the GDB monitor into an existing scenario is a fairly
+  invasive change that requires too much work.
+
+Given these limitations as a backdrop, two key ideas motivated a new approach
+for the revision of Genode's GDB support for this release:
 
 First, by using Genode's sandbox API as foundation for a new debug monitor,
 we would become able to use the monitor as drop-in replacement for 'init',
 potentially going as far as using the monitor for Sculpt's runtime subsystem.
-
-And second, GDB supports the debugging of multiple processes (called inferiors)
+Wouldn't that approach vastly simplify the integration issue (3)?
+Second, GDB supports the debugging of multiple processes (called inferiors)
 within one session, which would in principle allow us to inspect and debug
-component compositions.
+component compositions, addressing the first limitation.
+And third, the casual review of the documentation of the GDB protocol left
+the impression that a Genode-tailored implementation shouldn't be that
+complicated.
 
-The result of these ideas is the new 'monitor' component at 'os/src/monitor'
-as the designated successor of the 'gdb_monitor'. By leveraging the sandbox API
-it can be used as a drop-in replacement for the 'init' component and monitor
+The result of these ideas is the new *monitor* component at _os/src/monitor_
+as the designated successor of the traditional gdb_monitor.
+By leveraging the sandbox API,
+it can be used as a drop-in replacement for the init component and monitor
 multiple components. In real-world scenarios like Sculpt's runtime, we
 deliberately want/need to restrict the debugging to a few selected components,
 however, which calls for the support of a mix of monitored and regular
 components hosted side by side. Given this requirement, the sandbox API had to
 be enhanced to support the selective interception of PD and CPU sessions.
 
-Like the 'gdb_monitor', the new monitor speaks the GDB remote serial protocol
-over Genode's terminal session. But the protocol implementation does not re-use
-any gdbserver code, sidestepping the complexities of POSIX.
-
+Like the original gdb_monitor, the new monitor speaks the GDB remote serial
+protocol over Genode's terminal session. But the protocol implementation does
+not re-use any gdbserver code, sidestepping the complexities of POSIX.
 The monitor supports the essential GDB remote protocol commands for reading and
 writing of memory and registers, for stopping and resuming of threads including
 single-stepping, and it reports the occurrence of page faults and exceptions to
 GDB. Breakpoints are managed by GDB using software breakpoint instructions.
+The GDB protocol is operated in GDB's 'non-stop' mode, which means that
+threads of multiple inferiors can be stopped and resumed individually or in
+groups, depending on the GDB commands issued by the user.
 
-The monitor operates in GDB's 'non-stop' mode, which means that threads of
-multiple inferiors can be stopped and resumed individually or in groups,
-depending on the GDB commands issued by the user.
-
-As a secondary functionality, the monitor wipes all RAM dataspaces allocated
-by the monitored components when the RAM is freed. This is useful as a possible
-defense against cold-boot attacks.
-
-Supported debugging target platforms as of now are NOVA/x86_64, hw/x86_64 and
-hw/arm_64.
-
-For the hw platforms, we extended the low-level debugging support in the hw
-kernel as needed and the hw/arm_64 support also required a change in Genode's
-customized GDB port to enable shared library support for this architecture.
-So, in order to use Genode's host GDB with the monitor on hw/arm_64, the Genode
-tool chain needs to be rebuilt with the 'tool/tool_chain' script. Rebuilding
-GDB also fixes a potential failed assertion in GDB if at least two threads are
-initially stopped when GDB connects to the monitor.
+As of now, the monitor supports NOVA on 64-bit x86 as well as Genode's custom
+base-hw kernel on 64-bit ARM and x86. The 64-bit ARM support required a change
+in Genode's customized GDB port to enable shared library support for this
+architecture. So in order to use Genode's host GDB with the monitor on 64-bit
+ARM, the Genode tool chain needs to be rebuilt with the _tool/tool_chain_
+script.
 
 There exist three run scripts illustrating the new component. The
-'os/run/monitor.run' script exercises memory inspection via the 'm' command
+_os/run/monitor.run_ script exercises memory inspection via the 'm' command
 and memory modification via the 'M' command by letting a test program monitor
-itself. The 'os/run/monitor_gdb.run' script performs automated tests of various
-GDB commands and the 'os/run/monitor_gdb_interactive.run' script allows for the
+itself. The _os/run/monitor_gdb.run_ script performs automated tests of various
+GDB commands and the _os/run/monitor_gdb_interactive.run_ script allows for the
 interactive use of GDB to interact with monitored components.
 
-There's also a 'README' file in the 'os/src/monitor' directory with more
-details regarding the configuration of the monitor component.
+Details about the configuration of the monitor component are given by
+the README file at the _os/src/monitor/_ directory.
 
 
 Streamlined application development via Goa
@@ -98,19 +104,21 @@ Streamlined application development via Goa
 Support for the mainline Rust toolchain
 =======================================
 
-When we reintroduced Rust on Genode in the last release, our implementation
+When we reintroduced Rust on Genode in the
+[https://genode.org/documentation/release-notes/23.05#Initial_Rust_support - previous]
+release, our implementation
 relied on a slightly adapted Rust toolchain to work around missing support for
 versioned library symbols in our linker. With this release, we are now able to
 use the mainline 'x86_64-unknown-freebsd' target provided by Rust project,
 eliminating the need for a custom toolchain.
 
 On top of the streamlined Rust support, we created a Goa package for a popular
-Rust command line application, which will be published along with updated
+Rust command-line application, which will be published along with updated
 system packages in the upcoming Sculpt release.
 
 For details on the mainline Rust toolchain support and the ported package,
-take a look at the 
-[https://genodians.org/atopia/2023-08-24-enabling-the-upstream-rust-toolchain.txt - update blog post on Genodians.org].
+take a look at the dedicated
+[https://genodians.org/atopia/2023-08-24-enabling-the-upstream-rust-toolchain.txt - blog post on Genodians.org].
 
 
 Base framework and OS-level infrastructure
@@ -129,8 +137,8 @@ maintainers, we revisited the following areas.
 Core's page-fault resolution code got reworked for improved clarity and
 safety, by introducing dedicated result types, reducing the use of basic
 types, choosing expressive names, and fostering constness. Along the way, we
-introduces a number of 'print' hooks that greatly ease manual instrumentation
-and streamlines the error messages printed by core. Those messages no longer
+introduced a number of 'print' hooks that greatly ease manual instrumentation
+and streamlines diagnostic messages printed by core. Those messages no longer
 appear when a user-level page-fault handler is registered for the faulted-at
 region map. So the monitor component produces less noise on the attempt to
 dump non-existing memory.
@@ -167,7 +175,7 @@ The register framework has been updated to ease its use with '-Wconversion'
 warnings enabled, which is the default for Genode components.
 When reading from a bitfield, the new version returns the value in the
 smallest possible integer type, not the register-access type. This way,
-the user of the bitfield value can appropriate types without the need for
+the user of the bitfield value can use appropriate types without the need for
 casting. The update also replaces 'bool' access types with 'uint8_t' access
 types.
 
@@ -193,29 +201,31 @@ Libraries and applications
 New NIC server for raw uplink connectivity
 ==========================================
 
-With Genode 21.02, we transitioned all network device drivers to act as session
+With Genode
+[https://genode.org/documentation/release-notes/21.02#Pluggable_network_device_drivers - 21.02],
+we transitioned all network device drivers to act as session
 clients in order to make them pluggable. We achieved this by introducing a new
-service named Uplink that is very similar to the Nic service but with the peer
-roles switched. Up to now, the only Uplink server and Uplink-to-Nic adapter was
+_uplink_ service interface that is very similar to the NIC service but with the peer
+roles switched. Up to now, the only uplink server and uplink-to-NIC adapter was
 the NIC router. This is reasonable as it is the standard network multiplexer in
 Genode and therefore normally sits in front of each network device driver
 anyway. However, there is one major issue with this approach: It binds physical
 network access to layer 3 and 4 routing respectively layer 2 multiplexing,
-which, in our case, means that Nic clients can talk to the physical network
+which, in our case, means that NIC clients can talk to the physical network
 only with what is protocol-wise supported by the NIC router.
 
-That's why Genode 23.08 introduces the new Nic-Uplink adapter component. It
+That's why Genode 23.08 introduces the new NIC-uplink adapter component. It
 re-enables raw access to physical networks in Genode by forwarding packets
-unmodified and unfiltered between multiple Nic sessions and one Uplink session.
-The new component is accompanied by a test script nic_uplink.run that
-demonstrates the low-level integration and a Sculpt package pkg/pc_nic that can
+unmodified and unfiltered between multiple NIC sessions and one uplink session.
+The new component is accompanied by a test script _nic_uplink.run_ that
+demonstrates the low-level integration and a Sculpt package _pkg/pc_nic_ that can
 be used for deployment in more sophisticated systems together with the PC
 NIC-driver as back end.
 
-One constellation in which the Nic-Uplink server will be especially useful for
-us is the planned enablement of IPv6 on different layers of Genodes network
+One constellation, in which the NIC-uplink server will be especially useful for
+us is the planned enablement of IPv6 on different layers of Genode's network
 stack. More specifically, the tool will allow us to work at IPv6 support in
-both Genodes ported TCP/IP stacks and the NIC router at the same time.
+both Genode's ported TCP/IP stacks and the NIC router at the same time.
 
 
 New depot-remove component
@@ -323,7 +333,10 @@ Date:   Thu Jul 6 13:02:04 2023 +0200
 Tresor block encryptor
 ======================
 
-We further polished the Tresor Tester in order to make it run on a broad
+Following the introduction of the tresor library in the
+[https://genode.org/documentation/release-notes/23.05#Revision_of_Genode_s_custom_block-encryption_infrastructure - previous]
+release,
+we further polished the tresor tester in order to make it run on a broad
 spectrum of target platforms. For instance, the test can now be run without
 entropy input (permanently warning the user about the security risk) because
 some of our test hardware lacks support for it. Besides that, we mainly worked
@@ -331,13 +344,12 @@ at the resource consumption of the test - made it more adaptable or reduced it
 through improvements. This pleased not only less powerful hardware but our test
 management as well.
 
-Furthermore, we fixed a significant former deficiency with the Tresor library.
+Furthermore, we fixed a significant former deficiency with the tresor library.
 The library used to work on the raw on-disc data without decoding first. This
 worked fine for some platforms but caused alignment faults on others. That
-said, the Tresor library now always decodes into naturally typed and aligned
-C++ structs before accessing the data. The speed-up of accessing decoded data
-seems to compensate for the decoding effort because we did not observe a
-significant performance regression.
+said, the tresor library now always decodes into naturally typed and aligned
+C++ structs before accessing the data.
+
 
 Device drivers
 ##############
@@ -346,8 +358,8 @@ Intel GPU
 =========
 
 The handling of GPUs is somewhat special within the driver world. A GPU is a
-standalone execution unit that can be programmed much like a CPU. In the past
-there were fixed function GPUs which have been gradually replaced by dynamically
+standalone execution unit that can be programmed much like a CPU. In the past,
+there were fixed function GPUs, which have been gradually replaced by dynamically
 programmable units that execute compiled machine code (think shader compilers
 like GLSL or general purpose computing like CUDA or OpenCL). This leads to a
 situation where a GPU driver cannot trust the client that sends its machine code
@@ -358,14 +370,16 @@ hope for the best. In case the code execution is not successful, GPUs tend to
 just hang and the only thing a driver can do is to make sure via an IOMMU that
 the code does not access arbitrary memory and  program a watchdog timer and
 reset the GPU to a graceful state in case there is no proper response. With the
-current Genode release we have implemented this behavior for GEN9 (HD graphics)
+current Genode release, we have implemented this behavior for GEN9 (HD graphics)
 and GEN12 (Intel Iris Xe).
+
 
 Intel display
 =============
 
 The ported Linux Intel display driver now supports USB Type-C connectors as
 used with modern notebooks.
+
 
 New PC network driver based on DDE-Linux
 ========================================
@@ -379,7 +393,7 @@ on cable unplug/plug and the moderate throughput on GBit links had to be
 addressed.
 
 Our new DDE Linux approach introduced this year makes the porting of drivers
-from the Linux kernel much easier and less labor intensive as in the past.
+from the Linux kernel much easier and less labour intensive as in the past.
 Also, Linux is a very tempting Ethernet driver donor because of the variety
 of supported devices and the well known excellent performance (especially on
 Intel devices). Moreover, the Intel E1000e driver addresses all issues we
@@ -398,13 +412,15 @@ USB host controller
 
 The USB host controller driver ports for Raspberry Pi 1 and i.MX 6 Quad got
 updated to Linux kernel version 6.1.37 resp. 6.1.20. Both driver ports share the
-renewed device driver environment approach for Linux introduced in release 21.08.
+renewed device-driver environment approach for Linux introduced in release
+[https://genode.org/documentation/release-notes/21.08#Linux-device-driver_environment_re-imagined - 21.08].
 
-Beside the update of the last remaining outdated USB host controller drivers, we
-have reworked the common C/C++ Linux to Genode USB backend used by all USB
+Besides the update of the last remaining outdated USB host controller drivers, we
+have reworked the common C/C++ Linux-to-Genode USB back end used by all USB
 host controller driver incarnations. The internal changes were necessary to
-target issues regarding races during USB session close attempts, resets
+address issues regarding races during USB session close attempts, resets
 of USB endpoints, and potential stalls during synchronous USB RPC calls.
+
 
 PC audio refinements
 ====================
@@ -491,7 +507,8 @@ PinePhone's physical buttons, namely the volume buttons and the power button.
 The volume buttons are connected via cascaded resistors to a single ADC of the
 A64 SoC. The corresponding driver has been added to the genode-allwinner
 repository at _src/drivers/button/pinephone/_ and is accompanied by the
-_button_pinephone.run_ script.
+_button_pinephone.run_ script. It reports KEY_VOLUMEUP and KEY_VOLUMEDOWN
+input events to an event session.
 
 Sensing the power button has been a slightly more delicate issue because the
 power button is connected to the power-management IC (PMIC), which shall only
@@ -517,8 +534,8 @@ blanked. Here are some illustrative data points:
 !    Low brightness in economic mode:    1.7 W
 !    Screensaver:                        1.1 W
 
-You can find the screensaver feature integrated in the latest Sculpt OS
-image published by _nfeske_.
+You can find the screensaver feature integrated in the latest mobile Sculpt OS
+images published by _nfeske_.
 
 
 Platforms
@@ -527,29 +544,33 @@ Platforms
 NXP i.MX SoC family
 ===================
 
-Certain parts of i.MX specific code, like the base-support for the hw-kernel,
+Certain parts of i.MX specific code, like the base support for the hw kernel,
 and the GPIO driver for i.MX got moved from Genode's main repository to the
 corresponding genode-imx repository.
 
 Sculpt OS image creation for MNT Reform2
 ----------------------------------------
 
-With this release we introduce mainline support for Sculpt OS on the MNT
+With this release, we introduce mainline support for Sculpt OS on the MNT
 Reform2. To build a Sculpt OS image for this board you can use the common
-sculpt_image.run script, like the following:
+_gems/run/sculpt_image.run_ script, like the following:
 
 ! make run/sculpt_image KERNEL=hw BOARD=mnt_reform2 DEPOT=omit
 
-To be effective you need to extend your RUN_OPT variable accordingly:
+To be effective, you need to extend your RUN_OPT variable accordingly:
 
 ! RUN_OPT += --include image/imx8mq_mmc
+
 
 seL4 microkernel
 ================
 
-With the update of the seL4 kernel in the previous release we now added several
-improvements which shorten the boot-up-time of Genode's 'core'
+With the update of the seL4 kernel in the
+[https://genode.org/documentation/release-notes/23.05#Updated_seL4_microkernel - previous]
+release we now added several
+improvements, which reduce the boot-up time of Genode's 'core'
 roottask on seL4 by converting untyped memory to I/O memory on demand.
+
 
 Build system and tools
 ######################
@@ -559,87 +580,74 @@ Depot autopilot on-target test orchestrator
 
 As the rough plan to support automated testing in Goa is shaping up, it makes
 sense to share one convention about expressing the success criteria for a
-package under test between the Depot Autopilot and Goa. This merge motivated
-us to review the convention that was used with the Depot Autopilot up until
+package under test between the depot autopilot and Goa. This prospect motivated
+us to review the convention that was used with the depot autopilot up until
 now. The old syntax looked as follows:
-```
-<runtime ...>
-  <events>
-    <timeout meaning="failed" sec="20"/>
-    <log meaning="succeeded">
-      [init -> rom_logger] ROM 'generated':*
-      [init -> dynamic_rom] xray: change (finished)
-    </log>
-    <log meaning="succeeded">child exited</log>
-    <log meaning="failed">Error: </log>
-  </events>
-  ...
-</runtime>
-```
 
-We found that we wanted to apply various simplifications to this syntax:
-* Drop the intermediate <events> tag.
-* Replace <log meaning="succeeded"> by <succeed>.
-* Replace <log meaning="failed"> by <fail>.
-* Replace <timeout meaning="failed" sec="20"/> by an after_seconds
-  attribute of the <success> or <fail> tags.
+! <runtime ...>
+!   <events>
+!     <timeout meaning="failed" sec="20"/>
+!     <log meaning="succeeded">
+!       [init -> rom_logger] ROM 'generated':*
+!       [init -> dynamic_rom] xray: change (finished)
+!     </log>
+!     <log meaning="succeeded">child exited</log>
+!     <log meaning="failed">Error: </log>
+!   </events>
+!   ...
+! </runtime>
 
-So, the above example would become the following:
-```
-<runtime ...>
-  <fail after_seconds="20"/>
-  <succeed>
-    [init -> rom_logger] ROM 'generated':*
-    [init -> dynamic_rom] xray: change (finished)
-  </succeed>
-  <succeed>child exited</succeed>
-  <fail>Error: </fail>
-  ...
-</runtime>
-```
+We applied the following simplifications to this syntax:
+* Dropped the intermediate '<events>' tag,
+* Replaced '<log meaning="succeeded">' by '<succeed>',
+* Replaced '<log meaning="failed">' by '<fail>',
+* Replaced '<timeout meaning="failed" sec="20"/>' by an 'after_seconds'
+  attribute of the '<succeed>' or '<fail>' tags.
 
-Genode 23.08 adds support for this new scheme to the Depot Autopilot but keeps
-backwards-compatibility for now in order to allow Genode users to adapt to the
-change progressively. The Depot Autopilot always looks out for an <event> tag:
-If the tag is present in a package runtime, the old scheme is being used.
-Otherwise, the new one. Note that backwards-compatibility is planned to be
-removed after a short transition period.
+So, the above example becomes the following:
+! <runtime ...>
+!   <fail after_seconds="20"/>
+!   <succeed>
+!     [init -> rom_logger] ROM 'generated':*
+!     [init -> dynamic_rom] xray: change (finished)
+!   </succeed>
+!   <succeed>child exited</succeed>
+!   <fail>Error: </fail>
+!   ...
+! </runtime>
 
-All test packages of the official Genode repositories have already been updated
-to the new convention. From this experience, we can tell that automation via a
-combination of xslt script and sed commands can be worth the effort if you're
-maintaining a considerable number of test packages.
+For now, the depot autopilot maintains backwards-compatibility to allow Genode
+users to adapt to the change progressively. The old scheme is used whenever
+the package runtime contains an '<event>' tag. Note that backwards
+compatibility will be removed after a short transition period.
+All test packages of the official Genode repositories have been updated
+to the new convention.
 
 Furthermore, we took the opportunity to also add a new feature. The optional
-'log_prefix' attribute in the <succeed> and <fail> tags is a simple but handy
+'log_prefix' attribute in the '<succeed>' and '<fail>' tags is a simple but handy
 white-list filter when it comes to typical Genode logs. When matching the test
-log against the pattern given in the affected <succeed> or <fail> tag, the
-Depot Autopilot will consider only those log lines that start with the given
+log against the pattern given in the affected '<succeed>' or '<fail>' tag, the
+depot autopilot considers only those log lines that start with the given
 prefix. This is an easy way to watch only specific Genode components and solve
 problems with the log order of simultaneously running components.
 
 Last but not least, the transition prompted us to fix a minor issue with the
-Depot Autopilot log-processing. Color sequences will now be forwarded correctly
-from the test runtime to the log output of the Depot Autopilot, making the
+depot autopilot log-processing. Color sequences will now be forwarded correctly
+from the test runtime to the log output of the depot autopilot, making the
 analysis of test batteries a more pleasant experience.
+
 
 Updated run-tool defaults for x86_64
 ====================================
 
 With the update of the seL4 kernel and the update of the toolchain to GNU GCC
-12 in the previous release, x86 assembly instructions are generated,
-like POPCNT, which are not supported anymore by the Qemu CPU models we used.
-Previously, depending on the used kernel, either
+12 in the previous release, certain x86 assembly instructions like POPCNT are generated,
+which are not supported by the Qemu CPU models we used.
+Previously, the used CPU model was either the default model, or
+'-cpu core2duo' for NOVA, or '-cpu phenom' for SVM virtualization.
+The current release changes the default model to '-cpu Nehalem-v2', and
+selects '-cpu EPYC' for SVM virtualization.
 
-* the default CPU model or
-* -cpu core2duo for Genode@NOVA or
-* -cpu phenom for SVM virtualization
-
-was used. Because of that we changed with this release the used Qemu CPU
-
-* by default to '-cpu Nehalem-v2'
-* and to '-cpu EPYC' for SVM virtualization
-
-With this change the build.conf file in the x86 build directory must be
+Note that the _build.conf_ file in the x86 build directory must be
 re-generated by you, which otherwise may contain an older Qemu "-cpu " model,
 which can collide with the new default Qemu CPU settings.
