@@ -266,30 +266,30 @@ several practical use cases.
 DDE-Linux changes
 =================
 
-With this release we changed how external events are treated within the
+With this release, we changed how external events are treated within the
 Linux emulation environment.
 
 Whenever an external event occurred, for example timer or interrupt, the
 corresponding I/O signal handler was triggered. This handler unblocked the
 task waiting for the event and also initiated the immediate execution of all
 unblocked tasks. This, however, could lead to nested execution because these
-tasks might hit serialization points, e.g. synchronously waiting for packet
+tasks might hit serialization points, e.g., synchronously waiting for packet
 stream operations, that under the hood also require handling of other I/O
 signals. Such an execution model is not supported and confusing as it mixes
 application and I/O level signal handling.
 
 So the flagging of the scheduling intent is now decoupled from its execution by
-using an application level signal handler that is run in the context of the
-components main entrypoint. The I/O signal handler now triggers the scheduling
+using an application-level signal handler that is run in the context of the
+component's main entrypoint. The I/O signal handler now triggers the scheduling
 execution by sending a local signal to the EP and only flags the occurrence
 of the external event by unblocking the corresponding task.
-In this context we reworked the interrupt handling itself. Previously all
+In this context, we reworked the interrupt handling itself. Previously all
 interrupts were immediately processed in the I/O signal handler and only the
 currently pending one was handled. Due to the decoupling change the occurrence
 of interrupts becomes merely flagging a state and requires to record all
 interrupts and dispatch them consecutively in one go.
 
-To facilitate this convention the Lx_kit initialization function got extended
+To facilitate this convention, the Lx_kit initialization function got extended
 and it is now necessary to pass in a signal handler that is used to perform the
 normally occurring scheduler execution. As this signal handler is part of
 the main object of the DDE-Linux based component it is the natural place to
@@ -397,20 +397,19 @@ of USB endpoints, and potential stalls during synchronous USB RPC calls.
 PC audio refinements
 ====================
 
-In this release we simplified the memory allocator in the OpenBSD-based
+In this release, we simplified the memory allocator in the OpenBSD-based
 audio driver component and thereby decreased its memory usage.
-
 The memory subsystem implementation was initially brought over from DDE
-Linux and is geared towards use-cases where a high-performing allocator
-is desired. For the audio driver with its clear memory usage pattern
+Linux and is geared towards use cases where a high-performing allocator
+is desired. For the audio driver with its clear memory usage pattern,
 such an allocator is not necessary and since no other driver that could
-benefit from it was ported in the meantime we opted for replacing the
-implementation with a simpler on that keeps the overhead down.
+benefit from it was ported in the meantime, we opted for replacing the
+implementation with a simpler one with less overhead.
 
 We also adapted the mixer state report mechanism to always generate a
 new report on head-phone jack sense events.
 
-Furthermore we decreased the internal buffer size to implicitly limit
+Furthermore, we decreased the internal buffer size to implicitly limit
 the number of blocks provisioned for recording that brings them in line
 with the number of blocks used for playback (2).
 
@@ -418,10 +417,9 @@ with the number of blocks used for playback (2).
 Wifi
 ====
 
-With the [DDE-Linux changes] in place we had to adapt the initialization
+With the [DDE-Linux changes] in place, we had to adapt the initialization
 procedure in the wireless LAN driver since it behaves differently to all
 other DDE-Linux-based drivers components.
-
 The driver is actually a 'Libc::Component' due to its incorporation of
 the 'wpa_spplicant' application and the driver itself is confined to its
 own shared-object to better separate the Linux code.
@@ -430,16 +428,15 @@ Since we implement the Linux initcalls as static constructors, we have
 to initialize the Lx_kit before those are executed. This is normally
 not a problem because they are executed manually from within the drivers
 main object on construction. However, in a 'Libc::Component' this happens
-before our main object is constructed. In the past we used a VFS plugin to
+before our main object is constructed. In the past, we used a VFS plugin to
 perform the initialization - as the VFS is also constructed beforehand -
-but this is no longer possible as the drivers main signal handler that now
-dispatch the Lx_kit event signals is not available at this point.
+but this is no longer possible as the driver's main signal handler that now
+dispatches the Lx_kit event signals is not available at this point.
 
 We decided therefore to perform a multi-staged boot-up process where
 the component is now implemented as regular 'Genode::Component' that
 triggers the 'Libc::Component' construction manually after performing
 the Lx_kit initialization.
-
 This change enabled us to remove the VFS 'wifi' plugin that no longer
 has to be specified in the VFS configuration.
 
