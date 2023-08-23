@@ -276,7 +276,7 @@ Base framework and OS-level infrastructure
 Internal core and base-framework modernization
 ==============================================
 
-Genode's API received multiple rounds on modernization in the past years. But
+Genode's API received multiple rounds of modernization in the past years. But
 some of the framework's deepest internals remained largely unchanged over that
 time. Even though one can argue that mature and battle-tested code should
 better not be disrupted, our programming practices are not carved in stone.
