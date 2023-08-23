@@ -160,6 +160,13 @@ struct Timer_queue : public Qemu::Timer_queue
 		if (TMTimerIsActive(tm_timer))
 			TMTimerStop(tm_timer);
 
+
+		/*
+		 * Subtract 2 microframes to ease overhead in timer handling by
+		 * treating load for being more on point.
+		 */
+		// min->timeout_abs_ns -= 250'000;
+
 		uint64_t const now = TMTimerGetNano(tm_timer);
 		if (min->timeout_abs_ns < now)
 			TMTimerSetNano(tm_timer, 0);
