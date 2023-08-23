@@ -568,7 +568,7 @@ Wifi
 
 With the [DDE-Linux changes] in place, we had to adapt the initialization
 procedure in the wireless LAN driver since it behaves differently to all
-other DDE-Linux-based drivers components.
+other DDE-Linux-based driver components.
 The driver is actually a 'Libc::Component' due to its incorporation of
 the 'wpa_spplicant' application and the driver itself is confined to its
 own shared-object to better separate the Linux code.
