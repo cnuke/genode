@@ -96,11 +96,11 @@ the README file at the _os/src/monitor/_ directory.
 Goa tool gets usability improvements and depot-index publishing support
 #######################################################################
 
-Moving the Goa tool under the umbrella of Genode Labs in the last release
+Moving the Goa tool under the umbrella of Genode Labs in the previous release
 unleashed a wave of substantial improvements.
 
 Most significantly, we were able to integrate support for depot-index projects
-into Goa (Section [Support of index projects]). This greatly simplfies the
+into Goa (Section [Support of index projects]). This greatly simplifies the
 publishing of user-specific Goa projects for the upcoming Sculpt release.
 
 One of the game-changing features of Goa is its ability to easily test-run
@@ -160,7 +160,7 @@ repository.
 Run-stage generalization
 ========================
 
-In addition to building, exporting and publishing of depot archives, Goa
+In addition to building, exporting, and publishing of depot archives, Goa
 supports test-running an application project directly on the development system
 by utilizing base-linux. Similarly to how Goa modularized the build stage to
 support various build systems, we generalized the run stage to pave the way for
@@ -182,11 +182,11 @@ application development for Sculpt OS.
 * A route for the mesa_gpu_drv.lib.so ROM module was implicitly added when
   a Gpu was required. For consistency with existing packages, we now require the
   runtime file to mention the mesa_gpu_drv.lib.so ROM explicitly.
-* For Nic requirements, we used to take the label as the tap-device name to
-  which the Nic driver was bound. Since the 'label' attribute might be evaluated
+* For NIC requirements, we used to take the label as the tap-device name to
+  which the NIC driver was bound. Since the 'label' attribute might be evaluated
   differently by Sculpt OS, we introduced the 'tap_name' attribute instead. For
-  every distinct tap device, we now instantiate a pair of Nic driver and Nic
-  router. Every router uses a distinct subnet for its default domain, starting
+  each distinct tap device, we now instantiate a pair of NIC driver and NIC
+  router. Each router uses a distinct subnet for its default domain, starting
   at 10.0.10.0/24 and ending at 10.0.255.0/24.
 * The clipboard ROM and Report requirements are now routed to a report_rom
   component.
@@ -221,14 +221,14 @@ Quality assurance and usability tweaks
 ======================================
 
 Increasing our development efforts for the Goa tool demands means to catch
-regressions early on. For this purpose, we added a basic testing facility
+regressions early on. For this purpose, we added a basic testing facility,
 which validates that our examples still work as expected. Note that we are going
 to address automated testing for arbitrary Goa projects at some point in the
 future.
 
 With this release, we changed the name of the '.goarc' files to 'goarc'. The
 original intention of these files was to allow user-specific settings
-analogously to, e.g., '.bashrc'. However, these files may contain arbitrary tcl
+analogously to, e.g., '.bashrc'. However, these files may contain arbitrary Tcl
 code, thus having various '.goarc' files checked into git repositories, made
 things a little bit too obscure because those files are hidden. When a user
 clones a Git repo and invokes Goa commands, this code gets executed. Hence, it
