@@ -93,12 +93,161 @@ Details about the configuration of the monitor component are given by
 the README file at the _os/src/monitor/_ directory.
 
 
-Streamlined application development via Goa
-###########################################
+Goa tool gets usability improvements and depot-index publishing support
+#######################################################################
 
-; Find a better section title to distinguish from previous release?
+Moving the Goa tool under the umbrella of Genode Labs in the last release
+unleashed a wave of substantial improvements.
 
-; @jschlatow
+Most significantly, we were able to integrate support for depot-index projects
+into Goa (Section [Support of index projects]). This greatly simplfies the
+publishing of user-specific Goa projects for the upcoming Sculpt release.
+
+One of the game-changing features of Goa is its ability to easily test-run
+applications on the host system leveraging Genode's ABI compatibility
+between different kernels. However, in various instances, we still required
+customized runtime scenarios in order to render an application runnable by Goa.
+With this release, we further streamlined Goa's base-linux runtime with Sculpt
+OS (Section [Run-stage generalization]).
+
+Apart from these major changes, the lately added shared-library support and Rust
+support have seen practical improvements.
+
+
+Support of index projects
+=========================
+
+With an increasing number of Genode applications being developed with Goa,
+being able to manage and publish a personal depot index with Goa became due.
+In the past, we needed to build, export, and publish each individual Goa
+project and manually add it to the depot index in order to make it available
+for a particular Sculpt release.
+
+For this purpose, we added support for index projects to Goa. An index project
+is defined by an 'index' file. This file follows the structure of a depot index
+but only names the archive names (lacking depot user and version). The
+'goa export' command augments these names with the current depot user and
+version information. By running 'goa publish', the result is published as a
+depot index for the current Sculpt version.
+
+As Goa supports a hierarchical project structure, an index project may
+contain subdirectories with other Goa projects that provide the corresponding
+pkg archives. The 'goa export' command issued within such an index project
+recursively scans the working directory for any Goa project providing the
+required depot archives or any of their dependencies, and exports these
+subprojects as well.
+
+To make working with index projects an even more joyful experience, we changed
+the way Goa looks up version information. Goa used to expect the current
+version of each required depot archive to be specified in a goarc file. For
+each Goa project, however, a 'version' file may be used to specify the current
+version. This file was only evaluated on export of the particular project.
+With this release, Goa now scans the working directory for Goa subprojects in
+order to look up their 'version' file. This spares us keeping the 'version'
+files and goarc files in sync. The new 'bump-version' command adds another
+level of convenience as it automatically updates the 'version' file of a
+Goa project. In combination with the '-r' switch, we are now able to update the
+version information of all subprojects with a single command.
+
+An example of an index project is found at _examples/index_ in the Goa
+repository.
+
+:Goa tool:
+
+  [https://github.com/genodelabs/goa/]
+
+
+Run-stage generalization
+========================
+
+In addition to building, exporting and publishing of depot archives, Goa
+supports test-running an application project directly on the development system
+by utilizing base-linux. Similarly to how Goa modularized the build stage to
+support various build systems, we generalized the run stage to pave the way for
+other targets than base-linux. The interface of the generalized run stage and
+the current feature set of the linux target is documented by 'goa help targets'.
+
+In the course of generalizing the run stage, we introduced various plausibility
+checks to further accelerate application development. For instance, we check for
+typos in required and provided services of a runtime, and verify the
+availability of required ROM modules.
+
+Furthermore, the linux target underwent a major revision to streamline the
+application development for Sculpt OS.
+
+* Scenarios using a terminal component require a fonts file system.
+  In Sculpt OS, this is typically provided by instantiating a fonts_fs
+  component. Doing the same in Goa lifts the need to wrap Goa-managed
+  Sculpt packages in a separate test project.
+* A route for the mesa_gpu_drv.lib.so ROM module was implicitly added when
+  a Gpu was required. For consistency with existing packages, we now require the
+  runtime file to mention the mesa_gpu_drv.lib.so ROM explicitly.
+* For Nic requirements, we used to take the label as the tap-device name to
+  which the Nic driver was bound. Since the 'label' attribute might be evaluated
+  differently by Sculpt OS, we introduced the 'tap_name' attribute instead. For
+  every distinct tap device, we now instantiate a pair of Nic driver and Nic
+  router. Every router uses a distinct subnet for its default domain, starting
+  at 10.0.10.0/24 and ending at 10.0.255.0/24.
+* The clipboard ROM and Report requirements are now routed to a report_rom
+  component.
+* Arbitrary ROM requirements are routed to an lx_fs component that provides
+  the files found in the project's _var/rom_ directory as individual ROM
+  modules. An example resides in _examples/external_rom_. Thanks to Pirmin Duss
+  for this useful contribution.
+* Remaining service requirements that are not handled otherwise will be routed
+  to a black-hole component.
+
+
+Improved support for building shared libraries
+==============================================
+
+Since release 23.02, we are able to
+[https://genode.org/documentation/release-notes/23.02#Building_and_packaging_CMake-based_shared_libraries__via_Goa_ - build CMake-based shared libraries in Goa].
+In this release, this feature has seen a few improvements:
+
+* If available, Goa now calls 'make install' during build in order to install
+  artifacts into _<build_dir>/install_. For libraries, this typically also
+  installs include files into this directory. Having all include files in the
+  build directory is a prerequisite for extracting these as api artifacts
+  (see 'goa help api').
+* We added support for publishing api archives.
+* 'goa export' now respects the 'common_var_dir' configuration variable and
+  '--common-var-dir' command-line option when exporting api archives.
+* We fixed an issue that resulted in large binaries when building shared
+  libraries with Goa.
+
+
+Quality assurance and usability tweaks
+======================================
+
+Increasing our development efforts for the Goa tool demands means to catch
+regressions early on. For this purpose, we added a basic testing facility
+which validates that our examples still work as expected. Note that we are going
+to address automated testing for arbitrary Goa projects at some point in the
+future.
+
+With this release, we changed the name of the '.goarc' files to 'goarc'. The
+original intention of these files was to allow user-specific settings
+analogously to, e.g., '.bashrc'. However, these files may contain arbitrary tcl
+code, thus having various '.goarc' files checked into git repositories, made
+things a little bit too obscure because those files are hidden. When a user
+clones a Git repo and invokes Goa commands, this code gets executed. Hence, it
+is only fair to bring this code to the user's attention by not hiding it.
+
+In addition to all the aforementioned major changes, we added a couple of minor
+usability tweaks:
+
+* We added 'goa help import' in order to document the syntax of the 'import'
+  file.
+* We added the 'goa depot-dir' command that allows initializing a custom depot
+  directory with the default depot users.
+* We added a 'goa run-dir' command that prepares the run directory without
+  actually running the scenario. This is helpful when the run time of 'goa run'
+  is automatically evaluated by external scripts since 'goa run-dir' may take a
+  while downloading the required depot archives.
+* We added the 'run_as' configuration variable and '--run-as' command-line
+  option. This allows changing the depot user from which 'goa run' downloads
+  the required archives. See 'goa help config' for more details.
 
 
 Support for the mainline Rust toolchain
