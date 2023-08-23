@@ -17,7 +17,7 @@ Multi-component debug monitor
 #############################
 
 The debugging of Genode components using the GNU debugger (GDB) was already
-an anticipated feature when we introduces the first version of the GDB monitor
+an anticipated feature when we introduced the first version of the GDB monitor
 component in version
 [https://genode.org/documentation/release-notes/11.05#GDB_monitor_experiment - 11.05]
 and refined it in the subsequent releases
@@ -77,7 +77,7 @@ groups, depending on the GDB commands issued by the user.
 
 As of now, the monitor supports NOVA on 64-bit x86 as well as Genode's custom
 base-hw kernel on 64-bit ARM and x86. The 64-bit ARM support required a change
-in Genode's customized GDB port to enable shared library support for this
+in Genode's customized GDB port to enable shared-library support for this
 architecture. So in order to use Genode's host GDB with the monitor on 64-bit
 ARM, the Genode tool chain needs to be rebuilt with the _tool/tool_chain_
 script.
@@ -435,17 +435,17 @@ of the external event by unblocking the corresponding task.
 In this context, we reworked the interrupt handling itself. Previously all
 interrupts were immediately processed in the I/O signal handler and only the
 currently pending one was handled. Due to the decoupling change the occurrence
-of interrupts becomes merely flagging a state and requires to record all
+of interrupts becomes merely flagging a state and requires recording all
 interrupts and dispatch them consecutively in one go.
 
-To facilitate this convention, the Lx_kit initialization function got extended
+To facilitate this convention, the Lx_kit initialization function got extended,
 and it is now necessary to pass in a signal handler that is used to perform the
 normally occurring scheduler execution. As this signal handler is part of
 the main object of the DDE-Linux based component it is the natural place to
-perform any additional steps that required by the component before or after
+perform any additional steps that are required by the component before or after
 executing the scheduler.
 
-As it sometimes is necessary to execute a pending schedule from the EP directly,
+As it is sometimes necessary to execute a pending schedule from the EP directly,
 in case the scheduler is called from within an RPC function, the scheduler is
 extended with the 'execute' member function that performs the check that the
 scheduler is called from within the EP and triggers the execution afterwards.
@@ -485,11 +485,11 @@ programmable units that execute compiled machine code (think shader compilers
 like GLSL or general purpose computing like CUDA or OpenCL). This leads to a
 situation where a GPU driver cannot trust the client that sends its machine code
 to be executed by the GPU. There exists no sufficient way of inspecting the
-complied machine code for malicious behavior by the GPU driver. Therefore, the
+compiled machine code for malicious behavior by the GPU driver. Therefore, the
 only reasonable solution for a GPU driver is to send the code to the GPU and
 hope for the best. In case the code execution is not successful, GPUs tend to
 just hang and the only thing a driver can do is to make sure via an IOMMU that
-the code does not access arbitrary memory and  program a watchdog timer and
+the code does not access arbitrary memory and program a watchdog timer and
 reset the GPU to a graceful state in case there is no proper response. With the
 current Genode release, we have implemented this behavior for GEN9 (HD graphics)
 and GEN12 (Intel Iris Xe).
@@ -514,7 +514,7 @@ on cable unplug/plug and the moderate throughput on GBit links had to be
 addressed.
 
 Our new DDE Linux approach introduced this year makes the porting of drivers
-from the Linux kernel much easier and less labour intensive as in the past.
+from the Linux kernel much easier and less labour-intensive as in the past.
 Also, Linux is a very tempting Ethernet driver donor because of the variety
 of supported devices and the well known excellent performance (especially on
 Intel devices). Moreover, the Intel E1000e driver addresses all issues we
@@ -547,7 +547,7 @@ PC audio refinements
 ====================
 
 In this release, we simplified the memory allocator in the OpenBSD-based
-audio driver component and thereby decreased its memory usage.
+audio-driver component and thereby decreased its memory usage.
 The memory subsystem implementation was initially brought over from DDE
 Linux and is geared towards use cases where a high-performing allocator
 is desired. For the audio driver with its clear memory usage pattern,
@@ -589,7 +589,7 @@ the Lx_kit initialization.
 This change enabled us to remove the VFS 'wifi' plugin that no longer
 has to be specified in the VFS configuration.
 
-Furthermore we removed the handcrafted MAC address reporter in
+Furthermore, we removed the handcrafted MAC address reporter in
 favor of the Genode C API utility that was recently made available.
 
 
