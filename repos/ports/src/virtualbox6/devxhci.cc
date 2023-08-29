@@ -19,6 +19,8 @@
 #include <libc/allocator.h>
 #include <util/list.h>
 
+#include <os/backtrace.h>
+
 /* qemu-usb includes */
 #include <qemu/usb.h>
 
@@ -165,13 +167,14 @@ struct Timer_queue : public Qemu::Timer_queue
 		 * Subtract 2 microframes to ease overhead in timer handling by
 		 * treating load for being more on point.
 		 */
-		// min->timeout_abs_ns -= 250'000;
+		//min->timeout_abs_ns -= 125'000;
 
 		uint64_t const now = TMTimerGetNano(tm_timer);
 		if (min->timeout_abs_ns < now)
 			TMTimerSetNano(tm_timer, 0);
 		else
 			TMTimerSetNano(tm_timer, min->timeout_abs_ns - now);
+			// TMTimerSetNano(tm_timer, 1'000);
 	}
 
 	void _deactivate_timer(void *qtimer)
@@ -214,6 +217,9 @@ struct Timer_queue : public Qemu::Timer_queue
 
 	static DECLCALLBACK(void) tm_timer_cb(PPDMDEVINS pDevIns, PTMTIMER pTimer, void *pvUser)
 	{
+		// Genode::error(__func__, ": ", TMTimerGetNano(pTimer));
+		// Genode::backtrace();
+
 		PXHCI pThis    = PDMINS_2_DATA(pDevIns, PXHCI);
 		Timer_queue *q = pThis->timer_queue;
 
@@ -414,6 +420,11 @@ PDMBOTHCBDECL(VBOXSTRICTRC) xhciMmioWrite(PPDMDEVINS pDevIns, void *pvUser, RTGC
 
 	Genode::off_t offset = off;
 	Qemu::Controller *ctl = pThis->ctl;
+
+	// if (offset >= 0x2000) {
+	// 	Genode::error(__func__, ": offset: ", Genode::Hex(offset));
+	// 	Genode::backtrace();
+	// }
 
 	ctl->mmio_write(offset, pv, cb);
 	return 0;
