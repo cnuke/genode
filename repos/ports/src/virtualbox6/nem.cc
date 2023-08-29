@@ -271,10 +271,12 @@ VBOXSTRICTRC nemR3NativeRunGC(PVM pVM, PVMCPU pVCpu)
 
 		Mutex::Guard guard(interval_mutex);
 
-		::uint64_t new_interval_ns = TMVirtualSyncGetNsToDeadline(pVM);
-		new_interval_ns = (new_interval_ns / RT_NS_1MS) * RT_NS_1MS;
-		new_interval_ns = max(new_interval_ns, 1 * RT_NS_1MS);
-		new_interval_ns = min(new_interval_ns, 10 * RT_NS_1MS);
+		::uint64_t new_interval_ns = 1'000;
+
+		// ::uint64_t new_interval_ns = TMVirtualSyncGetNsToDeadline(pVM);
+		// new_interval_ns = (new_interval_ns / RT_NS_1MS) * RT_NS_1MS;
+		// new_interval_ns = max(new_interval_ns, 1 * RT_NS_1MS);
+		// new_interval_ns = min(new_interval_ns, 10 * RT_NS_1MS);
 
 		if (new_interval_ns != current_interval_ns) {
 			RTTimerChangeInterval(pVM->tm.s.pTimer, new_interval_ns);
