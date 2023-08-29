@@ -1,0 +1,12 @@
+diff --git a/src/cmdline.cpp b/src/cmdline.cpp
+index eeac84f..5c4dbe4 100644
+--- a/src/cmdline.cpp
++++ b/src/cmdline.cpp
+@@ -38,7 +38,6 @@ bool Cmdline::fpu_lazy;
+ 
+ struct Cmdline::param_map Cmdline::map[] INITDATA =
+ {
+-    { "iommu",      &Cmdline::iommu     },
+     { "keyb",       &Cmdline::keyb      },
+     { "serial",     &Cmdline::serial    },
+     { "spinner",    &Cmdline::spinner   },
