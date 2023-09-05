@@ -172,7 +172,7 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 			void log()
 			{
 				bool     const force = false;
-				unsigned const rate  = 500'000;
+				unsigned const rate  = 100'000;
 
 				if (!force && _total % rate != 0)
 					return;
@@ -191,10 +191,12 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 				if (0) {
 					log("[", _cpu, "] total=", _total, " virt_exit {");
 					unsigned i = 0;
-					for (unsigned long const &v : _virt_exit) {
+					for (unsigned long &v : _virt_exit) {
 						if (v)
 							log("[", _cpu, "]  ", Right_aligned(10, v), " ", Right_aligned(3, i), " ", HMGetVmxExitName(i));
 						++i;
+						// reset
+						// v = 0;
 					}
 					log("[", _cpu, "] }");
 				}
