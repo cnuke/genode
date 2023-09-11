@@ -29,6 +29,22 @@ test_read_seq_unaligned_512() {
 	dd bs=512 count=$((length / 512)) if=$data_file of=/dev/null
 }
 
+test_read_unaligned() {
+	local data_file="$1"
+	local bs="$2"
+	local skip="$3"
+	local length="$4"
+	dd bs=$bs count=$((length / bs)) skip=$skip if=$data_file of=/dev/null
+}
+
+test_write_unaligned() {
+	local data_file="$1"
+	local bs="$2"
+	local skip="$3"
+	local length="$4"
+	dd bs=$bs count=$((length / bs)) skip=$skip of=$data_file if=/dev/zero
+}
+
 test_read_compare_1() {
 	local data_file="$1"
 	local offset=$2
@@ -219,7 +235,18 @@ main() {
 
 		echo "--> Run $i:"
 
-		test_read_seq_unaligned_512 "$data_file" "1048576"
+		# test_read_seq_unaligned_512 "$data_file" "1048576"
+		# test_read_unaligned "$data_file" "8192" "0" "8192"
+
+		# test_read_unaligned "$data_file" "512" "8" "512"
+		# test_read_unaligned "$data_file" "512" "7" "512"
+		# test_read_unaligned "$data_file" "512" "7" "5120"
+
+		# test_write_unaligned "$data_file" "512" "8" "512"
+		# test_write_unaligned "$data_file" "512" "7" "512"
+		# test_write_unaligned "$data_file" "512" "7" "5120"
+
+		# exit 0
 
 		local pattern_file="/tmp/pattern"
 		produce_pattern "$i" "4096" > $pattern_file
