@@ -19,7 +19,6 @@
 
 /* local includes */
 #include <device.h>
-#include <device_pd.h>
 #include <device_component.h>
 #include <pci.h>
 #include <pci_uhci.h>
@@ -63,19 +62,12 @@ struct Config_helper
 	void enable(Driver::Io_mmu_domain_registry & domain_registry)
 	{
 		auto enable_fn = [&] (Driver::Io_mmu::Domain & domain) {
-			domain.enable_pci_device(_io_mem.cap(),
-			                         { _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
+			domain.enable_pci_device({ _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
 		};
 
-		_dev.for_each_io_mmu(
-			/* non-empty list fn */
-			[&] (Driver::Device::Io_mmu const &io_mmu) {
-				domain_registry.with_domain(io_mmu.name, enable_fn, [&] () {}); },
-
-			/* empty list fn */
-			[&] () {
-				domain_registry.with_default_domain(enable_fn); }
-		);
+		_dev.for_each_io_mmu([&] (Driver::Device::Io_mmu const &io_mmu) {
+			domain_registry.with_domain(io_mmu.name, enable_fn, [&] () {});
+		});
 
 		_config.power_on(delayer(_env));
 
@@ -120,19 +112,12 @@ struct Config_helper
 		_config.power_off();
 
 		auto disable_fn = [&] (Driver::Io_mmu::Domain & domain) {
-			domain.disable_pci_device(_io_mem.cap(),
-			                          { _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
+			domain.disable_pci_device({ _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
 		};
 
-		_dev.for_each_io_mmu(
-			/* non-empty list fn */
-			[&] (Driver::Device::Io_mmu const &io_mmu) {
-				domain_registry.with_domain(io_mmu.name, disable_fn, [&] () {}); },
-
-			/* empty list fn */
-			[&] () {
-				domain_registry.with_default_domain(disable_fn); }
-		);
+		_dev.for_each_io_mmu([&] (Driver::Device::Io_mmu const &io_mmu) {
+			domain_registry.with_domain(io_mmu.name, disable_fn, [&] () {});
+		});
 	}
 
 	void apply_quirks()

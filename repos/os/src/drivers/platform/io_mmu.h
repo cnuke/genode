@@ -78,15 +78,11 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 				unsigned devices() const { return _active_devices; }
 
 				/* interface for (un)assigning a pci device */
-				virtual void enable_pci_device(Io_mem_dataspace_capability const,
-				                               Pci::Bdf const) = 0;
-				virtual void disable_pci_device(Io_mem_dataspace_capability const,
-				                                Pci::Bdf const) = 0;
+				virtual void enable_pci_device(Pci::Bdf const) = 0;
+				virtual void disable_pci_device(Pci::Bdf const) = 0;
 
 				/* interface for adding/removing DMA buffers */
-				virtual void add_range(Range const &,
-				                       addr_t const,
-				                       Dataspace_capability const) = 0;
+				virtual void add_range(Range const &, addr_t const) = 0;
 				virtual void remove_range(Range const &) = 0;
 
 				Domain(Io_mmu                     & io_mmu,
@@ -141,7 +137,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 			return &domain._io_mmu == this; }
 
 		/* Return true if device requires physical addressing */
-		virtual bool mpu() { return false; };
+		virtual bool mpu() const { return false; };
 
 		/* Create a Io_mmu::Domain object */
 		virtual Domain & create_domain(Allocator &,

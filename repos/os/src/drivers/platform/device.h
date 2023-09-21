@@ -376,17 +376,11 @@ class Driver::Device : private List_model<Device>::Element
 				fn(idx++, mem.range); });
 		}
 
-		template <typename FN, typename EMPTY_FN>
-		void for_each_io_mmu(FN const & fn, EMPTY_FN const & empty_fn) const
+		template <typename FN>
+		void for_each_io_mmu(FN const & fn) const
 		{
-			bool empty = true;
 			_io_mmu_list.for_each([&] (Io_mmu const & io_mmu) {
-				empty = false;
-				fn(io_mmu);
-			});
-
-			if (empty)
-				empty_fn();
+				fn(io_mmu); });
 		}
 
 		void generate(Xml_generator &, bool) const;

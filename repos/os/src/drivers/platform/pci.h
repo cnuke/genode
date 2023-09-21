@@ -25,7 +25,6 @@
 
 namespace Driver {
 	class Device_component;
-	class Device_pd;
 
 	void pci_enable(Genode::Env            & env,
 	                Io_mmu_domain_registry & domain_registry,
