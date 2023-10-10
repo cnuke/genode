@@ -268,6 +268,7 @@ struct Gpu::Vram
 	}
 };
 
+#include <os/backtrace.h>
 
 class Lima::Call
 {
@@ -303,12 +304,16 @@ class Lima::Call
 
 			Gpu::Virtual_address alloc(uint32_t size)
 			{
-				return Gpu::Virtual_address { _alloc.alloc_aligned(size, 12).convert<::uint64_t>(
+				Gpu::Virtual_address gva = Gpu::Virtual_address { _alloc.alloc_aligned(size, 12).convert<::uint64_t>(
 					[&] (void *ptr) { return (::uint64_t)ptr; },
 					[&] (Range_allocator::Alloc_error) -> ::uint64_t {
 						error("Could not allocate GPU virtual address for size: ", size);
 						return 0;
 					}) };
+				log(__func__, ": ", Hex(gva.value), " size: ", size);
+				if (gva.value == 0x41000)
+					Genode::backtrace();
+				return gva;
 			}
 
 			void free(Gpu::Virtual_address va)
@@ -805,15 +810,18 @@ class Lima::Call
 
 					bool all_buffer_mapped = true;
 					Lima::for_each_submit_bo(arg, [&] (drm_lima_gem_submit_bo const &bo) {
+						log("_drm_lima_gem_submit: bo[", bo.handle, "]");
 						Buffer_space::Id const id = { .value = bo.handle };
 						if (!gc.buffer_space_contains(id)) {
 
+							log("_drm_lima_gem_submit: bo[", bo.handle, "] check");
 							bool imported = false;
 							(void)_apply_handle(bo.handle, [&] (Gpu::Vram const &v) {
 								Gpu::Vram_capability cap = _main_ctx->export_vram(v.id());
 								if (gc.import_vram(cap, v) == nullptr)
 									return;
 
+								log("_drm_lima_gem_submit: bo[", bo.handle, "] imported");
 								imported = true;
 							});
 
