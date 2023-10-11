@@ -68,7 +68,7 @@ namespace Dialog { namespace Meta {
 
 struct Dialog::Id
 {
-	using Value = String<20>;
+	using Value = String<32>;
 
 	Value value;
 
