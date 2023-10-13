@@ -24,6 +24,8 @@ CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/ath/
 CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/ath/ath9k
 CC_C_OPT += -I$(LX_SRC_DIR)/include/linux
 
+CC_C_OPT += -DCONFIG_IWLWIFI_DEBUG
+
 vpath %.c  $(REP_DIR)/src/lib/pc
 vpath %.cc $(REP_DIR)/src/lib/pc
 
