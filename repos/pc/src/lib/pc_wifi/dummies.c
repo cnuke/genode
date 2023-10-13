@@ -454,6 +454,14 @@ int iommu_device_use_default_domain(struct device * dev)
 }
 
 
+#include <linux/iommu.h>
+
+void iommu_device_unuse_default_domain(struct device * dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
 #include <linux/context_tracking_irq.h>
 
 noinstr void ct_irq_enter(void)
@@ -580,4 +588,35 @@ int get_option(char ** str,int * pint)
 char * strreplace(char * s,char old,char new)
 {
 	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void unregister_handler_proc(unsigned int irq,struct irqaction * action);
+void unregister_handler_proc(unsigned int irq,struct irqaction * action)
+{
+	lx_emul_trace(__func__);
+}
+
+
+#include <linux/task_work.h>
+
+struct callback_head * task_work_cancel(struct task_struct * task,task_work_func_t func)
+{
+	lx_emul_trace(__func__);
+	/* hope for the best... */
+	return NULL;
+}
+
+
+#include <linux/rcuwait.h>
+
+void finish_rcuwait(struct rcuwait * w)
+{
+	lx_emul_trace(__func__);
+	if (!w)
+		return;
+
+	w->task = NULL;
+	// rcu_assign_pointer(w->task, NULL);
+	// __set_current_state(TASK_RUNNING);
 }

@@ -394,14 +394,6 @@ struct task_struct * find_task_by_vpid(pid_t vnr)
 }
 
 
-#include <linux/rcuwait.h>
-
-void finish_rcuwait(struct rcuwait * w)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <net/flow_dissector.h>
 
 struct flow_dissector flow_keys_basic_dissector;
@@ -566,14 +558,6 @@ long __sched io_schedule_timeout(long timeout)
 struct io_tlb_mem io_tlb_default_mem;
 
 
-#include <linux/iommu.h>
-
-void iommu_device_unuse_default_domain(struct device * dev)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/uio.h>
 
 void iov_iter_kvec(struct iov_iter * i,unsigned int direction,const struct kvec * kvec,unsigned long nr_segs,size_t count)
@@ -630,14 +614,6 @@ void kill_anon_super(struct super_block * sb)
 #include <linux/fs.h>
 
 void kill_fasync(struct fasync_struct ** fp,int sig,int band)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/slab.h>
-
-void kmem_cache_destroy(struct kmem_cache * s)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1109,24 +1085,9 @@ bool sysfs_streq(const char * s1,const char * s2)
 }
 
 
-#include <linux/task_work.h>
-
-struct callback_head * task_work_cancel(struct task_struct * task,task_work_func_t func)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/fs.h>
 
 int unregister_filesystem(struct file_system_type * fs)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern void unregister_handler_proc(unsigned int irq,struct irqaction * action);
-void unregister_handler_proc(unsigned int irq,struct irqaction * action)
 {
 	lx_emul_trace_and_stop(__func__);
 }

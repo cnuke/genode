@@ -42,6 +42,15 @@ void kmem_cache_free_bulk(struct kmem_cache *s, size_t size, void **p)
 }
 
 
+void kmem_cache_destroy(struct kmem_cache * s)
+{
+	if (!s)
+		return;
+
+	kfree(s);
+}
+
+
 #include <linux/fs.h>
 
 int register_filesystem(struct file_system_type * fs)
