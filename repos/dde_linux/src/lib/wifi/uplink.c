@@ -79,6 +79,7 @@ static unsigned long uplink_tx_packet_content(struct genode_uplink_tx_packet_con
 		}
 	}
 
+	printk("%s:%d rx\n", __func__, __LINE__);
 	return result;
 }
 
@@ -186,6 +187,7 @@ static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_co
 		return GENODE_UPLINK_RX_REJECTED;
 	}
 
+	printk("%s:%d tx\n", __func__, __LINE__);
 	return GENODE_UPLINK_RX_ACCEPTED;
 }
 
