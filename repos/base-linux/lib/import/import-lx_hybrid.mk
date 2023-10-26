@@ -59,7 +59,7 @@ CXX_LINK_OPT += -Wl,--eh-frame-hdr
 # variable to the linker command line
 #
 ifneq ($(LX_LIBS),)
-LX_LIBS_OPT = $(shell pkg-config --static --libs $(LX_LIBS))
+LX_LIBS_OPT = $(shell pkg-config --libs $(LX_LIBS))
 endif
 
 #
