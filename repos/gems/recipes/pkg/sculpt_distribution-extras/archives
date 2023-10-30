@@ -5,7 +5,6 @@ _/pkg/cmus
 _/pkg/download_debian
 _/pkg/fs_rom
 _/pkg/glmark2
-_/pkg/gui_mixer_qt
 _/pkg/mixer_with_config
 _/pkg/mesa_gears
 _/pkg/pdf_view
