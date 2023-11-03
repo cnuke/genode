@@ -1071,8 +1071,5 @@ close $fd
 build [ingredients_of_type build]
 
 append boot_modules [build_artifacts]
-append boot_modules " linphone-simple_qml.tar "
-append boot_modules " linphone-simple-linphone-plugin.tar "
-append boot_modules " liblinphoneplugin.lib.so "
 
 build_boot_image $boot_modules
