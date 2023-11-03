@@ -16,6 +16,7 @@
 #include <vfs/dir_file_system.h>
 #include <vfs/single_file_system.h>
 #include <util/arg_string.h>
+#include <util/fifo.h>
 #include <util/xml_generator.h>
 #include <trace/timestamp.h>
 
@@ -264,6 +265,8 @@ class Vfs_tresor::Wrapper
 				char             *buffer_start     { nullptr };
 				size_t            buffer_num_bytes { 0 };
 
+				Genode::Fifo_element<Command> queue_elem { *this };
+
 				Command(Vfs_tresor::Wrapper &main, Module_channel_id id)
 				: Module_channel { COMMAND_POOL, id }, _main { main } { }
 
@@ -337,28 +340,20 @@ class Vfs_tresor::Wrapper
 				}
 		};
 
+		/*
+		 * Every pending Command is placed into the command-queue.
+		 * The commands will then be processed one after another in
+		 * FIFO fashion.
+		 */
+		Genode::Fifo<Genode::Fifo_element<Command>> _command_queue { };
+
 		template <typename FUNC>
 		void _with_first_processable_cmd(FUNC && func)
 		{
-			bool first_uncompleted_cmd { true };
-			bool done { false };
-			for_each_channel<Command>([&] (Command &cmd) {
-
-				if (done)
-					return;
-
-				if (cmd.state() == Command::PENDING) {
-					done = true;
-					if (first_uncompleted_cmd || !cmd.synchronize())
-						func(cmd);
-				}
-
-				if (cmd.state() == Command::IN_PROGRESS) {
-					if (cmd.synchronize())
-						done = true;
-					else
-						first_uncompleted_cmd = false;
-				}
+			_command_queue.head([&] (Genode::Fifo_element<Command> &elem) {
+				Command &cmd = elem.object();
+				if (cmd.state() == Command::PENDING)
+					func(cmd);
 			});
 		}
 
@@ -380,6 +375,8 @@ class Vfs_tresor::Wrapper
 					cmd.reset();
 					func(cmd);
 					cmd.state(Command::PENDING);
+
+					_command_queue.enqueue(cmd.queue_elem);
 				}
 			});
 			return done;
@@ -617,6 +614,8 @@ class Vfs_tresor::Wrapper
 
 		void _process_completed(Command &cmd)
 		{
+			_command_queue.remove(cmd.queue_elem);
+
 			using R = Result;
 
 			bool const success = cmd.success();
