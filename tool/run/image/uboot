@@ -56,7 +56,7 @@ proc run_image { } {
 
 	# compress ELF
 	if $use_gzip {
-		exec gzip [image_uboot_gzip_opt] --force $bin_img
+		exec pigz [image_uboot_gzip_opt] --force $bin_img
 		set bin_ext .gz
 		set compress_type gzip
 	}
