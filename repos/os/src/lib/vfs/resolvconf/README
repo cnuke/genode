@@ -1,0 +1,18 @@
+The _resolvconf_ VFS plugin amends the IP address contained in the
+'nameserver' file exposed by the TCP/IP VFS plugins like _lwip_
+and _lxip_ to provide the common 'resolv.conf' structure.
+
+The 'nameserver_file' attribute denotes where the nameserver file
+is located and defaults to '/socket/nameserver'.
+
+The 'name' attributes specifies how the file the plugin provides
+is called and defaults to 'resolv.conf'.
+
+The following config snippet illustrates its usage:
+
+!<config>
+!  <vfs>
+!    <dir name="socket"> <lxip dhcp="yes"/> </dir>
+!    <dir name="etc"> <resolvconf/> </dir>
+!  </vfs>
+!</config>
