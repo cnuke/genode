@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,6 +46,34 @@ const static char http_html_hdr[] =
 const static char http_index_html[] =
 	"<html><head><title>Congrats!</title></head><body><h1>Welcome to our lwIP HTTP server!</h1><p>This is a small test page.</body></html>"; /* HTML page */
 
+static ssize_t read_etc_resolvconf(char *buffer, size_t buffer_len)
+{
+#if 0
+	// XXX appears to be non-functioning
+	FILE *fp = fopen("/etc/resolv.conf", "r");
+	if (!fp) {
+		perror("fopen");
+		return -1;
+	}
+
+	ssize_t const result = fread(buffer, buffer_len, 1, fp);
+	(void)fclose(fp);
+#else
+	int fd = open("/etc/resolv.conf", O_RDONLY);
+	if (!fd) {
+		perror("open");
+		return -1;
+	}
+
+	ssize_t const result = read(fd, buffer, buffer_len);
+	(void)close(fd);
+#endif
+
+	if (result >= 0)
+		buffer[result] = '\0';
+
+	return result;
+}
 
 /**
  * Handle a single client's request.
@@ -78,8 +107,13 @@ void http_server_serve(int conn)
 			/* Send http header */
 			send(conn, http_html_hdr, Genode::strlen(http_html_hdr), 0);
 
-			/* Send our HTML page */
-			send(conn, http_index_html, Genode::strlen(http_index_html), 0);
+			ssize_t const result = read_etc_resolvconf(buf, sizeof(buf));
+			if (result > 0) {
+				send(conn, buf, result, 0);
+			} else
+
+				/* Send our HTML page */
+				send(conn, http_index_html, Genode::strlen(http_index_html), 0);
 		}
 	}
 }
