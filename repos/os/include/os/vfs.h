@@ -404,8 +404,22 @@ class Genode::Readonly_file : public File
 
 		Vfs::Env::Io &_io;
 
+		bool _transactional_file = false;
+
 		void _open(Vfs::File_system &fs, Allocator &alloc, Path const path)
 		{
+			Vfs::Directory_service::Stat stat { };
+
+			Vfs::Directory_service::Stat_result stat_res =
+				fs.stat(path.string(), stat);
+			if (stat_res != Vfs::Directory_service::STAT_OK) {
+				error("failed to stat file '", path, "'");
+				throw Open_failed();
+			}
+
+			if (stat.type == Vfs::Node_type::TRANSACTIONAL_FILE)
+				_transactional_file = true;
+
 			Vfs::Directory_service::Open_result res =
 				fs.open(path.string(), Vfs::Directory_service::OPEN_MODE_RDONLY,
 				        &_handle, alloc);
@@ -453,6 +467,8 @@ class Genode::Readonly_file : public File
 		}
 
 		~Readonly_file() { _handle->ds().close(_handle); }
+
+		bool transactional() const { return _transactional_file; }
 
 		struct At { Vfs::file_size value; };
 
@@ -542,7 +558,7 @@ void Genode::with_raw_file_content(Readonly_file const &file,
 	if (range.num_bytes == 0)
 		return;
 
-	if (file.read(range) != range.num_bytes)
+	if (file.read(range) != range.num_bytes && !file.transactional())
 		throw File::Truncated_during_read();
 
 	fn(range.start, range.num_bytes);
