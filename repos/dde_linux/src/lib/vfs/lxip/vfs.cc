@@ -1606,6 +1606,8 @@ extern "C" unsigned int ic_nameservers[1];
 
 extern bool ic_link_state;
 
+static void ip_config_info_cb(lxip_config_info_context_t ctx);
+
 
 /*******************************
  ** Filesystem implementation **
@@ -1683,8 +1685,11 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 		Lxip_file_system(Vfs::Env &env, Genode::Xml_node config)
 		:
 			Directory(""),
-			_ep(env.env().ep()), _alloc(env.alloc())
+			_ep(env.env().ep()), _alloc(env.alloc()),
+			_vfs_env(env)
 		{
+			lxip_init(ip_config_info_cb, this);
+
 			apply_config(config);
 		}
 
@@ -1692,6 +1697,10 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 
 		char const *name()          { return "lxip"; }
 		char const *type() override { return "lxip"; }
+
+		void update_ip_config_info()
+		{
+		}
 
 		/***************************
 		 ** File_system interface **
@@ -2010,6 +2019,14 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 };
 
 
+static void ip_config_info_cb(lxip_config_info_context_t ctx)
+{
+	Vfs::Lxip_file_system *lxip_fs = static_cast<Vfs::Lxip_file_system*>(ctx);
+	if (lxip_fs)
+		lxip_fs->update_ip_config_info();
+}
+
+
 struct Lxip_factory : Vfs::File_system_factory
 {
 	struct Init
@@ -2030,8 +2047,6 @@ struct Lxip_factory : Vfs::File_system_factory
 			Lx::malloc_init(env, lx_env.heap());
 			Lx::timer_init(env.ep(), timer, lx_env.heap(), &poll_all);
 			Lx::nic_client_init(env, lx_env.heap(), &poll_all);
-
-			lxip_init();
 		}
 	};
 
