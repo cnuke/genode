@@ -36,7 +36,10 @@ namespace Lx {
 	void lxcc_emul_init(Lx_kit::Env &env);
 }
 
-extern "C" void lxip_init();
+struct lxip_config_info_context;
+typedef void (*lxip_config_info_callback_t)(lxip_config_info_context *);
+
+extern "C" void lxip_init(lxip_config_info_callback_t, lxip_config_info_context*);
 
 extern "C" void lxip_configure_static(char const *addr,
                                       char const *netmask,

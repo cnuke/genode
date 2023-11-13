@@ -484,11 +484,15 @@ void module_cubictcp_register(void);
 void late_ip_auto_config(void);
 void late_tcp_congestion_default(void);
 
+static lxip_config_info_callback_t _ip_config_info_cb;
+static lxip_config_info_context    _ip_config_info_ctx;
+
 
 /**
  * Initialize sub-systems
  */
-void lxip_init()
+void lxip_init(lxip_config_info_callback_t info_cb,
+               lxip_config_info_context *info_ctx)
 {
 	/* init data */
 	INIT_LIST_HEAD(&init_net.dev_base_head);
@@ -511,6 +515,9 @@ void lxip_init()
 
 	/* late  */
 	late_tcp_congestion_default();
+
+	_ip_config_info_cb  = info_cb;
+	_ip_config_info_ctx = info_ctx;
 }
 
 
@@ -521,6 +528,9 @@ static void lxip_configure(char const *address_config)
 {
 	__ip_auto_config_setup((char *)address_config);
 	late_ip_auto_config();
+
+	if (_ip_config_info_cb && _ip_config_info_ctx)
+		_ip_config_info_cb(_ip_config_info_ctx);
 }
 
 
