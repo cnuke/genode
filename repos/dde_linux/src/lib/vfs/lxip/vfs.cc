@@ -579,9 +579,6 @@ class Vfs::Lxip_bind_file final : public Vfs::Lxip_file
 		                    Const_byte_range_ptr const &src,
 		                    file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!_sock_valid()) return -1;
@@ -618,9 +615,6 @@ class Vfs::Lxip_bind_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			if (dst.num_bytes < sizeof(handle.content_buffer))
 				return -1;
 
@@ -651,9 +645,6 @@ class Vfs::Lxip_listen_file final : public Vfs::Lxip_file
 		                    Const_byte_range_ptr const &src,
 		                    file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			if (!_sock_valid()) return -1;
 
 			/* write-once */
@@ -681,9 +672,6 @@ class Vfs::Lxip_listen_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			return Format::snprintf(dst.start, dst.num_bytes, "%lu\n", _backlog);
 		}
 };
@@ -723,9 +711,6 @@ class Vfs::Lxip_connect_file final : public Vfs::Lxip_file
 		                    Const_byte_range_ptr const &src,
 		                    file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!_sock_valid()) return -1;
@@ -792,9 +777,6 @@ class Vfs::Lxip_connect_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			int so_error = 0;
 			int opt_len = sizeof(so_error);
 			int res = sock_getsockopt(&_sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &opt_len);
@@ -833,9 +815,6 @@ class Vfs::Lxip_local_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!_sock_valid()) return -1;
@@ -893,9 +872,6 @@ class Vfs::Lxip_remote_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!_sock_valid()) return -1;
@@ -942,9 +918,6 @@ class Vfs::Lxip_remote_file final : public Vfs::Lxip_file
 		                    Const_byte_range_ptr const &src,
 		                    file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!handle.write_content_line(src)) return -1;
@@ -987,9 +960,6 @@ class Vfs::Lxip_accept_file final : public Vfs::Lxip_file
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			using namespace Linux;
 
 			if (!_sock_valid()) return -1;
@@ -1578,9 +1548,6 @@ class Vfs::Lxip_address_file final : public Vfs::File
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			enum {
 				MAX_ADDRESS_STRING_SIZE = sizeof("000.000.000.000\n")
 			};
@@ -1614,9 +1581,6 @@ class Vfs::Lxip_link_state_file final : public Vfs::File
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			if (handle.seek() != 0)
-				return -1;
-
 			enum {
 				MAX_LINK_STATE_STRING_SIZE = sizeof("down\n")
 			};
