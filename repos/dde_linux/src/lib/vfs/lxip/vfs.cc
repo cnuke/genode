@@ -1537,17 +1537,25 @@ class Vfs::Lxip_address_file final : public Vfs::File
 {
 	private:
 
-		unsigned int &_numeric_address;
+		Genode::Allocator &_alloc;
+		Vfs::Readonly_value_file_system &_ro_fs;
 
 	public:
 
-		Lxip_address_file(char const *name, unsigned int &numeric_address)
-		: Vfs::File(name), _numeric_address(numeric_address) { }
+		Lxip_address_file(char const *name, Genode::Allocator &alloc,
+		                  Vfs::Readonly_value_file_system &_ro_value_fs)
+		:
+			Vfs::File(name), _alloc(alloc), _ro_value_fs(ro_value_fs)
+		{
+		}
 
 		Lxip::ssize_t read(Lxip_vfs_file_handle &handle,
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
+			if (handle.seek() != 0)
+				return -1;
+
 			enum {
 				MAX_ADDRESS_STRING_SIZE = sizeof("000.000.000.000\n")
 			};
@@ -1620,16 +1628,29 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 
 		Genode::Entrypoint       &_ep;
 		Genode::Allocator        &_alloc;
+		Vfs::Env                 &_vfs_env;
 
 		Lxip::Protocol_dir_impl _tcp_dir {
 			_alloc, *this, "tcp", Lxip::Protocol_dir::TYPE_STREAM };
 		Lxip::Protocol_dir_impl _udp_dir {
 			_alloc, *this, "udp", Lxip::Protocol_dir::TYPE_DGRAM  };
 
-		Lxip_address_file    _address    { "address",    ic_myaddr };
-		Lxip_address_file    _netmask    { "netmask",    ic_netmask };
-		Lxip_address_file    _gateway    { "gateway",    ic_gateway };
-		Lxip_address_file    _nameserver { "nameserver", ic_nameservers[0] };
+		using Address_string = Genode::String<sizeof("000.000.000.000\n") + 1>;
+
+		Vfs::Readonly_value_file_system _address_value {
+			"address", Address_string {"0.0.0.0" } };
+		Vfs::Readonly_value_file_system _netmask_value {
+			"netmask", Address_string {"0.0.0.0" } };
+		Vfs::Readonly_value_file_system _gateway_value {
+			"gateway", Address_string {"0.0.0.0" } };
+		Vfs::Readonly_value_file_system _nameserver_value {
+			"nameserver", Address_string {"0.0.0.0" } };
+
+		Lxip_address_file _address    { "address",    _vfs_env.alloc(), _address_value };
+		Lxip_address_file _netmask    { "netmask",    _vfs_env.alloc(), _netmask_value };
+		Lxip_address_file _gateway    { "gateway",    _vfs_env.alloc(), _gateway_value };
+		Lxip_address_file _nameserver { "nameserver", _vfs_env.alloc(), _nameserver_value };
+
 		Lxip_link_state_file _link_state { "link_state", ic_link_state };
 
 		Vfs::Node *_lookup(char const *path)
@@ -1685,7 +1706,8 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 		Lxip_file_system(Vfs::Env &env, Genode::Xml_node config)
 		:
 			Directory(""),
-			_ep(env.env().ep()), _alloc(env.alloc())
+			_ep(env.env().ep()), _alloc(env.alloc()),
+			_vfs_env(env)
 		{
 			lxip_init(ip_config_info_cb, this);
 
@@ -1699,6 +1721,12 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 
 		void update_ip_config_info()
 		{
+			_address_value   .value(Address_string(Net::Ipv4_address(&ic_myaddr)));
+			_netmask_value   .value(Address_string(Net::Ipv4_address(&ic_netmask)));
+			_gateway_value   .value(Address_string(Net::Ipv4_address(&ic_gateway)));
+			_nameserver_value.value(Address_string(Net::Ipv4_address(ic_nameserver[0])));
+
+			_vfs_env.user().wakeup_vfs_user();
 		}
 
 		/***************************
