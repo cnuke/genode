@@ -214,6 +214,9 @@ struct Vfs::File : Vfs::Node
 
 	virtual File_io_service::Sync_result sync() {
 		return File_io_service::Sync_result::SYNC_OK; }
+
+
+	virtual file_size size() const { return 0; }
 };
 
 
@@ -1535,33 +1538,55 @@ class Lxip::Protocol_dir_impl : public Protocol_dir
 
 class Vfs::Lxip_address_file final : public Vfs::File
 {
+	public:
+
+		using String_value = Genode::String<sizeof("000.000.000.000\n") + 1>;
+
 	private:
 
-		unsigned int &_numeric_address;
+		Genode::Allocator &_alloc;
+
+		String_value _value;
+
+		file_size _size()
+		{
+			return _value.length();
+		}
 
 	public:
 
-		Lxip_address_file(char const *name, unsigned int &numeric_address)
-		: Vfs::File(name), _numeric_address(numeric_address) { }
+		Lxip_address_file(char const *name,
+		                  Genode::Allocator &alloc,
+		                  String_value const &value)
+		:
+			Vfs::File(name), _alloc(alloc), _value(value)
+		{
+		}
+
+		void value(String_value const &new_value)
+		{
+			_value = String_value { new_value, "\n" };
+		}
 
 		Lxip::ssize_t read(Lxip_vfs_file_handle &handle,
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
-			enum {
-				MAX_ADDRESS_STRING_SIZE = sizeof("000.000.000.000\n")
-			};
+			file_size const seek_offset = handle.seek();
+			if (seek_offset> _size())
+				return -1;
 
-			Genode::String<MAX_ADDRESS_STRING_SIZE> address {
-				Net::Ipv4_address(&_numeric_address)
-			};
+			char const * const src = _value.string() + seek_offset;
+			size_t       const len = min(size_t(_value.length() - seek_offset),
+			                             dst.num_bytes);
+			Genode::memcpy(dst.start, src, len);
 
-			Lxip::size_t n = min(dst.num_bytes, strlen(address.string()));
-			memcpy(dst.start, address.string(), n);
-			if (n < dst.num_bytes)
-				dst.start[n++] = '\n';
+			return len;
+		}
 
-			return n;
+		file_size size() const
+		{
+			return _size();
 		}
 };
 
@@ -1620,16 +1645,18 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 
 		Genode::Entrypoint       &_ep;
 		Genode::Allocator        &_alloc;
+		Vfs::Env                 &_vfs_env;
 
 		Lxip::Protocol_dir_impl _tcp_dir {
 			_alloc, *this, "tcp", Lxip::Protocol_dir::TYPE_STREAM };
 		Lxip::Protocol_dir_impl _udp_dir {
 			_alloc, *this, "udp", Lxip::Protocol_dir::TYPE_DGRAM  };
 
-		Lxip_address_file    _address    { "address",    ic_myaddr };
-		Lxip_address_file    _netmask    { "netmask",    ic_netmask };
-		Lxip_address_file    _gateway    { "gateway",    ic_gateway };
-		Lxip_address_file    _nameserver { "nameserver", ic_nameservers[0] };
+		Lxip_address_file _address    { "address",    _vfs_env.alloc(), "0.0.0.0" };
+		Lxip_address_file _netmask    { "netmask",    _vfs_env.alloc(), "0.0.0.0" };
+		Lxip_address_file _gateway    { "gateway",    _vfs_env.alloc(), "0.0.0.0" };
+		Lxip_address_file _nameserver { "nameserver", _vfs_env.alloc(), "0.0.0.0" };
+
 		Lxip_link_state_file _link_state { "link_state", ic_link_state };
 
 		Vfs::Node *_lookup(char const *path)
@@ -1700,6 +1727,14 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 
 		void update_ip_config_info()
 		{
+			using SV = Lxip_address_file::String_value;
+
+			_address   .value(SV(Net::Ipv4_address(&ic_myaddr)));
+			_netmask   .value(SV(Net::Ipv4_address(&ic_netmask)));
+			_gateway   .value(SV(Net::Ipv4_address(&ic_gateway)));
+			_nameserver.value(SV(Net::Ipv4_address(&ic_nameservers[0])));
+
+			_vfs_env.user().wakeup_vfs_user();
 		}
 
 		/***************************
@@ -1838,10 +1873,17 @@ class Vfs::Lxip_file_system : public Vfs::File_system,
 				return STAT_OK;
 			}
 
-			if (dynamic_cast<Vfs::File*>(node)) {
+			Vfs::File *file = dynamic_cast<Vfs::File*>(node);
+			if (file) {
 				out.type = Node_type::TRANSACTIONAL_FILE;
 				out.rwx  = Node_rwx::rw();
-				out.size = 0x1000;  /* there may be something to read */
+				/*
+				 * Use exact size when known to allow utilites that
+				 * rely on this information to work properly, set it
+				 * arbitrarily to 4096 bytes to denote the file has
+				 * content (even if we do not know how much in advance).
+				 */
+				out.size = file->size() ? : 0x1000;
 				return STAT_OK;
 			}
 
