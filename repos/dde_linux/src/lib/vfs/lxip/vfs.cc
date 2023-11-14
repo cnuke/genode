@@ -1548,6 +1548,10 @@ class Vfs::Lxip_address_file final : public Vfs::File
 		                   Byte_range_ptr const &dst,
 		                   file_size /* ignored */) override
 		{
+			/* for now treat as EOF */
+			if (handle.seek() != 0)
+				return 0;
+
 			enum {
 				MAX_ADDRESS_STRING_SIZE = sizeof("000.000.000.000\n")
 			};
