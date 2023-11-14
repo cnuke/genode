@@ -228,23 +228,29 @@ void Session_component::update_devices_rom()
 
 void Session_component::enable_device(Device const & device)
 {
-	pci_enable(_env, domain_registry(), device);
-
 	auto fn = [&] (Driver::Io_mmu::Domain & domain) {
+		device.for_pci_config([&] (Device::Pci_config const & cfg) {
+			domain.enable_pci_device({cfg.bus_num, cfg.dev_num, cfg.func_num});
+		});
 		domain.enable_device();
 	};
 
 	device.for_each_io_mmu([&] (Device::Io_mmu const & io_mmu) {
 		_domain_registry.with_domain(io_mmu.name, fn, [&] () { });
 	});
+
+	pci_enable(_env, device);
 }
 
 
 void Session_component::disable_device(Device const & device)
 {
-	pci_disable(_env, domain_registry(), device);
+	pci_disable(_env, device);
 
 	auto fn = [&] (Driver::Io_mmu::Domain & domain) {
+		device.for_pci_config([&] (Device::Pci_config const & cfg) {
+			domain.disable_pci_device({cfg.bus_num, cfg.dev_num, cfg.func_num});
+		});
 		domain.disable_device();
 	};
 

@@ -59,16 +59,8 @@ struct Config_helper
 	              Driver::Device::Pci_config const & cfg)
 	: _env(env), _dev(dev), _cfg(cfg) { _config.scan(); }
 
-	void enable(Driver::Io_mmu_domain_registry & domain_registry)
+	void enable()
 	{
-		auto enable_fn = [&] (Driver::Io_mmu::Domain & domain) {
-			domain.enable_pci_device({ _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
-		};
-
-		_dev.for_each_io_mmu([&] (Driver::Device::Io_mmu const &io_mmu) {
-			domain_registry.with_domain(io_mmu.name, enable_fn, [&] () {});
-		});
-
 		_config.power_on(delayer(_env));
 
 		Config::Command::access_t cmd =
@@ -99,7 +91,7 @@ struct Config_helper
 		_config.write<Config::Command>(cmd);
 	}
 
-	void disable(Driver::Io_mmu_domain_registry & domain_registry)
+	void disable()
 	{
 		Config::Command::access_t cmd =
 			_config.read<Config::Command>();
@@ -110,14 +102,6 @@ struct Config_helper
 		_config.write<Config::Command>(cmd);
 
 		_config.power_off();
-
-		auto disable_fn = [&] (Driver::Io_mmu::Domain & domain) {
-			domain.disable_pci_device({ _cfg.bus_num, _cfg.dev_num, _cfg.func_num });
-		};
-
-		_dev.for_each_io_mmu([&] (Driver::Device::Io_mmu const &io_mmu) {
-			domain_registry.with_domain(io_mmu.name, disable_fn, [&] () {});
-		});
 	}
 
 	void apply_quirks()
@@ -150,20 +134,18 @@ struct Config_helper
 
 
 void Driver::pci_enable(Env                            & env,
-                        Driver::Io_mmu_domain_registry & domain_registry,
                         Device const                   & dev)
 {
 	dev.for_pci_config([&] (Device::Pci_config const & pc) {
-		Config_helper(env, dev, pc).enable(domain_registry); });
+		Config_helper(env, dev, pc).enable(); });
 }
 
 
 void Driver::pci_disable(Env                            & env,
-                         Driver::Io_mmu_domain_registry & domain_registry,
                          Device const                   & dev)
 {
 	dev.for_pci_config([&] (Device::Pci_config const & pc) {
-		Config_helper(env, dev, pc).disable(domain_registry); });
+		Config_helper(env, dev, pc).disable(); });
 }
 
 
