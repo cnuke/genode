@@ -1611,7 +1611,8 @@ static void attribute_hex(Xml_generator &xml, char const *name,
 }
 
 
-void Acpi::generate_report(Genode::Env &env, Genode::Allocator &alloc)
+void Acpi::generate_report(Genode::Env &env, Genode::Allocator &alloc,
+                           Xml_node const &config_xml)
 {
 	/* parse table */
 	Acpi_table acpi_table(env, alloc);
@@ -1667,8 +1668,9 @@ void Acpi::generate_report(Genode::Env &env, Genode::Allocator &alloc)
 			});
 		};
 
+		bool ignore_dmar = config_xml.attribute_value("ignore_dmar", false);
 		for (Dmar_entry *entry = Dmar_entry::list()->first();
-		     entry; entry = entry->next()) {
+		     !ignore_dmar && entry; entry = entry->next()) {
 
 			entry->apply([&] (Dmar_common const &dmar) {
 				if (dmar.read<Dmar_common::Type>() == Dmar_common::Type::DRHD) {
