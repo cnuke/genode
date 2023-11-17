@@ -22,10 +22,174 @@
 #include <polygon_gfx/line_painter.h>
 #include <gems/gui_buffer.h>
 
+#include <audio_in_session/rpc_object.h>
+#include <root/component.h>
+#include <base/heap.h>
+
 namespace Osci {
 	using namespace Genode;
 	struct Main;
 }
+
+
+/***************
+ ** Recording **
+ ***************/
+
+namespace Audio_in {
+
+	class Session_component;
+	class In;
+	class Root;
+	struct Root_policy;
+	static Session_component *channel_acquired;
+	enum Channel_number { LEFT, MAX_CHANNELS, INVALID = MAX_CHANNELS };
+
+	using namespace Genode;
+}
+
+
+class Audio_in::Session_component : public Audio_in::Session_rpc_object
+{
+	private:
+
+		Channel_number _channel;
+
+	public:
+
+		Session_component(Genode::Env &env, Channel_number channel)
+		: Session_rpc_object(env, Signal_context_capability()),
+		  _channel(channel)
+		{ channel_acquired = this; }
+
+		~Session_component() { channel_acquired = nullptr; }
+};
+
+
+class Audio_in::In
+{
+	private:
+
+		bool _active() { return channel_acquired && channel_acquired->active(); }
+
+		Stream *stream() { return channel_acquired->stream(); }
+
+	public:
+
+		static bool channel_number(const char     *name,
+		                           Channel_number *out_number)
+		{
+			static struct Names {
+				const char     *name;
+				Channel_number  number;
+			} names[] = {
+				{ "left", LEFT },
+				{ 0, INVALID }
+			};
+
+			for (Names *n = names; n->name; ++n)
+				if (!Genode::strcmp(name, n->name)) {
+					*out_number = n->number;
+					return true;
+				}
+
+			return false;
+		}
+
+		void record_packet(Audio_in::Packet &packet)
+		{
+			if (!_active()) return;
+			/*
+			 * Check for an overrun first and notify the client later.
+			 */
+			bool overrun = stream()->overrun();
+
+			Packet *p = stream()->alloc();
+
+			float       * const dst = p->content();
+			float const * const src = packet.content();
+			memcpy(dst, src, p->size());
+
+			stream()->submit(p);
+
+			channel_acquired->progress_submit();
+
+			if (overrun) channel_acquired->overrun_submit();
+		}
+};
+
+
+struct Audio_in::Root_policy
+{
+	void aquire(char const *args)
+	{
+		size_t ram_quota = Arg_string::find_arg(args, "ram_quota").ulong_value(0);
+		size_t session_size = align_addr(sizeof(Audio_in::Session_component), 12);
+
+		if ((ram_quota < session_size) ||
+		    (sizeof(Stream) > (ram_quota - session_size))) {
+			Genode::error("insufficient 'ram_quota', got ", ram_quota,
+			              " need ", sizeof(Stream) + session_size,
+			              ", denying '",Genode::label_from_args(args),"'");
+			throw Genode::Insufficient_ram_quota();
+		}
+
+		char channel_name[16];
+		Channel_number channel_number;
+		Arg_string::find_arg(args, "channel").string(channel_name,
+		                                             sizeof(channel_name),
+		                                             "left");
+		if (!In::channel_number(channel_name, &channel_number)) {
+			Genode::error("invalid input channel '",(char const *)channel_name,"' requested, "
+			              "denying '",Genode::label_from_args(args),"'");
+			throw Genode::Service_denied();
+		}
+		if (Audio_in::channel_acquired) {
+			Genode::error("input channel '",(char const *)channel_name,"' is unavailable, "
+			              "denying '",Genode::label_from_args(args),"'");
+			throw Genode::Service_denied();
+		}
+	}
+
+	void release() { }
+};
+
+
+namespace Audio_in {
+	using namespace Genode;
+
+	typedef Root_component<Session_component, Root_policy> Root_component;
+}
+
+
+/**
+ * Root component, handling new session requests.
+ */
+class Audio_in::Root : public Audio_in::Root_component
+{
+	private:
+
+		Genode::Env               &_env;
+
+	protected:
+
+		Session_component *_create_session(char const *args) override
+		{
+			char channel_name[16];
+			Channel_number channel_number = INVALID;
+			Arg_string::find_arg(args, "channel").string(channel_name,
+			                                             sizeof(channel_name),
+			                                             "left");
+			In::channel_number(channel_name, &channel_number);
+			return new (md_alloc()) Session_component(_env, channel_number);
+		}
+
+	public:
+
+		Root(Genode::Env &env, Allocator &md_alloc)
+		: Root_component(env.ep(), md_alloc), _env(env) { }
+};
+
 
 
 struct Osci::Main
@@ -132,7 +296,7 @@ struct Osci::Main
 
 		_view.construct(_gui, Point::from_xml(config), _size);
 
-		_timer.trigger_periodic(1000*config.attribute_value("period_ms",  20));
+		// _timer.trigger_periodic(1000*config.attribute_value("period_ms",  20));
 	}
 
 	Line_painter const _line_painter { };
@@ -179,13 +343,20 @@ struct Osci::Main
 		_gui.framebuffer()->refresh(0, 0, _size.w(), _size.h());
 	}
 
+	Genode::Heap   _heap { _env.ram(), _env.rm() };
+	Audio_in::In   in { };
+	Audio_in::Root in_root { _env, _heap };
+
 	Main(Env &env) : _env(env)
 	{
 		_config.sigh(_config_handler);
 		_handle_config();
 
-		_timer.sigh(_timer_handler);
+		env.parent().announce(env.ep().manage(in_root));
 
+		// _timer.sigh(_timer_handler);
+
+		_audio_in.progress_sigh(_timer_handler);
 		_audio_in.start();
 	}
 };

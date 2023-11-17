@@ -2,6 +2,8 @@
 
 	<requires> <gui/> <audio_in/> </requires>
 
+	<provides> <audio_in/> </provides>
+
 	<content>
 		<rom label="ld.lib.so"/>
 		<rom label="osci"/>
