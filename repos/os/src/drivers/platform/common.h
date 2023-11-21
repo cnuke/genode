@@ -119,6 +119,10 @@ void Driver::Common::acquire_io_mmu_devices()
 						io_mmu_dev.add_default_range(range, range.start);
 						has_reserved_mem = true;
 					});
+
+					if (!has_reserved_mem)
+						return;
+
 					/* enable default mappings for corresponding pci devices */
 					device.for_pci_config([&] (Device::Pci_config const & cfg) {
 						io_mmu_dev.enable_default_mappings(
