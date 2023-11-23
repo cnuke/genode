@@ -109,7 +109,7 @@ class Intel::Io_mmu : private Attached_mmio,
 				void remove_range(Range const &) override;
 
 				/* Registered_translation_table interface */
-				virtual addr_t virt_addr(addr_t phys_addr) override
+				addr_t virt_addr(addr_t phys_addr) override
 				{
 					addr_t va { 0 };
 
