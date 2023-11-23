@@ -78,8 +78,8 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 				unsigned devices() const { return _active_devices; }
 
 				/* interface for (un)assigning a pci device */
-				virtual void enable_pci_device(Pci::Bdf const) = 0;
-				virtual void disable_pci_device(Pci::Bdf const) = 0;
+				virtual void enable_pci_device(Pci::Bdf const &) = 0;
+				virtual void disable_pci_device(Pci::Bdf const &) = 0;
 
 				/* interface for adding/removing DMA buffers */
 				virtual void add_range(Range const &, addr_t const) = 0;
@@ -135,7 +135,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 		virtual void add_default_range(Range const &, addr_t) { };
 
 		/* interface for activating default mappings for certain device */
-		virtual void enable_default_mappings(Pci::Bdf) { };
+		virtual void enable_default_mappings(Pci::Bdf const &) { };
 
 		/* interface for completing default mappings (enabled IOMMU) */
 		virtual void default_mappings_complete() { };
