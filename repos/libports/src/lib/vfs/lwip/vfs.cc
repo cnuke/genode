@@ -94,6 +94,9 @@ extern "C" {
 
 	typedef Genode::Registry<Lwip_nameserver_handle> Nameserver_registry;
 
+	/* we ignore IPv6 for now */
+	typedef Genode::String<sizeof("000.000.000.000\n") + 1> Nameserver_value;
+
 	#define Lwip_handle_list List<Lwip_file_handle>
 
 	class File_system;
@@ -177,20 +180,32 @@ struct Lwip::Lwip_dir_handle final : Lwip_handle
 
 struct Lwip::Lwip_nameserver_handle final : Lwip_handle, private Nameserver_registry::Element
 {
-	Lwip_nameserver_handle(Vfs::File_system &fs, Allocator &alloc, Nameserver_registry &registry)
-	: Lwip_handle(fs, alloc, Vfs::Directory_service::OPEN_MODE_RDONLY),
-	  Nameserver_registry::Element(registry, *this) { }
+	Nameserver_value const &_value;
+
+	Lwip_nameserver_handle(Vfs::File_system &fs,
+	                       Allocator &alloc,
+	                       Nameserver_registry &registry,
+	                       Nameserver_value const &value)
+	:
+		Lwip_handle(fs, alloc, Vfs::Directory_service::OPEN_MODE_RDONLY),
+		Nameserver_registry::Element(registry, *this),
+		_value(value)
+	{ }
 
 	Read_result read(Byte_range_ptr const &dst, size_t &out_count) override
 	{
-		memset(dst.start, 0x00, min(file_size(IPADDR_STRLEN_MAX), dst.num_bytes));
-		ipaddr_ntoa_r(dns_getserver(0), dst.start, dst.num_bytes);
+		out_count = 0;
 
-		auto n = strlen(dst.start);
-		if (n < dst.num_bytes)
-			dst.start[n] = '\n';
+		file_size const seek_offset = seek();
+		if (seek_offset> _value.length())
+			return Read_result::READ_ERR_INVALID;
 
-		out_count = n+1;
+		char const * const src = _value.string() + seek_offset;
+		size_t       const len = min(size_t(_value.length() - seek_offset),
+		                             dst.num_bytes);
+		Genode::memcpy(dst.start, src, len);
+
+		out_count = len;
 		return Read_result::READ_OK;
 	}
 };
@@ -1766,6 +1781,8 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory,
 
 			Nameserver_registry nameserver_handles { };
 
+			Nameserver_value nameserver { "0.0.0.0\n" };
+
 			typedef Genode::Fifo_element<Vfs_handle> Handle_element;
 			typedef Genode::Fifo<Vfs_netif::Handle_element> Handle_queue;
 
@@ -1780,14 +1797,20 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory,
 			~Vfs_netif()
 			{
 				/* free the allocated qeueue elements */
-				status_callback();
+				status_callback(Lwip::Nic_netif::Status_reason::STATUS_REASON_IO);
 			}
 
 			/**
 			 * Wake the application when the interface changes.
 			 */
-			void status_callback() override
+			void status_callback(Lwip::Nic_netif::Status_reason reason) override
 			{
+				if (reason == Lwip::Nic_netif::Status_reason::STATUS_REASON_IF) {
+					char addr_buf[64] { };
+					(void)ipaddr_ntoa_r(dns_getserver(0), addr_buf, sizeof(addr_buf));
+					nameserver = Nameserver_value { (char const*)addr_buf, "\n" };
+				}
+
 				_vfs_env.user().wakeup_vfs_user();
 			}
 
@@ -1892,7 +1915,7 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory,
 			}
 
 			if (match_nameserver(path)) {
-				st = { .size              = IPADDR_STRLEN_MAX,
+				st = { .size              = _netif.nameserver.length(),
 				       .type              = Node_type::TRANSACTIONAL_FILE,
 				       .rwx               = Node_rwx::rw(),
 				       .inode             = 0,
@@ -1947,7 +1970,8 @@ class Lwip::File_system final : public Vfs::File_system, public Lwip::Directory,
 
 			if (match_nameserver(path)) {
 				*out_handle = new (alloc)
-					Lwip_nameserver_handle(*this, alloc, _netif.nameserver_handles);
+					Lwip_nameserver_handle(*this, alloc, _netif.nameserver_handles,
+					                                     _netif.nameserver);
 				return OPEN_OK;
 			}
 

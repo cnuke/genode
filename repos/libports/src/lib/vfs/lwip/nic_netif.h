@@ -209,7 +209,7 @@ class Lwip::Nic_netif
 			}
 
 			/* notify subclass to resume pending transmissions */
-			status_callback();
+			status_callback(Status_reason::STATUS_REASON_IO);
 
 			if (progress)
 				_wakeup_scheduler.schedule_nic_server_wakeup();
@@ -317,7 +317,8 @@ class Lwip::Nic_netif
 		/**
 		* Status callback to override in subclass
 		 */
-		virtual void status_callback() { }
+		enum class Status_reason { STATUS_REASON_IO, STATUS_REASON_IF };
+		virtual void status_callback(Status_reason) { }
 
 		/**
 		 * Callback issued by lwIP to initialize netif struct
@@ -490,7 +491,7 @@ static void nic_netif_status_callback(struct netif *netif)
 			Genode::log("lwIP Nic interface down");
 	}
 
-	nic_netif->status_callback();
+	nic_netif->status_callback(Lwip::Nic_netif::Status_reason::STATUS_REASON_IF);
 }
 
 	}
