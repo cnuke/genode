@@ -272,10 +272,13 @@ void Intel::Io_mmu::generate(Xml_generator & xml)
 
 		const bool enabled = (bool)read<Global_status::Enabled>();
 		const bool rtps    = (bool)read<Global_status::Rtps>();
+		const bool ires    = (bool)read<Global_status::Ires>();
 		const bool irtps   = (bool)read<Global_status::Irtps>();
+		const bool cfis    = (bool)read<Global_status::Cfis>();
 
 		xml.attribute("dma_remapping", enabled && rtps);
-		xml.attribute("irq_remapping", enabled && irtps);
+		xml.attribute("msi_remapping", ires && irtps);
+		xml.attribute("irq_remapping", ires && irtps && !cfis);
 
 		/* dump registers */
 		xml.attribute("version", String<16>(read<Version::Major>(), ".",
@@ -285,6 +288,7 @@ void Intel::Io_mmu::generate(Xml_generator & xml)
 			xml.attribute("name", "Capability");
 			attribute_hex(xml, "value", read<Capability>());
 			xml.attribute("esrtps", (bool)read<Capability::Esrtps>());
+			xml.attribute("esirtps", (bool)read<Capability::Esirtps>());
 			xml.attribute("rwbf",   (bool)read<Capability::Rwbf>());
 			xml.attribute("nfr",     read<Capability::Nfr>());
 			xml.attribute("domains", read<Capability::Domains>());
@@ -294,6 +298,8 @@ void Intel::Io_mmu::generate(Xml_generator & xml)
 		xml.node("register", [&] () {
 			xml.attribute("name", "Extended Capability");
 			attribute_hex(xml, "value", read<Extended_capability>());
+			xml.attribute("interrupt_remapping",
+			              (bool)read<Extended_capability::Ir>());
 			xml.attribute("page_walk_coherency",
 			              (bool)read<Extended_capability::Page_walk_coherency>());
 		});
@@ -302,8 +308,10 @@ void Intel::Io_mmu::generate(Xml_generator & xml)
 			xml.attribute("name", "Global Status");
 			attribute_hex(xml, "value", read<Global_status>());
 			xml.attribute("qies",    (bool)read<Global_status::Qies>());
+			xml.attribute("ires",    (bool)read<Global_status::Ires>());
 			xml.attribute("rtps",    (bool)read<Global_status::Rtps>());
 			xml.attribute("irtps",   (bool)read<Global_status::Irtps>());
+			xml.attribute("cfis",    (bool)read<Global_status::Cfis>());
 			xml.attribute("enabled", (bool)read<Global_status::Enabled>());
 		});
 

@@ -203,6 +203,9 @@ class Intel::Io_mmu : private Attached_mmio,
 			/* enhanced set root table pointer support */
 			struct Esrtps : Bitfield<63,1> { };
 
+			/* enhanced set irq table pointer support */
+			struct Esirtps : Bitfield<62,1> { };
+
 			/* number of fault-recording registers (n-1) */
 			struct Nfr : Bitfield<40,8> { };
 
@@ -228,6 +231,9 @@ class Intel::Io_mmu : private Attached_mmio,
 		{
 			/* IOTLB register offset */
 			struct Iro : Bitfield<8,10> { };
+
+			/* interrupt remapping support */
+			struct Ir  : Bitfield<3,1> { };
 
 			struct Page_walk_coherency : Bitfield<0,1> { };
 		};
@@ -259,8 +265,14 @@ class Intel::Io_mmu : private Attached_mmio,
 			/* queued invalidation enable status */
 			struct Qies  : Bitfield<26,1> { };
 
+			/* interrupt remapping enable status */
+			struct Ires  : Bitfield<25,1> { };
+
 			/* interrupt remapping table pointer status */
 			struct Irtps : Bitfield<24,1> { };
+
+			/* compatibility format interrupts */
+			struct Cfis  : Bitfield<23,1> { };
 		};
 
 		struct Root_table_address : Register<0x20, 64>
