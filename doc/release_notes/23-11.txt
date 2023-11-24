@@ -1,0 +1,685 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 23.11
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+Kernel-agnostic DMA protection
+##############################
+
+; @jschlatow
+
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+PC power, frequency, temperature sensing and control
+====================================================
+
+; @alex-ab
+
+commit 916bd88e5e49df7458505d38bfdabc64b15bd085
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Sep 26 10:55:06 2023 +0200
+
+    base: extend PD session by system_control_cap
+    
+    Per Affinity::Location a system control cap can be requested. The capability
+    provides an RPC interface to request and set Cpu_state, as provided by the
+    former Pd::managing_system(Cpu_state) method. Invocation of those system
+    control capabilities then *can* (see below) be executed on the desired CPU
+    as described by Affinity::Location.
+    
+    The system control cap will be invalid for kernels that don't support
+    system_control/managing_system functionality at all.
+    
+    The system control cap will be ever by the same, e.g. ignoring the
+    Affinity::Location parameter, if the used kernel doesn't support or doesn't
+    require the feature to execute the system control per CPU.
+    
+    The commit is a preparation step to add guarded and selective x86 MSR
+    access per CPU.
+    
+    Fixes #5009
+
+commit e36170c997b07889ac9bed67a285623a918bad85
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Oct 4 11:32:42 2023 +0200
+
+    nova: add guarded access to MSRs
+    
+    via Genode Pd::system_control interface
+    
+    Issue #5009
+
+commit 94d04b724a8d098e16c231b7b33a9a65c7c4b8dd
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 18 16:54:05 2023 +0200
+
+    sculpt: add system-control in resource dialog
+    
+    This patch allows for the interactive assignment of the system-control role
+    to a new component via the resource dialog. This is useful for integrating
+    low-level components like the Intel frequency/power monitoring tool.
+    
+    Fixes #5033
+
+
+
+Modernized virtualization interface
+===================================
+
+; @atopia, @chelmuth
+
+commit daafe3f4e29c57c71f48e7e0867568e528b42c94
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Tue Jun 6 15:57:38 2023 +0200
+
+    base: rework vmm library API
+    
+    The new API emphasizes control over the vCPU data by granting access
+    through the Vcpu::with_state() method, which makes sure that the vCPU is
+    stopped, invokes the supplied function with a reference to the VM state
+    and resumes the vCPU if the function returns true.
+    
+    The old Vcpu::run(), Vcpu::pause() and Vcpu::state() methods are removed
+    in favor of the new API. Execution of the vCPU is now interrupted by
+    sending a native Genode Signal to its Vcpu_handler, which will run the
+    VMM's exit handling method. When this method retrieves the vCPU state by
+    calling Vcpu::with_state(), the outside interruption is detected and on
+    x86 a recall exit is injected into the state to signal the vCPU
+    interruption / pause request to the VMM's vCPU handler.
+    
+    Ref #4968
+
+commit 9489bf41a5892291a0491891d27862a0fc06e615
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Wed Jun 7 11:43:20 2023 +0200
+
+    base-hw: port to new VMM library API
+    
+    Ref #4968
+
+commit 85012d5eddb168328c8a36e39bb33f3ce38ab6de
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Wed Sep 13 13:34:27 2023 +0200
+
+    base-nova: port to new VMM library API
+    
+    Ref #4968
+
+commit 5136883deda53374ae5b027d80c34d832c191e59
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Tue Aug 8 14:14:30 2023 +0200
+
+    base-foc: port to new VMM library API
+    
+    Ref #4968
+
+commit 1515a0a51e3c8027b15d05bf64c03d30b57d212f
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Wed Aug 9 16:21:12 2023 +0200
+
+    base-sel4: port to new VMM library API
+    
+    Ref #4968
+
+commit 9f054635bde851e5a1fe7f367e7f9e9cf68ff133
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Tue Jun 20 17:37:56 2023 +0200
+
+    virtualbox6: port to new VMM library API
+    
+    Ref #4968
+
+commit 7e79128c032b5006eae34e148beaaa53fcf53fb1
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Mon Jun 26 16:39:40 2023 +0200
+
+    vmm_x86: port to new VMM library API
+    
+    Ref #4968
+
+commit cfab4e74a93a74d63ca31aba9e6a854aefbfea53
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Thu Aug 10 19:08:04 2023 +0200
+
+    vmm: port to new VMM library API
+    
+    Ref #4968
+
+commit 6b676d55c9af04aae74acd3d988f2a5b56af3de9
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Wed Jun 7 14:59:45 2023 +0200
+
+    seoul: port to new VMM library API
+    
+    Ref genodelabs/genode#4968
+
+commit 7cb7ef26078344a0ac927b3a0773ed9495dac62b
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Tue Jul 25 14:49:45 2023 +0200
+
+    seoul: enable SMP on base-hw
+    
+    Ref genodelabs/genode#4968
+
+
+Dialog API for low-complexity interactive applications
+======================================================
+
+; @nfeske
+
+commit 4fdc999087b6ce5099b5db4ae2e87a0f9d0e8896
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 27 00:28:49 2023 +0200
+
+    Dialog API
+    
+    The new API at gems/include/dialog/ aids the creation of simple GUI
+    applications based on the menu-view widget renderer. Its use is
+    illustrated by the simple test application at src/test/dialog/
+    that is accompanied with the dialog.run script.
+    
+    Issue #5008
+
+commit 0c40d52010526684b5c8fb54180b1e16f4ef29d6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jul 19 17:08:01 2023 +0200
+
+    sculpt: add Dialog::Distant_runtime
+    
+    The so-called 'Distant_runtime' implements GUI dialogs via menu_view
+    components hosted at a distant init instance as opposed to child
+    components (as implemented by the 'Sandboxed_runtime'). This is
+    particular the case in Sculpt OS where the sculpt manager is not the
+    parent of the menu_view instances.
+    
+    Issue #5008
+
+commit ffc25fde538d316f52dd073a89f20276672f23ec
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Jul 19 17:08:27 2023 +0200
+
+    sculpt: apply Dialog API to diag, panel, and graph
+    
+    This patch partially converts the Sculpt manager to the dialog API.
+    At this stage, both the old utilities and the new dialog API are still
+    used simultaneously.
+    
+    Issue #5008
+
+commit 3d026fbd52d07218073f408343f1965b282342c1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Oct 30 12:43:19 2023 +0100
+
+    sculpt_manager: use dialog API
+    
+    Issue #5053
+
+commit a3f8827f6d3280348781600795522c4fae3c6462
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Nov 15 16:12:42 2023 +0100
+
+    dialog: add text-area widget
+    
+    This patch moves the text-editing facility of app/text_area to a
+    text-area widget as part of the dialog library. This has two benefits.
+    First, it simplifies app/text_area by using the dialog API. Second, the
+    editor can now easily be reused by other dialog-API-based applications.
+    
+    Fixes #5058
+
+commit 78062f6f3a0e3d5c306707342ac7e9f7dfdf0342
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Nov 16 19:16:03 2023 +0100
+
+    touch_keyboard: use dialog API
+    
+    Fixes #5059
+
+commit b9011b46b16e28b8b9f098b6025e762fe45a8a3b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Jul 21 13:51:01 2023 +0200
+
+    phone_manager: transition to Dialog API
+    
+    Issue genodelabs/genode#5008
+
+
+API changes
+===========
+
+Simplified list-model utility
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+; @nfeske
+
+commit a2e83ca068a7080caef0bad1ba56e4c664259e09
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 26 15:25:26 2023 +0200
+
+    drivers/platform: use modern list-model interface
+    
+    Issue #4317
+
+commit 81283050920c2e773a93faa703a8936f92f0e7b6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 26 17:16:40 2023 +0200
+
+    pci_decode: use modern list-model interface
+    
+    Issue #4317
+
+commit 80199ffe6a2fe85559b4da9a0393e860dfb47066
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 26 17:39:46 2023 +0200
+
+    vmm: use modern list-model interface
+    
+    Issue #4317
+
+commit ddc86a612ee16858232ef959493f2329cfec517f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 26 17:50:07 2023 +0200
+
+    wireguard: use modern list-model interface
+    
+    Issue #4317
+
+    ....
+
+commit 56e9b0eadae63f8ace67dc4da2a41975b92f7595
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Oct 27 16:01:23 2023 +0200
+
+    Simplify 'List_model'
+    
+    This patch replaces the original policy-based 'update_from_xml' by a new
+    method that takes three functors for creating, destroying, and updating
+    elements as arguments. XML nodes are associated with their corresponding
+    internal data models by annotating the element type with the
+    'type_matches' class function and the 'matches' method.
+    
+    The patch also improves safety by enforcing that list-model elements can
+    never be copied.
+    
+    Fixes #4317
+
+commit 2d444821985f4f9f6af585f840753a00469ff00d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Oct 28 12:22:54 2023 +0200
+
+    list_model.h: retire 'update_list_model_from_xml'
+    
+    This transition vehicle to the modern interface has now been replaced by
+    the new 'List_model::update_from_xml' method.
+    
+    Issue #4317
+
+commit 586e647897fa23e13675c968826958bdc21ed5f7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Oct 28 12:30:40 2023 +0200
+
+    list_model.h: rename 'apply_first' to 'with_first'
+    
+    Issue #4317
+
+
+Libraries and applications
+##########################
+
+Seoul virtual machine monitor
+=============================
+
+; @alex-ab
+
+commit 85c6d9e7258b683b8ebc1eb81a0f0013b92e85f6
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sat Jan 7 21:04:58 2023 +0100
+
+    seoul: add 64bit guest support
+
+commit 5dc98a681785de7602e2bcdf83f2dd007810593d
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sat Sep 30 14:36:48 2023 +0200
+
+    seoul: support more guest memory
+    
+    for 64bit VMs having more than 3G
+
+
+Ported 3rd-party software
+=========================
+
+; @cnuke
+
+; Linphone
+
+commit 4bef85d7bc5632cba303710df105f0f295093a91
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon Aug 28 11:23:24 2023 +0200
+
+    ports: add socat
+    
+    Fixes #5007
+
+commit 51875b89fdc1bef7a84e8b7a64506bc82087a3e7
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Sep 29 12:30:26 2023 +0200
+
+    ports: add `socat_tcp` pkg
+    
+    Issue #5007
+
+commit 70fbd671c8ed40b36fec3dd7b9c53487ffbeded7
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Sep 19 11:00:04 2023 +0200
+
+    Add SDL2_mixer-2.6.3
+    
+    Issue #341.
+
+commit 936a3cc3f93bcfc0f50523037a2c211c2e3c2d61
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Sep 19 11:52:21 2023 +0200
+
+    Add SDL2_net-2.2.0
+    
+    Issue #341.
+
+
+Device drivers
+##############
+
+USB device drivers updated to Linux 6.1.20
+==========================================
+
+; @ssumpf
+
+commit c5a55e5af45af019a669b95b9d3bc6c920ba5666
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Jun 16 21:31:44 2023 +0200
+
+    genode_c_api/usb_client: API USB clients
+    
+    Through this API C-code can connect to an USB service.
+    
+    issue #4958
+
+commit f9e70b0300a1d7cb5721c7a6038c5bf79fc995af
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jul 4 20:51:31 2023 +0200
+
+    genode_c_api/event: add wheel events
+    
+    issue #4958
+
+commit 57d2b7235dc42cda4cbfd861166c64686795cb38
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jun 13 22:33:23 2023 +0200
+
+    virt_linux: add USB HID/NET/MBIM to kernel configuration
+    
+    issue #4958
+
+commit 71c32f2923b751df4dda5940b65b6d8f8a5f7b24
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Jun 22 20:07:32 2023 +0200
+
+    virt_linux: add init calls for USB HID/NET
+    
+    issue #4958
+
+commit 22231c0604706ff2d615efd3f7fd3cf193ab137e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jun 14 15:34:33 2023 +0200
+
+    virt_lx_emul: adjust dummies for usb_hid/net
+    
+    issue #4958
+
+commit d27e0a8fe69060611768690d1093985c0318d6e0
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jun 20 18:01:04 2023 +0200
+
+    virt_lx_emul: add shadow 'vmalloc.c'
+    
+    issue #4958
+
+commit 5eff895f9d735a6334407677ee5edcf640a631b8
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Jun 18 21:28:18 2023 +0200
+
+    virt/lx_emul: shadow urb handling for USB clients
+    
+    allocate, free, and submit urbs to an USB service using Genode's USB
+    client C-API.
+    
+    issue #4958
+
+commit 3925c7ec607b292eef6e8666189a1940e2bc9fde
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jul 5 18:51:42 2023 +0200
+
+    virt/lx_emul: add usb_client.c
+    
+    This registers C-API USB-client device handle (i.e., USB::Connection) as
+    Linux 'usb_device' and probes all the initialized drivers.
+    
+    issue #4958
+
+commit c4ec847680587ca409065d999672b01f49771b86
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jun 14 15:35:02 2023 +0200
+
+    lx_emul/shadow/uaccess_64: add 'clear_user'
+    
+    issue #4958
+
+commit 6ac68494db77c46393eb2c9b6812d660d2e88752
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Jun 29 18:01:53 2023 +0200
+
+    lx_emul/arm: add 'pteval_t'
+    
+    issue #4958
+
+commit c835993ac37e520ccded19cffd8605d8c7cca455
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Jun 22 19:56:36 2023 +0200
+
+    lx_emul: add wheel events to shadow evdev.c
+    
+    issue #4958
+
+commit 5bce4dac815aa9ed91f513fcb5f0d01b92e269ff
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Jul 3 22:26:50 2023 +0200
+
+    recipe: virt_linux api
+    
+    for x86_32, x86_64, arm, arm_64
+    
+    issue #4958
+
+commit f4d7455a9f2e515f34a27907e0fc0314f242c5aa
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jul 4 12:30:51 2023 +0200
+
+    recipe: wireguard use virt_linux api
+    
+    issue #4958
+
+commit e1b463082a0955d99ae7247fd087860ff8368fb5
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jul 5 13:15:00 2023 +0200
+
+    usb_net.run: enable Qemu device pass-through
+    
+    issue #4958
+
+commit f668aea42af216b0b3b3885dafbf5a7190310bde
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jun 14 15:33:25 2023 +0200
+
+    dde_linux: update usb_hid driver to Linux 6.1.20
+    
+    The drivers uses the 'virt_linux' api and the current lx_kit
+    implementation. It is a drop-in replacement for the Linux 4.16.3 based
+    version.
+    
+    issue #4958
+
+commit d5cf77539a0019ee6c02282cf2af953e5a4190ce
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jul 5 18:01:10 2023 +0200
+
+    dde_linux: update usb_net driver to Linux 6.1.20
+    
+    Driver for network-interface cards and LTE modems with MBIM support
+    connected via USB.
+    
+    issue #4958
+
+
+Platforms
+#########
+
+Linux
+=====
+
+; @chelmuth
+
+commit 9799adda792e9c5f05203d93a53c8b4fb7aa81d8
+Author: Robin Eklind <rnd0x00@gmail.com>
+Date:   Thu Sep 7 18:18:02 2023 +0200
+
+    fb_sdl: update to use sdl2
+    
+    Following the official migration guide of SDL [1], the
+    fb_sdl framebuffer driver was update from SDL1 to SDL2.
+    
+    The sdl2 port in world/src/lib/sdl2 is used.
+    
+    Since SDL1 is in maintenance mode [2], support for other
+    display servers than X11 will never be implemented. In
+    particular, support for Wayland is missing from SDL1.
+    
+    Fortunately, a port of sdl2 is maintained in genode-world.
+    
+    As SDL2 is actively developed, it will provide support for
+    modern hardware architectures, and has mature support for
+    Wayland [3].
+    
+    [1]: https://wiki.libsdl.org/SDL2/MigrationGuide
+    [2]: https://wiki.debian.org/Wayland#SDL1_.28unsupported.29
+    [3]: https://wiki.debian.org/Wayland#SDL2_.28supported_since_2.0.2.2B-.29
+    
+    Issue #4993
+
+commit d3d822cd9d6e9ed917c13a430aa71464af4d311d
+Author: Robin Eklind <rnd0x00@gmail.com>
+Date:   Thu Sep 21 17:44:21 2023 +0200
+
+    fb_sdl: refactor to only construct window once
+    
+    In SDL2, support has been added for multiple windows.
+    
+    As such, prior to this commit, invoking _sdl_screen.construct
+    would create a new window each time the original window was
+    resized.
+    
+    To avoid this, refactor to only construct the window once, and
+    upon resize events, reconstruct the SDL_Surface and SDL_Texture
+    of Sdl_screen to the new window dimensions.
+    
+    Issue identified by @chelmuth in https://github.com/genodelabs/genode/pull/4993#issuecomment-1729530634
+    
+    Fixes #4993
+
+
+Build system and tools
+######################
+
+Split of debug information from executable binaries
+===================================================
+
+; @cproc
+
+commit b7da39f6bb6225764f25f1cffb21d08803290246
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Oct 18 08:52:24 2023 +0200
+
+    mk: create separate debug info files
+    
+    Commit also adapts Qt5 libraries.
+    
+    Issue #5015
+
+commit 14e1704435a6177ff434617f72633882cedd2cd5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon Oct 30 07:43:02 2023 +0100
+
+    ports: adapt GDB test to separate debug info files
+    
+    Fixes #5044
+
+commit 7ae726e7a6b7e66eca0a8822ed36e0cc59942f88
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Oct 18 05:35:27 2023 +0200
+
+    create separate debug info files for Qt5 libraries
+    
+    Fixes #347
+
+
+Discharged implicit trigger of shared-library builds
+====================================================
+
+; @nfeske
+
+commit 3ebb715c5cb422c6b6065ca94dfeda7a75c4f54f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 12 16:21:03 2023 +0200
+
+    libports: use [build_artifacts] in run scripts
+    
+    ...except for the run scripts related to Qt and the NIC router.
+    
+    Issue #4860
+
+commit 12462d63ac9bf90d96657c6bd3c0e3ad801fd5b9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Nov 18 12:50:46 2023 +0100
+
+    run: check consistency of build_boot_image args
+
+commit 85681bf8e843a4ba5e0d9ca619c71b92b5b9e6cf
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Nov 20 14:53:05 2023 +0100
+
+    mk: remove implicit build of shared libraries
+    
+    This patch removes the implicit build of all shared libraries a target
+    depends on. Targets only depend on the respective ABIs instead. This
+    alleviates the need to locally build complex shared libraries (think of
+    Qt) when developing applications. Instead, application developers can
+    use binary depot archives.
+    
+    The implementation splits the mk/lib.mk file into three files:
+    - mk/a.mk   for building one static library (.lib.a)
+    - mk/so.mk  for building one shared object  (.lib.so)
+    - mk/abi.mk for building one ABI stub       (.abi.so)
+    
+    Fixes #5061
+
