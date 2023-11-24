@@ -33,11 +33,10 @@ set build_components {
 	server/report_rom
 	server/vfs lib/vfs lib/vfs_import
 	server/fs_rom
-	lib/vfs_import
 }
 
-append_if $use_gpu boot_modules { intel_gpu_drv }
-append_if $use_top boot_modules { top }
+append_if $use_gpu build_components { drivers/gpu/intel }
+append_if $use_top build_components { app/top }
 
 build $build_components
 
@@ -285,10 +284,6 @@ append config {
 </config>}
 
 install_config $config
-
-#
-# Boot modules
-#
 
 build_boot_image [build_artifacts]
 
