@@ -10,10 +10,9 @@ if {![have_include "power_on/qemu"] ||
 }
 
 set build_components {
-	core lib/ld init timer lib/libc lib/vfs lib/stdcxx lib/vfs_pipe
+	core lib/ld init timer lib/libc lib/libm lib/vfs lib/stdcxx lib/vfs_pipe
 	drivers/uart
-	app/gdb_monitor
-	test/gdb_monitor_target_config
+	app/gdb_monitor lib/gdbserver_platform test/gdb_monitor_target_config
 }
 
 lappend build_components "lib/gdbserver_platform-$::env(KERNEL)"
