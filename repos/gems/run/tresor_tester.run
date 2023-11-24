@@ -1115,7 +1115,7 @@ if {[have_board linux]} {
 
 set boot_modules [build_artifacts]
 
-append_if [have_board linux] boot_modules [tresor_image_name]
+lappend_if [have_board linux] boot_modules [tresor_image_name]
 
 build_boot_image $boot_modules
 

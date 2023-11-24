@@ -6,7 +6,7 @@ if { ![have_spec foc] && ![have_spec hw] && ![have_spec nova] &&
 
 set build_components {
 	core lib/ld init timer
-	server/cpu_sampler
+	server/cpu_sampler lib/cpu_sampler_platform
 	test/cpu_sampler
 }
 
