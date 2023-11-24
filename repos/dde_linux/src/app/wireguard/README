@@ -65,9 +65,10 @@ that can be observed with the Linux kernel driver.
 Peers
 ~~~~~
 
-There can be multiple <peer> sub-nodes in <config>, each adding a remote peer
-at the WireGuard driver. The <peer> tags can be removed and added dynamically
-but. The <peer> attribute public_key contains the public key of the remote
+There can be multiple <peer> sub-nodes in <config>, each representing a
+remote peer at the WireGuard driver. The <peer> tags can be added and
+removed dynamically which results in adding and removing peers at the driver.
+The <peer> attribute public_key contains the public key of the remote
 peer encoded with base64. The <peer> attribute allowed_ip contains the
 private-net IPv4 address that the remote peer is allowed to use for
 communicating to the local peer. The <peer> attributes enpoint_ip and
