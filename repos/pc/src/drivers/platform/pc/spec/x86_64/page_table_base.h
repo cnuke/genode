@@ -16,13 +16,14 @@
 #define _SRC__DRIVERS__PLATFORM__PC__SPEC__X86_64__PAGE_TABLE_BASE_H_
 
 #include <base/log.h>
-#include <hw/assert.h>
 #include <hw/page_flags.h>
 #include <hw/util.h>
 #include <util/misc_math.h>
 
 #include <clflush.h>
 #include <expanding_page_table_allocator.h>
+
+#define assert(expression)
 
 namespace Genode {
 
