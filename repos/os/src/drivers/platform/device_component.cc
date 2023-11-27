@@ -240,16 +240,23 @@ Device_component::Device_component(Registry<Device_component> & registry,
 
 		auto add_range_fn = [&] (Driver::Io_mmu::Domain & domain) {
 			_reserved_mem_registry.for_each([&] (Io_mem & iomem) {
-				domain.add_range(iomem.range, iomem.range.start);
+				domain.add_range(iomem.range, iomem.range.start,
+				                 iomem.io_mem->dataspace());
 			});
 		};
 
 		/* attach reserved memory ranges to IOMMU domains */
-		device.for_each_io_mmu([&] (Driver::Device::Io_mmu const &io_mmu) {
-			session.domain_registry().with_domain(io_mmu.name,
-			                                      add_range_fn,
-			                                      [&] () { });
-		});
+		device.for_each_io_mmu(
+			/* non-empty list fn */
+			[&] (Driver::Device::Io_mmu const &io_mmu) {
+				session.domain_registry().with_domain(io_mmu.name,
+				                                      add_range_fn,
+				                                      [&] () { }); },
+
+			/* empty list fn */
+			[&] () {
+				session.domain_registry().with_default_domain(add_range_fn); }
+		);
 
 	} catch(...) {
 		_release_resources();

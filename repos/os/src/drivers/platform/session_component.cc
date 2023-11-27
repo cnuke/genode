@@ -12,6 +12,7 @@
  */
 
 #include <dataspace/client.h>
+#include <base/attached_io_mem_dataspace.h>
 
 #include <device.h>
 #include <pci.h>
@@ -49,8 +50,11 @@ Session_component::_acquire(Device & device)
 					}
 				});
 			}
-		);
-	});
+		);},
+
+		/* empty list fn */
+		[&] () { }
+	);
 
 	Device_component * dc = new (heap())
 		Device_component(_device_registry, _env, *this, _devices, device);
@@ -129,7 +133,8 @@ void Session_component::update_io_mmu_devices()
 				[&] (Device::Io_mmu const & io_mmu) {
 					if (io_mmu.name == io_mmu_dev.name())
 						used_by_owned_device = true;
-			});
+				},
+				[&] () { });
 		});
 
 		/* synchronise with IOMMU domains */
@@ -230,14 +235,23 @@ void Session_component::enable_device(Device const & device)
 {
 	auto fn = [&] (Driver::Io_mmu::Domain & domain) {
 		device.for_pci_config([&] (Device::Pci_config const & cfg) {
-			domain.enable_pci_device({cfg.bus_num, cfg.dev_num, cfg.func_num});
+			Attached_io_mem_dataspace io_mem { _env, cfg.addr, 0x1000 };
+			domain.enable_pci_device(io_mem.cap(),
+			                         {cfg.bus_num, cfg.dev_num, cfg.func_num});
 		});
 		domain.enable_device();
 	};
 
-	device.for_each_io_mmu([&] (Device::Io_mmu const & io_mmu) {
-		_domain_registry.with_domain(io_mmu.name, fn, [&] () { });
-	});
+	device.for_each_io_mmu(
+		/* non-empty list fn */
+		[&] (Device::Io_mmu const & io_mmu) {
+			_domain_registry.with_domain(io_mmu.name, fn, [&] () { });
+		},
+
+		/* empty list fn */
+		[&] () {
+			_domain_registry.with_default_domain(fn); }
+	);
 
 	pci_enable(_env, device);
 }
@@ -254,9 +268,15 @@ void Session_component::disable_device(Device const & device)
 		domain.disable_device();
 	};
 
-	device.for_each_io_mmu([&] (Device::Io_mmu const & io_mmu) {
-		_domain_registry.with_domain(io_mmu.name, fn, [&] () { });
-	});
+	device.for_each_io_mmu(
+		/* non-empty list fn */
+		[&] (Device::Io_mmu const & io_mmu) {
+			_domain_registry.with_domain(io_mmu.name, fn, [&] () { }); },
+
+		/* empty list fn */
+		[&] () {
+			_domain_registry.with_default_domain(fn); }
+	);
 }
 
 
@@ -364,7 +384,7 @@ Session_component::alloc_dma_buffer(size_t const size, Cache cache)
 		guard.buf = &buf;
 
 		_domain_registry.for_each_domain([&] (Io_mmu::Domain & domain) {
-			domain.add_range({ buf.dma_addr, buf.size }, buf.phys_addr);
+			domain.add_range({ buf.dma_addr, buf.size }, buf.phys_addr, buf.cap);
 		});
 	} catch (Dma_allocator::Out_of_virtual_memory) { }
 
@@ -408,7 +428,8 @@ Session_component::Session_component(Env                          & env,
                                      Diag           const         & diag,
                                      bool           const           info,
                                      Policy_version const           version,
-                                     bool           const           dma_remapping)
+                                     bool           const           dma_remapping,
+                                     bool           const           kernel_iommu)
 :
 	Session_object<Platform::Session>(env.ep(), resources, label, diag),
 	Session_registry::Element(registry, *this),
@@ -428,6 +449,23 @@ Session_component::Session_component(Env                          & env,
 	 */
 	_cap_quota_guard().withdraw(Cap_quota{Rom_session::CAP_QUOTA});
 	_ram_quota_guard().withdraw(Ram_quota{5*1024});
+
+	/**
+	 * Until we integrated IOMMU support within the platform driver, we assume
+	 * there is a kernel_iommu used by each device if _iommu is set. We therefore
+	 * construct a corresponding domain object at session construction.
+	 */
+	if (kernel_iommu)
+		_io_mmu_devices.for_each([&] (Io_mmu & io_mmu_dev) {
+			if (io_mmu_dev.name() == "kernel_iommu") {
+				_domain_registry.default_domain(io_mmu_dev,
+				                                heap(),
+				                                _env_ram,
+				                                _dma_allocator.buffer_registry(),
+				                                _ram_quota_guard(),
+				                                _cap_quota_guard());
+			}
+		});
 }
 
 

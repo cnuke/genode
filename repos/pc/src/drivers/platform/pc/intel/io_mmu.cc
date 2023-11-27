@@ -24,7 +24,8 @@ static void attribute_hex(Genode::Xml_generator & xml, char const * name,
 
 
 template <typename TABLE>
-void Intel::Io_mmu::Domain<TABLE>::enable_pci_device(Pci::Bdf const & bdf)
+void Intel::Io_mmu::Domain<TABLE>::enable_pci_device(Io_mem_dataspace_capability const,
+                                                     Pci::Bdf const & bdf)
 {
 	Domain_id cur_domain =
 		_intel_iommu.root_table().insert_context<TABLE::address_width()>(
@@ -64,7 +65,8 @@ void Intel::Io_mmu::Domain<TABLE>::disable_pci_device(Pci::Bdf const & bdf)
 
 template <typename TABLE>
 void Intel::Io_mmu::Domain<TABLE>::add_range(Range const & range,
-                                             addr_t const paddr)
+                                             addr_t const paddr,
+                                             Dataspace_capability const)
 {
 	addr_t const             vaddr   { range.start };
 	size_t const             size    { range.size };

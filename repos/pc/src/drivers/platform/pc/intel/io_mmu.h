@@ -102,11 +102,13 @@ class Intel::Io_mmu : private Attached_mmio,
 
 			public:
 
-				void enable_pci_device(Pci::Bdf const &) override;
+				void enable_pci_device(Io_mem_dataspace_capability const,
+				                       Pci::Bdf const &) override;
 				void disable_pci_device(Pci::Bdf const &) override;
 
 				void add_range(Range const &,
-				               addr_t const) override;
+				               addr_t const,
+				               Dataspace_capability const) override;
 				void remove_range(Range const &) override;
 
 				/* Registered_translation_table interface */
@@ -139,7 +141,7 @@ class Intel::Io_mmu : private Attached_mmio,
 					Invalidation_guard guard { *this, _intel_iommu.caching_mode() };
 
 					_buffer_registry.for_each([&] (Dma_buffer const & buf) {
-						add_range({ buf.dma_addr, buf.size }, buf.phys_addr); });
+						add_range({ buf.dma_addr, buf.size }, buf.phys_addr, buf.cap); });
 				}
 
 				~Domain() override

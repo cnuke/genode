@@ -57,7 +57,8 @@ class Driver::Session_component
 		                  Diag             const       & diag,
 		                  bool             const         info,
 		                  Policy_version   const         version,
-		                  bool             const         dma_remapping);
+		                  bool             const         dma_remapping,
+		                  bool             const         kernel_iommu);
 
 		~Session_component();
 

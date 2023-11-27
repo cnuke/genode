@@ -31,7 +31,8 @@ class Driver::Root : public Root_component<Session_component>
 		     Sliced_heap                  & sliced_heap,
 		     Attached_rom_dataspace const & config,
 		     Device_model                 & devices,
-		     Io_mmu_devices               & io_mmu_devices);
+		     Io_mmu_devices               & io_mmu_devices,
+		     bool const                     kernel_iommu);
 
 		void update_policy();
 
@@ -45,7 +46,7 @@ class Driver::Root : public Root_component<Session_component>
 			 * created sessions.
 			 */
 			_sessions.for_each([&] (Session_component & sess) {
-				sess.enable_dma_remapping();
+			        sess.enable_dma_remapping();
 			});
 		}
 
@@ -60,6 +61,7 @@ class Driver::Root : public Root_component<Session_component>
 		Device_model                 & _devices;
 		Io_mmu_devices               & _io_mmu_devices;
 		bool                           _io_mmu_present { false };
+		bool const                     _kernel_iommu;
 		Registry<Session_component>    _sessions {};
 };
 

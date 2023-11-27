@@ -67,13 +67,31 @@ struct Driver::Io_mmu_domain : private Registry<Io_mmu_domain>::Element,
 
 class Driver::Io_mmu_domain_registry : public Registry<Io_mmu_domain>
 {
+	protected:
+
+		Constructible<Io_mmu_domain_wrapper> _default_domain { };
+
 	public:
+
+		void default_domain(Io_mmu                     & io_mmu,
+		                    Allocator                  & md_alloc,
+		                    Ram_allocator              & ram_alloc,
+		                    Registry<Dma_buffer> const & dma_buffers,
+		                    Ram_quota_guard            & ram_quota_guard,
+		                    Cap_quota_guard            & cap_quota_guard)
+		{
+			_default_domain.construct(io_mmu, md_alloc, ram_alloc, dma_buffers,
+			                          ram_quota_guard, cap_quota_guard);
+		}
 
 		template <typename FN>
 		void for_each_domain(FN && fn)
 		{
 			for_each([&] (Io_mmu_domain & wrapper) {
 				fn(wrapper.domain); });
+
+			if (_default_domain.constructed())
+				fn(_default_domain->domain);
 		}
 
 		template <typename MATCH_FN, typename NONMATCH_FN>
@@ -92,6 +110,13 @@ class Driver::Io_mmu_domain_registry : public Registry<Io_mmu_domain>
 
 			if (!exists)
 				nonmatch_fn();
+		}
+
+		template <typename FN>
+		void with_default_domain(FN && fn)
+		{
+			if (_default_domain.constructed())
+				fn(_default_domain->domain);
 		}
 };
 
