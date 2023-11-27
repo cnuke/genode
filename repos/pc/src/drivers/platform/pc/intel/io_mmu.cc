@@ -397,8 +397,7 @@ void Intel::Io_mmu::default_mappings_complete()
 	/* enable IOMMU */
 	_global_command<Global_command::Enable>(1);
 
-	if (_verbose)
-		log("enabled IOMMU ", name(), " with default mappings");
+	log("enabled IOMMU ", name(), " with default mappings");
 }
 
 
