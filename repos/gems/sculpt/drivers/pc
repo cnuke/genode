@@ -99,6 +99,7 @@
 			<service name="CPU">    <parent/> </service>
 			<service name="ROM">    <parent/> </service>
 		</route>
+		<config ignore_drhd="yes"/>
 	</start>
 
 	<start name="pci_decode" caps="350">

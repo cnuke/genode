@@ -41,4 +41,4 @@ This server also reports available DMA remapping units (IOMMU) as specified in
 the 'DMAR' table. In order to disable the IOMMU, you may provide the following
 config:
 
-! <config ignore_dmar="yes"/>
+! <config ignore_drhd="yes"/>

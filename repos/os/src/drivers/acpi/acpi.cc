@@ -1668,12 +1668,14 @@ void Acpi::generate_report(Genode::Env &env, Genode::Allocator &alloc,
 			});
 		};
 
-		bool ignore_dmar = config_xml.attribute_value("ignore_dmar", false);
+		bool ignore_drhd = config_xml.attribute_value("ignore_drhd", true);
 		for (Dmar_entry *entry = Dmar_entry::list()->first();
-		     !ignore_dmar && entry; entry = entry->next()) {
+		     entry; entry = entry->next()) {
 
 			entry->apply([&] (Dmar_common const &dmar) {
-				if (dmar.read<Dmar_common::Type>() == Dmar_common::Type::DRHD) {
+				if (!ignore_drhd &&
+				    dmar.read<Dmar_common::Type>() == Dmar_common::Type::DRHD)
+				{
 					Dmar_drhd drhd(dmar.base());
 
 					size_t size_log2 = drhd.read<Dmar_drhd::Size::Num_pages>() + 12;
