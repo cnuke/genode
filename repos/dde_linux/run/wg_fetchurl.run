@@ -370,7 +370,7 @@ append config {
 install_config $config
 
 append targets {
-	core init timer server/nic_router server/report_rom lib/curl
+	core init timer lib/ld server/nic_router server/report_rom lib/curl
 	app/fetchurl }
 
 if $linux {

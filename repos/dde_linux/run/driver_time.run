@@ -5,7 +5,7 @@ if {[expr ![have_spec arm_64] && ![have_spec x86_64]]} {
 
 set use_top 0
 
-set build_components { core init timer test/driver_time }
+set build_components { core init timer lib/ld test/driver_time }
 
 append_if $use_top build_components { app/top }
 
