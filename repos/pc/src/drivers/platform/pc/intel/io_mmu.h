@@ -75,7 +75,8 @@ class Intel::Io_mmu : private Attached_mmio,
 				TABLE            & _translation_table {
 					*(TABLE*)virt_addr(_translation_table_phys) };
 
-				struct Invalidation_guard {
+				struct Invalidation_guard
+				{
 					Domain<TABLE> & _domain;
 					bool            _requires_invalidation;
 
@@ -286,7 +287,8 @@ class Intel::Io_mmu : private Attached_mmio,
 			struct Invalidate : Bitfield<63,1> { };
 
 			/* invalidation request granularity */
-			struct Cirg       : Bitfield<61,2> {
+			struct Cirg       : Bitfield<61,2>
+			{
 				enum {
 					GLOBAL = 0x1,
 					DOMAIN = 0x2,
@@ -358,7 +360,8 @@ class Intel::Io_mmu : private Attached_mmio,
 			struct Type2  : Bitfield<28,1> { };
 			struct Source : Bitfield<0,16> { };
 
-			struct Type   : Bitset_2<Type1, Type2> {
+			struct Type   : Bitset_2<Type1, Type2>
+			{
 				enum {
 					WRITE_REQUEST  = 0x0,
 					READ_REQUEST   = 0x1,
@@ -380,7 +383,8 @@ class Intel::Io_mmu : private Attached_mmio,
 			struct Invalidate : Bitfield<63,1> { };
 
 			/* IOTLB invalidation request granularity */
-			struct Iirg : Bitfield<60,2> {
+			struct Iirg : Bitfield<60,2>
+			{
 				enum {
 					GLOBAL = 0x1,
 					DOMAIN = 0x2,

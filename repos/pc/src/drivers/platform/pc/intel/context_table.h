@@ -153,7 +153,8 @@ class Intel::Context_table
 
 		void generate(Xml_generator &, Env &, Intel::Report_helper &);
 
-		void flush_all() {
+		void flush_all()
+		{
 			for (Genode::size_t i=0; i < 512; i+=8)
 				Utils::clflush(&_entries[i]);
 		}

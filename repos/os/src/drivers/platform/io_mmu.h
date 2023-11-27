@@ -112,7 +112,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 				_enable();
 
 			_active_domains++;
-		};
+		}
 
 		void _disable_domain()
 		{
@@ -121,7 +121,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 
 			if (!_active_domains)
 				_disable();
-		};
+		}
 
 		void _destroy_domains()
 		{
@@ -132,13 +132,13 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 	public:
 
 		/* interface for adding default mappings (used for reserved memory) */
-		virtual void add_default_range(Range const &, addr_t) { };
+		virtual void add_default_range(Range const &, addr_t) { }
 
 		/* interface for activating default mappings for certain device */
-		virtual void enable_default_mappings(Pci::Bdf const &) { };
+		virtual void enable_default_mappings(Pci::Bdf const &) { }
 
 		/* interface for completing default mappings (enabled IOMMU) */
-		virtual void default_mappings_complete() { };
+		virtual void default_mappings_complete() { }
 
 		Device::Name const & name() const { return _name; }
 
@@ -146,7 +146,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 			return &domain._io_mmu == this; }
 
 		/* Return true if device requires physical addressing */
-		virtual bool mpu() const { return false; };
+		virtual bool mpu() const { return false; }
 
 		/* Create a Io_mmu::Domain object */
 		virtual Domain & create_domain(Allocator &,
@@ -155,7 +155,7 @@ class Driver::Io_mmu : private Io_mmu_devices::Element
 		                               Ram_quota_guard &,
 		                               Cap_quota_guard &) = 0;
 
-		virtual void generate(Xml_generator &) { };
+		virtual void generate(Xml_generator &) { }
 
 		Io_mmu(Io_mmu_devices      & io_mmu_devices,
 		       Device::Name  const & name)

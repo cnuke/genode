@@ -43,9 +43,6 @@ class Intel::Registered_translation_table : private Translation_table_registry::
 
 class Intel::Report_helper
 {
-	public:
-
-
 	private:
 
 		Translation_table_registry & _registry;
