@@ -42,7 +42,7 @@
 							export VERSION=`printf "%(%T)T"`
 							mkdir "/rw/$VERSION"
 							cp -r /report/* "/rw/$VERSION/"
-							sleep 60
+							sleep 30
 						done
 					</inline>
 				</vfs>
