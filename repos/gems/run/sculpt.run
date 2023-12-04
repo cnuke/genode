@@ -132,6 +132,7 @@ proc prefixed_with_depot_user { paths } {
 
 import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/pkg/sculpt \
+                  [depot_user]/pkg/trace_logger \
                   {*}[prefixed_with_depot_user [ingredients_of_type import]]
 
 
@@ -292,6 +293,20 @@ install_config {
 		<config verbose="yes"/>
 	</start>
 
+	<start name="trace_logger" priority="0">
+		<resource name="RAM" quantum="128M"/>
+		<config verbose="yes"
+		        session_ram="90M"
+		        session_arg_buffer="1M"
+		        session_parent_levels="3"
+		        period_sec="30"
+		        default_policy="null"
+		        default_buffer="32K">
+			<policy label_prefix="init -> drivers -> power"/>
+			<!--<policy label_prefix="kernel" thread="idle"/>-->
+		</config>
+	</start>
+
 	<start name="config_fs" caps="200" priority="0">
 		<binary name="vfs"/>
 		<resource name="RAM" quantum="12M"/>
@@ -398,6 +413,7 @@ install_config {
 		<resource name="CPU" quantum="10"/>
 		<binary name="init"/>
 		<route>
+			<!-- <service name="LOG" label="power"> <parent/> </service> -->
 			} [log_route] {
 			<service name="ROM" label="config">
 				<child name="config_fs_rom" label="drivers"/> </service>
