@@ -1,7 +1,6 @@
 /*
  * \brief  Lx_kit memory allocation backend
  * \author Stefan Kalkowski
- * \author Christian Helmuth
  * \date   2021-03-25
  */
 
@@ -100,8 +99,7 @@ class Lx_kit::Mem_allocator
 		void                 free_buffer(void *addr);
 		Dataspace_capability attached_dataspace_cap(void *addr);
 
-		void * alloc(size_t size, size_t align,
-		             void (*new_range_cb)(void const *virt_addr, unsigned long size));
+		void * alloc(size_t size, size_t align);
 		addr_t dma_addr(void * addr);
 		addr_t virt_addr(void * dma_addr);
 		addr_t virt_region_start(void * virt_addr);
