@@ -101,7 +101,10 @@ extern "C" void lx_emul_mem_cache_invalidate(const void * addr,
 
 void * lx_emul_heap_alloc(unsigned long size)
 {
-	return Lx_kit::env().heap.alloc(size);
+	void *ptr = Lx_kit::env().heap.alloc(size);
+	if (ptr)
+		Genode::memset(ptr, 0, size);
+	return ptr;
 }
 
 

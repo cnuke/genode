@@ -29,7 +29,7 @@ void  lx_emul_mem_cache_clean_invalidate(const void * ptr, unsigned long size);
 void  lx_emul_mem_cache_invalidate(const void * ptr, unsigned long size);
 
 /*
- * Heap for lx_emul metadata - unprepared for Linux code
+ * Heap for lx_emul metadata - cleared but unprepared for Linux code
  */
 
 void * lx_emul_heap_alloc(unsigned long size);
