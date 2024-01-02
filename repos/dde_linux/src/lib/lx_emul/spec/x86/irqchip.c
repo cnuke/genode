@@ -45,6 +45,9 @@ struct irq_chip dde_irqchip_data_chip = {
 };
 
 
+int lx_emul_verbose_irq = 0;
+
+
 int lx_emul_irq_task_function(void * data)
 {
 	unsigned long flags;
@@ -58,6 +61,9 @@ int lx_emul_irq_task_function(void * data)
 			irq = lx_emul_pending_irq();
 			if (irq == -1)
 				break;
+
+			if (lx_emul_verbose_irq)
+				printk("%s:%d: irq: %d\n", __func__, __LINE__, irq);
 
 			local_irq_save(flags);
 			irq_enter();

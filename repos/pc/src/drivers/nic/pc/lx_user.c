@@ -43,6 +43,8 @@ static unsigned long uplink_tx_packet_content(struct genode_uplink_tx_packet_con
 
 	skb_push(skb, ETH_HLEN);
 
+	printk("%s:%d: skb: %px len: %u\n", __func__, __LINE__, skb, skb->len);
+
 	if (dst_len < skb->len) {
 		printk("uplink_tx_packet_content: packet exceeds uplink packet size\n");
 		memset(dst, 0, dst_len);
@@ -147,6 +149,8 @@ static genode_uplink_rx_result_t uplink_rx_one_packet(struct genode_uplink_rx_co
 	skb_put(skb, len);
 	skb->dev = ctx->dev;
 
+	printk("%s:%d: skb: %px len: %u\n", __func__, __LINE__, skb, skb->len);
+
 	if (dev_queue_xmit(skb) < 0) {
 		printk("lx_user: failed to xmit packet\n");
 		return GENODE_UPLINK_RX_REJECTED;
@@ -199,6 +203,7 @@ static int user_task_function(void *arg)
 
 struct task_struct *user_task_struct_ptr;  /* used by 'Main' for lx_emul_task_unblock */
 
+extern int lx_emul_verbose_irq;
 
 void lx_user_init(void)
 {
@@ -207,6 +212,8 @@ void lx_user_init(void)
 	pid = kernel_thread(user_task_function, NULL, CLONE_FS | CLONE_FILES);
 
 	user_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
+
+	lx_emul_verbose_irq = 1;
 }
 
 
