@@ -10,7 +10,7 @@
  * different semantics. In short, libdrm or any other client must be aware of
  * the semantics of the respective GPU driver.
  *
- * Here a short explanation of the difference of Intel and Lima.
+ * Here a short explanation of the difference of Intel, Lima and Etnaviv.
  *
  * Intel:
  *
@@ -44,6 +44,13 @@
  * ourselves as Iris does in contrib Mesa code. 'map_cpu' will return the
  * Dataspace_capability of the allocated buffer that then can be directly
  * attached by Mesa because the GPU memory is again ordinary RAM.
+ *
+ * Etnaviv:
+ *
+ * 'alloc_vram' is used to allocate the buffer object. Where it will be
+ * mapped is up to Mesa that fills in the virtual-address.
+ *
+ * - TODO
  */
 
 /*
