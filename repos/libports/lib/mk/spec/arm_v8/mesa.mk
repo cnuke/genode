@@ -6,8 +6,8 @@ CC_OPT += -DHAVE_UINT128
 LIBS   += etnaviv
 CC_OPT += -DGALLIUM_ETNAVIV
 
-LIBS   += lima
-CC_OPT += -DGALLIUM_LIMA
+#LIBS   += lima
+#CC_OPT += -DGALLIUM_LIMA
 
 include $(REP_DIR)/lib/mk/mesa.inc
 
