@@ -805,3 +805,17 @@ extern "C" int __getcwd(char *dst, ::size_t dst_size)
 	copy_cstring(dst, cwd().base(), dst_size);
 	return 0;
 }
+
+
+extern "C" int __get_fdpath(int libc_fd, char *dst, ::size_t dst_size)
+{
+	using namespace Libc;
+
+	File_descriptor *fd = file_descriptor_allocator()->find_by_libc_fd(libc_fd);
+	if (fd == 0)
+		return Errno(ENOTSUP);
+
+	copy_cstring(dst, fd->fd_path, dst_size);
+
+	return 0;
+}

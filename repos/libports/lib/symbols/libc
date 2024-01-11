@@ -15,6 +15,7 @@ __error T
 __flt_rounds T
 __fpclassifyd T
 __fpclassifyf T
+__get_fdpath T
 __h_errno T
 __h_errno_set T
 __has_sse D 4
