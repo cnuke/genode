@@ -17,10 +17,17 @@ include:
 
 content: src/lib/curl
 
-content: LICENSE FindCURL.cmake
+content: LICENSE FindCURL.cmake libcurl.pc
 
 LICENSE:
 	cp $(PORT_DIR)/src/lib/curl/COPYING $@
 
 FindCURL.cmake:
 	echo 'set(CURL_FOUND True)' > $@
+
+libcurl.pc:
+	echo 'Name: libcurl' > $@
+	echo 'Description: Library to transfer files with ftp, http, etc.' >> $@
+	echo 'Version: 7.70.0' >> $@
+	echo 'Libs: -l:curl.lib.so' >> $@
+	echo 'supported_protocols="FILE FTP GOPHER HTTP HTTPS SCP SFTP"' >> $@
