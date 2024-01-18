@@ -295,6 +295,11 @@ struct Driver
 				dev_node.attribute("class").value(c);
 				if (c != 0x3 /* USB_CLASS_HID */) return;
 
+				if (dev_node.attribute_value("vendor_id", Genode::String<32>("unknown")) == "0xd8c") {
+					Genode::warning("ignoring NewBee device");
+					return;
+				}
+
 				Device::Label label;
 				dev_node.attribute("label").value(label);
 
