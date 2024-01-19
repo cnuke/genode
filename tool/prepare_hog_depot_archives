@@ -1,0 +1,76 @@
+#!bin/bash
+
+GENODE_DIR="$1"
+HOG_SOURCE_DIR="$2"
+DEPOT_TARGET_DIR="$3"
+ARCHIVE_VERSION="$4"
+
+if [ "$GENODE_DIR" = "" ] || [ "$HOG_SOURCE_DIR" = "" ] || \
+   [ "$DEPOT_TARGET_DIR" = "" ] || [ "$ARCHIVE_VERSION" = "" ]; then
+	printf -- "usage: $0 <genode-dir> <hog-dir> <depot-dir> <version>\n"
+	exit 1
+fi
+
+HOG_LIB="$HOG_SOURCE_DIR/haiku-on-genode/system/kinda-kernel/haiku.lib.so"
+
+if [ ! -f "$HOG_LIB" ]; then
+	printf -- "error: build haiku.lib.so first\n"
+	exit 1
+fi
+
+NAME="haiku_on_genode"
+VERSION="$ARCHIVE_VERSION"
+
+API_DIR="$DEPOT_TARGET_DIR/api/$NAME/$VERSION"
+BIN_DIR="$DEPOT_TARGET_DIR/bin/x86_64/$NAME/$VERSION"
+SRC_DIR="$DEPOT_TARGET_DIR/src/$NAME/$VERSION"
+
+mkdir -p $API_DIR
+mkdir -p $BIN_DIR
+mkdir -p $SRC_DIR
+
+#
+# API archive
+#
+
+# symbols file
+mkdir -p $API_DIR/lib/symbols
+$GENODE_DIR/tool/abi_symbols $HOG_LIB | sed '/^#/ d' \
+	> $API_DIR/lib/symbols/haiku_on_genode || exit 1
+
+# dummy lib .mk
+mkdir -p $API_DIR/lib/mk
+touch $API_DIR/lib/mk/haiku_on_genode.mk
+
+# header files
+INC_DIR="$API_DIR/include"
+mkdir -p $INC_DIR
+cp -R $HOG_SOURCE_DIR/haiku-on-genode/headers $INC_DIR || exit 1
+
+HOG_KITS_INCLUDES="$HOG_SOURCE_DIR/haiku-on-genode/kits"
+P="$HOG_KITS_INCLUDES"
+find $P -name '*.h' | sed 's;'^$P'/;;' | \
+	while read F; do
+		DN="$(dirname $F)"
+		mkdir -p $INC_DIR/kits/$DN
+		cp $P/$F $INC_DIR/kits/$DN
+	done
+
+#
+# SRC archive
+#
+
+# dummy lib .mk
+mkdir -p $SRC_DIR/lib/mk
+touch $SRC_DIR/lib/mk/haiku_on_genode.mk
+echo haiku_on_genode > $SRC_DIR/api
+
+# XXX used_apis?
+
+#
+# BIN archive
+#
+
+cp $HOG_LIB $BIN_DIR
+
+exit 0
