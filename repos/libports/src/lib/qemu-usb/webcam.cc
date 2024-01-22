@@ -59,13 +59,9 @@ struct Capture_webcam
 		return area;
 	}
 
-	unsigned _capture_cnt = 0;
 
 	bool update_yuv(void *frame)
 	{
-		if (++_capture_cnt > 60)
-			return true;
-
 		if (!_area.valid())
 			return false;
 
@@ -133,7 +129,6 @@ struct Capture_webcam
 
 		/* construct/destruct capture connection and dataspace */
 		if (on) {
-			_capture_cnt = 0;
 			_capture.construct(_env, "webcam");
 			_capture->buffer(_area);
 			_ds.construct(_env.rm(), _capture->dataspace());
@@ -210,12 +205,12 @@ extern "C" void capture_state_changed(bool on)
 
 extern "C" bool capture_bgr_frame(void * pixel)
 {
-	return capture->update_bgr(pixel) || true;
+	return capture->update_bgr(pixel);
 }
 
 extern "C" bool capture_yuv_frame(void * pixel)
 {
-	return capture->update_yuv(pixel) || true;
+	return capture->update_yuv(pixel);
 }
 
 
