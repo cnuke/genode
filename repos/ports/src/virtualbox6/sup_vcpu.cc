@@ -179,7 +179,7 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 
 				using Genode::log;
 
-				if (0) {
+				if (1) {
 					log("[", _cpu, "] total=", _total, " exit_state {"
 					   , _exit_state[(int)Exit_state::DEFAULT], ","
 					   , _exit_state[(int)Exit_state::NPT_EPT], ","
@@ -188,7 +188,7 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 					   , _exit_state[(int)Exit_state::STARTUP], ","
 					   , _exit_state[(int)Exit_state::ERROR], "}");
 				}
-				if (0) {
+				if (1) {
 					log("[", _cpu, "] total=", _total, " virt_exit {");
 					unsigned i = 0;
 					for (unsigned long &v : _virt_exit) {
@@ -196,16 +196,22 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 							log("[", _cpu, "]  ", Right_aligned(10, v), " ", Right_aligned(3, i), " ", HMGetVmxExitName(i));
 						++i;
 						// reset
-						// v = 0;
+						v = 0;
 					}
 					log("[", _cpu, "] }");
 				}
 				if (0) {
 					log("[", _cpu, "] rdmsr {");
-					for (auto &e : _rd_msrs) log("[", _cpu, "]  ", Hex(e.first, Hex::PREFIX, Hex::PAD), " : ", e.second);
+					for (auto &e : _rd_msrs) {
+						log("[", _cpu, "]  ", Hex(e.first, Hex::PREFIX, Hex::PAD), " : ", e.second);
+						e.second = 0;
+					}
 					log("[", _cpu, "] }");
 					log("[", _cpu, "] wrmsr {");
-					for (auto &e : _wr_msrs) log("[", _cpu, "]  ", Hex(e.first, Hex::PREFIX, Hex::PAD), " : ", e.second);
+					for (auto &e : _wr_msrs) {
+						log("[", _cpu, "]  ", Hex(e.first, Hex::PREFIX, Hex::PAD), " : ", e.second);
+						e.second = 0;
+					}
 					log("[", _cpu, "] }");
 				}
 				if (0) {
@@ -871,12 +877,12 @@ template <typename VIRT> VBOXSTRICTRC Sup::Vcpu_impl<VIRT>::_switch_to_hw()
 
 		_stats.inc(result.state, result.virt_exit);
 		if (result.rc == VINF_CPUM_R3_MSR_READ)
-			_stats.rdmsr(_vcpu.state().cx.value());
+			_stats.rdmsr(_state->ref.cx.value());
 		if (result.rc == VINF_CPUM_R3_MSR_WRITE)
-			_stats.wrmsr(_vcpu.state().cx.value());
+			_stats.wrmsr(_state->ref.cx.value());
 		if (result.virt_exit == VMX_EXIT_IO_INSTR) {
-			uint32_t const p = VMX_EXIT_QUAL_IO_PORT(_vcpu.state().qual_primary.value());
-			bool     const w = VMX_EXIT_QUAL_IO_DIRECTION(_vcpu.state().qual_primary.value()) == VMX_EXIT_QUAL_IO_DIRECTION_OUT;
+			uint32_t const p = VMX_EXIT_QUAL_IO_PORT(_state->ref.qual_primary.value());
+			bool     const w = VMX_EXIT_QUAL_IO_DIRECTION(_state->ref.qual_primary.value()) == VMX_EXIT_QUAL_IO_DIRECTION_OUT;
 			_stats.access_port(p, w);
 		}
 		_stats.log();
