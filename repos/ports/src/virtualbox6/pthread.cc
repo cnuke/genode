@@ -43,12 +43,13 @@ static bool const debug = true; /* required by stub_macros.h */
 using namespace Genode;
 
 
+unsigned long __yield_counter = 0;
+
+
 extern "C" int sched_yield()
 {
-	static unsigned long counter = 0;
-
-	if (++counter % 100'000 == 0)
-		warning(__func__, " called ", counter, " times");
+	if (++__yield_counter % 100'000 == 0)
+		warning(__func__, " called ", __yield_counter, " times");
 
 	return 0;
 }
