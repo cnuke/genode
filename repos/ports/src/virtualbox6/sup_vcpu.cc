@@ -90,6 +90,7 @@ namespace Sup {
 #include <sup_vcpu_vmx.h>
 #include <sup_vcpu_svm.h>
 
+extern unsigned long __yield_counter;
 
 template <typename VIRT>
 class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
@@ -178,6 +179,10 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 					return;
 
 				using Genode::log;
+
+				if (1) {
+					log("yield counter=", __yield_counter);
+				}
 
 				if (1) {
 					log("[", _cpu, "] total=", _total, " exit_state {"
