@@ -200,17 +200,18 @@ static Genode::Constructible<Capture_webcam> capture;
 
 extern "C" void capture_state_changed(bool on)
 {
+	error(__func__, ":", __LINE__, ": ", on ? "on" : "off");
 	capture->capture_state_changed(on);
 }
 
 extern "C" bool capture_bgr_frame(void * pixel)
 {
-	return capture->update_bgr(pixel);
+	return capture->update_bgr(pixel) || true;
 }
 
 extern "C" bool capture_yuv_frame(void * pixel)
 {
-	return capture->update_yuv(pixel);
+	return capture->update_yuv(pixel) || true;
 }
 
 
