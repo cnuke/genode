@@ -21,7 +21,6 @@ SRC_CC += VMM/VMMR3/PDMAsyncCompletion.cpp
 SRC_CC += VMM/VMMR3/PDMAsyncCompletionFile.cpp
 SRC_CC += VMM/VMMR3/PDMAsyncCompletionFileFailsafe.cpp
 SRC_CC += VMM/VMMR3/PDMAsyncCompletionFileNormal.cpp
-SRC_CC += VMM/VMMR3/PDMNetShaper.cpp
 SRC_CC += VMM/VMMR3/PDMR3Task.cpp
 SRC_CC += VMM/VMMAll/PDMAll.cpp
 SRC_CC += VMM/VMMAll/PDMAllQueue.cpp

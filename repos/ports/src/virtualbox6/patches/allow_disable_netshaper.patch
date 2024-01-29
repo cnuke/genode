@@ -1,0 +1,13 @@
+Allow for disabling netshaper.
+--- b/src/virtualbox6/src/VBox/VMM/VMMR3/PDMDriver.cpp
++++ a/src/virtualbox6/src/VBox/VMM/VMMR3/PDMDriver.cpp
+@@ -1909,6 +1909,9 @@ const PDMDRVHLPR3 g_pdmR3DrvHlp =
+ #ifdef VBOX_WITH_NETSHAPER
+     pdmR3DrvHlp_NetShaperAttach,
+     pdmR3DrvHlp_NetShaperDetach,
++#else
++    NULL,
++    NULL,
+ #endif /* VBOX_WITH_NETSHAPER */
+     pdmR3DrvHlp_LdrGetRCInterfaceSymbols,
+     pdmR3DrvHlp_LdrGetR0InterfaceSymbols,
