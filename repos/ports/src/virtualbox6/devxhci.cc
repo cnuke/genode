@@ -107,6 +107,7 @@ struct Timer_queue : public Qemu::Timer_queue
 
 	struct Context : public Genode::List<Context>::Element
 	{
+		uint64_t old_now        = 0ULL;
 		uint64_t timeout_abs_ns = ~0ULL;
 		bool     pending        = false;
 
@@ -195,6 +196,9 @@ struct Timer_queue : public Qemu::Timer_queue
 		for (Context *c = _context_list.first(); c; c = c->next()) {
 			if (c->pending && c->timeout_abs_ns <= now) {
 				c->pending = false;
+				uint64_t const diff = now - c->timeout_abs_ns;
+				if (diff >= 50'000'000)
+					Genode::error("diff: ", diff, " now: ", now, " old_now: ", c->old_now);
 				Qemu::usb_timer_callback(c->cb, c->data);
 			}
 		}
@@ -280,6 +284,7 @@ struct Timer_queue : public Qemu::Timer_queue
 			throw -1;
 		}
 
+		c->old_now = TMTimerGetNano(tm_timer);
 		c->timeout_abs_ns = expire_abs;
 		c->pending        = true;
 

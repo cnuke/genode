@@ -265,7 +265,7 @@ VBOXSTRICTRC nemR3NativeRunGC(PVM pVM, PVMCPU pVCpu)
 	 * CPU load if set lower. Other hosts use the VMX preemption timer, which
 	 * is currently not available on Genode.
 	 */
-	{
+	if (0) {
 		static ::uint64_t current_interval_ns { 0 };
 		static Mutex interval_mutex { };
 

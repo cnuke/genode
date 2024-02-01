@@ -180,7 +180,7 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 
 				using Genode::log;
 
-				if (1) {
+				if (0) {
 					log("yield counter=", __yield_counter);
 				}
 
@@ -193,7 +193,7 @@ class Sup::Vcpu_impl : public Sup::Vcpu, Genode::Noncopyable
 					   , _exit_state[(int)Exit_state::STARTUP], ","
 					   , _exit_state[(int)Exit_state::ERROR], "}");
 				}
-				if (1) {
+				if (0) {
 					log("[", _cpu, "] total=", _total, " virt_exit {");
 					unsigned i = 0;
 					for (unsigned long &v : _virt_exit) {
@@ -1023,4 +1023,255 @@ Sup::Vcpu & Sup::Vcpu::create_vmx(Genode::Env &env, VM &vm, Vm_connection &vm_co
                                   Cpu_index cpu, Pthread::Emt &emt)
 {
 	return *new Vcpu_impl<Vmx>(env, vm, vm_con, cpu, emt);
+}
+
+
+struct Timer_recorder
+{
+	struct Entry
+	{
+		Genode::uint64_t  hits;
+		Genode::uint64_t  duration;
+		Genode::uint64_t  min_duration;
+		Genode::uint64_t  max_duration;
+		Genode::uint64_t  total_duration;
+		unsigned long func;
+
+		Entry()
+		:
+			hits           { 0 },
+			duration       { 0 },
+			min_duration   { ~0ULL },
+			max_duration   { 0 },
+			total_duration { 0 },
+			func           { 0 }
+		{ }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, "func: ", Genode::Hex(func),
+			              " hits: ", hits,
+			              " duration: ", duration, " ",
+			              min_duration, "/", max_duration, " ",
+			              total_duration);
+		}
+	};
+	std::unordered_map<void*, Entry> _entries;
+
+	void record(void *timer, unsigned long func, Genode::uint64_t duration)
+	{
+		Entry &e = _entries[timer];
+		e.func = func;
+		e.duration = duration;
+		if (e.min_duration > duration)
+			e.min_duration = duration;
+		if (e.max_duration < duration)
+			e.max_duration = duration;
+
+		e.total_duration += duration;
+
+		e.hits++;
+	}
+
+	void dump(void)
+	{
+		for (auto const & v : _entries) {
+			Genode::log(v.first, " ", v.second);
+		}
+	}
+
+	void reset(void *timer)
+	{
+		Entry &e = _entries[timer];
+
+		e.hits         = 0;
+		e.func         = 0;
+		e.duration     = 0;
+		e.min_duration = 0;
+		e.max_duration = 0;
+	}
+};
+
+
+static Timer_recorder &get_timer_recorder()
+{
+	static Timer_recorder inst;
+
+	return inst;
+}
+
+
+void genode_record_timer(void *timer, void *func, ::uint64_t duration)
+{
+	get_timer_recorder().record(timer, (unsigned long)func, duration);
+}
+
+void genode_record_timer_dump()
+{
+	get_timer_recorder().dump();
+}
+
+void genode_record_timer_reset(void *timer)
+{
+	get_timer_recorder().reset(timer);
+}
+
+
+struct Executed_from_recorder
+{
+	struct Entry
+	{
+		char const       *name;
+		Genode::uint64_t  hits;
+		Genode::uint64_t  old_hits;
+
+		Entry() : name { nullptr }, hits { 0 }, old_hits { 0 } { }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, name, ":", " hits: ", hits);
+		}
+	};
+
+	std::unordered_map<unsigned long, Entry> _entries[4] { };
+
+	void record(unsigned cpu_id, char const *name, unsigned long addr)
+	{
+		if (cpu_id >= 4) {
+			Genode::error(__func__, ": cpu_id: ", cpu_id, " out of bounce");
+			return;
+		}
+
+		Entry &e = _entries[cpu_id][addr];
+
+		e.name = name;
+		e.hits++;
+	}
+
+	void dump(void)
+	{
+		unsigned id = 0;
+		for (auto & c : _entries) {
+			for (auto & v : c) {
+				Genode::uint64_t const diff = v.second.hits - v.second.old_hits;
+				v.second.old_hits = v.second.hits;
+				Genode::log(id, " ", Genode::Hex(v.first), " ", v.second, " diff: ", diff);
+			}
+
+			++id;
+		}
+	}
+
+	void reset(unsigned cpu_id, unsigned long addr)
+	{
+		if (cpu_id >= 4) {
+			Genode::error(__func__, ": cpu_id: ", cpu_id, " out of bounce");
+			return;
+		}
+
+		Entry &e = _entries[cpu_id][addr];
+
+		e.hits     = 0;
+		e.old_hits = 0;
+		e.name     = nullptr;
+		// e.duration = 0;
+	}
+};
+
+
+static Executed_from_recorder &get_executed_from_recorder()
+{
+	static Executed_from_recorder inst;
+
+	return inst;
+}
+
+
+void genode_executed_from_recorder(unsigned cpu_id, char const *name, void const *addr)
+{
+	get_executed_from_recorder().record(cpu_id, name, (unsigned long)addr);
+}
+
+
+void genode_executed_from_recorder_dump(void)
+{
+	get_executed_from_recorder().dump();
+}
+
+
+void genode_executed_from_recorder_reset(unsigned cpu_id, void const *addr)
+{
+	get_executed_from_recorder().reset(cpu_id, (unsigned long)addr);
+}
+
+
+struct Nemhandle_recorder
+{
+	struct Entry
+	{
+		Genode::uint64_t hits;
+		Genode::uint64_t old_hits;
+
+		Entry() : hits { 0 }, old_hits { 0 } { }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, "hits: ", hits);
+		}
+	};
+
+	std::unordered_map<int, Entry> _entries[4] { };
+
+	void record(unsigned cpu_id, int rc)
+	{
+		Entry &e = _entries[cpu_id][rc];
+		e.hits++;
+	}
+
+	void dump(void)
+	{
+		unsigned id = 0;
+		for (auto & c : _entries) {
+			for (auto & v : c) {
+				Genode::uint64_t const diff = v.second.hits - v.second.old_hits;
+				v.second.old_hits = v.second.hits;
+				Genode::log(id, " ", v.first, " ", v.second, " diff: ", diff);
+			}
+			++id;
+		}
+	}
+
+	void reset(unsigned cpu_id, int rc)
+	{
+		Entry &e = _entries[cpu_id][rc];
+
+		e.hits     = 0;
+		e.old_hits = 0;
+	}
+};
+
+
+static Nemhandle_recorder &get_nemhandle_recorder()
+{
+	static Nemhandle_recorder inst;
+
+	return inst;
+}
+
+
+void genode_nemhandle_recorder(unsigned cpu_id, int rc)
+{
+	get_nemhandle_recorder().record(cpu_id, rc);
+}
+
+
+void genode_nemhandle_recorder_dump(void)
+{
+	get_nemhandle_recorder().dump();
+}
+
+
+void genode_nemhandle_recoder_reset(unsigned cpu_id, int rc)
+{
+	get_nemhandle_recorder().reset(cpu_id, rc);
 }
