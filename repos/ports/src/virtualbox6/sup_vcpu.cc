@@ -48,6 +48,7 @@
 #include <sup_vcpu.h>
 #include <pthread_emt.h>
 
+
 using namespace Genode;
 
 
@@ -550,6 +551,7 @@ template <typename T> bool Sup::Vcpu_impl<T>::_check_and_request_irq_window()
 	return true;
 }
 
+void genode_record_ff_timer_dump();
 
 template <typename T> bool Sup::Vcpu_impl<T>::_continue_hw_accelerated()
 {
@@ -568,6 +570,13 @@ template <typename T> bool Sup::Vcpu_impl<T>::_continue_hw_accelerated()
 	    !VMCPU_FF_IS_ANY_SET(&_vmcpu, check_vmcpu))
 		return true;
 
+	if (VMCPU_FF_IS_SET(&_vmcpu, VMCPU_FF_TIMER)) {
+		static ::uint64_t count = 0;
+		if (++count % 1'000 == 0)
+			genode_record_ff_timer_dump();
+	}
+
+
 	Assert(!(VM_FF_IS_SET(&_vm, VM_FF_PGM_NO_MEMORY)));
 
 #define VERBOSE_VM(flag) \
@@ -582,19 +591,23 @@ template <typename T> bool Sup::Vcpu_impl<T>::_continue_hw_accelerated()
 		VERBOSE_VM(VM_FF_PGM_NEED_HANDY_PAGES);
 		/* handled by the assertion above
 		VERBOSE_VM(VM_FF_PGM_NO_MEMORY); */
-		VERBOSE_VM(VM_FF_PDM_QUEUES);
-		VERBOSE_VM(VM_FF_EMT_RENDEZVOUS);
-		VERBOSE_VM(VM_FF_REQUEST);
-		VERBOSE_VM(VM_FF_PGM_POOL_FLUSH_PENDING);
-		VERBOSE_VM(VM_FF_PDM_DMA);
+		// VERBOSE_VM(VM_FF_PDM_QUEUES);
+		// VERBOSE_VM(VM_FF_EMT_RENDEZVOUS);
+		// VERBOSE_VM(VM_FF_REQUEST);
+		// VERBOSE_VM(VM_FF_PGM_POOL_FLUSH_PENDING);
+		// VERBOSE_VM(VM_FF_PDM_DMA);
 	}
 	if (false && VMCPU_FF_IS_ANY_SET(&_vmcpu, check_vmcpu)) {
 		LogAlways(("VMCPU_FF=%llx\n", _vmcpu.fLocalForcedActions));
-		VERBOSE_VMCPU(VMCPU_FF_TO_R3);
-		VERBOSE_VMCPU(VMCPU_FF_PDM_CRITSECT);
-		VERBOSE_VMCPU(VMCPU_FF_PGM_SYNC_CR3);
-		VERBOSE_VMCPU(VMCPU_FF_PGM_SYNC_CR3_NON_GLOBAL);
-		VERBOSE_VMCPU(VMCPU_FF_REQUEST);
+		// VERBOSE_VMCPU(VMCPU_FF_TO_R3);
+		// VERBOSE_VMCPU(VMCPU_FF_PDM_CRITSECT);
+		// VERBOSE_VMCPU(VMCPU_FF_PGM_SYNC_CR3);
+		// VERBOSE_VMCPU(VMCPU_FF_PGM_SYNC_CR3_NON_GLOBAL);
+		// VERBOSE_VMCPU(VMCPU_FF_REQUEST);
+		// VERBOSE_VMCPU(VMCPU_FF_INTERRUPT_NMI);
+		// VERBOSE_VMCPU(VMCPU_FF_INTERRUPT_APIC);
+		// VERBOSE_VMCPU(VMCPU_FF_INTERRUPT_PIC);
+		// VERBOSE_VMCPU(VMCPU_FF_TIMER);
 	}
 
 #undef VERBOSE_VMCPU
@@ -703,6 +716,7 @@ typename Sup::Vcpu_impl<T>::Current_state Sup::Vcpu_impl<T>::_handle_paused()
 
 	/* are we forced to go back to emulation mode ? */
 	if (!_continue_hw_accelerated()) {
+		// LogAlways(("_handle_paused\n"));
 		/* go back to emulation mode */
 		return PAUSED;
 	}
@@ -942,8 +956,10 @@ template <typename T> VBOXSTRICTRC Sup::Vcpu_impl<T>::run()
 
 		if (_check_force_flags) {
 			_check_force_flags = false;
-			if (!Sup::Vcpu_impl<T>::_continue_hw_accelerated())
+			if (!Sup::Vcpu_impl<T>::_continue_hw_accelerated()){
+				// LogAlways(("run\n"));
 				return VINF_SUCCESS;
+			}
 		}
 
 		/* mimic state machine implemented in nemHCWinRunGC() etc. */
@@ -1026,6 +1042,16 @@ Sup::Vcpu & Sup::Vcpu::create_vmx(Genode::Env &env, VM &vm, Vm_connection &vm_co
 }
 
 
+static constexpr bool OMIT_TIMER         = true;
+static constexpr bool OMIT_FF_TIMER      = true;
+static constexpr bool OMIT_EXECUTED_FROM = true;
+static constexpr bool OMIT_NEMHANDLE     = true;
+static constexpr bool OMIT_NEWSTATE      = true;
+static constexpr bool OMIT_OLD_NEWSTATE  = true;
+static constexpr bool OMIT_NEMRC         = true;
+static constexpr bool OMIT_RC            = true;
+
+
 struct Timer_recorder
 {
 	struct Entry
@@ -1073,8 +1099,11 @@ struct Timer_recorder
 		e.hits++;
 	}
 
-	void dump(void)
+	void dump(bool omit)
 	{
+		if (omit)
+			return;
+
 		for (auto const & v : _entries) {
 			Genode::log(v.first, " ", v.second);
 		}
@@ -1108,7 +1137,7 @@ void genode_record_timer(void *timer, void *func, ::uint64_t duration)
 
 void genode_record_timer_dump()
 {
-	get_timer_recorder().dump();
+	get_timer_recorder().dump(OMIT_TIMER);
 }
 
 void genode_record_timer_reset(void *timer)
@@ -1148,8 +1177,11 @@ struct Executed_from_recorder
 		e.hits++;
 	}
 
-	void dump(void)
+	void dump(bool omit)
 	{
+		if (omit)
+			return;
+
 		unsigned id = 0;
 		for (auto & c : _entries) {
 			for (auto & v : c) {
@@ -1195,7 +1227,7 @@ void genode_executed_from_recorder(unsigned cpu_id, char const *name, void const
 
 void genode_executed_from_recorder_dump(void)
 {
-	get_executed_from_recorder().dump();
+	get_executed_from_recorder().dump(OMIT_EXECUTED_FROM);
 }
 
 
@@ -1205,7 +1237,7 @@ void genode_executed_from_recorder_reset(unsigned cpu_id, void const *addr)
 }
 
 
-struct Nemhandle_recorder
+struct Rc_recorder
 {
 	struct Entry
 	{
@@ -1228,8 +1260,11 @@ struct Nemhandle_recorder
 		e.hits++;
 	}
 
-	void dump(void)
+	void dump(bool omit)
 	{
+		if (omit)
+			return;
+
 		unsigned id = 0;
 		for (auto & c : _entries) {
 			for (auto & v : c) {
@@ -1251,9 +1286,9 @@ struct Nemhandle_recorder
 };
 
 
-static Nemhandle_recorder &get_nemhandle_recorder()
+static Rc_recorder &get_nemhandle_recorder()
 {
-	static Nemhandle_recorder inst;
+	static Rc_recorder inst;
 
 	return inst;
 }
@@ -1267,11 +1302,244 @@ void genode_nemhandle_recorder(unsigned cpu_id, int rc)
 
 void genode_nemhandle_recorder_dump(void)
 {
-	get_nemhandle_recorder().dump();
+	get_nemhandle_recorder().dump(OMIT_NEMHANDLE);
 }
 
 
 void genode_nemhandle_recoder_reset(unsigned cpu_id, int rc)
 {
 	get_nemhandle_recorder().reset(cpu_id, rc);
+}
+
+
+struct Ff_timer_recorder
+{
+	struct Entry
+	{
+		Genode::uint64_t hits;
+		char const *name;
+
+		Entry()
+		:
+			hits { 0 }, name { nullptr }
+		{ }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, name, " hits: ", hits);
+		}
+	};
+	std::unordered_map<void const*, Entry> _entries;
+
+	void record(void const *func, char const *name)
+	{
+		Entry &e = _entries[func];
+		if (e.name == nullptr)
+			e.name = name;
+
+		e.hits++;
+	}
+
+	unsigned dump_count = 0;
+
+	void dump(bool omit)
+	{
+		if (omit)
+			return;
+
+		++dump_count;
+
+		for (auto const & v : _entries) {
+			LogAlways(("%u %p %s %llu\n", dump_count, v.first, v.second.name, v.second.hits));
+			// Genode::log(v.first, " ", v.second);
+		}
+	}
+
+	void reset(void const *func)
+	{
+		Entry &e = _entries[func];
+
+		e.hits = 0;
+		e.name = nullptr;
+	}
+};
+
+
+static Ff_timer_recorder &get_ff_timer_recorder()
+{
+	static Ff_timer_recorder inst;
+
+	return inst;
+}
+
+
+void genode_record_ff_timer(void const *func, char const *name)
+{
+	get_ff_timer_recorder().record(func, name);
+}
+
+
+void genode_record_ff_timer_dump()
+{
+	get_ff_timer_recorder().dump(OMIT_FF_TIMER);
+}
+
+
+void genode_record_ff_timer_reset(void const *func)
+{
+	get_ff_timer_recorder().reset(func);
+}
+
+
+struct Newstate_recorder
+{
+	struct Entry
+	{
+		Genode::uint64_t hits;
+		Genode::uint64_t old_hits;
+
+		Entry() : hits { 0 }, old_hits { 0 } { }
+
+		void print(Genode::Output &out) const
+		{
+			Genode::print(out, "hits: ", hits);
+		}
+	};
+
+	std::unordered_map<unsigned, Entry> _entries[4] { };
+
+	void record(unsigned cpu_id, unsigned state)
+	{
+		Entry &e = _entries[cpu_id][state];
+		e.hits++;
+	}
+
+	void dump(bool omit)
+	{
+		if (omit)
+			return;
+
+		unsigned id = 0;
+		for (auto & c : _entries) {
+			for (auto & v : c) {
+				Genode::uint64_t const diff = v.second.hits - v.second.old_hits;
+				v.second.old_hits = v.second.hits;
+				Genode::log(id, " ", v.first, " ", v.second, " diff: ", diff);
+			}
+			++id;
+		}
+	}
+
+	void reset(unsigned cpu_id, unsigned state)
+	{
+		Entry &e = _entries[cpu_id][state];
+
+		e.hits     = 0;
+		e.old_hits = 0;
+	}
+};
+
+
+static Newstate_recorder &get_newstate_recorder()
+{
+	static Newstate_recorder inst;
+
+	return inst;
+}
+
+
+void genode_newstate_recorder(unsigned cpu_id, unsigned state)
+{
+	get_newstate_recorder().record(cpu_id, state);
+}
+
+
+void genode_newstate_recorder_dump(void)
+{
+	get_newstate_recorder().dump(OMIT_NEWSTATE);
+}
+
+
+void genode_newstate_recoder_reset(unsigned cpu_id, unsigned state)
+{
+	get_newstate_recorder().reset(cpu_id, state);
+}
+
+
+static Newstate_recorder &get_old_newstate_recorder()
+{
+	static Newstate_recorder inst;
+
+	return inst;
+}
+
+
+void genode_old_newstate_recorder(unsigned cpu_id, unsigned state)
+{
+	get_old_newstate_recorder().record(cpu_id, state);
+}
+
+
+void genode_old_newstate_recorder_dump(void)
+{
+	get_old_newstate_recorder().dump(OMIT_OLD_NEWSTATE);
+}
+
+
+void genode_old_newstate_recoder_reset(unsigned cpu_id, unsigned state)
+{
+	get_old_newstate_recorder().reset(cpu_id, state);
+}
+
+
+
+static Rc_recorder &get_nemrc_recorder()
+{
+	static Rc_recorder inst;
+
+	return inst;
+}
+
+
+void genode_nemrc_recorder(unsigned cpu_id, int rc)
+{
+	get_nemrc_recorder().record(cpu_id, rc);
+}
+
+
+void genode_nemrc_recorder_dump(void)
+{
+	get_nemrc_recorder().dump(OMIT_NEMRC);
+}
+
+
+void genode_nemrc_recoder_reset(unsigned cpu_id, int rc)
+{
+	get_nemrc_recorder().reset(cpu_id, rc);
+}
+
+
+static Rc_recorder &get_rc_recorder()
+{
+	static Rc_recorder inst;
+
+	return inst;
+}
+
+
+void genode_rc_recorder(unsigned cpu_id, int rc)
+{
+	get_rc_recorder().record(cpu_id, rc);
+}
+
+
+void genode_rc_recorder_dump(void)
+{
+	get_rc_recorder().dump(OMIT_RC);
+}
+
+
+void genode_rc_recoder_reset(unsigned cpu_id, int rc)
+{
+	get_rc_recorder().reset(cpu_id, rc);
 }

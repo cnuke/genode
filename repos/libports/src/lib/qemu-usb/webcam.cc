@@ -198,8 +198,12 @@ struct Capture_webcam
 
 static Genode::Constructible<Capture_webcam> capture;
 
+bool __genode_capture_on = false;
+
 extern "C" void capture_state_changed(bool on)
 {
+	__genode_capture_on = on;
+
 	error(__func__, ":", __LINE__, ": ", on ? "on" : "off");
 	capture->capture_state_changed(on);
 }

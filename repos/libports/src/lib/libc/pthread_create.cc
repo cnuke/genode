@@ -106,7 +106,7 @@ void Libc::init_pthread_support(Cpu_session &cpu_session,
 {
 	_cpu_session = &cpu_session;
 
-	_verbose = node.attribute_value("verbose", false);
+	_verbose = node.attribute_value("verbose", true);
 
 	String<32> const policy_name = node.attribute_value("placement",
 	                                                    String<32>("all-cpus"));

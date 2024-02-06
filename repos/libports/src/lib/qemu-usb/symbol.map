@@ -6,6 +6,8 @@
 
 		extern "C++" {
 			Qemu::*;
+
+			__genode_capture_on;
 		};
 
 	local:
