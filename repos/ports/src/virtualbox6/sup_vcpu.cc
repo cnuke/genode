@@ -1543,3 +1543,22 @@ void genode_rc_recoder_reset(unsigned cpu_id, int rc)
 {
 	get_rc_recorder().reset(cpu_id, rc);
 }
+
+
+#include <base/trace/events.h>
+
+
+void genode_trace_checkpoint_start(char const *name, unsigned long data)
+{
+	using namespace Genode::Trace;
+
+	Checkpoint(name, data, nullptr, Checkpoint::Type::START);
+}
+
+
+void genode_trace_checkpoint_end(char const *name, unsigned long data)
+{
+	using namespace Genode::Trace;
+
+	Checkpoint(name, data, nullptr, Checkpoint::Type::END);
+}
