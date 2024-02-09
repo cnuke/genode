@@ -38,9 +38,13 @@ namespace Trace_recorder {
 class Trace_recorder::Monitor
 {
 	private:
-		enum { DEFAULT_BUFFER_SIZE      = 64 * 1024 };
-		enum { TRACE_SESSION_RAM        = 1024 * 1024 };
-		enum { TRACE_SESSION_ARG_BUFFER = 128 * 1024 };
+
+		enum {
+			DEFAULT_BUFFER_SIZE              =   64u * 1024,
+			DEFAULT_TRACE_SESSION_RAM        = 1024u * 1024,
+			DEFAULT_TRACE_SESSION_ARG_BUFFER =  128u * 1024,
+			DEFAULT_PARENT_LEVELS            =    0u
+		};
 
 		class Trace_directory
 		{
@@ -112,10 +116,17 @@ class Trace_recorder::Monitor
 
 		Rtc::Connection                _rtc              { _env };
 		Timer::Connection              _timer            { _env };
-		Trace::Connection              _trace            { _env,
-		                                                   TRACE_SESSION_RAM,
-		                                                   TRACE_SESSION_ARG_BUFFER,
-		                                                   0 };
+
+		struct Config
+		{
+			size_t   session_ram;
+			size_t   session_arg_buffer;
+			unsigned session_parent_levels;
+
+			static Config from_xml(Xml_node const &);
+		};
+
+		Constructible<Trace::Connection> _trace          { };
 
 		Signal_handler<Monitor>        _timeout_handler  { _env.ep(),
 		                                                   *this,
