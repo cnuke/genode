@@ -49,7 +49,7 @@ This is a short description of the tags and attributes:
 :config.session_ram:
   Optional. Amount of RAM donated to the trace session.
 
-:config.session_arg_buffer:
+:config.session_arg_buffer_size:
   Optional. Size of the trace sessions argument buffer.
 
 :config.period_sec:

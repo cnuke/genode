@@ -42,7 +42,7 @@ class Main
 		struct Config
 		{
 			size_t       session_ram;
-			size_t       session_arg_buffer;
+			size_t       session_arg_buffer_size;
 			bool         verbose;
 			bool         prio;
 			bool         sc_time;
@@ -56,7 +56,7 @@ class Main
 
 		Trace::Connection _trace { _env,
 		                           _config.session_ram,
-		                           _config.session_arg_buffer };
+		                           _config.session_arg_buffer_size };
 
 		Timer::Connection _timer { _env };
 
@@ -231,8 +231,8 @@ Main::Config Main::Config::from_xml(Xml_node const &config)
 	return {
 		.session_ram         = config.attribute_value("session_ram",
 		                                              Number_of_bytes(1024*1024)),
-		.session_arg_buffer  = config.attribute_value("session_arg_buffer",
-		                                              Number_of_bytes(1024*4)),
+		.session_arg_buffer_size = config.attribute_value("session_arg_buffer_size",
+		                                                  Number_of_bytes(1024*4)),
 		.verbose             = config.attribute_value("verbose",  false),
 		.prio                = config.attribute_value("priority", false),
 		.sc_time             = config.attribute_value("sc_time",  false),
