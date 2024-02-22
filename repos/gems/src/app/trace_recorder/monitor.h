@@ -121,7 +121,7 @@ class Trace_recorder::Monitor
 			size_t buffer_size;
 
 			size_t session_ram;
-			size_t session_arg_buffer;
+			size_t session_arg_buffer_size;
 
 			static Config from_xml(Xml_node const &);
 		};

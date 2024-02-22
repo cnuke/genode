@@ -36,8 +36,8 @@ Trace_recorder::Monitor::Config Trace_recorder::Monitor::Config::from_xml(Xml_no
 		.session_ram =
 			config.attribute_value("session_ram",
 			                       Number_of_bytes(DEFAULT_TRACE_SESSION_RAM)),
-		.session_arg_buffer =
-			config.attribute_value("session_arg_buffer",
+		.session_arg_buffer_size =
+			config.attribute_value("session_arg_buffer_size",
 			                       Number_of_bytes(DEFAULT_TRACE_SESSION_ARG_BUFFER)),
 	};
 }

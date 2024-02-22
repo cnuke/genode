@@ -53,7 +53,7 @@ The '<config>' node may take the following optional attributes:
 
 :'session_ram': Sets the session RAM quota (default: '1024K').
 
-:'session_arg_buffer': Sets the session argument buffer size (default: '128K').
+:'session_arg_buffer_size': Sets the session argument buffer size (default: '128K').
 
 Furthermore, the '<policy>' nodes may take the following optional attributes:
 
