@@ -892,9 +892,9 @@ static int raw_notify(struct notifier_block *nb, unsigned long action, void *dat
 				struct usb_interface * iface =
 					(udev->actconfig) ? udev->actconfig->interface[i] : NULL;
 				if (!iface || !iface->cur_altsetting) continue;
-				if (i == 0 ||
+				if (i == 0 /* ||
 				    iface->cur_altsetting->desc.bInterfaceClass ==
-				    USB_CLASS_HID)
+				    USB_CLASS_HID */)
 					class = iface->cur_altsetting->desc.bInterfaceClass;
 			}
 
