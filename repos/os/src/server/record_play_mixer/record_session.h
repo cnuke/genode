@@ -167,7 +167,7 @@ class Mixer::Record_session : public Session_object<Record::Session, Record_sess
 
 						if (_operations.once_in_a_while())
 							warning("jitter too large for period of ",
-							        float(period_us)/1000.0f, " ms");
+							        float(period_us)/1000.0f, " ms ", _scheduler);
 
 						time_window = Time_window {
 							.start = _previous.end,
