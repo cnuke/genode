@@ -524,12 +524,8 @@ struct Stereo_output : Noncopyable
 				}
 			);
 
-			/*
-			 * Play silence to clean-up DMA buffers, depends
-			 * on clear() being called.
-			 */
 			if (orig_depleted != depleted && depleted)
-				Audio::play(data, sizeof(data));
+				log("recording depleted");
 		}
 	};
 
