@@ -225,28 +225,32 @@ struct Vfs::Oss_file_system::Audio
 
 		struct Frame { float left, right; };
 
-		void _for_each_frame(Const_byte_range_ptr const &src, auto const &fn) const
+		void _for_each_frame(Const_byte_range_ptr const &src,
+		                     unsigned             const  samples,
+		                     auto                 const &fn) const
 		{
 			short const *data = (short const*)(src.start);
 			float const scale = 1.0f/32768;
 
 			unsigned int const channels = _info.channels;
 
-			for (unsigned i = 0; i < _samples_per_fragment; i++)
+			for (unsigned i = 0; i < samples; i++)
 				fn(Frame { .left  = scale*float(data[i*channels]),
 				           .right = scale*float(data[i*channels + 1]) });
 		}
 
-		size_t _stereo_output(Const_byte_range_ptr const &src)
+		size_t _stereo_output(Const_byte_range_ptr const &src,
+		                      unsigned             const  samples,
+		                      Play::Duration       const  duration)
 		{
-			_time_window = _play[0]->schedule_and_enqueue(_time_window, _timer_trigger_duration,
+			_time_window = _play[0]->schedule_and_enqueue(_time_window, duration,
 				[&] (auto &submit) {
-					_for_each_frame(src, [&] (Frame const frame) {
+					_for_each_frame(src, samples, [&] (Frame const frame) {
 						submit(frame.left); }); });
 
 			_play[1]->enqueue(_time_window,
 				[&] (auto &submit) {
-					_for_each_frame(src, [&] (Frame const frame) {
+					_for_each_frame(src, samples, [&] (Frame const frame) {
 						submit(frame.right); }); });
 
 			return src.num_bytes;
@@ -284,22 +288,40 @@ struct Vfs::Oss_file_system::Audio
 			_info.ofrag_avail = _info.ofrag_total;
 			_info.ofrag_bytes = _info.ofrag_avail * _info.ofrag_size;
 
-			update_output_duration();
+			update_output_duration(_info.ofrag_size);
 
 			_info.update();
 			_info_fs.value(_info);
 		}
 
-		void update_output_duration()
+		struct Samples_duration
+		{
+			unsigned const samples;
+			unsigned const duration;
+
+			Samples_duration(unsigned const samples, unsigned const duration)
+			: samples { samples }, duration { duration } { }
+
+			bool valid() const { return samples && duration; }
+		};
+
+		Samples_duration _output_duration(size_t const bytes)
 		{
 			unsigned const frame_size   = _info.channels * _format_size(_info.format);
-			unsigned const samples      = _info.ofrag_size / frame_size;
+			unsigned const samples      = (unsigned)bytes / frame_size;
 			float    const tmp_duration = float(1'000'000u)
 			                            / float(_info.sample_rate)
 			                            * float(samples);
 
-			_timer_trigger_duration = { unsigned(tmp_duration) };
-			_samples_per_fragment   = unsigned(_info.ofrag_size / frame_size);
+			return Samples_duration { samples, unsigned(tmp_duration) };
+		}
+
+		void update_output_duration(unsigned const bytes)
+		{
+			Samples_duration const sd = _output_duration(bytes);
+
+			_timer_trigger_duration = { sd.duration };
+			_samples_per_fragment   = sd.samples;
 		}
 
 		void play_timer_sigh(Genode::Signal_context_capability cap)
@@ -349,18 +371,40 @@ struct Vfs::Oss_file_system::Audio
 			return false;
 		}
 
+		struct Const_byte_range_ptr_print
+		{
+			Const_byte_range_ptr const &_range;
+
+			Const_byte_range_ptr_print(Const_byte_range_ptr const &range)
+			: _range { range } { }
+
+			void print(Genode::Output &out) const
+			{
+				Genode::print(out, "start: ", (void const*)_range.start, " num_bytes: ", _range.num_bytes);
+			}
+		};
+
 		Write_result write(Const_byte_range_ptr const &src, size_t &out_size)
 		{
 			if (!_write_ready)
 				return Write_result::WRITE_ERR_WOULD_BLOCK;
 
-			out_size = _stereo_output(src);
+			unsigned timer_us = _timer_trigger_duration.us;
+			unsigned samples  = _samples_per_fragment;
+
+			if (src.num_bytes != _info.ofrag_size) {
+				Samples_duration const sd = _output_duration(src.num_bytes);
+				timer_us = sd.duration;
+				samples = sd.samples;
+			}
+
+			out_size = _stereo_output(src, samples, Play::Duration { timer_us });
 
 			_info.optr_fifo_samples += _samples_per_fragment;
 			_update_output_info();
 
 			_write_ready = false;
-			_timer.trigger_once(_timer_trigger_duration.us);
+			_timer.trigger_once(timer_us);
 
 			return Write_result::WRITE_OK;
 		}
@@ -611,14 +655,14 @@ struct Vfs::Oss_file_system::Local_factory : File_system_factory
 
 		_info.ofrag_size = ofrag_size_new;
 
-		if (_info.ofrag_size >= 16384) _info.ofrag_total = 2;
-		else                           _info.ofrag_total = 4;
-		// _info.ofrag_total = 2;
+		// if (_info.ofrag_size >= 16384) _info.ofrag_total = 2;
+		// else                           _info.ofrag_total = 4;
+		_info.ofrag_total = 2;
 
 		_info.ofrag_avail = _info.ofrag_total;
 		_info.ofrag_bytes = _info.ofrag_total * _info.ofrag_size;
 
-		_audio.update_output_duration();
+		_audio.update_output_duration(_info.ofrag_size);
 
 		_info.update();
 		_info_fs.value(_info);
