@@ -24,6 +24,8 @@
 #include <vfs/single_file_system.h>
 #include <vfs/value_file_system.h>
 
+#include "ring_buffer.h"
+
 namespace Vfs { struct Oss_file_system; }
 
 
@@ -181,6 +183,9 @@ struct Vfs::Oss_file_system::Audio
 		Info &_info;
 		Readonly_value_file_system<Info, 512> &_info_fs;
 
+		using Ring_buffer = Util::Ring_buffer<128u << 10>;
+		Ring_buffer _buffer[MAX_CHANNELS] { };
+
 		static size_t _sanitize_ms(unsigned ms)
 		{
 			if (ms < 5)  return  5;
@@ -207,6 +212,17 @@ struct Vfs::Oss_file_system::Audio
 			return (unsigned)size;
 		}
 
+		void _with_output_duration(size_t const bytes, auto const &fn)
+		{
+			unsigned const frame_size   = _info.channels * _format_size(_info.format);
+			unsigned const samples      = (unsigned)bytes / frame_size;
+			float    const tmp_duration = float(1'000'000u)
+			                            / float(_info.sample_rate)
+			                            * float(samples);
+
+			fn(Play::Duration { unsigned(tmp_duration) }, samples);
+		}
+
 		Play::Duration    _timer_trigger_duration { 0 };
 		Play::Time_window _time_window { };
 		bool _write_ready { true };
@@ -223,39 +239,32 @@ struct Vfs::Oss_file_system::Audio
 			_info_fs.value(_info);
 		}
 
-		struct Frame { float left, right; };
-
-		void _for_each_frame(Const_byte_range_ptr const &src,
-		                     unsigned             const  samples,
-		                     auto                 const &fn) const
+		void _for_each_sample(Ring_buffer    &buffer,
+		                      unsigned const  samples,
+		                      auto     const &fn) const
 		{
-			short const *data = (short const*)(src.start);
-			float const scale = 1.0f/32768;
+			for (unsigned i = 0; i < samples; i++) {
+				float v = 0;
+				Byte_range_ptr range { (char*)&v, sizeof(v) };
+				buffer.read(range);
 
-			unsigned int const channels = _info.channels;
-
-			for (unsigned i = 0; i < samples; i++)
-				fn(Frame { .left  = scale*float(data[i*channels]),
-				           .right = scale*float(data[i*channels + 1]) });
+				fn(v);
+			}
 		}
 
-		size_t _stereo_output(Const_byte_range_ptr const &src,
-		                      unsigned             const  samples,
-		                      Play::Duration       const  duration)
+		void _stereo_output(unsigned       const  samples,
+		                    Play::Duration const  duration)
 		{
 			_time_window = _play[0]->schedule_and_enqueue(_time_window, duration,
 				[&] (auto &submit) {
-					_for_each_frame(src, samples, [&] (Frame const frame) {
-						submit(frame.left); }); });
+					_for_each_sample(_buffer[0], samples,
+						[&] (float const v) { submit(v); }); });
 
 			_play[1]->enqueue(_time_window,
 				[&] (auto &submit) {
-					_for_each_frame(src, samples, [&] (Frame const frame) {
-						submit(frame.right); }); });
-
-			return src.num_bytes;
+					_for_each_sample(_buffer[1], samples,
+						[&] (float const v) { submit(v); }); });
 		}
-
 
 		static unsigned _format_size(unsigned fmt)
 		{
@@ -263,6 +272,60 @@ struct Vfs::Oss_file_system::Audio
 				return 2u;
 
 			return 0u;
+		}
+
+		unsigned _sample_count(Const_byte_range_ptr const &range) const
+		{
+			return (unsigned)range.num_bytes / (_format_size(_info.format) * _info.channels);
+		}
+
+		void _fill_buffer(Const_byte_range_ptr const &src, Ring_buffer &buffer, int channel)
+		{
+			short const *data = (short const*)(src.start);
+			float const scale = 1.0f/32768;
+
+			unsigned int const channels = _info.channels;
+			size_t       const samples  = _sample_count(src);
+
+			for (size_t i = 0; i < samples; i++) {
+				float const v = scale * float(data[i * channels + channel]);
+				buffer.write(Const_byte_range_ptr { (char const*)&v, sizeof(v) });
+			}
+		}
+
+		bool _buffer_write_samples_avail(unsigned samples) const
+		{
+			return _buffer[0].samples_write_avail<float>() >= samples;
+		}
+
+		bool _buffer_range_avail(Const_byte_range_ptr const &src) const
+		{
+			return _buffer_write_samples_avail(_sample_count(src));
+		}
+
+		bool _buffer_read_samples_avail(unsigned samples) const
+		{
+			return _buffer[0].samples_read_avail<float>() >= samples;
+		}
+
+		bool _timer_pending { false };
+
+		void _try_schedule_and_enqueue(bool &timer_pending)
+		{
+			if (timer_pending)
+				return;
+
+			if (timer_pending || !_buffer_read_samples_avail(_samples_per_fragment))
+				return;
+
+			_stereo_output(_samples_per_fragment,
+			               _timer_trigger_duration);
+
+			_info.optr_fifo_samples += _samples_per_fragment;
+			_update_output_info();
+
+			timer_pending = true;
+			_timer.trigger_once(_timer_trigger_duration.us);
 		}
 
 
@@ -283,7 +346,7 @@ struct Vfs::Oss_file_system::Audio
 			_info.format      = (unsigned)0x00000010;  /* S16LE */
 			_info.sample_rate = SAMPLE_RATE;
 
-			_info.ofrag_size  = 2048;//_fragment_size(SAMPLE_RATE, 10, sizeof(short), MAX_CHANNELS);
+			_info.ofrag_size  = 2048;
 			_info.ofrag_total = 4;
 			_info.ofrag_avail = _info.ofrag_total;
 			_info.ofrag_bytes = _info.ofrag_avail * _info.ofrag_size;
@@ -294,34 +357,13 @@ struct Vfs::Oss_file_system::Audio
 			_info_fs.value(_info);
 		}
 
-		struct Samples_duration
-		{
-			unsigned const samples;
-			unsigned const duration;
-
-			Samples_duration(unsigned const samples, unsigned const duration)
-			: samples { samples }, duration { duration } { }
-
-			bool valid() const { return samples && duration; }
-		};
-
-		Samples_duration _output_duration(size_t const bytes)
-		{
-			unsigned const frame_size   = _info.channels * _format_size(_info.format);
-			unsigned const samples      = (unsigned)bytes / frame_size;
-			float    const tmp_duration = float(1'000'000u)
-			                            / float(_info.sample_rate)
-			                            * float(samples);
-
-			return Samples_duration { samples, unsigned(tmp_duration) };
-		}
-
 		void update_output_duration(unsigned const bytes)
 		{
-			Samples_duration const sd = _output_duration(bytes);
-
-			_timer_trigger_duration = { sd.duration };
-			_samples_per_fragment   = sd.samples;
+			_with_output_duration(bytes,
+				[&] (Play::Duration const duration, unsigned const samples) {
+					_timer_trigger_duration = duration;
+					_samples_per_fragment   = samples;
+				});
 		}
 
 		void play_timer_sigh(Genode::Signal_context_capability cap)
@@ -334,7 +376,19 @@ struct Vfs::Oss_file_system::Audio
 			_info.optr_fifo_samples -= _samples_per_fragment;
 			_update_output_info();
 
-			_write_ready = true;
+			/*
+			 * Try to schedule the next duration if there are
+			 * samples left in the buffers. If that's not the
+			 * case reset the time window to prevent the mixer
+			 * for overcorrecting any late incoming schedule.
+			 */
+			_timer_pending = false;
+			_try_schedule_and_enqueue(_timer_pending);
+			if (!_timer_pending) {
+				Genode::error("optr_fifo_samples: ", _info.optr_fifo_samples, " avail: ",  _buffer[0].samples_read_avail<float>());
+			// 	_time_window = Play::Time_window { };
+			}
+
 			return true;
 		}
 
@@ -359,7 +413,8 @@ struct Vfs::Oss_file_system::Audio
 
 		bool write_ready() const
 		{
-			return _write_ready;
+			/* XXX is checking for _samples_per_fragment okay in case ? */
+			return _buffer_write_samples_avail(_samples_per_fragment);
 		}
 
 		bool read(Byte_range_ptr const &dst, size_t &out_size)
@@ -371,40 +426,19 @@ struct Vfs::Oss_file_system::Audio
 			return false;
 		}
 
-		struct Const_byte_range_ptr_print
-		{
-			Const_byte_range_ptr const &_range;
-
-			Const_byte_range_ptr_print(Const_byte_range_ptr const &range)
-			: _range { range } { }
-
-			void print(Genode::Output &out) const
-			{
-				Genode::print(out, "start: ", (void const*)_range.start, " num_bytes: ", _range.num_bytes);
-			}
-		};
-
 		Write_result write(Const_byte_range_ptr const &src, size_t &out_size)
 		{
-			if (!_write_ready)
+			/* XXX support partial write? */
+			if (!_buffer_range_avail(src))
 				return Write_result::WRITE_ERR_WOULD_BLOCK;
 
-			unsigned timer_us = _timer_trigger_duration.us;
-			unsigned samples  = _samples_per_fragment;
+			out_size = src.num_bytes;
 
-			if (src.num_bytes != _info.ofrag_size) {
-				Samples_duration const sd = _output_duration(src.num_bytes);
-				timer_us = sd.duration;
-				samples = sd.samples;
-			}
+			/* check channel has its own buffer */
+			for (unsigned i = 0; i < _info.channels; i++)
+				_fill_buffer(src, _buffer[i], i);
 
-			out_size = _stereo_output(src, samples, Play::Duration { timer_us });
-
-			_info.optr_fifo_samples += _samples_per_fragment;
-			_update_output_info();
-
-			_write_ready = false;
-			_timer.trigger_once(timer_us);
+			_try_schedule_and_enqueue(_timer_pending);
 
 			return Write_result::WRITE_OK;
 		}
@@ -655,9 +689,7 @@ struct Vfs::Oss_file_system::Local_factory : File_system_factory
 
 		_info.ofrag_size = ofrag_size_new;
 
-		// if (_info.ofrag_size >= 16384) _info.ofrag_total = 2;
-		// else                           _info.ofrag_total = 4;
-		_info.ofrag_total = 2;
+		_info.ofrag_total = 3;
 
 		_info.ofrag_avail = _info.ofrag_total;
 		_info.ofrag_bytes = _info.ofrag_total * _info.ofrag_size;
