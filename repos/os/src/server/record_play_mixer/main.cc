@@ -64,7 +64,7 @@ struct Mixer::Main : Record_session::Operations, Play_session::Operations
 			return *_clock_from_config;
 
 		// XXX missing TSC calibration
-		return Clock { unsigned(Trace::timestamp()/2000) };
+		return Clock { unsigned(Trace::timestamp()/2496) };
 	}
 
 	List_model<Audio_signal> _audio_signals { };
