@@ -220,6 +220,7 @@ proc _depot_auto_update { archives } {
 		return }
 
 	set    cmd "[genode_dir]/tool/depot/create $archives_to_create "
+	append cmd "DBG=1 "
 	append cmd "CROSS_DEV_PREFIX=[cross_dev_prefix] "
 	append cmd "DEPOT_DIR=[depot_dir] "
 	append cmd "UPDATE_VERSIONS=1 FORCE=1 REBUILD= "
