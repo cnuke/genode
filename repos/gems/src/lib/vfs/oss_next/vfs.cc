@@ -181,11 +181,38 @@ struct Vfs::Oss_file_system::Audio
 		Info &_info;
 		Readonly_value_file_system<Info, 512> &_info_fs;
 
-		/* XXX move session handling into Stereo object */
+		void _with_duration(size_t const bytes, auto const &fn)
+		{
+			unsigned const frame_size   = _info.channels * _format_size(_info.format);
+			unsigned const samples      = (unsigned)bytes / frame_size;
+			float    const tmp_duration = float(1'000'000u)
+			                            / float(_info.sample_rate)
+			                            * float(samples);
 
-		Timer::Connection _timer;
+			fn(unsigned(tmp_duration), samples);
+		}
 
-		enum { MAX_CHANNELS = 2u, };
+
+		bool     const _verbose;
+		bool     const _periodic_timing;
+		unsigned       _timer_ahead_us;
+
+		enum : unsigned {
+			MAX_CHANNELS   = 2u,
+
+			/*  512 S16LE stereo -> 11.6 ms at 44.1kHz */
+			MIN_OFRAG_SIZE = 2048u,
+			/* 2048 S16LE stereo -> 46.4 ms at 44.1kHz */
+			MAX_OFRAG_SIZE = 8192u,
+
+			MIN_IFRAG_SIZE = MIN_OFRAG_SIZE,
+			MAX_IFRAG_SIZE = MAX_OFRAG_SIZE,
+		};
+
+		/* XXX move Stereo_output object */
+
+		Timer::Connection _play_timer;
+
 		Genode::Constructible<Play::Connection> _play[MAX_CHANNELS];
 
 		void _for_each_play_session(auto const &fn)
@@ -196,23 +223,12 @@ struct Vfs::Oss_file_system::Audio
 		}
 
 		using Ring_buffer = Util::Ring_buffer<128u << 10>;
-		Ring_buffer _buffer[MAX_CHANNELS] { };
+		Ring_buffer _play_buffer[MAX_CHANNELS] { };
 
-		void _with_output_duration(size_t const bytes, auto const &fn)
-		{
-			unsigned const frame_size   = _info.channels * _format_size(_info.format);
-			unsigned const samples      = (unsigned)bytes / frame_size;
-			float    const tmp_duration = float(1'000'000u)
-			                            / float(_info.sample_rate)
-			                            * float(samples);
+		Play::Duration    _play_timer_duration { 0 };
+		Play::Time_window _play_time_window { };
 
-			fn(Play::Duration { unsigned(tmp_duration) }, samples);
-		}
-
-		Play::Duration    _timer_trigger_duration { 0 };
-		Play::Time_window _time_window { };
-
-		unsigned _samples_per_fragment = 0;
+		unsigned _output_samples_per_fragment = 0;
 
 		void _update_output_info()
 		{
@@ -244,17 +260,17 @@ struct Vfs::Oss_file_system::Audio
 
 			_for_each_play_session([&] (Play::Connection &play) {
 				if (first) {
-					_time_window = play.schedule_and_enqueue(_time_window, duration,
+					_play_time_window = play.schedule_and_enqueue(_play_time_window, duration,
 						[&] (auto &submit) {
-							_for_each_sample(_buffer[0], samples,
+							_for_each_sample(_play_buffer[0], samples,
 								[&] (float const v) { submit(v); }); });
 					first = false;
 					return;
 				}
 
-				play.enqueue(_time_window,
+				play.enqueue(_play_time_window,
 					[&] (auto &submit) {
-						_for_each_sample(_buffer[1], samples,
+						_for_each_sample(_play_buffer[1], samples,
 							[&] (float const v) { submit(v); }); });
 			});
 		}
@@ -286,44 +302,39 @@ struct Vfs::Oss_file_system::Audio
 			}
 		}
 
-		bool _buffer_write_samples_avail(unsigned samples) const
+		bool _play_buffer_write_samples_avail(unsigned samples) const
 		{
-			return _buffer[0].samples_write_avail<float>() >= samples;
+			return _play_buffer[0].samples_write_avail<float>() >= samples;
 		}
 
-		bool _buffer_range_avail(Const_byte_range_ptr const &src) const
+		bool _play_buffer_range_avail(Const_byte_range_ptr const &src) const
 		{
-			return _buffer_write_samples_avail(_sample_count(src));
+			return _play_buffer_write_samples_avail(_sample_count(src));
 		}
 
-		bool _buffer_read_samples_avail(unsigned samples) const
+		bool _play_buffer_read_samples_avail(unsigned samples) const
 		{
-			return _buffer[0].samples_read_avail<float>() >= samples;
+			return _play_buffer[0].samples_read_avail<float>() >= samples;
 		}
-
-		bool const _verbose;
-
-		bool     _periodic_timing;
-		unsigned _timer_ahead_us;
-		bool     _timer_pending { false };
-		bool     _timer_started { false };
+		bool     _play_timer_pending { false };
+		bool     _play_timer_started { false };
 
 		void _try_schedule_and_enqueue(bool &timer_pending)
 		{
-			if (timer_pending || !_buffer_read_samples_avail(_samples_per_fragment))
+			if (timer_pending || !_play_buffer_read_samples_avail(_output_samples_per_fragment))
 				return;
 
 			timer_pending = true;
 			if (_periodic_timing) {
-				if (!_timer_started) {
-					_timer.trigger_periodic(_timer_trigger_duration.us);
-					_timer_started = true;
+				if (!_play_timer_started) {
+					_play_timer.trigger_periodic(_play_timer_duration.us);
+					_play_timer_started = true;
 				}
 			} else
-				_timer.trigger_once(_timer_trigger_duration.us);
+				_play_timer.trigger_once(_play_timer_duration.us);
 
-			_stereo_output(_samples_per_fragment,
-			               _timer_trigger_duration);
+			_stereo_output(_output_samples_per_fragment,
+			               _play_timer_duration);
 
 			/*
 			 * For now we ignore 'optr_samples' altogether but we
@@ -331,13 +342,154 @@ struct Vfs::Oss_file_system::Audio
 			 * played while 'optr_fifo_samples' sums up the samples
 			 * in the ring-buffer.
 			 */
-			_info.optr_fifo_samples += _samples_per_fragment;
+			_info.optr_fifo_samples += _output_samples_per_fragment;
 			_update_output_info();
 		}
 
-		unsigned const _max_ofrag_size;
-		unsigned const _min_ofrag_size;
+		void _halt_output()
+		{
+			_for_each_play_session([&] (Play::Connection &play) {
+				play.stop();
+			});
 
+			_play_time_window = Play::Time_window { };
+		}
+
+		bool     const _play_enabled;
+		unsigned       _max_ofrag_size;
+		unsigned       _min_ofrag_size;
+
+		/* XXX move to Stereo_input object */
+
+		Timer::Connection _record_timer;
+
+		Genode::Constructible<Record::Connection> _record[MAX_CHANNELS];
+
+		void _for_each_record_session(auto const &fn)
+		{
+			for (auto &v : _record)
+				if (v.constructed())
+					fn(*v);
+		}
+
+		Ring_buffer _record_buffer[1] { };
+
+		unsigned _record_timer_duration { 0 };
+		Record::Num_samples _input_samples_per_fragment { 0 };
+
+		void _update_input_info()
+		{
+			_info.ifrag_bytes = unsigned((_info.ifrag_total * _info.ifrag_size)
+			                  - (_info.optr_fifo_samples * _info.channels * sizeof(short)));
+			_info.ifrag_avail = _info.ifrag_bytes / _info.ifrag_size;
+
+			_info.update();
+			_info_fs.value(_info);
+		}
+
+		short _collect_buffer[MAX_OFRAG_SIZE];
+
+		void _stereo_input(Record::Num_samples const num_samples)
+		{
+			auto clamped = [&] (float v)
+			{
+				return (v >  1.0) ?  1.0
+				     : (v < -1.0) ? -1.0
+				     :  v;
+			};
+
+			auto float_to_s16 = [&] (float v) { return int16_t(clamped(v)*32767); };
+
+			bool depleted = false;
+			_record[0]->record(num_samples,
+				[&] (Record::Time_window const tw,
+				     Record::Connection::Samples_ptr const &samples) {
+						for (unsigned i = 0; i < num_samples.value(); i++)
+							_collect_buffer[i*MAX_CHANNELS] = float_to_s16(samples.start[i]);
+
+					_record[1]->record_at(tw, num_samples,
+						[&] (Record::Connection::Samples_ptr const &samples) {
+							for (unsigned i = 0; i < num_samples.value(); i++)
+								_collect_buffer[i*MAX_CHANNELS+1] = float_to_s16(samples.start[i]);
+						});
+				},
+				[&] {
+					/* depleted */
+					memset(_collect_buffer, 0, sizeof(_collect_buffer));
+					depleted = true;
+				});
+
+			if (depleted)
+				return;
+
+			size_t const collect_avail = num_samples.value() * _info.channels * _format_size(_info.format);
+			size_t const write_avail   = _record_buffer[0].write_avail();
+			if (write_avail < collect_avail)
+				Genode::warning("overrun of ", collect_avail - write_avail, " bytes");
+
+			size_t const write_bytes = Genode::min(collect_avail, write_avail);
+			_record_buffer[0].write(Const_byte_range_ptr { (char const*)_collect_buffer,
+			                                               write_bytes });
+		}
+
+		bool _record_timer_pending { false };
+		bool _record_timer_started { false };
+
+		void _try_record(bool &timer_pending)
+		{
+			if (timer_pending)
+				return;
+
+			timer_pending = true;
+			_stereo_input(_input_samples_per_fragment);
+			if (_periodic_timing) {
+				if (!_record_timer_started) {
+					_record_timer.trigger_periodic(_record_timer_duration);
+					_record_timer_started = true;
+				}
+			} else
+				_record_timer.trigger_once(_record_timer_duration);
+		}
+
+		void _halt_input()
+		{
+			if (_periodic_timing) {
+				_record_timer_started = false;
+				_record_timer.trigger_periodic(0);
+			}
+		}
+
+
+		bool     const _record_enabled;
+		unsigned       _max_ifrag_size;
+		unsigned       _min_ifrag_size;
+
+		unsigned _default_frag_size(Xml_node const &config,
+		                            char const *attr, unsigned value) const
+		{
+			return config.attribute_value(attr, value);
+		}
+
+		void _clamp_frag_sizes()
+		{
+			_min_ofrag_size = Genode::max(_min_ofrag_size, MIN_OFRAG_SIZE);
+			_max_ofrag_size = Genode::min(_max_ofrag_size, MAX_OFRAG_SIZE);
+
+			if (_min_ofrag_size > _max_ofrag_size)
+				_min_ofrag_size = _max_ofrag_size;
+
+			_min_ifrag_size = Genode::max(_min_ifrag_size, MIN_OFRAG_SIZE);
+			_max_ifrag_size = Genode::min(_max_ifrag_size, MAX_OFRAG_SIZE);
+
+			if (_min_ifrag_size > _max_ifrag_size)
+				_min_ifrag_size = _max_ifrag_size;
+		}
+
+		void _clamp_timer_ahead()
+		{
+			_timer_ahead_us = Genode::max(_timer_ahead_us, 1000u);
+			_timer_ahead_us = Genode::min(_timer_ahead_us, 3000u);
+		}
 
 	public:
 
@@ -348,30 +500,52 @@ struct Vfs::Oss_file_system::Audio
 		:
 			_info            { info },
 			_info_fs         { info_fs },
-			_timer           { env },
 
 			/* XXX move into Config object */
 			_verbose         { config.attribute_value("verbose",         false) },
 			_periodic_timing { config.attribute_value("periodic_timing",  true) },
 			_timer_ahead_us  { config.attribute_value("timer_ahead_us",     0u) },
-			/* 2048 S16LE stereo -> 46.4 ms at 44.1kHz */
-			_max_ofrag_size  { config.attribute_value("max_ofrag_size",  8192u) },
-			/*  512 S16LE stereo -> 11.6 ms at 44.1kHz */
-			_min_ofrag_size  { config.attribute_value("min_ofrag_size",  2048u) }
+
+			_play_timer      { env },
+			_play_enabled    { config.attribute_value("play_enabled", true) },
+			_max_ofrag_size  { _default_frag_size(config, "max_ofrag_size", MAX_OFRAG_SIZE) },
+			_min_ofrag_size  { _default_frag_size(config, "min_ofrag_size", MIN_OFRAG_SIZE) },
+
+			_record_timer    { env },
+			_record_enabled  { config.attribute_value("record_enabled", true) },
+			_max_ifrag_size  { _default_frag_size(config, "max_ifrag_size", MAX_IFRAG_SIZE) },
+			_min_ifrag_size  { _default_frag_size(config, "min_ifrag_size", MIN_IFRAG_SIZE) }
 		{
-			_play[0].construct(env, "left");
-			_play[1].construct(env, "right");
+			_clamp_frag_sizes();
+			_clamp_timer_ahead();
 
 			_info.channels    = MAX_CHANNELS;
 			_info.format      = (unsigned)0x00000010; /* S16LE */
 			_info.sample_rate = 44'100u;
 
-			_info.ofrag_size  = _min_ofrag_size;
-			_info.ofrag_total = 4;
-			_info.ofrag_avail = _info.ofrag_total;
-			_info.ofrag_bytes = _info.ofrag_avail * _info.ofrag_size;
+			if (_play_enabled) {
+				_play[0].construct(env, "left");
+				_play[1].construct(env, "right");
 
-			update_output_duration(_info.ofrag_size);
+				_info.ofrag_size  = _min_ofrag_size;
+				_info.ofrag_total = 4;
+				_info.ofrag_avail = _info.ofrag_total;
+				_info.ofrag_bytes = _info.ofrag_avail * _info.ofrag_size;
+
+				update_output_duration(_info.ofrag_size);
+			}
+
+			if (_record_enabled) {
+				_record[0].construct(env, "left");
+				_record[1].construct(env, "right");
+
+				_info.ifrag_size  = _min_ifrag_size;
+				_info.ifrag_total = 4;
+				_info.ifrag_avail = _info.ifrag_total;
+				_info.ifrag_bytes = _info.ifrag_avail * _info.ifrag_size;
+
+				update_input_duration(_info.ifrag_size);
+			}
 
 			_info.update();
 			_info_fs.value(_info);
@@ -382,36 +556,112 @@ struct Vfs::Oss_file_system::Audio
 			return _verbose;
 		}
 
-		unsigned max_ofrag_size() const
-		{
-			return _max_ofrag_size;
-		}
+		/**************************
+		 ** Record session stuff **
+		 **************************/
 
-		unsigned min_ofrag_size() const
-		{
-			return _min_ofrag_size;
-		}
+		unsigned max_ifrag_size() const { return _max_ifrag_size; }
 
-		void update_output_duration(unsigned const bytes)
+		unsigned min_ifrag_size() const { return _min_ifrag_size; }
+
+		void update_input_duration(unsigned const bytes)
 		{
-			_with_output_duration(bytes,
-				[&] (Play::Duration const duration, unsigned const samples) {
-					_timer_trigger_duration = duration;
-					_samples_per_fragment   = samples;
+			_with_duration(bytes,
+				[&] (unsigned const duration, unsigned const samples) {
+					_record_timer_duration = duration;
+					_input_samples_per_fragment = Record::Num_samples { samples };
 				});
 
 			/* XXX wrap check */
-			_timer_trigger_duration.us -= _timer_ahead_us;
+			// _record_timer_duration -= _timer_ahead_us;
+		}
+
+		void record_timer_sigh(Genode::Signal_context_capability cap)
+		{
+			_record_timer.sigh(cap);
+		}
+
+		bool handle_record_timer()
+		{
+			_record_timer_pending = false;
+			_try_record(_record_timer_pending);
+			if (!_record_timer_pending) {
+				Genode::error("record overrun");
+				return false;
+			}
+
+			_update_input_info();
+			return true;
+		}
+
+		void enable_input(bool enable)
+		{
+			if (enable == false)
+				_halt_input();
+			else
+				_try_record(_record_timer_pending);
+		}
+
+		bool read_ready() const
+		{
+			if (!_record_enabled)
+				return true;
+
+			return _record_buffer[0].read_avail() >= _info.ifrag_size;
+		}
+
+		Read_result read(Byte_range_ptr const &dst, size_t &out_size)
+		{
+			if (!_record_enabled) {
+				Genode::memset(dst.start, 0, dst.num_bytes);
+				out_size = dst.num_bytes;
+				return Read_result::READ_OK;
+			}
+
+			unsigned long const avail = _record_buffer[0].read_avail();
+
+			/* get the ball rolling on first read */
+			if (avail == 0 && !_record_timer_started)
+				_try_record(_record_timer_pending);
+
+			if (avail < _info.ifrag_size)
+				return Read_result::READ_QUEUED;
+
+			unsigned long const bytes_read = Genode::min(avail, dst.num_bytes);
+			_record_buffer[0].read(Byte_range_ptr { dst.start, bytes_read });
+
+			out_size = bytes_read;
+			return Read_result::READ_OK;
+		}
+
+		/************************
+		 ** Play session stuff **
+		 ************************/
+
+		unsigned max_ofrag_size() const { return _max_ofrag_size; }
+
+		unsigned min_ofrag_size() const { return _min_ofrag_size; }
+
+		void update_output_duration(unsigned const bytes)
+		{
+			_with_duration(bytes,
+				[&] (unsigned const duration, unsigned const samples) {
+					_play_timer_duration         = Play::Duration { duration };
+					_output_samples_per_fragment = samples;
+				});
+
+			/* XXX wrap check */
+			// _play_timer_duration.us -= _timer_ahead_us;
 		}
 
 		void play_timer_sigh(Genode::Signal_context_capability cap)
 		{
-			_timer.sigh(cap);
+			_play_timer.sigh(cap);
 		}
 
 		bool handle_play_timer()
 		{
-			_info.optr_fifo_samples -= _samples_per_fragment;
+			_info.optr_fifo_samples -= _output_samples_per_fragment;
 			_update_output_info();
 
 			/*
@@ -425,55 +675,34 @@ struct Vfs::Oss_file_system::Audio
 			 * we cannot detect potential underruns, although
 			 * it stands to reasons if that is needed after all.
 			 */
-			_timer_pending = false;
-			_try_schedule_and_enqueue(_timer_pending);
-			if (!_timer_pending) {
+			_play_timer_pending = false;
+			_try_schedule_and_enqueue(_play_timer_pending);
+			if (!_play_timer_pending) {
 
 				if (_verbose)
 					Genode::log("Buffer empty, stop playback");
 
 				if (_periodic_timing) {
-					_timer_started = false;
-					_timer.trigger_periodic(0);
+					_play_timer_started = false;
+					_play_timer.trigger_periodic(0);
 				}
-				halt_output();
+				_halt_output();
 			}
 
 			return true;
 		}
 
-		void halt_output()
-		{
-			_for_each_play_session([&] (Play::Connection &play) {
-				play.stop();
-			});
-
-			_time_window = Play::Time_window { };
-		}
-
 		void enable_output(bool enable)
 		{
 			if (enable == false)
-				halt_output();
-		}
-
-		bool read_ready() const
-		{
-			/* XXX fine as long as read() returns silence */
-			return true;
+				_halt_output();
+			else
+				_try_schedule_and_enqueue(_play_timer_pending);
 		}
 
 		bool write_ready() const
 		{
-			/* XXX is checking for _samples_per_fragment okay in case ? */
-			return _buffer_write_samples_avail(_samples_per_fragment);
-		}
-
-		Read_result read(Byte_range_ptr const &dst, size_t &out_size)
-		{
-			Genode::memset(dst.start, 0, dst.num_bytes);
-			out_size = dst.num_bytes;
-			return Read_result::READ_OK;
+			return _play_buffer_write_samples_avail(2*_output_samples_per_fragment);
 		}
 
 		Write_result write(Const_byte_range_ptr const &src, size_t &out_size)
@@ -481,16 +710,17 @@ struct Vfs::Oss_file_system::Audio
 			out_size = 0;
 
 			/* XXX document why limiting is reasonable */
-			if (!_buffer_range_avail(src) || _buffer_read_samples_avail(2*_samples_per_fragment))
+			if (!_play_buffer_range_avail(src)
+			  || _play_buffer_read_samples_avail(2*_output_samples_per_fragment))
 				return Write_result::WRITE_ERR_WOULD_BLOCK;
 
 			out_size = src.num_bytes;
 
 			/* check channel has its own buffer */
 			for (unsigned i = 0; i < _info.channels; i++)
-				_fill_buffer(src, _buffer[i], i);
+				_fill_buffer(src, _play_buffer[i], i);
 
-			_try_schedule_and_enqueue(_timer_pending);
+			_try_schedule_and_enqueue(_play_timer_pending);
 
 			return Write_result::WRITE_OK;
 		}
@@ -557,6 +787,14 @@ class Vfs::Oss_file_system::Data_file_system : public Single_file_system
 				_vfs_user.wakeup_vfs_user();
 		}
 
+		Genode::Io_signal_handler<Vfs::Oss_file_system::Data_file_system> _record_timer {
+			_ep, *this, &Vfs::Oss_file_system::Data_file_system::_handle_record_timer };
+
+		void _handle_record_timer()
+		{
+			if (_audio.handle_record_timer())
+				_vfs_user.wakeup_vfs_user();
+		}
 
 	public:
 
@@ -573,6 +811,7 @@ class Vfs::Oss_file_system::Data_file_system : public Single_file_system
 			_audio    { audio }
 		{
 			_audio.play_timer_sigh(_play_timer);
+			_audio.record_timer_sigh(_record_timer);
 		}
 
 		static const char *name()   { return "data"; }
@@ -659,17 +898,30 @@ struct Vfs::Oss_file_system::Local_factory : File_system_factory
 		*this,
 		&Vfs::Oss_file_system::Local_factory::_enable_input_changed };
 
-	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _enable_output_handler {
-		_enable_output_fs, "/enable_output",
-		_env.alloc(),
-		*this,
-		&Vfs::Oss_file_system::Local_factory::_enable_output_changed };
-
 	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _halt_input_handler {
 		_halt_input_fs, "/halt_input",
 		_env.alloc(),
 		*this,
 		&Vfs::Oss_file_system::Local_factory::_halt_input_changed };
+
+	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _ifrag_total_handler {
+		_ifrag_total_fs, "/ifrag_total",
+		_env.alloc(),
+		*this,
+		&Vfs::Oss_file_system::Local_factory::_ifrag_total_changed };
+
+	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _ifrag_size_handler {
+		_ifrag_size_fs, "/ifrag_size",
+		_env.alloc(),
+		*this,
+		&Vfs::Oss_file_system::Local_factory::_ifrag_size_changed };
+
+
+	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _enable_output_handler {
+		_enable_output_fs, "/enable_output",
+		_env.alloc(),
+		*this,
+		&Vfs::Oss_file_system::Local_factory::_enable_output_changed };
 
 	Genode::Io::Watch_handler<Vfs::Oss_file_system::Local_factory> _halt_output_handler {
 		_halt_output_fs, "/halt_output",
@@ -702,21 +954,62 @@ struct Vfs::Oss_file_system::Local_factory : File_system_factory
 
 	void _enable_input_changed()
 	{
+		bool const enable = (bool)_enable_input_fs.value();
+		_audio.enable_input(enable);
 	}
 
 	void _halt_input_changed()
 	{
+		bool const halt = (bool)_halt_input_fs.value();
+		if (halt)
+			_audio.enable_input(false);
+	}
+
+	void _ifrag_total_changed()
+	{
+		/*
+		 * NOP for now as it is set in tandem with ifrag_size
+		 * that in return limits number of fragments.
+		 */
+	}
+
+	void _ifrag_size_changed()
+	{
+		unsigned const ifrag_size_max = _audio.max_ifrag_size();
+		unsigned const ifrag_size_min = _audio.min_ifrag_size();
+
+		unsigned ifrag_size_new = _ifrag_size_fs.value();
+
+		ifrag_size_new = Genode::max(ifrag_size_new, ifrag_size_min);
+		ifrag_size_new = Genode::min(ifrag_size_new, ifrag_size_max);
+
+		_info.ifrag_size = ifrag_size_new;
+
+		_info.ifrag_total = 4;
+
+		_info.ifrag_avail = _info.ifrag_total;
+		_info.ifrag_bytes = _info.ifrag_total * _info.ifrag_size;
+
+		_audio.update_output_duration(_info.ifrag_size);
+
+		_info.update();
+		_info_fs.value(_info);
+
+		if (_audio.verbose())
+			Genode::log(_info);
 	}
 
 	void _enable_output_changed()
 	{
-		bool enable = (bool)_enable_output_fs.value();
+		bool const enable = (bool)_enable_output_fs.value();
 		_audio.enable_output(enable);
 	}
 
 	void _halt_output_changed()
 	{
-		_audio.halt_output();
+		bool const halt = (bool)_halt_output_fs.value();
+		if (halt)
+			_audio.enable_output(false);
 	}
 
 	void _ofrag_total_changed()
