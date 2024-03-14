@@ -471,6 +471,7 @@ class Audio_in::Root : public Audio_in::Root_component
 
 struct Stereo_output : Noncopyable
 {
+	static constexpr unsigned SAMPLES_PER_PERIOD = Audio_in::PERIOD;
 	static constexpr unsigned CHANNELS = 2;
 
 	Env &_env;
@@ -478,26 +479,12 @@ struct Stereo_output : Noncopyable
 	Record::Connection _left  { _env, "left"  };
 	Record::Connection _right { _env, "right" };
 
-	struct Period
-	{
-		unsigned samples;
-	};
-
-	Period      const _period;
-
 	struct Recording : private Noncopyable
 	{
 		bool depleted = false;
 
 		/* 16 bit per sample, interleaved left and right */
-		int16_t data[4096*CHANNELS] { };
-
-		Record::Num_samples const _num_samples;
-
-		Recording(Period const period)
-		:
-			_num_samples { period.samples }
-		{ }
+		int16_t data[SAMPLES_PER_PERIOD*CHANNELS] { };
 
 		void clear() { for (auto &e : data) e = 0; }
 
@@ -506,6 +493,8 @@ struct Stereo_output : Noncopyable
 			using Samples_ptr = Record::Connection::Samples_ptr;
 
 			bool const orig_depleted = depleted;
+
+			Record::Num_samples const num_samples { SAMPLES_PER_PERIOD };
 
 			auto clamped = [&] (float v)
 			{
@@ -516,18 +505,16 @@ struct Stereo_output : Noncopyable
 
 			auto float_to_s16 = [&] (float v) { return int16_t(clamped(v)*32767); };
 
-			left.record(_num_samples,
+			left.record(num_samples,
 				[&] (Record::Time_window const tw, Samples_ptr const &samples) {
 					depleted = false;
 
-					unsigned const num_samples = _num_samples.value();
-
-					for (unsigned i = 0; i < num_samples; i++)
+					for (unsigned i = 0; i < SAMPLES_PER_PERIOD; i++)
 						data[i*CHANNELS] = float_to_s16(samples.start[i]);
 
-					right.record_at(tw, _num_samples,
+					right.record_at(tw, num_samples,
 						[&] (Samples_ptr const &samples) {
-							for (unsigned i = 0; i < num_samples; i++)
+							for (unsigned i = 0; i < SAMPLES_PER_PERIOD; i++)
 								data[i*CHANNELS + 1] = float_to_s16(samples.start[i]);
 						});
 				},
@@ -539,7 +526,7 @@ struct Stereo_output : Noncopyable
 		}
 	};
 
-	Recording _recording { _period };
+	Recording _recording { };
 
 	Signal_handler<Stereo_output> _output_handler {
 		_env.ep(), *this, &Stereo_output::_handle_output };
@@ -550,10 +537,7 @@ struct Stereo_output : Noncopyable
 		Audio::play(_recording.data, sizeof(_recording.data));
 	}
 
-	Stereo_output(Env &env, Xml_node config)
-	:
-		_env(env),
-		_period(config.attribute_value("samples", Audio_out::PERIOD))
+	Stereo_output(Env &env) : _env(env)
 	{
 		Audio::play_sigh(_output_handler);
 
@@ -566,6 +550,7 @@ struct Stereo_output : Noncopyable
 
 struct Stereo_input : Noncopyable
 {
+	static constexpr unsigned SAMPLES_PER_PERIOD = Audio_in::PERIOD;
 	static constexpr unsigned CHANNELS = 2;
 
 	Env &_env;
@@ -573,50 +558,8 @@ struct Stereo_input : Noncopyable
 	Play::Connection _left  { _env, "left"  };
 	Play::Connection _right { _env, "right" };
 
-	struct Sample_rate
-	{
-		unsigned khz;
-	};
-
-	struct Period
-	{
-		unsigned samples;
-	};
-
-	Period      const _period;
-	Sample_rate const _sample_rate;
-
-	struct Frames_data
-	{
-		/* about 93ms per channel at 44.1 kHz */
-		/* 16 bit per sample, interleaved left and right */
-		enum : unsigned { MAX_SAMPLES = 4096u };
-		int16_t samples[MAX_SAMPLES*CHANNELS] { };
-
-		Period const period;
-
-		Frames_data(Period period) : period { period }
-		{
-			if (period.samples > MAX_SAMPLES) {
-				struct Period_too_large : Genode::Exception { };
-				throw Period_too_large();
-			}
-		}
-	};
-
-	Constructible<Frames_data> _data { };
-
-	static Play::Duration duration_from_args(Sample_rate const sample_rate,
-	                                         Period      const period)
-	{
-		float const tmp_duration = float(1'000'000u)
-		                         / float(sample_rate.khz)
-		                         * float(period.samples);
-
-		return Play::Duration { .us = unsigned(tmp_duration) };
-	}
-
-	Play::Duration const _duration;
+	/* 16 bit per sample, interleaved left and right */
+	int16_t data[SAMPLES_PER_PERIOD*CHANNELS] { };
 
 	struct Frame { float left, right; };
 
@@ -624,9 +567,9 @@ struct Stereo_input : Noncopyable
 	{
 		float const scale = 1.0f/32768;
 
-		for (unsigned i = 0; i < _data->period.samples; i++)
-			fn(Frame { .left  = scale*float(_data->samples[i*CHANNELS]),
-			           .right = scale*float(_data->samples[i*CHANNELS + 1]) });
+		for (unsigned i = 0; i < SAMPLES_PER_PERIOD; i++)
+			fn(Frame { .left  = scale*float(data[i*CHANNELS]),
+			           .right = scale*float(data[i*CHANNELS + 1]) });
 	}
 
 	Play::Time_window _time_window { };
@@ -636,13 +579,14 @@ struct Stereo_input : Noncopyable
 
 	void _handle_input()
 	{
-		if (int const err = Audio::record(_data->samples, _data->period.samples*CHANNELS)) {
+		if (int const err = Audio::record(data, sizeof(data))) {
 			if (err && err != 35)
 				warning("error ", err, " during recording");
 			return;
 		}
 
-		_time_window = _left.schedule_and_enqueue(_time_window, _duration,
+		Play::Duration const duration_us { 11*1000 }; /* hint for first period */
+		_time_window = _left.schedule_and_enqueue(_time_window, duration_us,
 			[&] (auto &submit) {
 				_for_each_frame([&] (Frame const frame) {
 					submit(frame.left); }); });
@@ -653,12 +597,7 @@ struct Stereo_input : Noncopyable
 					submit(frame.right); }); });
 	}
 
-	Stereo_input(Env &env, Xml_node config)
-	:
-		_env(env),
-		_period(config.attribute_value("samples",          unsigned(Audio_in::PERIOD))),
-		_sample_rate(config.attribute_value("sample_rate", unsigned(Audio_in::SAMPLE_RATE))),
-		_duration(duration_from_args(_sample_rate, _period))
+	Stereo_input(Env &env) : _env(env)
 	{
 		Audio::record_sigh(_input_handler);
 	}
@@ -702,8 +641,8 @@ struct Main
 	void _handle_announce_session()
 	{
 		if (_record_play) {
-			_stereo_output.construct(_env, _config.xml());
-			_stereo_input .construct(_env, _config.xml());
+			_stereo_output.construct(_env);
+			_stereo_input .construct(_env);
 			return;
 		}
 
