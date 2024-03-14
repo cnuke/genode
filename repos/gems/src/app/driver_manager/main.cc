@@ -130,7 +130,7 @@ struct Driver_manager::Intel_gpu_driver : Device_driver
 		xml.node("start", [&] () {
 			_gen_common_start_node_content(xml, "intel_gpu_drv", "intel_gpu_drv",
 			                               Ram_quota{64*1024*1024}, Cap_quota{1400},
-			                               Priority{0}, version);
+			                               Priority{-1}, version);
 			xml.node("provides", [&] () {
 				xml.node("service", [&] () {
 					xml.attribute("name", Gpu::Session::service_name()); });
@@ -159,7 +159,7 @@ struct Driver_manager::Intel_fb_driver : Device_driver
 		xml.node("start", [&] () {
 			_gen_common_start_node_content(xml, "intel_fb_drv", "pc_intel_fb_drv",
 			                               Ram_quota{42*1024*1024}, Cap_quota{800},
-			                               Priority{0}, version);
+			                               Priority{-1}, version);
 			xml.node("heartbeat", [&] () { });
 			xml.node("route", [&] () {
 				_gen_config_route(xml, "fb_drv.config");
