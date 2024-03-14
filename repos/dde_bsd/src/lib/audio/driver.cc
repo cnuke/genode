@@ -417,17 +417,20 @@ static bool configure_audio_device(Genode::Env &env, dev_t dev, Genode::Xml_node
 
 	using namespace Audio;
 
+	unsigned const sample_rate = config.attribute_value("sample_rate", unsigned(Audio_out::SAMPLE_RATE));
+	unsigned const samples     = config.attribute_value("samples",     unsigned(Audio_out::PERIOD));
+
 	/*
 	 * Configure the device according to our Audio_out session parameters.
 	 * Only set the relevant parameters and let the audio(4) subsystem
 	 * figure out the rest.
 	 */
-	ap.rate  = Audio_out::SAMPLE_RATE;
+	ap.rate  = sample_rate;
 	ap.pchan = Audio_out::MAX_CHANNELS;
 	ap.sig   = 1;
 	ap.bits  = 16;
 	ap.bps   = (ap.bits / 8);
-	ap.round = Audio_out::PERIOD;
+	ap.round = samples;
 	/*
 	 * Use 2 blocks, the one that is currently played and the one
 	 * that will be filled in.
