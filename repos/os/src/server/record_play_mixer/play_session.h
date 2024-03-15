@@ -413,6 +413,9 @@ class Mixer::Play_session : public Session_object<Play::Session, Play_session>,
 			Scheduler::Play_window_result const window =
 				_scheduler.play_window(config, previous, num_samples);
 
+			if (0) // config.log
+			log(__func__, ": ", _scheduler);
+
 			if (!_scheduler.consecutive())
 				_operations.wakeup_record_clients();
 

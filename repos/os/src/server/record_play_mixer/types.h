@@ -34,7 +34,7 @@ namespace Mixer {
 
 			unsigned _us = 0;
 
-			static constexpr unsigned LIMIT = (1 << 22),
+			static constexpr unsigned LIMIT = (1 << 24),
 			                          MASK  = LIMIT - 1;
 
 			static constexpr unsigned _masked(unsigned v) { return v & MASK; }

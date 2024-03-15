@@ -191,6 +191,7 @@ struct Mixer::Main : Record_session::Operations, Play_session::Operations
 
 	bool once_in_a_while() override
 	{
+		return false;
 		if (_count.value == _once_in_a_while_triggered.value)
 			return false;
 
