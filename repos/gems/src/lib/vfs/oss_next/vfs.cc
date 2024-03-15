@@ -26,6 +26,18 @@
 
 #include "ring_buffer.h"
 
+static inline Genode::uint64_t rdtsc()
+{
+	Genode::uint32_t lo, hi;
+	asm volatile ("rdtsc" : "=a" (lo), "=d" (hi) : : "memory");
+	return (Genode::uint64_t)hi << 32 | lo;
+}
+
+static inline Genode::uint64_t timestamp_us()
+{
+	return rdtsc() / 1896;
+}
+
 namespace Vfs {
 	using namespace Genode;
 
@@ -220,6 +232,53 @@ struct Vfs::Oss_file_system::Audio
 					fn(*v);
 		}
 
+		struct Play_buffer
+		{
+			static constexpr unsigned SIZE_LOG2 = 24, SIZE = 1 << SIZE_LOG2, MASK = SIZE - 1;
+			float _samples[SIZE] { };
+
+			unsigned _rpos  = 0;
+			unsigned _wpos  = 0;
+
+			void reset()
+			{
+				_rpos  = 0;
+				_wpos  = 0;
+			}
+
+			void insert(float value)
+			{
+				_wpos = (_wpos + 1) & MASK;
+				_samples[_wpos] = value;
+			}
+
+			float remove()
+			{
+				_rpos = (_rpos + 1) & MASK;
+				return _samples[_rpos];
+			}
+
+			unsigned read_avail() const
+			{
+				if (_wpos > _rpos)
+					return _wpos - _rpos;
+
+				return (_wpos - _rpos + SIZE) & MASK;
+			}
+
+			unsigned write_avail() const
+			{
+				if (_wpos > _rpos)
+						return ((_rpos - _wpos + SIZE) & MASK) - 1;
+				else if (_wpos < _rpos)
+					return _rpos - _wpos;
+
+				return MASK;
+			}
+		};
+
+		Play_buffer _play_buffer_new[MAX_CHANNELS] { };
+
 		using Ring_buffer = Util::Ring_buffer<128u << 10>;
 		Ring_buffer _play_buffer[MAX_CHANNELS] { };
 
@@ -237,6 +296,15 @@ struct Vfs::Oss_file_system::Audio
 
 			_info.update();
 			_info_fs.value(_info);
+		}
+
+		void _for_each_sample(Play_buffer    &buffer,
+		                      unsigned const  samples,
+		                      auto     const &fn) const
+		{
+			for (unsigned i = 0; i < samples; i++) {
+				fn(buffer.remove());
+			}
 		}
 
 		void _for_each_sample(Ring_buffer    &buffer,
@@ -261,7 +329,8 @@ struct Vfs::Oss_file_system::Audio
 				if (first) {
 					_play_time_window = play.schedule_and_enqueue(_play_time_window, duration,
 						[&] (auto &submit) {
-							_for_each_sample(_play_buffer[0], samples,
+							// _for_each_sample(_play_buffer[0], samples,
+							_for_each_sample(_play_buffer_new[0], samples,
 								[&] (float const v) { submit(v); }); });
 					first = false;
 					return;
@@ -269,7 +338,8 @@ struct Vfs::Oss_file_system::Audio
 
 				play.enqueue(_play_time_window,
 					[&] (auto &submit) {
-						_for_each_sample(_play_buffer[1], samples,
+						// _for_each_sample(_play_buffer[1], samples,
+						_for_each_sample(_play_buffer_new[1], samples,
 							[&] (float const v) { submit(v); }); });
 			});
 		}
@@ -285,6 +355,20 @@ struct Vfs::Oss_file_system::Audio
 		unsigned _sample_count(Const_byte_range_ptr const &range) const
 		{
 			return (unsigned)range.num_bytes / (_format_size(_info.format) * _info.channels);
+		}
+
+		void _fill_buffer(Const_byte_range_ptr const &src, Play_buffer &buffer, int channel)
+		{
+			short const *data = (short const*)(src.start);
+			float const scale = 1.0f/32768;
+
+			unsigned int const channels = _info.channels;
+			size_t       const samples  = _sample_count(src);
+
+			for (size_t i = 0; i < samples; i++) {
+				float const v = scale * float(data[i * channels + channel]);
+				buffer.insert(v);
+			}
 		}
 
 		void _fill_buffer(Const_byte_range_ptr const &src, Ring_buffer &buffer, int channel)
@@ -303,7 +387,8 @@ struct Vfs::Oss_file_system::Audio
 
 		bool _play_buffer_write_samples_avail(unsigned samples) const
 		{
-			return _play_buffer[0].samples_write_avail<float>() >= samples;
+			// return _play_buffer[0].samples_write_avail<float>() >= samples;
+			return _play_buffer_new[0].write_avail() >= samples;
 		}
 
 		bool _play_buffer_range_avail(Const_byte_range_ptr const &src) const
@@ -313,7 +398,8 @@ struct Vfs::Oss_file_system::Audio
 
 		bool _play_buffer_read_samples_avail(unsigned samples) const
 		{
-			return _play_buffer[0].samples_read_avail<float>() >= samples;
+			// return _play_buffer[0].samples_read_avail<float>() >= samples;
+			return _play_buffer_new[0].read_avail() >= samples;
 		}
 
 		bool _play_timer_pending { false };
@@ -324,6 +410,8 @@ struct Vfs::Oss_file_system::Audio
 			if (_play_timer_pending || !_play_buffer_read_samples_avail(_output_samples_per_fragment))
 				return;
 
+			// Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer_new[0].read_avail());
+			// Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer[0].samples_read_avail<float>());
 			_play_timer_pending = true;
 
 			if (!_play_timer_started) {
@@ -334,6 +422,8 @@ struct Vfs::Oss_file_system::Audio
 			_stereo_output(_output_samples_per_fragment,
 			               _play_timer_duration);
 
+			Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer_new[0].read_avail());
+			// Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer[0].samples_read_avail<float>());
 			/*
 			 * For now we ignore 'optr_samples' altogether but we
 			 * could use it later on to denote the samples currently
@@ -355,6 +445,11 @@ struct Vfs::Oss_file_system::Audio
 			});
 
 			_play_timer_counter = 0;
+
+			_play_buffer_new[0].reset();
+			_play_buffer_new[1].reset();
+			// _play_buffer[0].reset();
+			// _play_buffer[1].reset();
 
 			_play_timer_pending = false;
 			_play_timer_started = false;
@@ -646,8 +741,17 @@ struct Vfs::Oss_file_system::Audio
 			_play_timer.sigh(cap);
 		}
 
+		Genode::uint64_t _last_timer = 0;
+
 		bool handle_play_timer()
 		{
+			// Genode::uint64_t const now = timestamp_us();
+			// Genode::int64_t const diff = ((Genode::int64_t)timestamp_us()) - _last_timer;
+
+			// if (diff - (Genode::int64_t)_play_timer_duration.us > 1000)
+				// Genode::warning(__func__, ": ", diff, " ", _play_timer_duration.us);
+			// _last_timer = now;
+
 			_play_timer_counter++;
 
 			_info.optr_fifo_samples -= _output_samples_per_fragment;
@@ -665,6 +769,8 @@ struct Vfs::Oss_file_system::Audio
 			 * sessions as some clients, e.g. cmus, do not
 			 * close the device but simply omit write calls.
 			 */
+			// Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer_new[0].read_avail());
+			// Genode::error(__func__, ":", __LINE__, ": read_avail: ", _play_buffer[0].samples_read_avail<float>());
 			_play_timer_pending = false;
 			_try_schedule_and_enqueue();
 			if (!_play_timer_pending) {
@@ -692,8 +798,10 @@ struct Vfs::Oss_file_system::Audio
 
 		bool write_ready() const
 		{
-			return _play_buffer_write_samples_avail(2*_output_samples_per_fragment);
+			return _play_buffer_write_samples_avail(4*_output_samples_per_fragment);
 		}
+
+		Genode::uint64_t _last_write_timer = 0;
 
 		Write_result write(Const_byte_range_ptr const &src, size_t &out_size)
 		{
@@ -701,14 +809,29 @@ struct Vfs::Oss_file_system::Audio
 
 			/* XXX document why limiting is reasonable */
 			if (!_play_buffer_range_avail(src)
-			  || _play_buffer_read_samples_avail(2*_output_samples_per_fragment))
+			  || _play_buffer_read_samples_avail(4*_output_samples_per_fragment)
+			  )
 				return Write_result::WRITE_ERR_WOULD_BLOCK;
 
 			out_size = src.num_bytes;
 
+			// Genode::uint64_t const now = timestamp_us();
+			// Genode::int64_t const diff = ((Genode::int64_t)timestamp_us()) - _last_write_timer;
+
+			// if (diff - (Genode::int64_t)_play_timer_duration.us > 1000)
+				// Genode::warning(__func__, ": ", diff, " ", _play_timer_duration.us);
+			// _last_write_timer = now;
+
+			Genode::error(__func__, ":", __LINE__, ": out: ", out_size / 4, " write_avail: ", _play_buffer_new[0].write_avail());
+			// Genode::error(__func__, ":", __LINE__, ": out: ", out_size / 4, " write_avail: ", _play_buffer[0].samples_write_avail<float>());
+
 			/* check channel has its own buffer */
 			for (unsigned i = 0; i < _info.channels; i++)
-				_fill_buffer(src, _play_buffer[i], i);
+				_fill_buffer(src, _play_buffer_new[i], i);
+				// _fill_buffer(src, _play_buffer[i], i);
+
+			// Genode::error(__func__, ":", __LINE__, ": out: ", out_size / 4, " write_avail: ", _play_buffer_new[0].write_avail());
+			// Genode::error(__func__, ":", __LINE__, ": out: ", out_size / 4, " write_avail: ", _play_buffer[0].samples_write_avail<float>());
 
 			_try_schedule_and_enqueue();
 
