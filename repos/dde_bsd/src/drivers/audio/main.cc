@@ -32,6 +32,20 @@ using namespace Genode;
 using namespace Audio;
 
 
+static inline Genode::uint64_t rdtsc()
+{
+	Genode::uint32_t lo, hi;
+	asm volatile ("rdtsc" : "=a" (lo), "=d" (hi) : : "memory");
+	return (Genode::uint64_t)hi << 32 | lo;
+}
+
+
+static inline Genode::uint64_t timestamp_us()
+{
+	return rdtsc() / 1896;
+}
+
+
 /**************
  ** Playback **
  **************/
@@ -531,8 +545,17 @@ struct Stereo_output : Noncopyable
 	Signal_handler<Stereo_output> _output_handler {
 		_env.ep(), *this, &Stereo_output::_handle_output };
 
+	uint64_t _last_timer = 0;
+
 	void _handle_output()
 	{
+		uint64_t const now = timestamp_us();
+		int64_t const diff = ((int64_t)timestamp_us()) - _last_timer;
+		_last_timer = now;
+
+		// if (diff > 11800 || diff < 11400)
+		// 	Genode::warning(__func__, ": ", diff);
+
 		_recording.from_record_sessions(_left, _right);
 		Audio::play(_recording.data, sizeof(_recording.data));
 	}
