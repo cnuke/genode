@@ -232,6 +232,8 @@ class Mixer::Record_root : public Root_component<Record_session>
 			if (session_resources_from_args(args).ram_quota.value < Record::Session::DATASPACE_SIZE)
 				throw Insufficient_ram_quota();
 
+			Genode::error("Record_session", __func__, ": args: '", args, "'");
+
 			return new (md_alloc())
 				Record_session(_sessions,
 				               _env,

@@ -443,6 +443,8 @@ class Mixer::Play_root : public Root_component<Play_session>
 			if (session_resources_from_args(args).ram_quota.value < Play::Session::DATASPACE_SIZE)
 				throw Insufficient_ram_quota();
 
+			Genode::error("Play_session", __func__, ": args: '", args, "'");
+
 			return new (md_alloc())
 				Play_session(_sessions,
 				             _env,
