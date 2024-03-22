@@ -3,7 +3,7 @@ _/src/acpi_drv
 _/src/ps2_drv
 _/src/pc_usb_host_drv
 _/src/usb_hid_drv
-_/src/vesa_drv
+_/src/boot_fb_drv
 _/src/report_rom
 _/src/rom_filter
 _/src/event_filter
