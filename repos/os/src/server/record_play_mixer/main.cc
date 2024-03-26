@@ -179,12 +179,6 @@ struct Mixer::Main : Record_session::Operations, Play_session::Operations
 	void _handle_timer()
 	{
 		_count.value++;
-
-		Clock const now = current_clock_value();
-		_play_sessions.for_each([&] (Play_session &play_session) {
-			if (play_session.stale_session(now, 500'000u))
-				play_session.stop();
-		});
 	}
 
 	Timer_count _once_in_a_while_triggered { };
