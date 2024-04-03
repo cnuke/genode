@@ -16,7 +16,7 @@
 		<libc stdout="/dev/log" stderr="/dev/log"/>
 		<vfs>
 			<dir name="dev">
-				<log/> <oss_next name="dsp"/>
+				<log/> <oss name="dsp"/>
 			</dir>
 		</vfs>
 	</config>
