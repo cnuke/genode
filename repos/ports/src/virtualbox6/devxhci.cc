@@ -18,6 +18,7 @@
 #include <base/attached_rom_dataspace.h>
 #include <base/registry.h>
 #include <libc/allocator.h>
+#include <timer_session/connection.h>
 #include <util/list.h>
 
 /* qemu-usb includes */
@@ -83,7 +84,6 @@ struct XHCI
 	/** The MMIO region handle. */
 	IOMMMIOHANDLE hMmio;
 
-	PTMTIMERR3        controller_timer;
 	Timer_queue      *timer_queue;
 	Qemu::Controller *ctl;
 
@@ -119,7 +119,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	};
 
 	Genode::List<Context> _context_list;
-	PTMTIMER              tm_timer;
+	Timer::Connection _timer;
 
 	void _append_new_context(void *qtimer, void (*cb)(void*), void *data)
 	{
@@ -158,14 +158,16 @@ struct Timer_queue : public Qemu::Timer_queue
 		Context *min = _min_pending();
 		if (min == nullptr) return;
 
-		if (TMTimerIsActive(tm_timer))
-			TMTimerStop(tm_timer);
+		_timer.sigh(Genode::Signal_context_capability());
+		_timer.sigh(_timer_sigh);
 
-		uint64_t const now = TMTimerGetNano(tm_timer);
-		if (min->timeout_abs_ns < now)
-			TMTimerSetNano(tm_timer, 0);
-		else
-			TMTimerSetNano(tm_timer, min->timeout_abs_ns - now);
+		uint64_t const now = _timer.elapsed_us();
+
+		uint64_t const timeout_abs_us = min->timeout_abs_ns / 1000;
+		if (timeout_abs_us < now)
+			_timer.trigger_once(0);
+
+		_timer.trigger_once(timeout_abs_us - now);
 	}
 
 	void _deactivate_timer(void *qtimer)
@@ -178,19 +180,29 @@ struct Timer_queue : public Qemu::Timer_queue
 
 		if (c == _min_pending()) {
 			c->pending = false;
-			TMTimerStop(tm_timer);
+			_timer.sigh(Genode::Signal_context_capability());
 			_program_min_timer();
 		}
 
 		c->pending = false;
 	}
 
-	Timer_queue(Genode::Allocator &alloc, PTMTIMER timer)
-	: _alloc(alloc), tm_timer(timer) { }
+	Genode::Signal_handler<Timer_queue> _timer_sigh;
 
-	void timeout()
+	Timer_queue(Genode::Allocator  &alloc,
+	            Genode::Entrypoint &ep,
+	            Genode::Env        &env)
+	:
+		_alloc(alloc),
+		_timer(env),
+		_timer_sigh(ep, *this, &Timer_queue::_handle_timeout)
 	{
-		uint64_t now = TMTimerGetNano(tm_timer);
+		_timer.sigh(_timer_sigh);
+	}
+
+	void _handle_timeout()
+	{
+		uint64_t const now = _timer.elapsed_us() * 1000;
 
 		for (Context *c = _context_list.first(); c; c = c->next()) {
 			if (c->pending && c->timeout_abs_ns <= now) {
@@ -201,19 +213,6 @@ struct Timer_queue : public Qemu::Timer_queue
 
 		_program_min_timer();
 	}
-
-	/**********************
-	 ** TMTimer callback **
-	 **********************/
-
-	static DECLCALLBACK(void) tm_timer_cb(PPDMDEVINS pDevIns, PTMTIMER pTimer, void *pvUser)
-	{
-		PXHCI pThis    = PDMINS_2_DATA(pDevIns, PXHCI);
-		Timer_queue *q = pThis->timer_queue;
-
-		q->timeout();
-	}
-
 
 	unsigned count_timer()
 	{
@@ -231,7 +230,7 @@ struct Timer_queue : public Qemu::Timer_queue
 	 ** Qemu::Timer_queue interface **
 	 *********************************/
 
-	Qemu::int64_t get_ns() { return TMTimerGetNano(tm_timer); }
+	Qemu::int64_t get_ns() { return _timer.elapsed_us() * 1000; }
 
 	Genode::Mutex _timer_mutex { };
 
@@ -418,11 +417,7 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 
 	static Libc::Allocator alloc;
 
-	int rc = PDMDevHlpTMTimerCreate(pDevIns, TMCLOCK_VIRTUAL, Timer_queue::tm_timer_cb,
-	                                pThis, TMTIMER_FLAGS_NO_CRIT_SECT,
-	                                "XHCI Timer", &pThis->controller_timer);
-
-	static Timer_queue timer_queue(alloc, pThis->controller_timer);
+	static Timer_queue timer_queue(alloc, *pThis->usb_ep, *_xhci_genode_env);
 	pThis->timer_queue = &timer_queue;
 	static Pci_device pci_device(alloc, pDevIns);
 
@@ -452,7 +447,7 @@ static DECLCALLBACK(int) xhciR3Construct(PPDMDEVINS pDevIns, int iInstance, PCFG
 	/*
 	 * Register PCI device and I/O region.
 	 */
-	rc = PDMDevHlpPCIRegister(pDevIns, pPciDev);
+	int rc = PDMDevHlpPCIRegister(pDevIns, pPciDev);
 	if (RT_FAILURE(rc))
 		return rc;
 
