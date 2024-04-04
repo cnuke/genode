@@ -1042,6 +1042,18 @@ class Vfs::Oss_file_system::Data_file_system : public Single_file_system
 		{
 			Audio &_audio;
 
+			bool _rd_or_rdwr() const
+			{
+				return status_flags() == STATUS_RDONLY
+				    || status_flags() == STATUS_RDWR;
+			}
+
+			bool _wr_or_rdwr() const
+			{
+				return status_flags() == STATUS_WRONLY
+				    || status_flags() == STATUS_RDWR;
+			}
+
 			Oss_vfs_handle(Directory_service &ds,
 			               File_io_service   &fs,
 			               Allocator         &alloc,
@@ -1051,6 +1063,15 @@ class Vfs::Oss_file_system::Data_file_system : public Single_file_system
 				Single_vfs_handle { ds, fs, alloc, flags },
 				_audio { audio }
 			{ }
+
+			~Oss_vfs_handle()
+			{
+				if (_rd_or_rdwr())
+					_audio.enable_input(false);
+
+				if (_wr_or_rdwr())
+					_audio.enable_output(false);
+			}
 
 			Read_result read(Byte_range_ptr const &dst,
 			                 size_t               &out_count) override {
