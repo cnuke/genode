@@ -1355,7 +1355,7 @@ struct Vfs::Oss_file_system::Local_factory : File_system_factory
 
 	static Name name(Xml_node config)
 	{
-		return config.attribute_value("name", Name("oss_next"));
+		return config.attribute_value("name", Name("oss"));
 	}
 
 	Data_file_system _data_fs;
