@@ -39,8 +39,8 @@
 			<service name="File_system"/>
 			<service name="Usb"/>
 			<service name="Nic"/>
-			<service name="Audio_out"/>
-			<service name="Audio_in"/>
+			<service name="Play"/>
+			<service name="Record"/>
 			<service name="Capture"/>
 		</parent-provides>
 
@@ -55,7 +55,8 @@
 			<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="rom" ld_verbose="yes">
 				<vfs>
 					<dir name="dev">
-						<log/> <rtc/> <null/> <gpu/> <zero/> <oss name="dsp"/>
+						<log/> <rtc/> <null/> <gpu/> <zero/>
+						<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
 					</dir>
 					<dir name="pipe"> <pipe/> </dir>
 					<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>
