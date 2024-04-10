@@ -13,5 +13,7 @@ launcher: vm_fs shared_fs download_debug_info black_hole
 depot: genodelabs cnuke alex-ab mstein nfeske cproc chelmuth jschlatow
 depot: ssumpf skalk
 
+depot: cnuke_test
+
 # preconfigured example scenarios
-presets: empty nano3d window_manager falkon_web_browser goa_testbed
+presets: empty nano3d window_manager
