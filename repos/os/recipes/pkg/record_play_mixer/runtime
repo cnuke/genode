@@ -3,11 +3,21 @@
 	<provides> <record/> <play/> </provides>
 
 	<config jitter_ms="10">
-		<mix name="left">  <play label_suffix="left"/>  </mix>
-		<mix name="right"> <play label_suffix="right"/> </mix>
+		<mix name="left">
+			<play label_suffix="client -> left"/>
+		</mix>
+		<mix name="right">
+			<play label_suffix="client -> right"/>
+		</mix>
 
-		<policy label_suffix="left"   record="left"  period_ms="12" jitter_ms="5" volume="1.0"/>
-		<policy label_suffix="right"  record="right" period_ms="12" jitter_ms="5" volume="1.0"/>
+		<mix name="mic_left">  <play label_suffix="audio -> left"/>  </mix>
+		<mix name="mic_right"> <play label_suffix="audio -> right"/> </mix>
+
+		<policy label_suffix="audio -> left"   record="left"  period_ms="12" jitter_ms="5" volume="1.0"/>
+		<policy label_suffix="audio -> right"  record="right" period_ms="12" jitter_ms="5" volume="1.0"/>
+
+		<policy label_suffix="left"  record="left"  period_ms="12" jitter_ms="5" volume="1.0"/>
+		<policy label_suffix="right" record="right" period_ms="12" jitter_ms="5" volume="1.0"/>
 	</config>
 
 	<content>
