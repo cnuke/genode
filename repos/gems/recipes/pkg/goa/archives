@@ -25,6 +25,13 @@ _/src/qt5_svg
 _/src/report_rom
 _/src/rom_filter
 _/src/sdl
+_/src/sdl_mixer
+_/src/sdl_net
+_/src/sdl_ttf
+_/src/sdl2
+_/src/sdl2_mixer
+_/src/sdl2_net
+_/src/sdl2_ttf
 _/src/sed
 _/src/stdcxx
 _/src/stdin2out
