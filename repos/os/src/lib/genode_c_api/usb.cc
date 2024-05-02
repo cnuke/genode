@@ -1102,8 +1102,21 @@ void Session_component::_device_policy(genode_usb_device const &d,
 				d.configs.for_each([&] (genode_usb_configuration const &c) {
 					if (!c.active)
 						return;
+
+					enum { CLASS_AUDIO = 0x1, CLASS_HID = 0x3 };
+					bool audio_found = false;
 					c.interfaces.for_each([&] (genode_usb_interface const &i) {
+						/*
+						 * Check for audio interface first to prevent HID
+						 * interfaces from taking precedence.
+						 */
+						if (i.desc.iclass == CLASS_AUDIO && cla == CLASS_HID)
+							audio_found = true;
+
 						if (i.desc.iclass == cla) match = true; });
+
+					if (audio_found && match)
+						match = false;
 				});
 			}
 
