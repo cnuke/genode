@@ -87,6 +87,8 @@ proc create_ipxe_config { } {
 
 	if {![load_ipxe_lighttpd]} { return }
 
+	exec ln -sfn [genode_dir]/public [run_dir]
+
 	set conf_file [file normalize [run_dir]/lighttpd.conf]
 
 	set fh [open "$conf_file" "WRONLY CREAT TRUNC"]
