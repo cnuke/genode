@@ -261,6 +261,7 @@ handle_irq_request(genode_usb_request_handle_t handle,
 static void
 handle_bulk_request(genode_usb_request_handle_t handle,
                    unsigned char                ep_addr,
+                   unsigned short               stream_id,
                    genode_buffer_t              payload,
                    void                        *opaque_callback_data)
 {
@@ -284,6 +285,7 @@ handle_bulk_request(genode_usb_request_handle_t handle,
 
 	usb_fill_bulk_urb(urb, udev, pipe, payload.addr, payload.size,
 	                  async_complete, handle);
+	urb->stream_id = stream_id;
 	anchor_and_submit_urb(handle, urb, &data->submitted);
 }
 

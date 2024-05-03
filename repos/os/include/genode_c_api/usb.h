@@ -120,6 +120,7 @@ typedef void (*genode_usb_req_irq_t)
 typedef void (*genode_usb_req_bulk_t)
 	(genode_usb_request_handle_t handle,
 	 unsigned char               ep,
+	 unsigned short              stream_id,
 	 genode_buffer_t             payload,
 	 void                       *opaque_data);
 

@@ -77,8 +77,9 @@ struct Usb::Interface_session : Interface
 			BULK, IRQ, ISOC, FLUSH
 		} type { FLUSH };
 
-		uint8_t index { 0 };
-		size_t  payload_return_size { 0 };
+		uint8_t  index { 0 };
+		uint16_t stream_id { 0 };
+		size_t   payload_return_size { 0 };
 
 		using Tagged_packet::Tagged_packet;
 	};

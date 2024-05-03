@@ -795,7 +795,7 @@ Interface_component::_handle_request(Constructible<Packet_descriptor> &cpd,
 
 	switch (cpd->type) {
 	case Packet_descriptor::BULK:
-		cbs->bulk_fn(handle, cpd->index, payload, opaque_data);
+		cbs->bulk_fn(handle, cpd->index, cpd->stream_id, payload, opaque_data);
 		break;
 	case Packet_descriptor::IRQ:
 		cbs->irq_fn(handle, cpd->index, payload, opaque_data);
