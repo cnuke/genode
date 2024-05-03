@@ -51,6 +51,7 @@ class Urb : Usb::Endpoint, public Usb::Interface::Urb,
 		}
 
 		::Endpoint       &_endpoint;
+		uint16_t          _stream_id { 0 };
 		USBPacket * const _packet   { nullptr };
 		bool              _canceled { false   };
 
@@ -59,6 +60,14 @@ class Urb : Usb::Endpoint, public Usb::Interface::Urb,
 		Urb(Registry<Urb> &registry,
 		    ::Interface   &iface,
 		    ::Endpoint    &endp,
+		    uint8_t        type,
+		    size_t         size,
+		    USBPacket     *packet);
+
+		Urb(Registry<Urb> &registry,
+		    ::Interface   &iface,
+		    ::Endpoint    &endp,
+		    uint16_t       stream_id,
 		    uint8_t        type,
 		    size_t         size,
 		    USBPacket     *packet);
@@ -468,6 +477,21 @@ Urb::Urb(Registry<Urb> &registry,
 Urb::Urb(Registry<Urb> &registry,
          ::Interface   &iface,
          ::Endpoint    &endp,
+         uint16_t       stream_id,
+         uint8_t        type,
+         size_t         size,
+         USBPacket     *packet)
+:
+	Registry<Urb>::Element(registry, *this),
+	Usb::Endpoint(endp.address(), endp.attributes()),
+	Usb::Interface::Urb(iface._session(), *this,
+	                    _type(type), size),
+	_endpoint(endp), _stream_id(stream_id), _packet(packet) { }
+
+
+Urb::Urb(Registry<Urb> &registry,
+         ::Interface   &iface,
+         ::Endpoint    &endp,
          uint8_t        type,
          size_t         size,
          uint32_t       isoc_packets)
@@ -644,6 +668,10 @@ static void usb_host_update_ep(USBDevice *udev)
 				usb_ep_set_type(udev, pid, ep, type);
 				usb_ep_set_ifnum(udev, pid, ep, iface.number());
 				usb_ep_set_halted(udev, pid, ep, 0);
+
+				// libusb_get_ss_endpoint_companion_descriptor
+				// usb_ep_set_max_streams(udev, pid, ep,
+				//                        endp_ss_comp->bmAttributes);
 			});
 		});
 	});
@@ -858,7 +886,7 @@ static void usb_host_handle_data(USBDevice *udev, USBPacket *p)
 					p->status = USB_RET_ASYNC;
 					new (_usb_session()->_alloc)
 						::Urb(_usb_session()->_urb_registry,
-						      iface, endp, type, usb_packet_size(p), p);
+						      iface, endp, p->stream ? : 0, type, usb_packet_size(p), p);
 					iface.update_urbs();
 					return;
 				case USB_ENDPOINT_XFER_ISOC:
@@ -927,6 +955,50 @@ static void usb_host_ep_stopped(USBDevice *udev, USBEndpoint *usb_ep)
 }
 
 
+static int usb_host_alloc_streams(USBDevice *udev, USBEndpoint **eps,
+                                  int nr_eps, int streams)
+{
+	USBHostDevice *s = USB_HOST_DEVICE(udev);
+	unsigned char endpoints[30];
+	int i, rc;
+
+	for (i = 0; i < nr_eps; i++) {
+		endpoints[i] = eps[i]->nr;
+		if (eps[i]->pid == USB_TOKEN_IN) {
+			endpoints[i] |= 0x80;
+		}
+	}
+
+	rc = 0; // libusb_alloc_streams(s->dh, streams, endpoints, nr_eps);
+	if (rc < 0) {
+		error("allocating streams failed", rc);
+
+	} else if (rc != streams) {
+		error(__func__, ": streams got (", rc,
+		      ") does not match requested streams (", streams, ")");
+	}
+
+	return (rc == streams) ? 0 : -1;
+}
+
+
+static void usb_host_free_streams(USBDevice *udev, USBEndpoint **eps,
+                                  int nr_eps)
+{
+	USBHostDevice *s = USB_HOST_DEVICE(udev);
+	unsigned char endpoints[30];
+	int i;
+
+	for (i = 0; i < nr_eps; i++) {
+		endpoints[i] = eps[i]->nr;
+		if (eps[i]->pid == USB_TOKEN_IN) {
+			endpoints[i] |= 0x80;
+		}
+	}
+	// libusb_free_streams(s->dh, endpoints, nr_eps);
+}
+
+
 static Property usb_host_dev_properties[] = {
     DEFINE_PROP_END_OF_LIST(),
 };
@@ -943,6 +1015,8 @@ static void usb_host_class_initfn(ObjectClass *klass, void *data)
 	uc->handle_data    = usb_host_handle_data;
 	uc->handle_control = usb_host_handle_control;
 	uc->ep_stopped     = usb_host_ep_stopped;
+	uc->alloc_streams  = usb_host_alloc_streams;
+	uc->free_streams   = usb_host_free_streams;
 	dc->props = usb_host_dev_properties;
 }
 
