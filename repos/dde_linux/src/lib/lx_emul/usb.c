@@ -126,6 +126,37 @@ static void release_device(struct usb_per_dev_data * data)
 }
 
 
+static int alloc_streams(struct usb_device *udev, unsigned short ifnum,
+                         unsigned char ep_addr[30], unsigned num_eps,
+                         unsigned num_streams)
+{
+	struct usb_interface *iface = usb_ifnum_to_if(udev, ifnum);
+	struct usb_host_endpoint *eps[30] = { };
+
+	for (unsigned int i = 0; i < num_eps; i++) {
+		eps[i] = ep_addr[i] & USB_DIR_IN ? udev->ep_in [ep_addr[i] & 0xf]
+		                                 : udev->ep_out[ep_addr[i] & 0xf];
+	}
+
+	return usb_alloc_streams(iface, eps, num_eps, num_streams, GFP_NOIO);
+}
+
+
+static void free_streams(struct usb_device *udev, unsigned short ifnum,
+                         unsigned char ep_addr[30], unsigned num_eps)
+{
+	struct usb_interface *iface = usb_ifnum_to_if(udev, ifnum);
+	struct usb_host_endpoint *eps[30] = { };
+
+	for (unsigned int i = 0; i < num_eps; i++) {
+		eps[i] = ep_addr[i] & USB_DIR_IN ? udev->ep_in [ep_addr[i] & 0xf]
+		                                 : udev->ep_out[ep_addr[i] & 0xf];
+	}
+
+	(void)usb_free_streams(iface, ifnum, eps, num_eps);
+}
+
+
 static void
 handle_control_request(genode_usb_request_handle_t handle,
                        unsigned char               ctrl_request,
