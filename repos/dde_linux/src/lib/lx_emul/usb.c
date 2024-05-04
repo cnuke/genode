@@ -153,7 +153,7 @@ static void free_streams(struct usb_device *udev, unsigned short ifnum,
 		                                 : udev->ep_out[ep_addr[i] & 0xf];
 	}
 
-	(void)usb_free_streams(iface, ifnum, eps, num_eps);
+	(void)usb_free_streams(iface, eps, num_eps, GFP_NOIO);
 }
 
 
@@ -572,16 +572,34 @@ static void add_interface_callback(struct genode_usb_configuration * cfg,
 	struct usb_interface_cache *iface_cache = ucfg->intf_cache[idx];
 	struct usb_interface       *iface       = ucfg->interface[idx];
 	unsigned i;
+	unsigned num_eps;
 
 	for (i = 0; i < iface_cache->num_altsetting; i++) {
 		struct genode_usb_interface_descriptor *desc =
 			(struct genode_usb_interface_descriptor*)
 				&iface_cache->altsetting[i].desc;
+		struct usb_host_interface *hiface = &iface_cache->altsetting[i];
+		struct usb_host_endpoint *eps[30] = { };
+
 		bool set = iface ? &iface->altsetting[i] == iface->cur_altsetting
 		                 : false;
 		genode_usb_device_add_interface(cfg, interface_string, *desc,
 		                                add_endpoint_callback,
 		                                &iface_cache->altsetting[i], set);
+
+		if (desc->iprotocol == 98)
+			for (num_eps = 0; num_eps < desc->num_endpoints; num_eps++) {
+					struct usb_endpoint_descriptor *ep_desc =
+						&hiface->endpoint[num_eps].desc;
+
+					if ((ep_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_BULK) {
+						eps[num_eps] = &hiface->endpoint[num_eps];
+					}
+
+			}
+
+		if (num_eps)
+			usb_alloc_streams(iface, eps, num_eps, 16, GFP_NOIO);
 	}
 }
 
