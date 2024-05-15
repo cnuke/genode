@@ -16,7 +16,7 @@ import_from_depot \
 	[depot_user]/src/acpi \
 	[depot_user]/src/pci_decode \
 	[depot_user]/src/platform \
-	[depot_user]/src/pc_i2c_hid
+	[depot_user]/pkg/pc_i2c_hid
 
 append config {
 <config prio_levels="2">
