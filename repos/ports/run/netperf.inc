@@ -166,7 +166,7 @@ append_if $use_wifi_driver  packages " [depot_user]/src/platform_drv            
 
 import_from_depot $packages
 
-build { app/netperf }
+build { app/netperf drivers/nic/fec }
 
 #
 # Generate config
@@ -323,13 +323,25 @@ append  config { </wifi_config>
 
 	append config {
 
+	<start name="mem_report_rom" caps="100">
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="2M"/>
+		<provides>
+			<service name="ROM" />
+			<service name="Report" />
+		</provides>
+		<config>
+		</config>
+	</start>
+
 	<start name="nic_drv" caps="1200" managing_system="yes">
-		<resource name="RAM" quantum="32M"/>
+		<resource name="RAM" quantum="128M"/>
 		<binary name="init"/>
 		<route>
 			<service name="ROM" label="config"> <parent label="drivers.config"/> </service>
 			<service name="Timer"> <child name="timer"/> </service>
 			<service name="Uplink"> <child name="nic_router"/> </service>
+			<service name="Report"> <child name="mem_report_rom"/> </service>
 			<any-service> <parent/> </any-service>
 		</route>
 	</start> }
