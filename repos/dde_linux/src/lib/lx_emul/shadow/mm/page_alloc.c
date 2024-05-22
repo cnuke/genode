@@ -37,6 +37,7 @@ unsigned long __alloc_pages_bulk(gfp_t gfp,int preferred_nid,
 				lx_emul_trace_and_stop("__alloc_pages_bulk: page_array entry not null");
 
 			page_array[i] = page + i;
+			init_page_count(page_array[i]);
 		}
 	}
 
