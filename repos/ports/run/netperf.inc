@@ -166,7 +166,7 @@ append_if $use_wifi_driver  packages " [depot_user]/src/platform_drv            
 
 import_from_depot $packages
 
-build { app/netperf }
+build { app/netperf drivers/nic/fec }
 
 #
 # Generate config
@@ -458,7 +458,9 @@ if { $use_usb_driver } {
 	close $fd
 }
 
-build_boot_image [build_artifacts]
+set boot_modules [build_artifacts]
+append boot_modules { fec_nic_drv }
+build_boot_image $boot_modules
 
 #
 # Execute test case
