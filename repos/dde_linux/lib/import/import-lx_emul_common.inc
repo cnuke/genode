@@ -176,7 +176,7 @@ CUSTOM_TARGET_DEPS += $(TARGET_SOURCE_LIST)
 # last path element as using the file name is not enough for certain
 # drivers (e.g., rtlwifi)
 define GEN_KBUILD_MODNAME =
-$(lastword $(subst /, ,$(dir $(1))))-$(notdir $(1))
+$(subst -,_,$(notdir $(1)))
 endef
 
 # Define per-compilation-unit CC_OPT defines needed by MODULE* macros in Linux
