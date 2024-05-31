@@ -2544,39 +2544,84 @@ int Libc::Vfs_plugin::pipe(Libc::File_descriptor *pipefdo[2])
 }
 
 
-int Libc::Vfs_plugin::poll(Pollfd fds[], int nfds)
+bool Libc::Vfs_plugin::poll(File_descriptor &fd, struct pollfd &pfd)
+{
+	error("Plugin::poll() is deprecated");
+	return false;
+}
+
+
+bool Libc::Vfs_plugin::supports_select(int nfds,
+                                       fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+                                       struct timeval *timeout)
+{
+	/* return true if any file descriptor (which is set) belongs to the VFS */
+	for (int fd = 0; fd < nfds; ++fd) {
+
+		if (FD_ISSET(fd, readfds) || FD_ISSET(fd, writefds) || FD_ISSET(fd, exceptfds)) {
+
+			File_descriptor *fdo =
+				file_descriptor_allocator()->find_by_libc_fd(fd);
+
+			if (fdo && (fdo->plugin == this))
+				return true;
+		}
+	}
+	return false;
+}
+
+
+int Libc::Vfs_plugin::select(int nfds,
+                             fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+                             struct timeval *timeout)
 {
 	int nready = 0;
 
+	fd_set const in_readfds  = *readfds;
+	fd_set const in_writefds = *writefds;
+	/* XXX exceptfds not supported */
+
+	/* clear fd sets */
+	FD_ZERO(readfds);
+	FD_ZERO(writefds);
+	FD_ZERO(exceptfds);
+
 	auto fn = [&] {
+		for (int fd = 0; fd < nfds; ++fd) {
 
-		for (int pollfd_index = 0; pollfd_index < nfds; pollfd_index++) {
+			bool fd_in_readfds = FD_ISSET(fd, &in_readfds);
+			bool fd_in_writefds = FD_ISSET(fd, &in_writefds);
 
-			Vfs::Vfs_handle *handle = vfs_handle(fds[pollfd_index].fdo);
+			if (!fd_in_readfds && !fd_in_writefds)
+				continue;
+
+			File_descriptor *fdo =
+				file_descriptor_allocator()->find_by_libc_fd(fd);
+
+			/* handle only fds that belong to this plugin */
+			if (!fdo || (fdo->plugin != this))
+				continue;
+
+			Vfs::Vfs_handle *handle = vfs_handle(fdo);
 			if (!handle) continue;
 
-			bool fd_ready = false;
-
-			if (fds[pollfd_index].events & (POLLIN | POLLPRI | POLLRDNORM | POLLRDBAND)) {
+			if (fd_in_readfds) {
 				if (handle->fs().read_ready(*handle)) {
-					*fds[pollfd_index].revents |= POLLIN;
-					fd_ready = true;
+					FD_SET(fd, readfds);
+					++nready;
 				} else {
 					handle->fs().notify_read_ready(handle);
 				}
 			}
 
-			if (fds[pollfd_index].events & (POLLOUT | POLLWRNORM | POLLWRBAND)) {
+			if (fd_in_writefds) {
 				if (handle->fs().write_ready(*handle)) {
-					*fds[pollfd_index].revents |= POLLOUT;
-					fd_ready = true;
+					FD_SET(fd, writefds);
+					++nready;
 				}
 			}
 
-			/* XXX POLLERR not supported */
-
-			if (fd_ready)
-				nready++;
+			/* XXX exceptfds not supported */
 		}
 		return Fn::COMPLETE;
 	};
