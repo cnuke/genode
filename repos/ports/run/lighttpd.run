@@ -129,6 +129,10 @@ server.network-backend = "write"
 server.upload-dirs     = ( "/tmp" )
 server.modules         = ("mod_openssl")
 server.modules += ( "mod_webdav" )
+server.max-keep-alive-requests = 4
+server.max-keep-alive-idle     = 4
+server.max-fds                 = 128
+
 index-file.names     = (
   "index.xhtml", "index.html", "index.htm"
 )

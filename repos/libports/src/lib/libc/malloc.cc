@@ -72,6 +72,9 @@ class Libc::Slab_alloc : public Slab
 };
 
 
+#include <os/backtrace.h>
+
+
 /**
  * Allocator that uses slabs for small objects sizes
  */
@@ -184,6 +187,11 @@ class Libc::Malloc
 
 			*(aligned_addr - 1) = Metadata(real_size, offset);
 
+			if (aligned_addr == (void*)0x6f3560) {
+				Genode::error(this, " ", __func__, ":", __LINE__, " aligned_addr: ", aligned_addr, " size: ", size, " real_size: ", real_size);
+				Genode::backtrace();
+			}
+
 			return aligned_addr;
 		}
 
@@ -220,6 +228,10 @@ class Libc::Malloc
 			unsigned const  msb        = _slab_log2(real_size);
 
 			void *alloc_addr = (void *)((addr_t)ptr - md->offset);
+			if (ptr == (void*)0x6f3560) {
+				Genode::error(this, " ", __func__, ":", __LINE__, " ptr: ", ptr, " alloc_addr: ", alloc_addr, " real_size: ", real_size);
+				Genode::backtrace();
+			}
 
 			if (md->offset == 0)
 				error("libc free: meta-data offset is 0 for address: ", ptr,
@@ -239,16 +251,26 @@ using namespace Libc;
 
 static Malloc *mallocator;
 
+static Genode::Mutex &mufoobar()
+{
+	static Genode::Mutex inst;
+	return inst;
+}
+
 
 extern "C" void *malloc(size_t size)
 {
+	Mutex::Guard guard(mufoobar());
+
 	return mallocator->alloc(size);
 }
 
 
 extern "C" void *calloc(size_t nmemb, size_t size)
 {
-	void *addr = malloc(nmemb*size);
+	Mutex::Guard guard(mufoobar());
+
+	void *addr = mallocator->alloc(nmemb*size);
 	if (addr)
 		Genode::memset(addr, 0, nmemb*size);
 	return addr;
@@ -257,15 +279,25 @@ extern "C" void *calloc(size_t nmemb, size_t size)
 
 extern "C" void free(void *ptr)
 {
+	Mutex::Guard guard(mufoobar());
+	if (ptr /*&& ptr == (void*)0x6f3560*/) {
+		// Genode::error(__func__, ":", __LINE__, " ptr: ", ptr);
+		// Genode::backtrace();
+	}
 	if (ptr) mallocator->free(ptr);
 }
 
 
 extern "C" void *realloc(void *ptr, size_t size)
 {
-	if (!ptr) return malloc(size);
+	Mutex::Guard guard(mufoobar());
+
+	if (!ptr) return mallocator->alloc(size);
 
 	if (!size) {
+		Genode::error(__func__, ":", __LINE__, ": ptr: ", ptr);
+		Genode::backtrace();
+
 		free(ptr);
 		return nullptr;
 	}
