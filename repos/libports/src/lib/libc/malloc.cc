@@ -280,6 +280,9 @@ extern "C" void *calloc(size_t nmemb, size_t size)
 extern "C" void free(void *ptr)
 {
 	Mutex::Guard guard(mufoobar());
+	Genode::error("ignore free ptr: ", ptr);
+	return;
+
 	if (ptr /*&& ptr == (void*)0x6f3560*/) {
 		// Genode::error(__func__, ":", __LINE__, " ptr: ", ptr);
 		// Genode::backtrace();
