@@ -655,10 +655,10 @@ struct Vfs::Oss_file_system::Audio
 			case Record_result::RECORD_OK:
 				break;
 			case Record_result::RECORD_UNDERRUN:
-				warning("underrun while recording");
+				// warning("underrun while recording");
 				break;
 			case Record_result::RECORD_OVERRUN:
-				warning("overrun while recording");
+				// warning("overrun while recording");
 				input.halt();
 				break;
 			}
