@@ -502,8 +502,8 @@ struct Stereo_input : Noncopyable
 
 	Env &_env;
 
-	Play::Connection _left  { _env, "left"  };
-	Play::Connection _right { _env, "right" };
+	Play::Connection _left  { _env, "mic_left"  };
+	Play::Connection _right { _env, "mic_right" };
 
 	struct Frame { float left, right; };
 
