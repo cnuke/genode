@@ -1,0 +1,14 @@
+<!--
+  Generic usb configuration containing the relevant USB devices used for testing.
+  -->
+
+<config bios_handoff="no">
+
+	<policy label_prefix="vbox6_raw-ubuntu">
+		<device/>
+	</policy>
+
+	<policy label_prefix="vbox6_raw-win">
+		<device/>
+	</policy>
+</config>

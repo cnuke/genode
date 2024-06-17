@@ -1,0 +1,54 @@
+<config arch="x86_64">
+
+	<common_routes>
+		<service name="ROM" label_last="ld.lib.so"> <parent/> </service>
+		<service name="CPU">   <parent/> </service>
+		<service name="PD">    <parent/> </service>
+		<service name="LOG">   <parent/> </service>
+		<service name="Timer"> <parent/> </service>
+	</common_routes>
+
+	<default-route>
+		<service name="Timer"> <parent/> </service>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="black_hole"/>
+	<start name="system_clock"/>
+	<start name="wm" pkg="themed_wm"/>
+
+	<start name="audio"/>
+	<start name="mixer"/>
+
+	<start name="shared_fs"/>
+
+	<start name="vbox6_fs-win10" pkg="chroot">
+		<config> <default-policy path="/vm/win10" writeable="yes"/> </config>
+		<route>
+			<service name="File_system"> <child name="default_fs_rw"/> </service>
+		</route>
+	</start>
+
+	<start name="vbox6-win10" pkg="vbox6" priority="-2">
+		<route>
+			<service name="File_system" label="shared">      <child name="shared_fs"/>         </service>
+			<service name="File_system" label="vm">          <child name="vbox6_fs-win10"/>    </service>
+			<service name="ROM" label="capslock">            <parent label="capslock"/>        </service>
+			<service name="ROM" label="clipboard">           <child name="wm"/>                </service>
+			<service name="ROM" label="mesa_gpu_drv.lib.so"> <child name="black_hole"/>        </service>
+			<service name="ROM" label="platform_info">       <parent label="platform_info"/>   </service>
+			<service name="Report" label="clipboard">        <child name="wm"/>                </service>
+			<service name="Report" label_last="shape">       <child name="wm"/>                </service>
+			<service name="Gpu">                             <child name="black_hole"/>        </service>
+			<service name="Gui">                             <child name="themed_wm"/>         </service>
+			<service name="Nic">                             <child name="nic_router"/>        </service>
+			<service name="Play">                            <child name="mixer"/>             </service>
+			<service name="RM">                              <parent/>                         </service>
+			<service name="Record">                          <child name="mixer"/>             </service>
+			<service name="Rtc">                             <child name="system_clock"/>      </service>
+			<service name="Usb">                             <child name="usb"/>               </service>
+			<service name="VM">                              <parent/>                         </service>
+		</route>
+	</start>
+
+</config>

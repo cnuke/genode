@@ -1,0 +1,18 @@
+deploy:     vbox6_raw-win10
+drivers:    pc
+gpu:        vbox6
+manager:    use_ram_fs
+nic_router: vbox6
+ram_fs:     vbox6
+system:     pc
+usb:        vbox6
+
+import: pkg/sculpt_drivers-pc
+import: raw/vbox6_files
+
+launcher: black_hole system_clock
+launcher: audio mixer
+
+launcher: vbox6_nvme_part_block
+
+launcher: shared_fs
