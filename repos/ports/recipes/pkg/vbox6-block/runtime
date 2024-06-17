@@ -57,7 +57,7 @@
 					<dir name="dev">
 						<log/> <rtc/> <null/> <gpu/> <zero/>
 						<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
-						<block name="block" label="block0" block_buffer_count="128"/>
+						<block name="block" label="block" block_buffer_count="128"/>
 					</dir>
 					<dir name="pipe"> <pipe/> </dir>
 					<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>

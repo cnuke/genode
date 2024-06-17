@@ -1,0 +1,6 @@
+set ::env(LOG) core
+set ::env(SCULPT) vbox6_raw-win10
+
+source ${genode_dir}/repos/gems/run/sculpt.run
+
+run_genode_until forever
