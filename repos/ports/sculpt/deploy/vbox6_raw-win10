@@ -30,6 +30,21 @@
 
 	<start name="shared_fs"/>
 
+	<start name="vbox_system_state" pkg="dynamic_rom" priority="-1">
+		<config verbose="yes">
+			<rom name="system">
+				<inline description="empty system state">
+<system/>
+				</inline>
+				<sleep milliseconds="40000"/>
+				<inline description="poweroff system state">
+<system state="poweroff"/>
+				</inline>
+				<sleep milliseconds="20000"/>
+			</rom>
+		</config>
+	</start>
+
 	<start name="vbox6_nvme_part"/>
 
 	<start name="vbox6_raw_fs-win10" pkg="chroot">
@@ -48,6 +63,7 @@
 			<service name="ROM" label="clipboard">           <child name="wm"/>                 </service>
 			<service name="ROM" label="mesa_gpu_drv.lib.so"> <child name="black_hole"/>         </service>
 			<service name="ROM" label="platform_info">       <parent label="platform_info"/>    </service>
+			<service name="ROM" label="system">              <child name="vbox_system_state"/>  </service>
 			<service name="Report" label="clipboard">        <child name="wm"/>                 </service>
 			<service name="Report" label_last="shape">       <child name="wm"/>                 </service>
 			<service name="Gpu">                             <child name="black_hole"/>         </service>
