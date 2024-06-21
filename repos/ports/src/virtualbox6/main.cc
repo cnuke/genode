@@ -418,6 +418,12 @@ void Main::_handle_input()
 				return;
 		}
 
+		if (ev.key_press(Input::KEY_POWER)) {
+			if (_iconsole->PowerButton() != S_OK)
+				Genode::error("ACPI shutdown failed");
+			return;
+		}
+
 		_input_adapter.handle_input_event(ev);
 	};
 
