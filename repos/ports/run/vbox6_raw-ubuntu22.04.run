@@ -1,5 +1,5 @@
 set ::env(LOG) core
-set ::env(SCULPT) vbox6_raw-win10
+set ::env(SCULPT) vbox6_raw-ubuntu22.04
 
 source ${genode_dir}/repos/gems/run/sculpt.run
 

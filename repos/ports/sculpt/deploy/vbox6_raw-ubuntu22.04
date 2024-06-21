@@ -50,15 +50,15 @@
 	<start name="vbox6_nvme_part"/>
 
 	<start name="vbox6_raw_fs" pkg="chroot">
-		<config> <default-policy path="/vm/win-10-raw" writeable="yes"/> </config>
+		<config> <default-policy path="/vm/ubuntu-22.04-raw" writeable="yes"/> </config>
 		<route>
 			<service name="File_system"> <child name="default_fs_rw"/> </service>
 		</route>
 	</start>
 
-	<start name="vbox6_raw-win10" pkg="vbox6-block" priority="-2">
+	<start name="vbox6_raw-ubuntu22.04" pkg="vbox6-block" priority="-2">
 		<route>
-			<service name="Block" label="block">             <child name="vbox6_nvme_part" label="7"/> </service>
+			<service name="Block" label="block">             <child name="vbox6_nvme_part" label="6"/> </service>
 			<service name="File_system" label="shared">      <child name="shared_fs"/>          </service>
 			<service name="File_system" label="vm">          <child name="vbox6_raw_fs"/>       </service>
 			<service name="ROM" label="capslock">            <parent label="capslock"/>         </service>

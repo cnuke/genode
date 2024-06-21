@@ -9,7 +9,7 @@
   <Machine uuid="{dc7344b5-a8ab-4da6-8e95-be856b753b0b}" name="Ubuntu-22.04" OSType="Ubuntu_64" snapshotFolder="Snapshots" lastStateChange="2017-02-02T23:56:49Z">
     <MediaRegistry>
       <HardDisks>
-        <HardDisk uuid="{f52c2bdb-0fc0-4ab3-a0e0-3ed30f5fdf69}" location="volume.vmdk" format="VMDK" type="Normal"/>
+        <HardDisk uuid="{f52c2bdb-0fc0-4ab3-a0e0-3ed30f5fdf69}" location="disk0.vmdk" format="VMDK" type="Normal"/>
       </HardDisks>
       <DVDImages/>
     </MediaRegistry>
@@ -27,7 +27,7 @@
         <Order position="3" device="None"/>
         <Order position="4" device="None"/>
       </Boot>
-      <Display controller="VMSVGA" VRAMSize="128" monitorCount="1" accelerate3D="false"/>
+      <Display controller="VBoxSVGA" VRAMSize="128" monitorCount="1" accelerate3D="false"/>
       <VideoCapture enabled="false"/>
       <RemoteDisplay enabled="false"/>
       <Paravirt provider="KVM"/>
@@ -41,7 +41,7 @@
         </Controllers>
       </USB>
       <Network>
-        <Adapter slot="0" enabled="true" MACAddress="080027235455" cable="false" speed="0" type="82540EM">
+        <Adapter slot="0" enabled="true" MACAddress="080027235455" cable="true" speed="0" type="82540EM">
           <HostInterface/>
         </Adapter>
       </Network>
