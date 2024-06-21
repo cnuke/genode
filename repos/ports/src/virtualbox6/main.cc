@@ -287,6 +287,12 @@ struct Main : Event_handler
 
 	void _handle_fb_mode();
 
+	Constructible<Attached_rom_dataspace> _system_state_rom;
+	Signal_handler<Main>                  _system_state_handler {
+		_env.ep(), *this, &Main::_handle_system_state };
+
+	void _handle_system_state();
+
 	Input_adapter _input_adapter { _iconsole };
 
 	bool const _genode_gui_attached = ( _attach_genode_gui(), true );
@@ -394,6 +400,11 @@ struct Main : Event_handler
 		 * framebuffer dimensions in scenarios without a window manager.
 		 */
 		_handle_fb_mode();
+
+		if (_config.xml().attribute_value("consider_system_state", false)) {
+			_system_state_rom.construct(_env, "system");
+			_system_state_rom->sigh(_system_state_handler);
+		}
 	}
 };
 
@@ -459,6 +470,35 @@ void Main::_handle_fb_mode()
 			                            fb->w(), fb->h(),
 			                            32, true);
 		});
+	});
+}
+
+
+void Main::_handle_system_state()
+{
+	if (!_system_state_rom.constructed() || !_system_state_rom->valid())
+		return;
+
+	_system_state_rom->update();
+	Genode::Xml_node const system = _system_state_rom->xml();
+
+	auto const state = system.attribute_value("state", Genode::String<32>());
+
+	Libc::with_libc([&] {
+
+		if (state == "reset") {
+			Genode::log("VM reset requested");
+
+			if (_iconsole->Reset() != S_OK)
+				Genode::error("VM reset failed");
+		} else
+
+		if (state == "poweroff") {
+			Genode::log("VM power-off requested");
+
+			if (_iconsole->PowerButton() != S_OK)
+				Genode::error("ACPI shutdown failed");
+		}
 	});
 }
 
