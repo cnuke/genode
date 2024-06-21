@@ -12,6 +12,7 @@
 		<rom label="mesa_gpu_drv.lib.so"/>
 		<rom label="capslock"/>
 		<rom label="platform_info"/>
+		<rom label="system"/>
 		<report label="shape"/>
 		<report label="clipboard"/>
 		<rom    label="clipboard"/>
@@ -52,7 +53,7 @@
 			<binary name="virtualbox6" />
 			<resource name="RAM" quantum="8G"/>
 			<exit propagate="yes"/>
-			<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="rom" ld_verbose="yes">
+			<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="rom" consider_system_state="yes" ld_verbose="yes">
 				<vfs>
 					<dir name="dev">
 						<log/> <rtc/> <null/> <gpu/> <zero/>
@@ -83,6 +84,7 @@
 				<service name="File_system">                <parent label="vm"/>            </service>
 				<service name="ROM" label="capslock">       <parent label="capslock"/>      </service>
 				<service name="ROM" label="platform_info">  <parent label="platform_info"/> </service>
+				<service name="ROM" label="system">         <parent label="system"/>        </service>
 				<service name="ROM" label="VBoxSharedClipboard.so">
 				  <parent label="virtualbox6-sharedclipboard.lib.so"/> </service>
 				<service name="ROM" label="VBoxSharedFolders.so">
