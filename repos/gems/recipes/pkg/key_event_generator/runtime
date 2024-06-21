@@ -1,0 +1,10 @@
+<runtime ram="1M" caps="100" binary="key_event_generator">
+
+	<requires> <event/> </requires>
+
+	<content>
+		<rom label="key_event_generator"/>
+		<rom label="ld.lib.so"/>
+	</content>
+
+</runtime>

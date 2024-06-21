@@ -1,0 +1,3 @@
+The key-event-generator component allows for generating artificial key events.
+
+It will use a press and release event for the specified key.
