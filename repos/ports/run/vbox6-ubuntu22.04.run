@@ -1,0 +1,8 @@
+set ::env(LOG) core
+set ::env(SCULPT) vbox6-ubuntu22.04
+
+source ${genode_dir}/repos/gems/run/sculpt.run
+
+run_genode_until forever
+
+#run_genode_until {\[init -> runtime\] child "vbox6_raw-win10" exited with exit value 0} 90

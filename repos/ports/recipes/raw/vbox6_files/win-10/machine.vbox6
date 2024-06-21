@@ -9,7 +9,7 @@
   <Machine uuid="{dc7344b5-a8ab-4da6-8e95-be856b753b0b}" name="Windows-10" OSType="Windows10_64" snapshotFolder="Snapshots" lastStateChange="2017-02-02T23:56:49Z">
     <MediaRegistry>
       <HardDisks>
-        <HardDisk uuid="{f52c2bdb-0fc0-4ab3-a0e0-3ed30f5fdf69}" location="disk0.vmdk" format="VMDK" type="Normal"/>
+        <HardDisk uuid="{e25d2a0e-9716-4c7c-ba68-f9f47249cc20}" location="disk0.vdi" format="VDI" type="Normal"/>
       </HardDisks>
       <DVDImages/>
     </MediaRegistry>
@@ -35,7 +35,7 @@
         </Controllers>
       </USB>
       <Network>
-        <Adapter slot="0" enabled="true" MACAddress="080027235455" cable="true" speed="0" type="82540EM">
+        <Adapter slot="0" enabled="true" MACAddress="080027235455" cable="false" speed="0" type="82540EM">
           <HostInterface/>
         </Adapter>
       </Network>
@@ -56,7 +56,7 @@
     <StorageControllers>
       <StorageController name="SATA" type="AHCI" PortCount="2" useHostIOCache="true" Bootable="true">
         <AttachedDevice type="HardDisk" port="0" device="0">
-          <Image uuid="{f52c2bdb-0fc0-4ab3-a0e0-3ed30f5fdf69}"/>
+          <Image uuid="{e25d2a0e-9716-4c7c-ba68-f9f47249cc20}"/>
         </AttachedDevice>
         <AttachedDevice passthrough="false" type="DVD" port="1" device="0"/>
       </StorageController>
