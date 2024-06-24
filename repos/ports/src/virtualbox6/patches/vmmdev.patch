@@ -1,0 +1,30 @@
+Make guest additions log message always available.
+--- a/src/virtualbox6/src/VBox/Devices/VMMDev/VMMDev.cpp
++++ b/src/virtualbox6/src/VBox/Devices/VMMDev/VMMDev.cpp
+@@ -1006,10 +1006,10 @@
+         /* make a copy of supplied information */
+         pThis->fGuestCaps = fu32Caps;
+ 
+-        LogRel(("VMMDev: Guest Additions capability report (legacy): (0x%x) seamless: %s, hostWindowMapping: %s, graphics: yes\n",
++        RTLogPrintf("VMMDev: Guest Additions capability report (legacy): (0x%x) seamless: %s, hostWindowMapping: %s, graphics: yes\n",
+                 fu32Caps,
+                 fu32Caps & VMMDEV_GUEST_SUPPORTS_SEAMLESS ? "yes" : "no",
+-                fu32Caps & VMMDEV_GUEST_SUPPORTS_GUEST_HOST_WINDOW_MAPPING ? "yes" : "no"));
++                fu32Caps & VMMDEV_GUEST_SUPPORTS_GUEST_HOST_WINDOW_MAPPING ? "yes" : "no");
+ 
+         if (pThisCC->pDrv && pThisCC->pDrv->pfnUpdateGuestCapabilities)
+             pThisCC->pDrv->pfnUpdateGuestCapabilities(pThisCC->pDrv, fu32Caps);
+@@ -1035,11 +1035,11 @@
+     fu32Caps |= pReq->u32OrMask;
+     fu32Caps &= ~pReq->u32NotMask;
+ 
+-    LogRel(("VMMDev: Guest Additions capability report: (%#x -> %#x) seamless: %s, hostWindowMapping: %s, graphics: %s\n",
++    RTLogPrintf("VMMDev: Guest Additions capability report: (%#x -> %#x) seamless: %s, hostWindowMapping: %s, graphics: %s\n",
+             pThis->fGuestCaps, fu32Caps,
+             fu32Caps & VMMDEV_GUEST_SUPPORTS_SEAMLESS ? "yes" : "no",
+             fu32Caps & VMMDEV_GUEST_SUPPORTS_GUEST_HOST_WINDOW_MAPPING ? "yes" : "no",
+-            fu32Caps & VMMDEV_GUEST_SUPPORTS_GRAPHICS ? "yes" : "no"));
++            fu32Caps & VMMDEV_GUEST_SUPPORTS_GRAPHICS ? "yes" : "no");
+ 
+     pThis->fGuestCaps = fu32Caps;
+ 
