@@ -607,16 +607,16 @@ class Usb::Block_driver
 
 		bool handle_io()
 		{
-			using Urb   = Device::Urb;
-			using Value = Device::Packet_descriptor::Return_value;
+			/*using Urb   = Device::Urb;
+			using Value = Device::Packet_descriptor::Return_value;*/
 
-			auto out = [] (Urb&, Byte_range_ptr&) { };
+			/*auto out = [] (Urb&, Byte_range_ptr&) { };
 			auto in  = [] (Urb&, Const_byte_range_ptr&) { };
-			auto cpl = [this] (Urb&, Value r) { completed(r); };
+			auto cpl = [this] (Urb&, Value r) { completed(r); };*/
 
 			switch (_state) {
 			case ALT_SETTING: [[fallthrough]];
-			case RESET:         return _device.update_urbs<Urb>(out, in, cpl);
+			case RESET:         [[fallthrough]];//return _device.update_urbs<Urb>(out, in, cpl);
 			case INQUIRY:       return _inquiry_cmd.process(CHECK_MEDIUM);
 			case CHECK_MEDIUM:  return _medium_state.process(READ_CAPACITY);
 			case READ_CAPACITY: return _capacity(REPORT);
