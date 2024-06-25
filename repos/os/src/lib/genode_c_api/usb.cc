@@ -1372,8 +1372,9 @@ Device_capability Session_component::acquire_single_device()
 		_sessions.for_each([&] (Session_component &sc) {
 			if (sc.acquired(device)) acquired = true; });
 
-		if (acquired)
-			return;
+		/*if (acquired)
+			return;*/
+
 
 		cap = _acquire(device.label(), true);
 		_sessions.for_each([&] (Session_component &sc) {
@@ -1406,8 +1407,8 @@ void Session_component::produce_xml(Xml_generator &xml)
 			if (sc.acquired(device) && &sc != this)
 				acquired_by_other_session = true;
 		});
-		if (acquired_by_other_session)
-			return;
+		/*if (acquired_by_other_session)
+			return;*/
 
 		device.generate(xml, acquired(device));
 	});
