@@ -23,7 +23,10 @@
 /* core includes */
 #include <pager.h>
 
-namespace Core { class Platform_thread; }
+namespace Core {
+	class Platform_thread;
+	class Platform_pd;
+}
 
 
 /*
@@ -72,10 +75,15 @@ class Core::Platform_thread : public List<Platform_thread>::Element
 		/**
 		 * Constructor
 		 */
-		Platform_thread(size_t, const char *name, unsigned priority,
+		Platform_thread(Platform_pd &, size_t, const char *name, unsigned priority,
 		                Affinity::Location, addr_t);
 
 		~Platform_thread();
+
+		/**
+		 * Return true if thread creation succeeded
+		 */
+		bool valid() const { return true; }
 
 		/**
 		 * Pause this thread

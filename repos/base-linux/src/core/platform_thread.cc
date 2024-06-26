@@ -73,7 +73,7 @@ Platform_thread::Registry &Platform_thread::_registry()
  ** Platform_thread **
  *********************/
 
-Platform_thread::Platform_thread(size_t, const char *name, unsigned,
+Platform_thread::Platform_thread(Platform_pd &, size_t, const char *name, unsigned,
                                  Affinity::Location, addr_t)
 {
 	copy_cstring(_name, name, min(sizeof(_name), Genode::strlen(name) + 1));

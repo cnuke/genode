@@ -141,23 +141,22 @@ static void prepopulate_ipc_buffer(addr_t  const ipc_buffer_phys,
 
 int Platform_thread::start(void *ip, void *sp, unsigned int)
 {
-	ASSERT(_pd);
 	ASSERT(_pager);
 
 	/* pager endpoint in core */
 	Cap_sel const pager_sel(Capability_space::ipc_cap_data(_pager->cap()).sel);
 
 	/* install page-fault handler endpoint selector to the PD's CSpace */
-	_pd->cspace_cnode(_fault_handler_sel).copy(platform_specific().core_cnode(),
-	                                           pager_sel, _fault_handler_sel);
+	_pd.cspace_cnode(_fault_handler_sel).copy(platform_specific().core_cnode(),
+	                                          pager_sel, _fault_handler_sel);
 
 	/* install the thread's endpoint selector to the PD's CSpace */
-	_pd->cspace_cnode(_ep_sel).copy(platform_specific().core_cnode(),
-	                                _info.ep_sel, _ep_sel);
+	_pd.cspace_cnode(_ep_sel).copy(platform_specific().core_cnode(),
+	                               _info.ep_sel, _ep_sel);
 
 	/* install the thread's notification object to the PD's CSpace */
-	_pd->cspace_cnode(_lock_sel).mint(platform_specific().core_cnode(),
-	                                  _info.lock_sel, _lock_sel);
+	_pd.cspace_cnode(_lock_sel).mint(platform_specific().core_cnode(),
+	                                 _info.lock_sel, _lock_sel);
 
 	/*
 	 * Populate the thread's IPC buffer with initial information about the
@@ -168,15 +167,15 @@ int Platform_thread::start(void *ip, void *sp, unsigned int)
 
 	/* bind thread to PD and CSpace */
 	seL4_CNode_CapData const guard_cap_data =
-		seL4_CNode_CapData_new(0, CONFIG_WORD_SIZE - _pd->cspace_size_log2());
+		seL4_CNode_CapData_new(0, CONFIG_WORD_SIZE - _pd.cspace_size_log2());
 
 	seL4_CNode_CapData const no_cap_data = { { 0 } };
 
 	int const ret = seL4_TCB_SetSpace(_info.tcb_sel.value(),
 	                                  _fault_handler_sel.value(),
-	                                  _pd->cspace_cnode_1st().sel().value(),
+	                                  _pd.cspace_cnode_1st().sel().value(),
 	                                  guard_cap_data.words[0],
-	                                  _pd->page_directory_sel().value(),
+	                                  _pd.page_directory_sel().value(),
 	                                  no_cap_data.words[0]);
 	ASSERT(ret == 0);
 
@@ -207,17 +206,18 @@ void Platform_thread::state(Thread_state) { }
 
 bool Platform_thread::install_mapping(Mapping const &mapping)
 {
-	return _pd->install_mapping(mapping, name());
+	return _pd.install_mapping(mapping, name());
 }
 
 
-Platform_thread::Platform_thread(size_t, const char *name, unsigned priority,
-                                 Affinity::Location location, addr_t utcb)
+Platform_thread::Platform_thread(Platform_pd &pd, size_t, const char *name,
+                                 unsigned priority, Affinity::Location location,
+                                 addr_t utcb)
 :
 	_name(name),
 	_utcb(utcb ? utcb : addr_t(INITIAL_IPC_BUFFER_VIRT)),
 	_pager_obj_sel(platform_specific().core_sel_alloc().alloc()),
-	_location(location),
+	_pd(pd), _location(location),
 	_priority((uint16_t)(Cpu_session::scale_priority(CONFIG_NUM_PRIORITIES, priority)))
 
 {
@@ -228,15 +228,17 @@ Platform_thread::Platform_thread(size_t, const char *name, unsigned priority,
 
 	_info.init(_utcb, _priority);
 	platform_thread_registry().insert(*this);
+
+	_bound_to_pd = pd.bind_thread(*this);
 }
 
 
 Platform_thread::~Platform_thread()
 {
-	if (_pd) {
-		seL4_TCB_Suspend(_info.tcb_sel.value());
-		_pd->unbind_thread(*this);
-	}
+	seL4_TCB_Suspend(_info.tcb_sel.value());
+
+	if (_bound_to_pd)
+		_pd.unbind_thread(*this);
 
 	if (_pager) {
 		Cap_sel const pager_sel(Capability_space::ipc_cap_data(_pager->cap()).sel);
@@ -251,6 +253,7 @@ Platform_thread::~Platform_thread()
 	platform_thread_registry().remove(*this);
 	platform_specific().core_sel_alloc().free(_pager_obj_sel);
 }
+
 
 Trace::Execution_time Platform_thread::execution_time() const
 {
@@ -271,6 +274,7 @@ Trace::Execution_time Platform_thread::execution_time() const
 	return { ec_time, sc_time, 10000, _priority};
 }
 
+
 void Platform_thread::setup_vcpu(Cap_sel ept, Cap_sel notification)
 {
 	if (!_info.init_vcpu(platform_specific(), ept)) {
@@ -279,10 +283,10 @@ void Platform_thread::setup_vcpu(Cap_sel ept, Cap_sel notification)
 	}
 
 	/* install the thread's endpoint selector to the PD's CSpace */
-	_pd->cspace_cnode(_vcpu_sel).copy(platform_specific().core_cnode(),
-	                                  _info.vcpu_sel, _vcpu_sel);
-	_pd->cspace_cnode(_vcpu_notify_sel).copy(platform_specific().core_cnode(),
-	                                         notification, _vcpu_notify_sel);
+	_pd.cspace_cnode(_vcpu_sel).copy(platform_specific().core_cnode(),
+	                                 _info.vcpu_sel, _vcpu_sel);
+	_pd.cspace_cnode(_vcpu_notify_sel).copy(platform_specific().core_cnode(),
+	                                        notification, _vcpu_notify_sel);
 
 	prepopulate_ipc_buffer(_info.ipc_buffer_phys, _vcpu_sel, _vcpu_notify_sel,
 	                       _utcb);

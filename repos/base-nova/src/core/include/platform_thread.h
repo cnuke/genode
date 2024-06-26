@@ -39,7 +39,7 @@ class Core::Platform_thread
 {
 	private:
 
-		Platform_pd       *_pd;
+		Platform_pd       &_pd;
 		Pager_object      *_pager;
 		addr_t             _id_base;
 		addr_t             _sel_exc_base;
@@ -93,7 +93,7 @@ class Core::Platform_thread
 		/**
 		 * Constructor
 		 */
-		Platform_thread(size_t quota, char const *name,
+		Platform_thread(Platform_pd &, size_t quota, char const *name,
 		                unsigned priority,
 		                Affinity::Location affinity,
 		                addr_t utcb);
@@ -102,6 +102,11 @@ class Core::Platform_thread
 		 * Destructor
 		 */
 		~Platform_thread();
+
+		/**
+		 * Return true if thread creation succeeded
+		 */
+		bool valid() const { return true; }
 
 		/**
 		 * Start thread
@@ -199,16 +204,6 @@ class Core::Platform_thread
 		 * Get pd name
 		 */
 		const char *pd_name() const;
-
-		/**
-		 * Associate thread with protection domain
-		 */
-		void bind_to_pd(Platform_pd *pd, bool main_thread)
-		{
-			_pd = pd;
-
-			if (main_thread) _features |= MAIN_THREAD;
-		}
 
 		/**
 		 * Set CPU quota of the thread to 'quota'

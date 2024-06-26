@@ -47,10 +47,11 @@ class Core::Platform_thread
 		char          _name[32];            /* thread name that will be
 		                                       registered at the kernel
 		                                       debugger */
-		Platform_pd  *_platform_pd;         /* protection domain thread
-		                                       is bound to */
+		Platform_pd  &_pd;
 		unsigned      _priority;            /* thread priority */
 		Pager_object *_pager;
+
+		bool _bound_to_pd = false;
 
 	public:
 
@@ -60,7 +61,7 @@ class Core::Platform_thread
 		/**
 		 * Constructor
 		 */
-		Platform_thread(size_t, const char *name,
+		Platform_thread(Platform_pd &pd, size_t, const char *name,
 		                unsigned priority,
 		                Affinity::Location,
 		                addr_t utcb);
@@ -68,13 +69,18 @@ class Core::Platform_thread
 		/**
 		 * Constructor used for core-internal threads
 		 */
-		Platform_thread(char const *name)
-		: Platform_thread(0, name, 0, Affinity::Location(), 0) { }
+		Platform_thread(Platform_pd &pd, char const *name)
+		: Platform_thread(pd, 0, name, 0, Affinity::Location(), 0) { }
 
 		/**
 		 * Destructor
 		 */
 		~Platform_thread();
+
+		/**
+		 * Return true if thread creation succeeded
+		 */
+		bool valid() const { return _bound_to_pd; }
 
 		/**
 		 * Start thread
@@ -108,10 +114,8 @@ class Core::Platform_thread
 		 *
 		 * \param thread_id     local thread ID
 		 * \param l4_thread_id  final L4 thread ID
-		 * \param pd            platform pd, thread is bound to
 		 */
-		void bind(int thread_id, Okl4::L4_ThreadId_t l4_thread_id,
-		          Platform_pd &pd);
+		void bind(int thread_id, Okl4::L4_ThreadId_t l4_thread_id);
 
 		/**
 		 * Unbind this thread
@@ -148,7 +152,7 @@ class Core::Platform_thread
 		/**
 		 * Get the 'Platform_pd' object this thread belongs to
 		 */
-		Platform_pd* pd() { return _platform_pd; }
+		Platform_pd &pd() { return _pd; }
 
 		/**
 		 * Return identification of thread when faulting

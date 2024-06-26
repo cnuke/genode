@@ -56,7 +56,7 @@ class Core::Platform_thread : Noncopyable
 		typedef String<32> Label;
 
 		Label              const _label;
-		Platform_pd *            _pd;
+		Platform_pd             &_pd;
 		Weak_ptr<Address_space>  _address_space  { };
 		Pager_object *           _pager;
 		Native_utcb *            _utcb_core_addr { }; /* UTCB addr in core */
@@ -115,7 +115,7 @@ class Core::Platform_thread : Noncopyable
 		 * \param virt_prio  unscaled processor-scheduling priority
 		 * \param utcb       core local pointer to userland stack
 		 */
-		Platform_thread(size_t const quota, Label const &label,
+		Platform_thread(Platform_pd &, size_t const quota, Label const &label,
 		                unsigned const virt_prio, Affinity::Location,
 		                addr_t const utcb);
 
@@ -123,6 +123,11 @@ class Core::Platform_thread : Noncopyable
 		 * Destructor
 		 */
 		~Platform_thread();
+
+		/**
+		 * Return true if thread creation succeeded
+		 */
+		bool valid() const { return true; }
 
 		/**
 		 * Return information about current exception state
@@ -144,17 +149,6 @@ class Core::Platform_thread : Noncopyable
 		 * Return information about current fault
 		 */
 		Kernel::Thread_fault fault_info() { return _kobj->fault(); }
-
-		/**
-		 * Join a protection domain
-		 *
-		 * \param main_thread   whether thread is the first in protection domain
-		 *
-		 * This function has no effect when called more twice for a
-		 * given thread.
-		 */
-		void join_pd(Platform_pd *const pd, bool const main_thread,
-		             Weak_ptr<Address_space> address_space);
 
 		/**
 		 * Run this thread
@@ -245,7 +239,7 @@ class Core::Platform_thread : Noncopyable
 
 		Pager_object &pager();
 
-		Platform_pd * pd() const { return _pd; }
+		Platform_pd &pd() const { return _pd; }
 
 		Ram_dataspace_capability utcb() const { return _utcb; }
 };

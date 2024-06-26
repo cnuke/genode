@@ -72,12 +72,14 @@ class Core::Platform_thread : public List<Platform_thread>::Element
 
 		friend class Platform_pd;
 
-		Platform_pd *_pd = nullptr;
+		Platform_pd &_pd;
 
 		enum { INITIAL_IPC_BUFFER_VIRT = 0x1000 };
 
 		Affinity::Location _location;
 		uint16_t           _priority;
+
+		bool _bound_to_pd = false;
 
 		bool main_thread() const { return _utcb == INITIAL_IPC_BUFFER_VIRT; }
 
@@ -86,13 +88,18 @@ class Core::Platform_thread : public List<Platform_thread>::Element
 		/**
 		 * Constructor
 		 */
-		Platform_thread(size_t, const char *name, unsigned priority,
+		Platform_thread(Platform_pd &pd, size_t, const char *name, unsigned priority,
 		                Affinity::Location, addr_t utcb);
 
 		/**
 		 * Destructor
 		 */
 		~Platform_thread();
+
+		/**
+		 * Return true if thread creation succeeded
+		 */
+		bool valid() const { return _bound_to_pd; }
 
 		/**
 		 * Start thread

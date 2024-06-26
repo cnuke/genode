@@ -81,8 +81,6 @@ bool Platform_pd::bind_thread(Platform_thread &thread)
 		return false;
 	}
 
-	thread._pd = this;
-
 	/*
 	 * Map IPC buffer
 	 *

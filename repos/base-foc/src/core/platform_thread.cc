@@ -280,7 +280,7 @@ void Platform_thread::_finalize_construction()
 }
 
 
-Platform_thread::Platform_thread(size_t, const char *name, unsigned prio,
+Platform_thread::Platform_thread(Platform_pd &pd, size_t, const char *name, unsigned prio,
                                  Affinity::Location location, addr_t)
 :
 	_name(name),
@@ -298,6 +298,7 @@ Platform_thread::Platform_thread(size_t, const char *name, unsigned prio,
 	_create_thread();
 	_finalize_construction();
 	affinity(location);
+	_bound_to_pd = pd.bind_thread(*this);
 }
 
 
