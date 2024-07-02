@@ -135,6 +135,10 @@ struct Sculpt::Deploy
 			deploy.for_each_sub_node("common_routes", [&] (Xml_node node) {
 				append_xml_node(node); });
 
+			/* copy <static> from manual deploy config */
+			deploy.for_each_sub_node("static", [&] (Xml_node node) {
+				append_xml_node(node); });
+
 			/*
 			 * Copy the <start> node from manual deploy config, unless the
 			 * component was interactively killed by the user.
