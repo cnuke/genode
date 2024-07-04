@@ -1,8 +1,8 @@
 deploy:     vbox6_raw-ubuntu22.04
 drivers:    pc
-gpu:        vbox6
+gpu:        intel
 manager:    vbox6
-nic_router: vbox6-no_uplink
+nic_router: vbox6
 ram_fs:     vbox6
 system:     pc
 usb:        vbox6

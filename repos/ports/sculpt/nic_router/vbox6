@@ -10,8 +10,8 @@
 	<domain name="uplink">
 		<nat domain="default" tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
 
-		<nat domain="vm_ubuntu_raw"  tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
-		<nat domain="vm_windows_raw" tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
+		<nat domain="vbox6_raw-ubuntu"  tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
+		<nat domain="vbox6_raw-win"     tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
 
 		<tcp-forward port="2251" domain="vbox6_raw-ubuntu" to="10.0.51.2" to_port="22"/>
 		<tcp-forward port="2261" domain="vbox6_raw-win"    to="10.0.61.2" to_port="22"/>

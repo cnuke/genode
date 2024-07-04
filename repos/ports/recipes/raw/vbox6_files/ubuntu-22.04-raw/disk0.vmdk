@@ -5,7 +5,7 @@ parentCID=ffffffff
 createType="fullDevice"
 
 # Extent description
-RW 201326592 FLAT "/dev/block" 0
+RW 134217728 FLAT "/dev/block" 0
 
 # The disk Data Base
 ddb.virtualHWVersion = "4"

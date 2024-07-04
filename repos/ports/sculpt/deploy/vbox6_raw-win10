@@ -65,7 +65,7 @@
 			<service name="ROM" label="clipboard">           <child name="wm"/>                 </service>
 			<service name="ROM" label="mesa_gpu_drv.lib.so"> <child name="black_hole"/>         </service>
 			<service name="ROM" label="platform_info">       <parent label="platform_info"/>    </service>
-			<service name="ROM" label="system">              <child name="vbox_system_state"/>  </service>
+			<service name="ROM" label="system">              <child name="black_hole"/>         </service>
 			<service name="Report" label="clipboard">        <child name="wm"/>                 </service>
 			<service name="Report" label_last="shape">       <child name="wm"/>                 </service>
 			<service name="Gpu">                             <child name="black_hole"/>         </service>
