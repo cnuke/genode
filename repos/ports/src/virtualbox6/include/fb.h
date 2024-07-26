@@ -208,6 +208,7 @@ class Genodefb :
 			Lock();
 
 			if (_display_bitmap.isNull()) {
+				_clear_screen();
 				Unlock();
 				return S_OK;
 			}
