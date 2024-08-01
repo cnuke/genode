@@ -282,7 +282,7 @@ size_t _copy_from_iter(void * addr, size_t bytes, struct iov_iter * i)
 		return 0;
 
 	kdata = (char*)(addr);
-	iov   = i->iov;
+	iov   = i->__iov;
 
 	len = bytes;
 	while (len > 0) {
@@ -316,7 +316,7 @@ size_t _copy_to_iter(const void * addr, size_t bytes, struct iov_iter * i)
 		return 0;
 
 	kdata = (char*)(addr);
-	iov   = i->iov;
+	iov   = i->__iov;
 
 	len = bytes;
 	while (len > 0) {
@@ -469,7 +469,8 @@ void rfkill_init(void)
 {
 	pid_t pid;
 
-	pid = kernel_thread(rfkill_task_function, NULL, CLONE_FS | CLONE_FILES);
+	pid = kernel_thread(rfkill_task_function, NULL, "rfkill_task",
+	                    CLONE_FS | CLONE_FILES);
 
 	rfkill_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
 }

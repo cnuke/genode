@@ -314,7 +314,8 @@ void uplink_init(void)
 {
 	pid_t pid;
 
-	pid = kernel_thread(user_task_function, NULL, CLONE_FS | CLONE_FILES);
+	pid = kernel_thread(user_task_function, NULL, "uplink_task",
+	                    CLONE_FS | CLONE_FILES);
 
 	uplink_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
 }
