@@ -227,7 +227,7 @@ int firmware_request_nowarn(const struct firmware ** firmware,const char * name,
 
 int task_work_add(struct task_struct * task,struct callback_head * work,enum task_work_notify_mode notify)
 {
-	printk("%s: task: %p work: %p notify: %u\n", __func__, task, work, notify);
+	printk("%s: task: %px work: %px notify: %u\n", __func__, task, work, notify);
 	return -1;
 }
 #endif
@@ -282,7 +282,7 @@ size_t _copy_from_iter(void * addr, size_t bytes, struct iov_iter * i)
 		return 0;
 
 	kdata = (char*)(addr);
-	iov   = i->iov;
+	iov   = i->__iov;
 
 	len = bytes;
 	while (len > 0) {
@@ -316,7 +316,7 @@ size_t _copy_to_iter(const void * addr, size_t bytes, struct iov_iter * i)
 		return 0;
 
 	kdata = (char*)(addr);
-	iov   = i->iov;
+	iov   = i->__iov;
 
 	len = bytes;
 	while (len > 0) {
@@ -467,9 +467,15 @@ static int rfkill_task_function(void *arg)
 
 void rfkill_init(void)
 {
-	pid_t pid;
+	pid_t pid =
 
-	pid = kernel_thread(rfkill_task_function, NULL, CLONE_FS | CLONE_FILES);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0)
+		kernel_thread(rfkill_task_function, NULL,
+		                    CLONE_FS | CLONE_FILES);
+#else
+		kernel_thread(rfkill_task_function, NULL, "rfkill_task",
+		                    CLONE_FS | CLONE_FILES);
+#endif
 
 	rfkill_task_struct_ptr = find_task_by_pid_ns(pid, NULL);
 }
