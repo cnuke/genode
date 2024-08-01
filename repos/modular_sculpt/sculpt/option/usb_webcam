@@ -1,0 +1,6 @@
+option
++ child usb_webcam | pkg: usb_webcam | priority: -2
+  + connect
+    + usb | + child usb
+    + rm  | + parent
+-

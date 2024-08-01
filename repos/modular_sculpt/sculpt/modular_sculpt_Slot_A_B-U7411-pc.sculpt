@@ -1,0 +1,16 @@
+board:    u7411
+deploy:   modular_sculpt_Slot_A_B
+gpu:      empty
+manager:  use_ram_fs
+network:  modular_sculpt
+platform: u7411
+ram_fs:   modular_sculpt
+system:   pc
+usb:      Slot_A_B
+
+import: pkg/sculpt_drivers-pc
+import: pkg/pc_audio
+import: raw/vbox_files
+
+# options not referenced by deploy preset
+option: test-webcam

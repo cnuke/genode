@@ -1,0 +1,57 @@
+option
+
++ child vm_windows_Slot_A | pkg: vm_block_capture | priority: -3
+  + affinity | xpos: 1 | ypos: 0 | width: 2 | height: 2
+  + config | vbox_file: machine.vbox6 | xhci: yes | vm_name: windows | capslock: rom
+           | ld_verbose: yes
+    + vfs
+    | + dir dev
+    |   + block block0 | io_buffer: 8M
+    |   + gpu
+    |   + legacy_oss dsp
+    |   + log
+    |   + null
+    |   + rtc
+    |   + zero
+    | + dir pipe | + pipe
+    | + dir shared | + fs | label: shared -> / | writeable: yes
+    | + rom VBoxSharedClipboard.so
+    | + rom VBoxSharedFolders.so
+    | + fs | label: vm -> / | writeable: yes
+    + libc | stdout: /dev/log | stderr: /dev/log | rtc: /dev/rtc | pipe: /pipe
+      + pthread | placement: single-cpu
+    + monitor | label: DP-1
+    + webcam | vertical_flip: true
+             | fps:           30
+             | screen_size:   false
+             | width:         640
+             | height:        480
+    + arg | value: virtualbox
+    + env VBOX_USER_HOME         | : /
+    + env VBOX_LOG_DEST          | : file=/dev/log
+    + env VBOX_LOG               | :
+    + env VBOX_LOG_FLAGS         | : thread
+    + env VBOX_RELEASE_LOG_DEST  | : file=/dev/log
+    + env VBOX_RELEASE_LOG       | :
+    + env VBOX_RELEASE_LOG_FLAGS | : thread
+  + connect
+    + rom clipboard                       | + child wm
+    + rom mesa_gpu.lib.so                 | + child mesa_gpu-cpu
+    + rom capslock                        | + child report | label: global_keys/capslock
+    + rom platform_info                   | + parent | label: platform_info
+    + fs  vm                              | + child default_fs_rw | prepend_resource: /vm/windows-10-raw
+    + fs  shared                          | + child default_fs_rw | prepend_resource: /shared
+    + report    | label_last: shape       | + child wm
+    + report    | label_last: clipboard   | + child wm
+    + block                               | + child storage | label: 7
+    + gui                                 | + child wm
+    + nic                                 | + child network
+    + rtc                                 | + child system_clock
+    + audio_out                           | + child audio_mixer
+    + audio_in                            | + child audio
+    + usb                                 | + child usb
+    + capture                             | + child usb_webcam
+    + vm                                  | + parent
+    + rm                                  | + parent
+    + gpu                                 | + parent
+-
