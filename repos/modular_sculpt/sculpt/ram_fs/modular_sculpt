@@ -1,0 +1,12 @@
+config
++ vfs
+  + ram
+  + import
+    + dir depot
+      + tar depot.tar
+  + import
+    + dir vm | + tar vbox_files.tar
+  + import
+    + dir shared
++ default-policy | root: / | writeable: yes
+-

@@ -1,0 +1,16 @@
+board:    s938
+deploy:   modular_sculpt_windows_Slot_A
+gpu:      empty
+manager:  use_ram_fs
+network:  modular_sculpt
+platform: s938
+ram_fs:   modular_sculpt
+system:   pc
+usb:      Slot_A
+
+import: pkg/sculpt_drivers-pc
+import: pkg/bsd_audio
+import: raw/vbox_files
+
+# options not referenced by deploy preset
+option: test-webcam

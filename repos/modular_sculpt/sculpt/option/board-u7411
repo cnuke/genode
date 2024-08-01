@@ -1,0 +1,226 @@
+option
+
++ child platform | binary: init | caps: 1500 | ram: 32M | managing_system: yes
+  + provides
+    + dma
+    + dma nic
+    + dma wifi
+    + dma audio
+    + dma acpica
+    + platform
+    + platform nic
+    + platform wifi
+    + platform audio
+    + platform acpica
+  + connect
+    + io_mem            | + parent | . attached to hardware node in the graph
+    + io_port           | + parent
+    + irq               | + parent
+    + rom config        | + child model  | label: child/platform
+    + rom system        | + child model  | label: system
+    + rom sleep_states  | + child report | label: acpi_support/sleep_states
+    + report            | + child report
+    + rm                | + parent
+    + rom ld.lib.so     | + parent
+    + rom report_rom    | + parent
+    + rom rom_reporter  | + parent
+    + rom acpi          | + parent
+    + rom pci_decode    | + parent
+    + rom pc_platform   | + parent
+    + rom platform_info | + parent
+
++ child discover_report | binary: fs_report | ram: 2M | caps: 100
+  + provides | + report
+  + config | + vfs | + fs
+  + connect
+    + fs             | + child model | identity: rw
+    + rom vfs.lib.so | + parent
+
++ child discover | binary: pc_discover | ram: 1M | caps: 100
+  + config
+  + connect
+    + report            | + child discover_report | label: option -> board
+    + rom devices       | + child report          | label: platform/devices
+    + rom board         | + child model           | label: option/board
+    + rom platform_info | + parent
+
++ child audio | binary: pc_audio | priority: -1 | ram: 8M | caps: 200 | enabled: yes
+  + provides
+    + audio_in
+    + audio_out
+  + affinity | xpos: 0 | width: 1
+  + config | record_play: no | report_mixer: yes
+           | speaker_priority: external | mic_priority: external
+           | profile: u7411
+    + vfs
+      + dir firmware | + tar sof_firmware.tar
+    + profile u7411
+      + routing | playback: pcmC0D0p | mic_internal: pcmC0D6c | mic_headset: pcmC0D0c
+                | speaker_external_id:  1 | speaker_internal_id:  3
+                | mic_external_id:     13 | mic_internal_id:     30
+      + control Headphone Playback Volume | id:  0 | channel: 0 | type: int  | value: 87 | min: 0 | max: 87
+      + control Headphone Playback Volume | id:  0 | channel: 1 | type: int  | value: 87 | min: 0 | max: 87
+      + control Speaker Playback Volume   | id:  2 | channel: 0 | type: int  | value: 87 | min: 0 | max: 87
+      + control Speaker Playback Volume   | id:  2 | channel: 1 | type: int  | value: 87 | min: 0 | max: 87
+      + control Loopback Mixing           | id:  4              | type: enum | selected: 0
+      + control Auto-Mute Mode            | id:  9              | type: enum | selected: 0
+      + control Input Source              | id: 10              | type: enum | selected: 0
+      + control Input Source              | id: 11              | type: enum | selected: 0
+      + control Capture Volume            | id: 12 | channel: 0 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 12 | channel: 1 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 14 | channel: 0 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 14 | channel: 1 | type: int  | value: 63 | min: 0 | max: 63
+      + control Master Playback Volume    | id: 18 | channel: 0 | type: int  | value: 60 | min: 0 | max: 87
+      + control Master Playback Switch    | id: 19 | channel: 0 | type: bool | value: true
+      + control Dmic0 Capture Volume      | id: 29 | channel: 0 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic0 Capture Volume      | id: 29 | channel: 1 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic1 2nd Capture Volume  | id: 32 | channel: 0 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic1 2nd Capture Volume  | id: 32 | channel: 1 | type: int  | value: 70 | min: 0 | max: 70
+  + connect
+    + dma                  | + child platform | label: audio
+    + platform             | + child platform | label: audio
+    + report               | + child report
+    + rom sof_firmware.tar | + parent
+    + rom vfs.lib.so       | + parent
+    + rm                   | + parent
+
++ child audio_mixer | pkg: mixer | priority: -1 | enabled: yes
+  + affinity | xpos: 0 | width: 1
+  + config
+    + default | out_volume: 100 | volume: 100
+  + connect
+    + audio_out | + child audio
+    + report    | + child report
+    + rm        | + parent
+
++ child touchpad | pkg: pc_i2c_hid | caps: 150 | priority: -2
+  + config
+    + i2c_slave  | irq: 266 | bus_addr: 44 | hid_addr: 32 | gpio_chip: INT34C5
+                 | info: Fujitsu U7411 (SYNAPTICS)
+
+    + i2c_master | bus_speed_hz: 400 | info: Tigerlake
+      + fmcn | hcnt: 193 | lcnt: 313 | hold_time: 80
+
+  + heartbeat | restart_after_skipped: 4
+  + connect
+    + dma      | + child platform     | label: touchpad
+    + platform | + child platform     | label: touchpad
+    + event    | + child event_filter | label: touchpad
+
++ child nvme_drv | binary: nvme | ram: 64M | caps: 100 | priority: -3 | enabled: yes
+  . disarm Sculpt part_block management
+  + managed | max_ram: 32M | max_caps: 500
+  + provides
+    + block
+  + config | system: yes
+    + report | namespaces: yes
+    + policy | label: 1 | namespace: 1 | writeable: yes
+  + connect
+    + dma        | + child platform | label: nvme
+    + platform   | + child platform | label: nvme
+    + rom system | + child model    | label: system
+    + report     | + child report
+
++ child storage | pkg: part_block | priority: -3
+  + connect
+    + block  | + child nvme_drv | label: 1
+    + report | + child report
+
++ child usb | binary: pc_usb_host | ram: 16M | caps: 200 | priority: -2 | enabled: yes
+  + provides
+    + usb
+  + connect
+    + dma        | + child platform | label: usb
+    + platform   | + child platform | label: usb
+    + report     | + child report
+    + rom config | + child model    | label: child/usb
+
++ child intel_gpu | binary: intel_gpu | ram: 32M | caps: 1400 | priority: -2 | enabled: yes
+  + managed | max_ram: 256M | max_caps: 5000
+  + provides
+    + gpu
+    + dma
+    + platform
+  + connect
+    + dma        | + child platform | label: intel_gpu
+    + platform   | + child platform | label: intel_gpu
+    + rom config | + child model    | label: child/gpu
+    + rom system | + child model    | label: system
+    + rm         | + parent
+
++ child intel_fb | binary: pc_intel_fb | ram: 16M | caps: 800 | priority: -2 | enabled: yes
+  + managed | max_ram: 256M | max_caps: 5000
+  + heartbeat | restart_after_skipped: 2
+  + connect
+    + dma                | + child intel_gpu
+    + platform           | + child intel_gpu
+    + capture            | + child gui
+    + report             | + child report
+    + rom config         | + child model  | label: fb
+    + rom intel_opregion | + child report | label: platform/intel_opregion
+    + rm                 | + parent
+
++ child ps2 | binary: ps2 | ram: 1M | caps: 100 | priority: -2 | enabled: yes
+  + config | capslock_led: rom | numlock_led: rom | system: yes
+  + connect
+    + dma          | + child platform     | label: ps2
+    + platform     | + child platform     | label: ps2
+    + rom capslock | + child report       | label: global_keys/capslock
+    + rom numlock  | + child report       | label: global_keys/numlock
+    + rom system   | + child model        | label: system
+    + event        | + child event_filter | label: ps2
+
++ child usb_hid | binary: usb_hid | ram: 11M | caps: 180 | priority: -2 | enabled: yes
+  .
+  . Enabled/disabled by the sculpt manager according to the presence of
+  . USB-HID devices.
+  .
+  + config | capslock_led: rom | numlock_led: rom
+  + connect
+    + usb          | + child usb
+    + report       | + child report
+    + rom capslock | + child report | label: global_keys/capslock
+    + rom numlock  | + child report | label: global_keys/numlock
+    + event        | + child event_filter | label: usb_hid
+
++ child nic | binary: pc_nic | ram: 20M | caps: 300 | priority: -3 | enabled: yes
+  + config
+  + connect
+    + dma         | + child platform | label: nic
+    + platform    | + child platform | label: nic
+    + uplink      | + child network  | label: nic
+    + report      | + child report
+    + rm          | + parent
+
++ child wifi | binary: wifi | ram: 24M | caps: 260 | priority: -3 | enabled: no
+  + config
+  | + libc | stdout: /dev/log | stderr: /dev/null | rtc: /dev/rtc
+  | + vfs
+  |   + dir dev
+  |     + null
+  |     + zero
+  |     + log
+  |     + null
+  |     + jitterentropy random
+  |     + jitterentropy urandom
+  |   + inline rtc | : 2018-01-01 00:01
+  |   + dir firmware
+  |     + tar pc_wifi_firmware.tar
+  + connect
+    + dma                           | + child platform | label: wifi
+    + platform                      | + child platform | label: wifi
+    + uplink                        | + child network  | label: wifi
+    + report                        | + child report
+    + rom wifi_config               | + child model    | label: child/wifi
+    + rom libcrypto.lib.so          | + parent
+    + rom vfs.lib.so                | + parent
+    + rom libc.lib.so               | + parent
+    + rom libm.lib.so               | + parent
+    + rom vfs_jitterentropy.lib.so  | + parent
+    + rom libssl.lib.so             | + parent
+    + rom wifi.lib.so               | + parent | label: pc_wifi.lib.so
+    + rom pc_wifi_firmware.tar      | + parent
+    + rom wpa_driver_nl80211.lib.so | + parent
+    + rom wpa_supplicant.lib.so     | + parent
+    + rm                            | + parent
+-

@@ -1,0 +1,19 @@
+deploy
++ option board   | required: yes
++ option sculpt  | required: yes
++ option managed | required: yes
+
++ option acpi_support
++ option black_hole
++ option recall_fs
++ option system_clock
++ option system_shell
++ option window_manager
+
++ child mesa_gpu-cpu | pkg: mesa_gpu-cpu
+  + connect
+    + rm | + parent
+
++ option usb_webcam
++ option vm_windows_Slot_A
+-
