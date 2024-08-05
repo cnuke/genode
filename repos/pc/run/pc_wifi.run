@@ -3,7 +3,7 @@
 # pull in the locally build binaries rather than the ones
 # from the depot.
 #
-set debug_driver false
+set debug_driver true
 
 #
 # Configure wireless lan
