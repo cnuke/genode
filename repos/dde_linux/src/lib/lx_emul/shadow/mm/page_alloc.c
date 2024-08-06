@@ -62,6 +62,9 @@ static void lx_free_pages(struct page *page, bool force)
 {
 	void * const virt_addr = page_address(page);
 
+	printk("%s:%d: page: %px virt_addr: %px\n", __func__, __LINE__, page, virt_addr);
+	return;
+
 	if (force)
 		set_page_count(page, 0);
 	else if (!put_page_testzero(page))

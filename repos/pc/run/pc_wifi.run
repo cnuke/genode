@@ -291,7 +291,7 @@ append config {
 	</start>
 
 	<start name="wifi" caps="260" priority="-1">
-		<resource name="RAM" quantum="32M"/>
+		<resource name="RAM" quantum="256M"/>
 		<config ld_verbose="yes">
 			<report mac_address="true"/>
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" rng="/dev/urandom"/>
@@ -327,7 +327,7 @@ install_config $config
 # boot-module assembly
 #
 if {$debug_driver} {
-exec rm bin/wifi.lib.so
+catch { exec rm bin/wifi.lib.so }
 exec echo dummy > bin/wifi.lib.so
 }
 

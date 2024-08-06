@@ -18,10 +18,15 @@
 #include <lx_emul/page_virt.h>
 #include <lx_kit/env.h>
 
+extern "C" void lx_emul_backtrace();
 
 extern "C" void * lx_emul_mem_alloc_aligned(unsigned long size, unsigned long align)
 {
 	void * const ptr = Lx_kit::env().memory.alloc(size, align, &lx_emul_add_page_range);
+	Genode::error(__func__, ":", __LINE__, ": size: ", size, " align: ", align, " ptr: ", ptr);
+	if (size > 64u << 10)
+		lx_emul_backtrace();
+
 	return ptr;
 };
 
@@ -30,6 +35,7 @@ extern "C" void * lx_emul_mem_alloc_aligned_uncached(unsigned long size,
                                                      unsigned long align)
 {
 	void * const ptr = Lx_kit::env().uncached_memory.alloc(size, align, &lx_emul_add_page_range);
+	Genode::error(__func__, ":", __LINE__, ": size: ", size, " align: ", align, " ptr: ", ptr);
 	return ptr;
 };
 
@@ -58,6 +64,8 @@ extern "C" unsigned long lx_emul_mem_virt_addr(void * dma_addr)
 
 extern "C" void lx_emul_mem_free(const void * ptr)
 {
+	Genode::error(__func__, ":", __LINE__, ": ptr: ", ptr);
+
 	if (!ptr)
 		return;
 	if (Lx_kit::env().memory.free(ptr))
@@ -110,5 +118,6 @@ void * lx_emul_heap_alloc(unsigned long size)
 
 void lx_emul_heap_free(void * ptr)
 {
+	Genode::error(__func__, ":", __LINE__, ": ptr: ", ptr);
 	Lx_kit::env().heap.free(ptr, 0);
 }
