@@ -1213,22 +1213,8 @@ void intel_gt_mcr_lock(struct intel_gt * gt,unsigned long * flags)
 }
 
 
-extern void intel_gt_mcr_multicast_write(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value);
-void intel_gt_mcr_multicast_write(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern void intel_gt_mcr_multicast_write_fw(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value);
 void intel_gt_mcr_multicast_write_fw(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-extern u32 intel_gt_mcr_read_any(struct intel_gt * gt,i915_mcr_reg_t reg);
-u32 intel_gt_mcr_read_any(struct intel_gt * gt,i915_mcr_reg_t reg)
 {
 	lx_emul_trace_and_stop(__func__);
 }
