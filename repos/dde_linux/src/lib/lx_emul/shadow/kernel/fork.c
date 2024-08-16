@@ -42,6 +42,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 	struct cred * cred;
 	struct task_struct * task;
 	struct signal_struct *signal;
+	char const *thread_name = "kthread";
 
 	cred = kzalloc(sizeof (struct cred), GFP_KERNEL);
 	if (!cred)
@@ -85,8 +86,10 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 	};
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0)
-	if (name)
+	if (name) {
 		strscpy_pad(task->comm, name, sizeof(task->comm));
+		thread_name = name;
+	}
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
@@ -106,7 +109,7 @@ pid_t kernel_thread(int (* fn)(void *),void * arg,unsigned long flags)
 	task_thread_info(task)->preempt_count = 0;
 #endif
 
-	lx_emul_task_create(task, "kthread", task->pid, fn, arg);
+	lx_emul_task_create(task, thread_name, task->pid, fn, arg);
 
 #ifdef CONFIG_THREAD_INFO_IN_TASK
 	task->stack = lx_emul_task_stack(task);
