@@ -295,6 +295,21 @@ int __intel_gt_reset(struct intel_gt * gt, intel_engine_mask_t engine_mask)
 }
 
 
+extern u32 intel_gt_mcr_read_any(struct intel_gt * gt,i915_mcr_reg_t reg);
+u32 intel_gt_mcr_read_any(struct intel_gt * gt,i915_mcr_reg_t reg)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+extern void intel_gt_mcr_multicast_write(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value);
+void intel_gt_mcr_multicast_write(struct intel_gt * gt,i915_mcr_reg_t reg,u32 value)
+{
+	lx_emul_trace(__func__);
+}
+
+
 void i915_perf_init(struct drm_i915_private * i915)
 {
 	lx_emul_trace(__func__);
