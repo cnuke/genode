@@ -242,11 +242,17 @@ struct Extract::Main
 
 	bool _verbose = false;
 
-	void _process_config()
+	bool _ignore_failures = false;
+
+	bool _process_config()
 	{
 		Xml_node const config = _config.xml();
 
 		_verbose = config.attribute_value("verbose", false);
+
+		_ignore_failures = config.attribute_value("ignore_failures", false);
+
+		bool overall_success = true;
 
 		config.for_each_sub_node("extract", [&] (Xml_node node) {
 
@@ -280,20 +286,27 @@ struct Extract::Main
 			catch (Extracted_archive::Write_failed) {
 				warning("writing to directory ", dst_path, " failed"); }
 
-			/* abort on first error */
-			if (!success)
-				throw Exception();
+			if (!success) {
+				overall_success = false;
+				return;
+			}
 
 			if (_verbose)
 				log("extracted '", src_path, "' to '", dst_path, "'");
 		});
+
+		return overall_success;
 	}
 
 	Main(Env &env) : _env(env)
 	{
-		Libc::with_libc([&] () { _process_config(); });
+		bool success = false;
 
-		env.parent().exit(0);
+		Libc::with_libc([&] () { success = _process_config(); });
+
+		env.parent().exit(_ignore_failures ? 0
+		                                   : success ? 0
+		                                             : 1);
 	}
 };
 
