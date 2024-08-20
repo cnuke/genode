@@ -26,3 +26,7 @@ how many path elements should be removed from the files stored in the archive
 during extraction. In this example the top directory would be omitted. The
 'name' attribute is used for naming compressed files that are not part of an
 archive.
+
+The 'keep_going' attribute of the 'config' node instructs the component to
+ignore failed extractions when operating in batch-mode, i.e. multiple archives
+are specified and only the overall progress is of importance.
