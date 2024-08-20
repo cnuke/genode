@@ -242,15 +242,11 @@ struct Extract::Main
 
 	bool _verbose = false;
 
-	bool _keep_going = false;
-
 	void _process_config()
 	{
 		Xml_node const config = _config.xml();
 
 		_verbose = config.attribute_value("verbose", false);
-
-		_keep_going = config.attribute_value("keep_going", false);
 
 		config.for_each_sub_node("extract", [&] (Xml_node node) {
 
@@ -284,16 +280,9 @@ struct Extract::Main
 			catch (Extracted_archive::Write_failed) {
 				warning("writing to directory ", dst_path, " failed"); }
 
-			/*
-			 * Allow for batch-operation to overall succeed, even when
-			 * some steps have failed.
-			 */
-			if (!success) {
-				if (_keep_going)
-					return;
-				else
-					throw Exception();
-			}
+			/* abort on first error */
+			if (!success)
+				throw Exception();
 
 			if (_verbose)
 				log("extracted '", src_path, "' to '", dst_path, "'");
