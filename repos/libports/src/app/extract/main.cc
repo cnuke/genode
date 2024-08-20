@@ -244,6 +244,8 @@ struct Extract::Main
 
 	bool _ignore_failures = false;
 
+	bool _stop_on_failure = false;
+
 	bool _process_config()
 	{
 		Xml_node const config = _config.xml();
@@ -252,48 +254,55 @@ struct Extract::Main
 
 		_ignore_failures = config.attribute_value("ignore_failures", false);
 
+		_stop_on_failure = config.attribute_value("stop_on_failure", true);
+
 		bool overall_success = true;
 
-		config.for_each_sub_node("extract", [&] (Xml_node node) {
+		try {
+			config.for_each_sub_node("extract", [&] (Xml_node node) {
 
-			Path     const src_path = node.attribute_value("archive", Path());
-			Path     const dst_path = node.attribute_value("to",      Path());
-			Raw_name const raw_name = node.attribute_value("name", Raw_name());
+				Path     const src_path = node.attribute_value("archive", Path());
+				Path     const dst_path = node.attribute_value("to",      Path());
+				Raw_name const raw_name = node.attribute_value("name", Raw_name());
 
-			Extracted_archive::Strip const strip { node.attribute_value("strip", 0U) };
+				Extracted_archive::Strip const strip { node.attribute_value("strip", 0U) };
 
-			bool success = false;
+				bool success = false;
 
-			struct Create_directories_failed { };
+				struct Create_directories_failed { };
 
-			try {
-				if (!create_directories(dst_path))
-					throw Create_directories_failed();
+				try {
+					if (!create_directories(dst_path))
+						throw Create_directories_failed();
 
-				chdir("/");
-				chdir(dst_path.string());
+					chdir("/");
+					chdir(dst_path.string());
 
-				Extracted_archive extracted_archive(src_path, strip, raw_name);
+					Extracted_archive extracted_archive(src_path, strip, raw_name);
 
-				success = true;
-			}
-			catch (Create_directories_failed) {
-				warning("failed to created directory '", dst_path, "'"); }
-			catch (Extracted_archive::Read_failed) {
-				warning("reading from archive ", src_path, " failed"); }
-			catch (Extracted_archive::Open_failed) {
-				warning("could not open archive ", src_path); }
-			catch (Extracted_archive::Write_failed) {
-				warning("writing to directory ", dst_path, " failed"); }
+					success = true;
+				}
+				catch (Create_directories_failed) {
+					warning("failed to created directory '", dst_path, "'"); }
+				catch (Extracted_archive::Read_failed) {
+					warning("reading from archive ", src_path, " failed"); }
+				catch (Extracted_archive::Open_failed) {
+					warning("could not open archive ", src_path); }
+				catch (Extracted_archive::Write_failed) {
+					warning("writing to directory ", dst_path, " failed"); }
 
-			if (!success) {
-				overall_success = false;
-				return;
-			}
+				if (!success) {
+					overall_success = false;
+					if (_stop_on_failure)
+						throw Exception();
+					else
+						return;
+				}
 
-			if (_verbose)
-				log("extracted '", src_path, "' to '", dst_path, "'");
-		});
+				if (_verbose)
+					log("extracted '", src_path, "' to '", dst_path, "'");
+			});
+		} catch (Exception) { }
 
 		return overall_success;
 	}
