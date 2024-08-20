@@ -320,38 +320,7 @@ void free_unref_page(struct page *page, unsigned int order)
 
 
 /*
- * see linux/src/linux/mm/page_alloc.c - original code
- */
-static inline bool pcp_allowed_order(unsigned int order)
-{
-	if (order <= PAGE_ALLOC_COSTLY_ORDER)
-		return true;
-#ifdef CONFIG_TRANSPARENT_HUGEPAGE
-	if (order == pageblock_order)
-		return true;
-#endif
-	return false;
-}
-
-
-/*
- * see linux/src/linux/mm/page_alloc.c - mostly original code
- */
-static inline void free_the_page(struct page *page, unsigned int order)
-{
-	if (pcp_allowed_order(order))		/* Via pcp? */
-		free_unref_page(page, order);
-	else {
-		__free_pages(page, order);
-		/* XXX bad idea ?
-		__free_pages_ok(page, order, FPI_NONE);
-		*/
-	}
-}
-
-
-/*
- * see linux/src/linux/mm/page_alloc.c - original code
+ * see linux/src/linux/mm/page_alloc.c - mostly original code, beside __folio_put
  */
 void destroy_large_folio(struct folio *folio)
 {
@@ -364,7 +333,8 @@ void destroy_large_folio(struct folio *folio)
 		folio_undo_large_rmappable(folio);
 
 	mem_cgroup_uncharge(folio);
-	free_the_page(&folio->page, folio_order(folio));
+
+	__folio_put(folio);
 }
 
 
