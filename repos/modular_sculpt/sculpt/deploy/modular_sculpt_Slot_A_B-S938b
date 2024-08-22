@@ -37,6 +37,7 @@
 	<start name="shared_fs"/>
 	<start name="usb_webcam"/>
 
+	<start name="nvme"/>
 	<start name="storage_nvme"/>
 
 	<start name="vm_ubuntu_fs"/>

@@ -3,7 +3,7 @@ drivers:    pc
 ram_fs:     modular_sculpt
 system:     pc
 usb:        Slot_A_B
-manager:    use_ram_fs
+manager:    modular_sculpt
 nic_router: nic
 gpu_drv:    empty
 
@@ -20,7 +20,7 @@ launcher: touchpad
 launcher: sof_audio audio_mixer
 
 launcher: default_fs_shell
-launcher: storage_nvme
+launcher: nvme storage_nvme
 
 launcher: usb_webcam
 launcher: shared_fs
