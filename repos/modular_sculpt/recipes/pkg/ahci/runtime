@@ -1,0 +1,20 @@
+<runtime ram="10M" caps="100" binary="ahci_drv">
+
+	<requires> <platform/> <report/> </requires>
+	<provides> <block/> </provides>
+
+	<config>
+		<report ports="yes"/>
+		<policy label="1" device="1" writeable="yes"/>
+		<policy label="2" device="1" writeable="yes"/>
+		<policy label="3" device="1" writeable="yes"/>
+		<policy label="4" device="1" writeable="yes"/>
+		<policy label="5" device="1" writeable="yes"/>
+		<policy label="6" device="1" writeable="yes"/>
+	</config>
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="ahci_drv"/>
+	</content>
+
+</runtime>
