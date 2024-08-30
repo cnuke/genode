@@ -12,6 +12,7 @@
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
 
+	<start name="acpi_support"/>
 	<start name="black_hole"/>
 	<start name="system_clock"/>
 	<start name="fonts_fs"/>

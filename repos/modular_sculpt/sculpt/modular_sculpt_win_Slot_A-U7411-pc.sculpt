@@ -10,6 +10,7 @@ gpu_drv:    empty
 import: pkg/sculpt_drivers-pc
 import: raw/vbox_files
 
+launcher: acpi_support
 launcher: black_hole system_clock
 launcher: fonts_fs
 
