@@ -634,8 +634,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	using Cmd_str = Genode::String<sizeof(Msg_buffer::send)>;
 
-	void _submit_cmd(Cmd_str const &str)
+	void _submit_cmd(State next, Cmd_str const &str)
 	{
+		_state_transition(_state, next);
+
 		Genode::memset(_msg.send, 0, sizeof(_msg.send));
 		Genode::memcpy(_msg.send, str.string(), str.length());
 		++_msg.send_id;
@@ -762,8 +764,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		};
 		_for_each_ap(valid_ssid);
 
-		_state_transition(_state, State::INITIATE_SCAN);
-		_submit_cmd(Cmd_str("SCAN", (char const*)ssid_buffer));
+		_submit_cmd(State::INITIATE_SCAN,
+		            Cmd_str("SCAN", (char const*)ssid_buffer));
 	}
 
 	void _poll_signal_strength()
@@ -775,8 +777,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		_state_transition(_state, State::SIGNAL);
-		_submit_cmd(Cmd_str("SIGNAL_POLL"));
+		_submit_cmd(State::SIGNAL, Cmd_str("SIGNAL_POLL"));
 	}
 
 	void _handle_scan_timeout(Genode::Duration)
@@ -897,12 +898,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	void _remove_stale_aps()
 	{
-		if (_state != State::IDLE) {
-			Genode::warning("cannot remove stale APs in non-idle state "
-			                "(", state_strings(_state), ")");
-			return;
-		}
-
 		if (_processed_ap) { return; }
 
 		_aps.for_each([&] (Accesspoint &ap) {
@@ -912,8 +907,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		});
 
 		if (!_processed_ap) {
-			/* TODO move State transition somewhere more sane */
-			_state_transition(_state, State::IDLE);
 			_add_new_aps();
 			return;
 		}
@@ -922,17 +915,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			Genode::log("Remove network: '", _processed_ap->ssid, "'");
 		}
 
-		_state_transition(_state, State::REMOVE_NETWORK);
-		_submit_cmd(Cmd_str("REMOVE_NETWORK ", _processed_ap->id));
+		_submit_cmd(State::REMOVE_NETWORK,
+		            Cmd_str("REMOVE_NETWORK ", _processed_ap->id));
 	}
 
 	void _update_aps()
 	{
-		if (_state != State::IDLE) {
-			Genode::warning("cannot enable network in non-idle state");
-			return;
-		}
-
 		if (_processed_ap) { return; }
 
 		_aps.for_each([&] (Accesspoint &ap) {
@@ -948,18 +936,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		/* re-use state to change PSK */
-		_state_transition(_state, State::FILL_NETWORK_PSK);
 		_network_set_psk();
 	}
 
-
 	void _add_new_aps()
 	{
-		if (_state != State::IDLE) {
-			Genode::warning("cannot enable network in non-idle state");
-			return;
-		}
-
 		if (_processed_ap) { return; }
 
 		_aps.for_each([&] (Accesspoint &ap) {
@@ -969,8 +950,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		});
 
 		if (!_processed_ap) {
-			/* XXX move State transition somewhere more sane */
-			_state_transition(_state, State::IDLE);
 			_update_aps();
 			return;
 		}
@@ -979,17 +958,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			Genode::log("Add network: '", _processed_ap->ssid, "'");
 		}
 
-		_state_transition(_state, State::ADD_NETWORK);
-		_submit_cmd(Cmd_str("ADD_NETWORK"));
+		_submit_cmd(State::ADD_NETWORK, Cmd_str("ADD_NETWORK"));
 	}
 
 	void _network_enable(Accesspoint &ap)
 	{
-		if (_state != State::IDLE) {
-			Genode::warning("cannot enable network in non-idle state");
-			return;
-		}
-
 		if (ap.enabled) { return; }
 
 		if (_verbose) {
@@ -998,17 +971,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		ap.enabled = true;
 
-		_state_transition(_state, State::ENABLE_NETWORK);
-		_submit_cmd(Cmd_str("ENABLE_NETWORK ", ap.id));
+		_submit_cmd(State::ENABLE_NETWORK, Cmd_str("ENABLE_NETWORK ", ap.id));
 	}
 
 	void _network_disable(Accesspoint &ap)
 	{
-		if (_state != State::IDLE) {
-			Genode::warning("cannot enable network in non-idle state");
-			return;
-		}
-
 		if (!ap.enabled) { return; }
 
 		if (_verbose) {
@@ -1017,8 +984,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		ap.enabled = false;
 
-		_state_transition(_state, State::DISABLE_NETWORK);
-		_submit_cmd(Cmd_str("DISABLE_NETWORK ", ap.id));
+		_submit_cmd(State::DISABLE_NETWORK, Cmd_str("DISABLE_NETWORK ", ap.id));
 	}
 
 	void _network_set_ssid(char const *msg)
@@ -1027,8 +993,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		Genode::ascii_to(msg, id);
 
 		_processed_ap->id = static_cast<int>(id);
-		_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-		                     " ssid \"", _processed_ap->ssid, "\""));
+		_submit_cmd(State::FILL_NETWORK_SSID,
+		            Cmd_str("SET_NETWORK ", _processed_ap->id,
+		                    " ssid \"", _processed_ap->ssid, "\""));
 	}
 
 	void _network_set_bssid()
@@ -1036,30 +1003,35 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool const valid = _processed_ap->bssid.length() == 17 + 1;
 		char const *bssid = valid ? _processed_ap->bssid.string() : "";
 
-		_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-		                     " bssid ", bssid));
+		_submit_cmd(State::FILL_NETWORK_BSSID,
+		            Cmd_str("SET_NETWORK ", _processed_ap->id,
+		                    " bssid ", bssid));
 	}
 
 	void _network_set_key_mgmt_sae()
 	{
-		_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-		                     " key_mgmt SAE"));
+		_submit_cmd(State::FILL_NETWORK_KEY_MGMT,
+		            Cmd_str("SET_NETWORK ", _processed_ap->id,
+		                    " key_mgmt SAE"));
 	}
 
 	void _network_set_pmf()
 	{
-		_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-		                     " ieee80211w 2"));
+		_submit_cmd(State::SET_NETWORK_PMF,
+		            Cmd_str("SET_NETWORK ", _processed_ap->id,
+		                    " ieee80211w 2"));
 	}
 
 	void _network_set_psk()
 	{
 		if (_processed_ap->wpa()) {
-			_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-			                     " psk \"", _processed_ap->pass, "\""));
+			_submit_cmd(State::FILL_NETWORK_PSK,
+			            Cmd_str("SET_NETWORK ", _processed_ap->id,
+			                    " psk \"", _processed_ap->pass, "\""));
 		} else {
-			_submit_cmd(Cmd_str("SET_NETWORK ", _processed_ap->id,
-			                     " key_mgmt NONE"));
+			_submit_cmd(State::FILL_NETWORK_PSK,
+			            Cmd_str("SET_NETWORK ", _processed_ap->id,
+			                    " key_mgmt NONE"));
 		}
 	}
 
@@ -1099,7 +1071,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				Genode::error("could not add network: ", msg);
 				_state_transition(_state, State::IDLE);
 			} else {
-				_state_transition(_state, State::FILL_NETWORK_SSID);
 				_network_set_ssid(msg);
 
 				successfully = true;
@@ -1132,7 +1103,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				Genode::error("could not set ssid for network: ", msg);
 				_state_transition(_state, State::IDLE);
 			} else {
-				_state_transition(_state, State::FILL_NETWORK_BSSID);
 				_network_set_bssid();
 
 				successfully = true;
@@ -1151,10 +1121,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				 * explicitly.
 				 */
 				if (_processed_ap->wpa3()) {
-					_state_transition(_state, State::FILL_NETWORK_KEY_MGMT);
 					_network_set_key_mgmt_sae();
 				} else {
-					_state_transition(_state, State::FILL_NETWORK_PSK);
 					_network_set_psk();
 				}
 
@@ -1168,7 +1136,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				Genode::error("could not set key_mgmt for network: ", msg);
 				_state_transition(_state, State::IDLE);
 			} else {
-				_state_transition(_state, State::SET_NETWORK_PMF);
 				_network_set_pmf();
 
 				successfully = true;
@@ -1429,8 +1396,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 * current status.
 			 */
 			if (!p) {
-				_state_transition(state, State::STATUS);
-				_submit_cmd(Cmd_str("STATUS"));
+				_submit_cmd(State::STATUS, Cmd_str("STATUS"));
 
 			} else {
 				p->bssid = ap.bssid;
@@ -1467,8 +1433,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * Query the status to incorporate the newly acquired
 		 * quality into a new state report.
 		 */
-		_state_transition(state, State::STATUS);
-		_submit_cmd(Cmd_str("STATUS"));
+		_submit_cmd(State::STATUS, Cmd_str("STATUS"));
 	}
 
 	/* connection state */
@@ -1570,8 +1535,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			if (_state != State::IDLE) {
 				_pending_bssid = bssid;
 			} else {
-				_state_transition(_state, State::INFO);
-				_submit_cmd(Cmd_str("BSS ", bssid));
+				_submit_cmd(State::INFO, Cmd_str("BSS ", bssid));
 			}
 
 			_try_arming_any_timer();
@@ -1624,8 +1588,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			wifi_kick_socketcall();
 
 			if (_state == State::IDLE) {
-				_state_transition(_state, State::PENDING_RESULTS);
-				_submit_cmd(Cmd_str("SCAN_RESULTS"));
+				_submit_cmd(State::PENDING_RESULTS, Cmd_str("SCAN_RESULTS"));
 			}
 		} else
 
@@ -1722,8 +1685,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		if (_state == State::IDLE && _pending_bssid.length() > 1) {
-			_state_transition(_state, State::INFO);
-			_submit_cmd(Cmd_str("BSS ", _pending_bssid));
+			_submit_cmd(State::INFO, Cmd_str("BSS ", _pending_bssid));
 
 			_pending_bssid = Accesspoint::Bssid();
 		}
