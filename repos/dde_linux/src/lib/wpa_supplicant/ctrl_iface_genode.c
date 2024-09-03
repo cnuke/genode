@@ -78,6 +78,8 @@ static void send_reply(struct ctrl_iface_priv *priv, char const *txt, size_t len
 	char   *msg  = priv->send_buffer;
 	size_t  mlen = priv->send_buffer_size;
 
+	wifi_block_for_processing();
+
 	if (len >= mlen) {
 		len = mlen - 1;
 	}
@@ -85,6 +87,8 @@ static void send_reply(struct ctrl_iface_priv *priv, char const *txt, size_t len
 	memcpy(msg, txt, len);
 	msg[len] = 0;
 	(*priv->send_id)++;
+
+	wifi_notify_cmd_result();
 }
 
 
@@ -114,22 +118,16 @@ static void wpa_supplicant_ctrl_iface_receive(int fd, void *eloop_ctx,
 	                                          &reply_len);
 
 	if (reply) {
-		wifi_block_for_processing();
 		send_reply(priv, reply, reply_len);
-		wifi_notify_cmd_result();
 		os_free(reply);
 	} else
 
 	if (reply_len == 1) {
-		wifi_block_for_processing();
 		send_reply(priv, "FAIL", 4);
-		wifi_notify_cmd_result();
 	} else
 
 	if (reply_len == 2) {
-		wifi_block_for_processing();
 		send_reply(priv, "OK", 2);
-		wifi_notify_cmd_result();
 	}
 }
 
@@ -139,6 +137,8 @@ static void send_event(struct ctrl_iface_priv *priv, char const *txt, size_t len
 	char   *msg  = priv->event_buffer;
 	size_t  mlen = priv->event_buffer_size;
 
+	wifi_block_for_processing();
+
 	if (len >= mlen) {
 		len = mlen - 1;
 	}
@@ -146,6 +146,8 @@ static void send_event(struct ctrl_iface_priv *priv, char const *txt, size_t len
 	memcpy(msg, txt, len);
 	msg[len] = 0;
 	(*priv->event_id)++;
+
+	wifi_notify_event();
 }
 
 
@@ -181,7 +183,6 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
 	;
 	if (!forward) { return; }
 
-	wifi_notify_event();
 	send_event(priv, txt, len);
 }
 
