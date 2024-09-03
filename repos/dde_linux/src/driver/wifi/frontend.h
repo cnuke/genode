@@ -452,6 +452,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				});
 
 				_connected_ap.invalidate();
+				_connecting = false;
 			}
 		}
 
@@ -766,7 +767,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * If we are blocked or currently trying to join a network
 		 * suspend scanning.
 		 */
-		if (_rfkilled || _connecting.length() > 1) {
+		if (_rfkilled || _connecting) {
 			if (_verbose)
 				Genode::log("Timer: suspend due to RFKILL or connection"
 				            " attempt");
@@ -1472,7 +1473,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	Genode::Constructible<Genode::Reporter> _state_reporter { };
 
-	Accesspoint::Bssid _connecting { };
+	bool _connecting = false;
 
 	Accesspoint::Bssid const _extract_bssid(char const *msg, State state)
 	{
@@ -1548,7 +1549,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 */
 		_connected_ap.invalidate();
 		if (connected) { _connected_ap.bssid = bssid; }
-		if (connected || disconnected) { _connecting = Accesspoint::Bssid(); }
+		if (connected || disconnected) { _connecting = false; }
 
 		/*
 		 * Save local connection state here for later re-use when
@@ -1629,7 +1630,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (connecting_to_network(msg)) {
 			if (!_single_autoconnect) {
 				Accesspoint::Bssid const &bssid = _extract_bssid(msg, State::CONNECTING);
-				_connecting = bssid;
+				_connecting = true;
 
 				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 					xml.node("accesspoint", [&] () {
@@ -1713,7 +1714,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (_verbose_state) {
 			Genode::log("State:",
 			            " connected: ",  _connected_ap.bssid_valid(),
-			            " connecting: ", _connecting.length() > 1,
+			            " connecting: ", _connecting,
 			            " enabled: ",    _count_enabled(),
 			            " stored: ",     _count_stored(),
 			"");
