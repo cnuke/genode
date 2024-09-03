@@ -5,12 +5,12 @@
 
 	<config>
 		<report ports="yes"/>
-		<policy label="1" device="1" writeable="yes"/>
-		<policy label="2" device="1" writeable="yes"/>
-		<policy label="3" device="1" writeable="yes"/>
-		<policy label="4" device="1" writeable="yes"/>
-		<policy label="5" device="1" writeable="yes"/>
-		<policy label="6" device="1" writeable="yes"/>
+		<policy label="1" device="2" writeable="yes"/>
+		<policy label="2" device="2" writeable="yes"/>
+		<policy label="3" device="2" writeable="yes"/>
+		<policy label="4" device="2" writeable="yes"/>
+		<policy label="5" device="2" writeable="yes"/>
+		<policy label="6" device="2" writeable="yes"/>
 	</config>
 	<content>
 		<rom label="ld.lib.so"/>
