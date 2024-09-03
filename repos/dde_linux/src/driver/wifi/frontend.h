@@ -1536,7 +1536,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		/* simplistic heuristic to ignore re-authentication requests */
 		if (_connected_ap.bssid.valid() && auth_failed) {
-			if (_reauth_attempts < MAX_ATTEMPTS) {
+			if (_reauth_attempts < MAX_REAUTH_ATTEMPTS) {
 				Genode::log("ignore deauth from: ", _connected_ap.bssid);
 				_reauth_attempts++;
 				return;
