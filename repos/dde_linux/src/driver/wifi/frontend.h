@@ -1643,12 +1643,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		if (network_not_found(msg)) {
 
-			/* always try to update the accesspoint list */
-			if (_state == State::IDLE) {
-				_state_transition(_state, State::PENDING_RESULTS);
-				_submit_cmd(Cmd_str("SCAN_RESULTS"));
-			}
-
 			if (_single_autoconnect && ++_scan_attempts >= MAX_ATTEMPTS) {
 				_scan_attempts = 0;
 				_single_autoconnect = false;
