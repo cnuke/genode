@@ -709,13 +709,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		/* left one attempt out */
-		if (_scan_busy) {
-			if (_verbose) { Genode::log("Scan already pending, ignore scan request"); }
-			_scan_busy = false;
-			return;
-		}
-
 		enum { SSID_ARG_LEN = 6 + 64, /* " ssid " + "a5a5a5a5..." */ };
 		/* send buffer - 'SCAN ' + stuff */
 		char ssid_buffer[sizeof(Msg_buffer::send)-16] = { };
@@ -1061,15 +1054,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	/* result handling */
 
-	bool _scan_busy { false };
-
 	void _handle_scan_results(State state, char const *msg)
 	{
 		switch (state) {
 		case State::INITIATE_SCAN:
 			if (!cmd_successful(msg)) {
-				_scan_busy = Genode::strcmp(msg, "FAIL-BUSY");
-				if (!_scan_busy) {
+				bool const scan_busy = Genode::strcmp(msg, "FAIL-BUSY");
+				if (!scan_busy) {
 					Genode::warning("could not initiate scan: ", msg);
 				}
 			}
