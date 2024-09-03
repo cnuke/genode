@@ -349,12 +349,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_rfkilled = Wifi::rfkill_blocked();
 
 		/* re-enable scan timer */
-		if (!_rfkilled) {
-			_timer.sigh(_timer_sigh);
+		if (!_rfkilled)
 			_try_arming_any_timer();
-		} else {
-			_timer.sigh(Genode::Signal_context_capability());
-		}
 
 		if (_rfkilled && _state != State::IDLE) {
 			Genode::warning("rfkilled in state ", state_strings(_state));
@@ -374,7 +370,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	Genode::uint64_t _connected_scan_interval { 30 };
 	Genode::uint64_t _scan_interval           {  5 };
-	Genode::uint64_t _update_quality_interval {  0 };
+	Genode::uint64_t _update_quality_interval { 30 };
 
 	void _config_update(bool signal)
 	{
@@ -390,7 +386,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		Genode::uint64_t const connected_scan_interval =
 			Util::check_time(config.attribute_value("connected_scan_interval",
 			                                        _connected_scan_interval),
-			                 0, 15*60);
+			                 10, 15*60);
 
 		Genode::uint64_t const scan_interval =
 			Util::check_time(config.attribute_value("scan_interval",
@@ -400,7 +396,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		Genode::uint64_t const update_quality_interval =
 			Util::check_time(config.attribute_value("update_quality_interval",
 			                                        _update_quality_interval),
-			                 0, 15*60);
+			                 10, 15*60);
 
 		bool const new_connected_scan_interval =
 			connected_scan_interval != _connected_scan_interval;
@@ -418,9 +414,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		/*
 		 * Arm again if intervals changed, implicitly discards
 		 * an already scheduled timer.
-		 *
-		 * First try to arm scanning and if that fails try arming
-		 * signal-strength polling.
 		 */
 		if (   new_connected_scan_interval
 			|| new_scan_interval
@@ -683,19 +676,51 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		return nullptr;
 	}
 
-	Timer::Connection                      _timer;
-	Genode::Signal_handler<Wifi::Frontend> _timer_sigh;
+	Timer::Connection _timer;
+
+	Timer::One_shot_timeout<Wifi::Frontend> _scan_timeout {
+		_timer, *this, &Wifi::Frontend::_handle_scan_timeout };
+	Timer::One_shot_timeout<Wifi::Frontend> _quality_timeout {
+		_timer, *this, &Wifi::Frontend::_handle_quality_timeout };
 
 	bool _arm_timer(Timer_type const type)
 	{
 		Genode::uint64_t const sec = _seconds_from_type(type);
 		if (!sec) { return false; }
 
-		if (_verbose)
-			Genode::log("Arm timer for ", _name_from_type(type));
+		Genode::Microseconds const us { sec * 1000'000u };
 
-		_timer.trigger_once(sec * (1000 * 1000));
+		if (_verbose)
+			Genode::log("Arm timer for ", _name_from_type(type), ": ", us);
+
+		switch (type) {
+		case Timer_type::CONNECTED_SCAN: _scan_timeout.schedule(us); break;
+		case Timer_type::SCAN:           _scan_timeout.schedule(us); break;
+		case Timer_type::SIGNAL_POLL:    _quality_timeout.schedule(us); break;
+		}
 		return true;
+	}
+
+	bool _arm_scan_timer()
+	{
+		Timer_type const type = _connected_ap.bssid_valid()
+		                      ? Timer_type::CONNECTED_SCAN
+		                      : Timer_type::SCAN;
+		return _arm_timer(type);
+	}
+
+	bool _arm_poll_timer()
+	{
+		if (!_connected_ap.bssid_valid())
+			return false;
+
+		return _arm_timer(Timer_type::SIGNAL_POLL);
+	}
+
+	void _try_arming_any_timer()
+	{
+		_arm_scan_timer();
+		(void)_arm_poll_timer();
 	}
 
 	void _request_scan()
@@ -754,7 +779,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_submit_cmd(Cmd_str("SIGNAL_POLL"));
 	}
 
-	void _handle_timer()
+	void _handle_scan_timeout(Genode::Duration)
 	{
 		/*
 		 * If we are blocked or currently trying to join a network
@@ -762,7 +787,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 */
 		if (_rfkilled || _connecting) {
 			if (_verbose)
-				Genode::log("Timer: suspend due to RFKILL or connection"
+				Genode::log("Scanning: suspend due to RFKILL or connection"
 				            " attempt");
 			return;
 		}
@@ -775,44 +800,30 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 */
 		if (_arm_scan_timer()) {
 			_request_scan();
-			return;
 		} else
 			if (_verbose)
 				Genode::log("Timer: scanning disabled");
+	}
 
+	void _handle_quality_timeout(Genode::Duration)
+	{
 		/*
-		 * We arm the poll timer only when we are not scanning.
-		 * So connected-scan MUST be disabled for the signal-strength
-		 * polling to be active.
+		 * If we are blocked or currently trying to join a network
+		 * suspend scanning.
 		 */
+		if (_rfkilled || _connecting) {
+			if (_verbose)
+				Genode::log("Quality polling: suspend due to RFKILL or connection"
+				            " attempt");
+			return;
+		}
+
 		if (_arm_poll_timer()) {
 			_poll_signal_strength();
 			return;
 		} else
 			if (_verbose)
 				Genode::log("Timer: signal-strength polling disabled");
-	}
-
-	bool _arm_scan_timer()
-	{
-		Timer_type const type = _connected_ap.bssid_valid()
-		                      ? Timer_type::CONNECTED_SCAN
-		                      : Timer_type::SCAN;
-		return _arm_timer(type);
-	}
-
-	bool _arm_poll_timer()
-	{
-		if (!_connected_ap.bssid_valid())
-			return false;
-
-		return _arm_timer(Timer_type::SIGNAL_POLL);
-	}
-
-	void _try_arming_any_timer()
-	{
-		if (!_arm_scan_timer())
-			(void)_arm_poll_timer();
 	}
 
 	Genode::Constructible<Genode::Expanding_reporter> _ap_reporter { };
@@ -1729,12 +1740,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_config_rom(env, "wifi_config"),
 		_config_sigh(env.ep(), *this, &Wifi::Frontend::_handle_config_update),
 		_timer(env),
-		_timer_sigh(env.ep(), *this, &Wifi::Frontend::_handle_timer),
 		_events_handler(env.ep(), *this, &Wifi::Frontend::_handle_events),
 		_cmd_handler(env.ep(),    *this, &Wifi::Frontend::_handle_cmds)
 	{
 		_config_rom.sigh(_config_sigh);
-		_timer.sigh(_timer_sigh);
 
 		/* set/initialize as unblocked */
 		_notify_blockade.wakeup();
@@ -1769,7 +1778,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_handle_rfkill();
 
 		/* kick-off initial scanning */
-		_handle_timer();
+		_handle_scan_timeout(Genode::Duration(Genode::Microseconds(0)));
 	}
 
 	/**
