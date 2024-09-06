@@ -182,11 +182,13 @@ struct Accesspoint : Genode::Interface
 
 	void invalidate() { ssid = Ssid(); bssid = Bssid(); }
 
-	bool valid()       const { return ssid.length() > 1; }
-	bool bssid_valid() const { return bssid.length() > 1; }
+	bool ssid_valid()  const { return ssid.length() > 1 && ssid.length() <= 32 + 1; }
+	bool bssid_valid() const { return bssid.length() == 17 + 1; }
 	bool wpa()         const { return prot != "NONE"; }
 	bool wpa3()        const { return prot == "WPA3"; }
 	bool stored()      const { return id != -1; }
+
+	bool pass_valid()  const { return pass.length() > 8 && pass.length() <= 63 + 1; }
 };
 
 
@@ -269,7 +271,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		Accesspoint *p = nullptr;
 		_aps.for_each([&] (Accesspoint &ap) {
-			if (ap.valid() && ap.ssid == ssid) { p = &ap; }
+			if (ap.ssid_valid() && ap.ssid == ssid) { p = &ap; }
 		});
 		return p;
 	}
@@ -280,7 +282,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		Accesspoint *p = nullptr;
 		_aps.for_each([&] (Accesspoint &ap) {
-			if (ap.valid() && ap.ssid == ssid) { p = &ap; }
+			if (ap.ssid_valid() && ap.ssid == ssid) { p = &ap; }
 		});
 
 		if (!p)
@@ -474,35 +476,30 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			ap.ssid  = node.attribute_value("ssid",  Accesspoint::Ssid());
 			ap.bssid = node.attribute_value("bssid", Accesspoint::Bssid());
 
-			size_t const ssid_len = ap.ssid.length() - 1;
-			if (ssid_len == 0 || ssid_len > 32) {
+			if (!ap.ssid_valid()) {
 				Genode::warning("ignoring accesspoint with invalid ssid");
 				return;
 			}
 
-			if (ap.wpa()) {
-				size_t const psk_len = ap.pass.length() - 1;
-				if (psk_len < 8 || psk_len > 63) {
+			ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
+			ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
+			ap.auto_connect  = node.attribute_value("auto_connect", true);
+			ap.explicit_scan = node.attribute_value("explicit_scan", false);
+
+			if (ap.wpa() && !ap.pass_valid()) {
 					Genode::warning("ignoring accesspoint '", ap.ssid,
-					                "' with invalid pass");
+					                "' with invalid psk");
 					return;
-				}
 			}
 
 			_with_accesspoint(ap.ssid, [&] (Accesspoint &p) {
 
-				ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
-				ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
-				ap.auto_connect  = node.attribute_value("auto_connect", true);
-				ap.explicit_scan = node.attribute_value("explicit_scan", false);
-
-				p.update = ((ap.bssid.length() > 1 && ap.bssid != p.bssid)
+				p.update = ((ap.bssid_valid() && ap.bssid != p.bssid)
 				         || ap.pass  != p.pass
 				         || ap.prot  != p.prot
 				         || ap.auto_connect != p.auto_connect);
 
-				/* TODO add better way to check validity */
-				if (ap.bssid.length() == 17 + 1) { p.bssid = ap.bssid; }
+				if (ap.bssid_valid()) { p.bssid = ap.bssid; }
 
 				p.ssid          = ap.ssid;
 				p.prot          = ap.prot;
@@ -510,7 +507,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				p.auto_connect  = ap.auto_connect;
 				p.explicit_scan = ap.explicit_scan;
 
-				single_autoconnect |= (p.update || p.auto_connect) && !_connected_ap.valid();
+				single_autoconnect |= (p.update || p.auto_connect) && !_connected_ap.ssid_valid();
 			},
 			[&] { Genode::error("could not add accesspoint"); });
 		};
@@ -894,7 +891,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (_processed_ap) { return; }
 
 		_aps.for_each([&] (Accesspoint &ap) {
-			if (!_processed_ap && ap.valid() && ap.stale) {
+			if (!_processed_ap && ap.ssid_valid() && ap.stale) {
 				_processed_ap = &ap;
 			}
 		});
@@ -937,7 +934,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (_processed_ap) { return; }
 
 		_aps.for_each([&] (Accesspoint &ap) {
-			if (!_processed_ap && ap.valid() && !ap.stored()) {
+			if (!_processed_ap && ap.ssid_valid() && !ap.stored()) {
 				_processed_ap = &ap;
 			}
 		});
@@ -993,7 +990,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	void _network_set_bssid()
 	{
-		bool const valid = _processed_ap->bssid.length() == 17 + 1;
+		bool const valid = _processed_ap->bssid_valid();
 		char const *bssid = valid ? _processed_ap->bssid.string() : "";
 
 		_submit_cmd(State::FILL_NETWORK_BSSID,
@@ -1280,7 +1277,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		};
 		for_each_line(msg, fill_ap);
 
-		if (!ap.ssid.valid()) {
+		if (!ap.ssid_valid()) {
 			Genode::error("Cannot query SSID :-(");
 			return;
 		}
@@ -1495,7 +1492,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		Accesspoint::Bssid const &bssid = _extract_bssid(msg, state);
 
 		/* simplistic heuristic to ignore re-authentication requests */
-		if (_connected_ap.bssid.valid() && auth_failed) {
+		if (_connected_ap.bssid_valid() && auth_failed) {
 			if (_reauth_attempts < MAX_REAUTH_ATTEMPTS) {
 				Genode::log("ignore deauth from: ", _connected_ap.bssid);
 				_reauth_attempts++;
