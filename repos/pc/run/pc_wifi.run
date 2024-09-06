@@ -3,7 +3,7 @@
 # pull in the locally build binaries rather than the ones
 # from the depot.
 #
-set debug_driver false
+set debug_driver true
 
 #
 # Configure wireless lan
@@ -24,6 +24,21 @@ proc wifi_wpa { } {
 	return $::env(GENODE_WIFI_WPA)
 }
 
+proc wifi_ssid2 { } {
+	return $::env(GENODE_WIFI_SSID2)
+}
+
+proc wifi_psk2 { } {
+	return $::env(GENODE_WIFI_PSK2)
+}
+
+proc wifi_wpa2 { } {
+	if {![info exists ::env(GENODE_WIFI_WPA2)]} {
+		return WPA2
+	}
+	return $::env(GENODE_WIFI_WPA2)
+}
+
 #
 # wifi-driver config generator (supporting a network list)
 #
@@ -41,26 +56,31 @@ proc wifi_wpa { } {
 #   } [wifi_config 30 5 no [list "net1 WPA2 net1_psk no" "net2 WPA2 net2_psk yes"]] {
 #   </inline>}
 
-set wifi_verbose       false
-set wifi_verbose_state false
 
-proc wifi_config { connected_scan_interval scan_interval rfkill networks } {
+# } [wifi_config 30 5 3 no [list "[wifi_ssid] [wifi_wpa] [wifi_psk] no" "[wifi_ssid2] [wifi_wpa2] [wifi_psk2] no"] ""] {
+
+set wifi_verbose       true
+
+proc wifi_config { connected_scan_interval scan_interval update_quality_interval rfkill networks log_level } {
 	global wifi_verbose
 	global wifi_verbose_state
 
 	set    config "<wifi_config"
+	append config " network_mode=\"single\""
 	append config " verbose=\"$wifi_verbose\""
-	append config " verbose_state=\"$wifi_verbose_state\""
 	append config " connected_scan_interval=\"$connected_scan_interval\""
 	append config " scan_interval=\"$scan_interval\""
+	append config " update_quality_interval=\"$update_quality_interval\""
 	append config " rfkill=\"$rfkill\""
+	append config " log_level=\"$log_level\""
 	append config ">\n"
 	foreach n $networks {
 		append config "  <network"
 		append config " ssid=\"[lindex $n 0]\""
 		append config " protection=\"[lindex $n 1]\""
 		append config " passphrase=\"[lindex $n 2]\""
-		append config " explicit_scan=\"[lindex $n 3]\""
+		append config " auto_connect=\"[lindex $n 3]\""
+		append config " explicit_scan=\"[lindex $n 4]\""
 		append config "/>\n"
 	}
 	append config "</wifi_config>\n"
@@ -219,7 +239,7 @@ append config {
 		<binary name="report_rom"/>
 		<resource name="RAM" quantum="2M"/>
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
-		<config verbose="no"/>
+		<config verbose="yes"/>
 	</start>
 
 	<start name="accesspoints_report_rom">
@@ -232,23 +252,23 @@ append config {
 	<start name="config_rom">
 		<binary name="dynamic_rom"/>
 		<resource name="RAM" quantum="4M"/>
-		<provides><service name="ROM"/></provides>
+		<provides> <service name="ROM"/> </provides>
 		<config verbose="yes">
 			<rom name="wifi_config">
 				<inline description="disconnect">
-} [wifi_config 30 5 no {}] {
+} [wifi_config 5 5 5 no {} ""] {
 				</inline>
-				<sleep milliseconds="15000"/>
+				<sleep milliseconds="10000"/>
 				<inline description="connect">
-} [wifi_config 30 5 no [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes"]] {
-				</inline>
-				<sleep milliseconds="60000"/>
-				<inline description="rfkill block">
-} [wifi_config 30 5 yes [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes"]] {
+} [wifi_config 30 5 3 no [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes yes" ] ""] {
 				</inline>
 				<sleep milliseconds="30000"/>
+				<inline description="rfkill block">
+} [wifi_config 10 5 3 yes [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes yes" ] ""] {
+				</inline>
+				<sleep milliseconds="15000"/>
 				<inline description="rfkill unblock">
-} [wifi_config 30 5 no [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes"]] {
+} [wifi_config 10 5 3 no [list "[wifi_ssid] [wifi_wpa] [wifi_psk] yes no" ] ""] {
 				</inline>
 				<sleep milliseconds="30000"/>
 			</rom>
@@ -327,7 +347,7 @@ install_config $config
 # boot-module assembly
 #
 if {$debug_driver} {
-exec rm bin/wifi.lib.so
+catch { exec rm bin/wifi.lib.so }
 exec echo dummy > bin/wifi.lib.so
 }
 
