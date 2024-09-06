@@ -274,18 +274,24 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		return p;
 	}
 
-	Accesspoint *_lookup_ap_by_bssid(Accesspoint::Bssid const &bssid)
+	void _with_accesspoint(Accesspoint::Ssid const &ssid,
+	                       auto const found_fn,
+	                       auto const err_fn)
 	{
 		Accesspoint *p = nullptr;
 		_aps.for_each([&] (Accesspoint &ap) {
-			if (ap.valid() && ap.bssid == bssid) { p = &ap; }
+			if (ap.valid() && ap.ssid == ssid) { p = &ap; }
 		});
-		return p;
-	}
 
-	Accesspoint *_alloc_ap()
-	{
-		return new (&_ap_allocator) Accesspoint_r(_aps);
+		if (!p)
+			try {
+				p = new (&_ap_allocator) Accesspoint_r(_aps);
+			} catch (...) {
+				err_fn();
+				return;
+			}
+
+		found_fn(*p);
 	}
 
 	void _free_ap(Accesspoint &ap)
@@ -474,24 +480,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				return;
 			}
 
-			Accesspoint *p = _lookup_ap_by_ssid(ap.ssid);
-			if (p) {
-				if (_verbose) { Genode::log("Update: '", p->ssid, "'"); }
-				/* mark for updating */
-				p->update = true;
-			} else {
-				p = _alloc_ap();
-				if (!p) {
-					Genode::warning("could not add accesspoint, no slots left");
-					return;
-				}
-			}
-
-			ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
-			ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
-			ap.auto_connect  = node.attribute_value("auto_connect", true);
-			ap.explicit_scan = node.attribute_value("explicit_scan", false);
-
 			if (ap.wpa()) {
 				size_t const psk_len = ap.pass.length() - 1;
 				if (psk_len < 8 || psk_len > 63) {
@@ -501,25 +489,30 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				}
 			}
 
+			_with_accesspoint(ap.ssid, [&] (Accesspoint &p) {
 
-			/* check if updating is really necessary */
-			if (p->update) {
-				p->update = ((ap.bssid.length() > 1 && ap.bssid != p->bssid)
-				          || ap.pass  != p->pass
-				          || ap.prot  != p->prot
-				          || ap.auto_connect != p->auto_connect);
-			}
+				ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
+				ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
+				ap.auto_connect  = node.attribute_value("auto_connect", true);
+				ap.explicit_scan = node.attribute_value("explicit_scan", false);
 
-			/* TODO add better way to check validity */
-			if (ap.bssid.length() == 17 + 1) { p->bssid = ap.bssid; }
+				p.update = ((ap.bssid.length() > 1 && ap.bssid != p.bssid)
+				         || ap.pass  != p.pass
+				         || ap.prot  != p.prot
+				         || ap.auto_connect != p.auto_connect);
 
-			p->ssid          = ap.ssid;
-			p->prot          = ap.prot;
-			p->pass          = ap.pass;
-			p->auto_connect  = ap.auto_connect;
-			p->explicit_scan = ap.explicit_scan;
+				/* TODO add better way to check validity */
+				if (ap.bssid.length() == 17 + 1) { p.bssid = ap.bssid; }
 
-			single_autoconnect |= (p->update || p->auto_connect) && !_connected_ap.valid();
+				p.ssid          = ap.ssid;
+				p.prot          = ap.prot;
+				p.pass          = ap.pass;
+				p.auto_connect  = ap.auto_connect;
+				p.explicit_scan = ap.explicit_scan;
+
+				single_autoconnect |= (p.update || p.auto_connect) && !_connected_ap.valid();
+			},
+			[&] { Genode::error("could not add accesspoint"); });
 		};
 		config.for_each_sub_node("network", parse);
 
