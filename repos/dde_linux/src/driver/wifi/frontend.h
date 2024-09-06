@@ -49,12 +49,14 @@
 #include <base/sleep.h>
 #include <os/reporter.h>
 #include <timer_session/connection.h>
+#include <util/attempt.h>
 #include <util/interface.h>
 #include <util/xml_node.h>
 
 /* rep includes */
 #include <wifi/ctrl.h>
 #include <wifi/rfkill.h>
+using Ctrl_msg_buffer = Msg_buffer;
 
 /* local includes */
 #include <util.h>
@@ -124,6 +126,25 @@ static bool scan_results(char const *msg) {
 
 static bool list_network_results(char const *msg) {
 	return Genode::strcmp("network", msg, 7) == 0; }
+
+
+using Cmd = Genode::String<sizeof(Msg_buffer::send)>;
+static void ctrl_cmd(Ctrl_msg_buffer &msg, Cmd const &cmd)
+{
+	Genode::memset(msg.send, 0, sizeof(msg.send));
+	Genode::memcpy(msg.send, cmd.string(), cmd.length());
+	++msg.send_id;
+
+	wpa_ctrl_set_fd();
+
+	/*
+	 * We might have to pull the socketcall task out of poll_all()
+	 * because otherwise we might be late and wpa_supplicant has
+	 * already removed all scan results due to BSS age settings.
+	 */
+	wifi_kick_socketcall();
+}
+
 
 
 /*
@@ -249,6 +270,872 @@ static void for_each_result_line(char const *msg, FUNC const &func)
 		func(ap);
 	}
 }
+
+
+struct Action
+{
+	enum class Type : unsigned { COMMAND, QUERY };
+
+	enum class Result : unsigned { SUCCESSFUL, FAILED };
+
+	struct Action_ok { };
+	enum class Action_error : unsigned { CMD_FAILED, };
+	using Action_result = Genode::Attempt<Action_ok, Action_error>;
+
+	Type const type;
+
+	bool successful;
+
+	Action(Type type) : type { type } , successful { true } { }
+
+	virtual void submit() { }
+
+	virtual void response(char const *) { }
+
+	virtual void query(char const *, Accesspoint &) { }
+
+	virtual bool complete() const = 0;
+
+	Action_result result() const
+	{
+		if (successful)
+			return Action_ok();
+
+		return Action_error::CMD_FAILED;
+	}
+};
+
+
+/*
+ * Action for adding a new network
+ *
+ * In case the 'auto_connect' option is set for the network it
+ * will also be enabled to active auto-joining.
+ */
+struct Add_network_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, ADD_NETWORK, FILL_NETWORK_SSID, FILL_NETWORK_BSSID,
+		FILL_NETWORK_KEY_MGMT, SET_NETWORK_PMF, FILL_NETWORK_PSK,
+		ENABLE_NETWORK, COMPLETE
+	};
+
+	Ctrl_msg_buffer &_msg;
+	Accesspoint      _accesspoint;
+	State            _state;
+
+	Add_network_cmd(Ctrl_msg_buffer &msg, Accesspoint const &ap)
+	:
+		Action       { Type::COMMAND },
+		_msg         { msg },
+		_accesspoint { ap },
+		_state       { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("ADD_NETWORK"));
+			_state = State::ADD_NETWORK;
+			break;
+		case State::ADD_NETWORK:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " ssid \"", _accesspoint.ssid, "\""));
+			_state = State::FILL_NETWORK_SSID;
+			break;
+		case State::FILL_NETWORK_SSID:
+		{
+			bool const valid = _accesspoint.bssid_valid();
+			char const *bssid = valid ? _accesspoint.bssid.string() : "";
+
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " bssid ", bssid));
+			_state = State::FILL_NETWORK_BSSID;
+			break;
+		}
+		case State::FILL_NETWORK_BSSID:
+			if (_accesspoint.wpa3()) {
+				ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+				                       " key_mgmt SAE"));
+				_state = State::FILL_NETWORK_KEY_MGMT;
+			} else {
+				if (_accesspoint.wpa())
+					ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+					                       " psk \"", _accesspoint.pass, "\""));
+				else
+					ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+					                       " key_mgmt NONE"));
+				_state = State::FILL_NETWORK_PSK;
+			}
+			break;
+		case State::FILL_NETWORK_KEY_MGMT:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			         " ieee80211w 2"));
+			_state = State::SET_NETWORK_PMF;
+			break;
+		case State::SET_NETWORK_PMF:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " psk \"", _accesspoint.pass, "\""));
+			_state = State::FILL_NETWORK_PSK;
+			break;
+		case State::FILL_NETWORK_PSK:
+			if (_accesspoint.auto_connect) {
+				ctrl_cmd(_msg, Cmd("ENABLE_NETWORK ", _accesspoint.id));
+				_state = State::ENABLE_NETWORK;
+			} else
+				_state = State::COMPLETE;
+			break;
+		case State::ENABLE_NETWORK:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		/*
+		 * Handle response by expected failure handling
+		 * and use fallthrough switch cases to reduce code.
+		 */
+		switch (_state) {
+		case State::INIT: break;
+
+		case State::ADD_NETWORK:
+			if (cmd_fail(msg)) {
+				error("ADD_NETWORK(", (unsigned)_state, ") failed: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+
+		case State::FILL_NETWORK_SSID:     [[fallthrough]];
+		case State::FILL_NETWORK_BSSID:    [[fallthrough]];
+		case State::FILL_NETWORK_KEY_MGMT: [[fallthrough]];
+		case State::SET_NETWORK_PMF:       [[fallthrough]];
+		case State::FILL_NETWORK_PSK:      [[fallthrough]];
+		case State::ENABLE_NETWORK:
+			if (!cmd_successful(msg)) {
+				error("ADD_NETWORK(", (unsigned)_state, ") failed: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete) {
+			_state = State::COMPLETE;
+			return;
+		}
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::ADD_NETWORK:
+		{
+			long id = -1;
+			Genode::ascii_to(msg, id);
+			_accesspoint.id = static_cast<int>(id);
+			break;
+		}
+		case State::FILL_NETWORK_SSID:     break;
+		case State::FILL_NETWORK_BSSID:    break;
+		case State::FILL_NETWORK_KEY_MGMT: break;
+		case State::SET_NETWORK_PMF:       break;
+		case State::FILL_NETWORK_PSK:      break;
+		case State::ENABLE_NETWORK:        break;
+		case State::COMPLETE:              break;
+		}
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for removing a network
+ */
+struct Remove_network_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, REMOVE_NETWORK, COMPLETE
+	};
+
+	Ctrl_msg_buffer &_msg;
+	int              _id;
+	State            _state;
+
+	Remove_network_cmd(Ctrl_msg_buffer &msg, int id)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_id         { id },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("REMOVE_NETWORK ", _id));
+			_state = State::REMOVE_NETWORK;
+			break;
+		case State::REMOVE_NETWORK:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::REMOVE_NETWORK:
+			if (cmd_fail(msg)) {
+				error("could not remove network: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for enabling a network
+ */
+struct Enable_network_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, ENABLE_NETWORK, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	int              _id;
+	State            _state;
+
+	Enable_network_cmd(Ctrl_msg_buffer &msg, int id)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_id         { id },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("ENABLE_NETWORK ", _id));
+			_state = State::ENABLE_NETWORK;
+			break;
+		case State::ENABLE_NETWORK:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::ENABLE_NETWORK:
+			if (cmd_fail(msg)) {
+				error("could not enable network: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for disabling a network
+ */
+struct Disable_network_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, DISABLE_NETWORK, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	int              _id;
+	State            _state;
+
+	Disable_network_cmd(Ctrl_msg_buffer &msg, int id)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_id         { id },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("DISABLE_NETWORK ", _id));
+			_state = State::DISABLE_NETWORK;
+			break;
+		case State::DISABLE_NETWORK:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::DISABLE_NETWORK:
+			if (cmd_fail(msg)) {
+				error("could not disable network: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for updating a network
+ *
+ * For now only the PSK is updated and depending on the
+ * auto_connect configuration the network will also be
+ * enabled to allow for auto-join after the alteration.
+ */
+struct Update_network_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, UPDATE_NETWORK_PSK, DISABLE_NETWORK, ENABLE_NETWORK,
+		COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	Accesspoint      _accesspoint;
+	State            _state;
+
+	Update_network_cmd(Ctrl_msg_buffer &msg, Accesspoint const &ap)
+	:
+		Action       { Type::COMMAND },
+		_msg         { msg },
+		_accesspoint { ap },
+		_state       { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " psk \"", _accesspoint.pass, "\""));
+			_state = State::UPDATE_NETWORK_PSK;
+			break;
+		case State::UPDATE_NETWORK_PSK:
+			ctrl_cmd(_msg, Cmd("DISABLE_NETWORK ", _accesspoint.id));
+			_state = State::DISABLE_NETWORK;
+			break;
+		case State::DISABLE_NETWORK:
+			if (_accesspoint.auto_connect) {
+				ctrl_cmd(_msg, Cmd("ENABLE_NETWORK ", _accesspoint.id));
+				_state = State::ENABLE_NETWORK;
+			} else {
+				_state = State::COMPLETE;
+			}
+			break;
+		case State::ENABLE_NETWORK:
+			_state  = State::COMPLETE;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::UPDATE_NETWORK_PSK: [[fallthrough]];
+		case State::ENABLE_NETWORK:     [[fallthrough]];
+		case State::DISABLE_NETWORK:
+			if (!cmd_successful(msg)) {
+				error("UPDATE_NETWORK(", (unsigned)_state, ") failed: ", msg);
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for initiating a scan request
+ */
+struct Scan_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, SCAN, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	Scan_cmd(Ctrl_msg_buffer &msg)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("SCAN"));
+			_state = State::SCAN;
+			break;
+		case State::SCAN:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::SCAN:
+			if (!cmd_successful(msg)) {
+				/* ignore busy fails silently */
+				bool const scan_busy = strcmp(msg, "FAIL-BUSY");
+				if (!scan_busy) {
+					error("could not initiate scan: ", msg);
+					Action::successful = false;
+					complete = true;
+				}
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for initiating a explicit scan request
+ */
+struct Explicit_scan_cmd : Action
+{
+	enum class State : unsigned {
+		INIT, FILL_SSID, SCAN, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	/*
+	 * The number of explicit networks is limited by the
+	 * message buffer that is 4096 bytes larger. Thus its
+	 * possible to store around 58 explicit SSID (64 + 6)
+	 * request, which should be plenty - limit the buffer
+	 * to that amount.
+	 */
+	char _ssid_buffer[4060] { };
+
+	Explicit_scan_cmd(Ctrl_msg_buffer &msg)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_state      { State::INIT }
+	{ }
+
+	void with_ssid_buffer(auto const fn)
+	{
+		fn(_ssid_buffer, sizeof(_ssid_buffer));
+
+		_state = State::FILL_SSID;
+	}
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			break;
+		case State::FILL_SSID:
+			ctrl_cmd(_msg, Cmd("SCAN", (char const *)_ssid_buffer));
+			_state = State::SCAN;
+			break;
+		case State::SCAN:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT:      break;
+		case State::FILL_SSID: break;
+		case State::SCAN:
+			if (!cmd_successful(msg)) {
+				/* ignore busy fails silently */
+				bool const scan_busy = strcmp(msg, "FAIL-BUSY");
+				if (!scan_busy) {
+					error("could not initiate scan: ", msg);
+					Action::successful = false;
+					complete = true;
+				}
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for setting a configuration variable
+ */
+struct Set_cmd : Action
+{
+	using Key   = Genode::String<64>;
+	using Value = Genode::String<128>;
+
+	enum class State : unsigned {
+		INIT, SET, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	Key   _key;
+	Value _value;
+
+	Set_cmd(Ctrl_msg_buffer &msg, Key key, Value value)
+	:
+		Action      { Type::COMMAND },
+		_msg        { msg },
+		_state      { State::INIT },
+		_key        { key },
+		_value      { value }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("SET ", _key, " ", _value));
+			_state = State::SET;
+			break;
+		case State::SET:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void response(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::SET:
+			if (!cmd_successful(msg)) {
+				error("could not set '", _key, "' to '", _value, "'");
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for querying BSS information
+ */
+struct Bss_query : Action
+{
+	enum class State : unsigned {
+		INIT, BSS, COMPLETE
+	};
+	Ctrl_msg_buffer    &_msg;
+	Accesspoint::Bssid  _bssid;
+	State               _state;
+
+	Bss_query(Ctrl_msg_buffer &msg, Accesspoint::Bssid bssid)
+	:
+		Action      { Type::QUERY },
+		_msg        { msg },
+		_bssid      { bssid },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("BSS ", _bssid));
+			_state = State::BSS;
+			break;
+		case State::BSS:      break;
+		case State::COMPLETE: break;
+		}
+	}
+
+	void query(char const *msg, Accesspoint &ap) override
+	{
+		if (_state != State::BSS)
+			return;
+
+		_state = State::COMPLETE;
+
+		/*
+		 * It might happen that the supplicant already flushed
+		 * its internal BSS information and cannot help us out.
+		 * Since we already sent out a rudimentary report, just
+		 * stop here.
+		 */
+		if (0 == msg[0])
+			return;
+
+		auto fill_ap = [&] (char const *line) {
+			if (Genode::strcmp(line, "ssid=", 5) == 0) {
+				ap.ssid = Accesspoint::Ssid(line+5);
+			} else
+
+			if (Genode::strcmp(line, "bssid=", 6) == 0) {
+				ap.bssid = Accesspoint::Bssid(line+6);
+			} else
+
+			if (Genode::strcmp(line, "freq=", 5) == 0) {
+				ap.freq = Accesspoint::Freq(line+5);
+			}
+		};
+		for_each_line(msg, fill_ap);
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for querying RSSI information
+ */
+struct Rssi_query : Action
+{
+	enum class State : unsigned {
+		INIT, RSSI, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	Rssi_query(Ctrl_msg_buffer &msg)
+	:
+		Action      { Type::QUERY },
+		_msg        { msg },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("SIGNAL_POLL"));
+			_state = State::RSSI;
+			break;
+		case State::RSSI:     break;
+		case State::COMPLETE: break;
+		}
+	}
+
+	void query(char const *msg, Accesspoint &ap) override
+	{
+		if (_state != State::RSSI)
+			return;
+
+		_state = State::COMPLETE;
+
+		using Rssi = Genode::String<5>;
+		Rssi rssi { };
+		auto get_rssi = [&] (char const *line) {
+			if (Genode::strcmp(line, "RSSI=", 5) != 0)
+				return;
+
+			rssi = Rssi(line + 5);
+		};
+		for_each_line(msg, get_rssi);
+
+		/*
+		 * Use the same simplified approximation for denoting
+		 * the quality to be in line with the scan results.
+		 */
+		ap.signal = Util::approximate_quality(rssi.valid() ? rssi.string()
+		                                                   : "-100");
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for querying the current connection status
+ */
+struct Status_query : Action
+{
+	enum class State : unsigned {
+		INIT, STATUS, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	Status_query(Ctrl_msg_buffer &msg)
+	:
+		Action      { Type::QUERY },
+		_msg        { msg },
+		_state      { State::INIT }
+	{ }
+
+	void submit() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("STATUS"));
+			_state = State::STATUS;
+			break;
+		case State::STATUS:   break;
+		case State::COMPLETE: break;
+		}
+	}
+
+	void query(char const *msg, Accesspoint &ap) override
+	{
+		if (_state != State::STATUS)
+			return;
+
+		_state = State::COMPLETE;
+
+		/*
+		 * It might happen that the supplicant already flushed
+		 * its internal BSS information and cannot help us out.
+		 * Since we already sent out a rudimentary report, just
+		 * stop here.
+		 */
+		if (0 == msg[0])
+			return;
+
+		auto fill_ap = [&] (char const *line) {
+			if (Genode::strcmp(line, "ssid=", 5) == 0) {
+				ap.ssid = Accesspoint::Ssid(line+5);
+			} else
+
+			if (Genode::strcmp(line, "bssid=", 6) == 0) {
+				ap.bssid = Accesspoint::Bssid(line+6);
+			} else
+
+			if (Genode::strcmp(line, "freq=", 5) == 0) {
+				ap.freq = Accesspoint::Freq(line+5);
+			}
+		};
+		for_each_line(msg, fill_ap);
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
 
 
 /*
