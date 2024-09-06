@@ -370,71 +370,103 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Genode::Attached_rom_dataspace         _config_rom;
 	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
 
-	bool _verbose       { false };
-	bool _verbose_state { false };
-
 	bool _deferred_config_update { false };
 	bool _single_autoconnect     { false };
 
-	Genode::uint64_t _connected_scan_interval { 30 };
-	Genode::uint64_t _scan_interval           {  5 };
-	Genode::uint64_t _update_quality_interval { 30 };
+	struct Config
+	{
+		enum {
+			DEFAULT_CONNECTED_SCAN_INTERVAL  = 30,
+			DEFAULT_SCAN_INTERVAL            =  5,
+			DEFAULT_UPDATE_QUAILITY_INTERVAL = 30,
 
-	void _config_update(bool signal)
+			DEFAULT_VERBOSE       = false,
+			DEFAULT_VERBOSE_STATE = false,
+			DEFAULT_RFKILL        = false,
+		};
+
+		unsigned connected_scan_interval { DEFAULT_CONNECTED_SCAN_INTERVAL };
+		unsigned scan_interval           { DEFAULT_SCAN_INTERVAL };
+		unsigned update_quality_interval { DEFAULT_UPDATE_QUAILITY_INTERVAL };
+
+		bool verbose       { DEFAULT_VERBOSE };
+		bool verbose_state { DEFAULT_VERBOSE_STATE };
+		bool rfkill        { DEFAULT_RFKILL };
+
+		bool intervals_changed(Config const &cfg) const
+		{
+			return connected_scan_interval != cfg.connected_scan_interval
+			    || scan_interval           != cfg.scan_interval
+			    || update_quality_interval != cfg.update_quality_interval;
+		}
+
+		bool rfkill_changed(Config const &cfg) const
+		{
+			return rfkill != cfg.rfkill;
+		}
+
+		static Config from_xml(Genode::Xml_node const &node)
+		{
+			bool const verbose       = node.attribute_value("verbose",
+			                                                (unsigned)DEFAULT_VERBOSE);
+			bool const verbose_state = node.attribute_value("verbose_state",
+			                                                (unsigned)DEFAULT_VERBOSE_STATE);
+			bool const rfkill        = node.attribute_value("rfkill",
+			                                                (unsigned)DEFAULT_RFKILL);
+
+			unsigned const connected_scan_interval =
+				Util::check_time(node.attribute_value("connected_scan_interval",
+				                 (unsigned)DEFAULT_CONNECTED_SCAN_INTERVAL),
+				                 10, 15*60);
+
+			unsigned const scan_interval =
+				Util::check_time(node.attribute_value("scan_interval",
+				                 (unsigned)DEFAULT_SCAN_INTERVAL),
+				                 5, 15*60);
+
+			unsigned const update_quality_interval =
+				Util::check_time(node.attribute_value("update_quality_interval",
+				                 (unsigned)DEFAULT_UPDATE_QUAILITY_INTERVAL),
+				                 10, 15*60);
+
+			return Config {
+				.connected_scan_interval = connected_scan_interval,
+				.scan_interval           = scan_interval,
+				.update_quality_interval = update_quality_interval,
+				.verbose                 = verbose,
+				.verbose_state           = verbose_state,
+				.rfkill                  = rfkill
+			};
+		}
+	};
+
+	Config _config { };
+
+	void _config_update(bool initial_config)
 	{
 		_config_rom.update();
 
 		if (!_config_rom.valid()) { return; }
 
-		Genode::Xml_node config = _config_rom.xml();
+		Genode::Xml_node config_node = _config_rom.xml();
 
-		_verbose       = config.attribute_value("verbose",       _verbose);
-		_verbose_state = config.attribute_value("verbose_state", _verbose_state);
+		Config const old_config = _config;
 
-		Genode::uint64_t const connected_scan_interval =
-			Util::check_time(config.attribute_value("connected_scan_interval",
-			                                        _connected_scan_interval),
-			                 10, 15*60);
-
-		Genode::uint64_t const scan_interval =
-			Util::check_time(config.attribute_value("scan_interval",
-			                                        _scan_interval),
-			                 5, 15*60);
-
-		Genode::uint64_t const update_quality_interval =
-			Util::check_time(config.attribute_value("update_quality_interval",
-			                                        _update_quality_interval),
-			                 10, 15*60);
-
-		bool const new_connected_scan_interval =
-			connected_scan_interval != _connected_scan_interval;
-
-		bool const new_scan_interval =
-			connected_scan_interval != _scan_interval;
-
-		bool const new_update_quality_interval =
-			update_quality_interval != _update_quality_interval;
-
-		_connected_scan_interval = connected_scan_interval;
-		_scan_interval           = scan_interval;
-		_update_quality_interval = update_quality_interval;
+		_config = Config::from_xml(config_node);
 
 		/*
 		 * Arm again if intervals changed, implicitly discards
 		 * an already scheduled timer.
 		 */
-		if (   new_connected_scan_interval
-			|| new_scan_interval
-		    || new_update_quality_interval)
+		if (_config.intervals_changed(old_config) || initial_config)
 			_try_arming_any_timer();
 
 		/*
 		 * Always handle rfkill, regardless in which state we are currently in.
 		 * When we come back from rfkill, will most certainly will be IDLE anyway.
 		 */
-		if (config.has_attribute("rfkill")) {
-			bool const blocked = config.attribute_value("rfkill", false);
-			Wifi::set_rfkill(blocked);
+		if (_config.rfkill_changed(old_config) || initial_config) {
+			Wifi::set_rfkill(_config.rfkill);
 
 			/*
 			 * In case we get blocked set rfkilled immediately to prevent
@@ -442,7 +474,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 * by the singal handler but is not expected to be any different
 			 * as the rfkill call is not supposed to fail.
 			 */
-			if (blocked && !_rfkilled) {
+			if (_config.rfkill && !_rfkilled) {
 				_rfkilled = true;
 
 				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
@@ -458,11 +490,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		/*
-		 * Block any further config updates until we have finished applying
+		 * Block any further config_node updates until we have finished applying
 		 * the current one.
 		 */
 		if (_state != State::IDLE) {
-			Genode::warning("deferring config update (", state_strings(_state), ")");
+			Genode::warning("deferring config_node update (", state_strings(_state), ")");
 			_deferred_config_update = true;
 			return;
 		}
@@ -511,7 +543,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			},
 			[&] { Genode::error("could not add accesspoint"); });
 		};
-		config.for_each_sub_node("network", parse);
+		config_node.for_each_sub_node("network", parse);
 
 		/*
 		 * To accomodate a management component that only deals
@@ -519,12 +551,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * fake connecting event. Either a connected or disconnected
 		 * event will bring us to square one.
 		 */
-		if (signal && _count_to_be_enabled() == 1 && single_autoconnect && !_rfkilled) {
+		if (!initial_config && _count_to_be_enabled() == 1 && single_autoconnect && !_rfkilled) {
 
 			auto lookup = [&] (Accesspoint const &ap) {
 				if (!ap.auto_connect) { return; }
 
-				if (_verbose) { Genode::log("Single autoconnect event for '", ap.ssid, "'"); }
+				if (_config.verbose) { Genode::log("Single autoconnect event for '", ap.ssid, "'"); }
 
 				try {
 					Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
@@ -545,10 +577,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * Marking removes stale APs first and triggers adding of
 		 * new ones afterwards.
 		 */
-		_mark_stale_aps(config);
+		_mark_stale_aps(config_node);
 	}
 
-	void _handle_config_update() { _config_update(true); }
+	void _handle_config_update() { _config_update(false); }
 
 	/* state */
 
@@ -613,7 +645,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	void _state_transition(State &current, State next)
 	{
-		if (_verbose_state) {
+		if (_config.verbose_state) {
 			using namespace Genode;
 			log("Transition: ", state_strings(current), " -> ",
 			    state_strings(next));
@@ -646,12 +678,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	enum class Timer_type : uint8_t { CONNECTED_SCAN, SCAN, SIGNAL_POLL };
 
-	Genode::uint64_t _seconds_from_type(Timer_type const type)
+	unsigned _seconds_from_type(Timer_type const type)
 	{
 		switch (type) {
-		case Timer_type::CONNECTED_SCAN: return _connected_scan_interval;
-		case Timer_type::SCAN:           return _scan_interval;
-		case Timer_type::SIGNAL_POLL:    return _update_quality_interval;
+		case Timer_type::CONNECTED_SCAN: return _config.connected_scan_interval;
+		case Timer_type::SCAN:           return _config.scan_interval;
+		case Timer_type::SIGNAL_POLL:    return _config.update_quality_interval;
 		}
 		/* never reached */
 		return 0;
@@ -677,12 +709,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	bool _arm_timer(Timer_type const type)
 	{
-		Genode::uint64_t const sec = _seconds_from_type(type);
+		unsigned const sec = _seconds_from_type(type);
 		if (!sec) { return false; }
 
 		Genode::Microseconds const us { sec * 1000'000u };
 
-		if (_verbose)
+		if (_config.verbose)
 			Genode::log("Arm timer for ", _name_from_type(type), ": ", us);
 
 		switch (type) {
@@ -719,7 +751,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		/* skip as we will be scheduled some time soon(tm) anyway */
 		if (_state != State::IDLE) {
-			if (_verbose) {
+			if (_config.verbose) {
 				Genode::log("Not idle, ignore scan request, state: ",
 				            Genode::Hex((unsigned)_state));
 			}
@@ -761,7 +793,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	void _poll_signal_strength()
 	{
 		if (_state != State::IDLE) {
-			if (_verbose)
+			if (_config.verbose)
 				Genode::log("Not idle, ignore signal-poll request, state: ",
 				            Genode::Hex((unsigned)_state));
 			return;
@@ -777,7 +809,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * suspend scanning.
 		 */
 		if (_rfkilled || _connecting) {
-			if (_verbose)
+			if (_config.verbose)
 				Genode::log("Scanning: suspend due to RFKILL or connection"
 				            " attempt");
 			return;
@@ -792,7 +824,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (_arm_scan_timer()) {
 			_request_scan();
 		} else
-			if (_verbose)
+			if (_config.verbose)
 				Genode::log("Timer: scanning disabled");
 	}
 
@@ -803,7 +835,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * suspend scanning.
 		 */
 		if (_rfkilled || _connecting) {
-			if (_verbose)
+			if (_config.verbose)
 				Genode::log("Quality polling: suspend due to RFKILL or connection"
 				            " attempt");
 			return;
@@ -813,7 +845,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			_poll_signal_strength();
 			return;
 		} else
-			if (_verbose)
+			if (_config.verbose)
 				Genode::log("Timer: signal-strength polling disabled");
 	}
 
@@ -825,7 +857,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		for_each_line(msg, [&] (char const*) { count_lines++; });
 
 		if (!count_lines) {
-			if (_verbose) { Genode::log("Scan results empty"); }
+			if (_config.verbose) { Genode::log("Scan results empty"); }
 			return;
 		}
 
@@ -901,7 +933,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		if (_verbose) {
+		if (_config.verbose) {
 			Genode::log("Remove network: '", _processed_ap->ssid, "'");
 		}
 
@@ -921,7 +953,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		if (!_processed_ap) { return; }
 
-		if (_verbose) {
+		if (_config.verbose) {
 			Genode::log("Update network: '", _processed_ap->ssid, "'");
 		}
 
@@ -944,7 +976,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		if (_verbose) {
+		if (_config.verbose) {
 			Genode::log("Add network: '", _processed_ap->ssid, "'");
 		}
 
@@ -955,7 +987,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		if (ap.enabled) { return; }
 
-		if (_verbose) {
+		if (_config.verbose) {
 			Genode::log("Enable network: ", ap.id, " '", ap.ssid, "'");
 		}
 
@@ -968,7 +1000,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		if (!ap.enabled) { return; }
 
-		if (_verbose) {
+		if (_config.verbose) {
 			Genode::log("Disable network: ", ap.id, " '", ap.ssid, "'");
 		}
 
@@ -1660,7 +1692,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 		_notify_lock_unlock();
 
-		if (_verbose_state) {
+		if (_config.verbose_state) {
 			Genode::log("State:",
 			            " connected: ",  _connected_ap.bssid_valid(),
 			            " connecting: ", _connecting,
@@ -1724,7 +1756,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		/* read in list of APs */
-		_config_update(false);
+		_config_update(true);
 
 		/* get initial RFKILL state */
 		_handle_rfkill();
