@@ -317,7 +317,7 @@ struct Action : Genode::Fifo<Action>::Element
 	enum class Type    : unsigned { COMMAND, QUERY };
 	enum class Command : unsigned {
 		INVALID, ADD, DISABLE, ENABLE, EXPLICIT_SCAN,
-		REMOVE, SCAN, SCAN_RESULTS, SET, UPDATE, };
+		LOG_LEVEL, REMOVE, SCAN, SCAN_RESULTS, SET, UPDATE, };
 	enum class Query   : unsigned {
 		INVALID, BSS, RSSI, STATUS, };
 
@@ -1099,7 +1099,7 @@ struct Set_cmd : Action
 	{
 		switch (_state) {
 		case State::INIT:
-			ctrl_cmd(_msg, Cmd("SET ", _key, " ", _value));
+			ctrl_cmd(_msg, Cmd("SET ", _key, " \"", _value, "\""));
 			_state = State::SET;
 			break;
 		case State::SET:
@@ -1120,7 +1120,77 @@ struct Set_cmd : Action
 		case State::INIT: break;
 		case State::SET:
 			if (!cmd_successful(msg)) {
-				error("could not set '", _key, "' to '", _value, "'");
+				error("could not set '", _key, "' to '", _value, "': '", msg, "'");
+				Action::successful = false;
+				complete = true;
+			}
+			break;
+		case State::COMPLETE: break;
+		}
+
+		if (complete)
+			_state = State::COMPLETE;
+	}
+
+	bool complete() const override {
+		return _state == State::COMPLETE; }
+};
+
+
+/*
+ * Action for setting a configuration variable
+ */
+struct Log_level_cmd : Action
+{
+	using Level = Genode::String<16>;
+
+	enum class State : unsigned {
+		INIT, LOG_LEVEL, COMPLETE
+	};
+	Ctrl_msg_buffer &_msg;
+	State            _state;
+
+	Level _level;
+
+	Log_level_cmd(Ctrl_msg_buffer &msg, Level const &level)
+	:
+		Action      { Command::LOG_LEVEL },
+		_msg        { msg },
+		_state      { State::INIT },
+		_level      { level }
+	{ }
+
+	void print(Genode::Output &out) const override
+	{
+		Genode::print(out, "Log_level_cmd: ", (unsigned)_state);
+	}
+
+	void execute() override
+	{
+		switch (_state) {
+		case State::INIT:
+			ctrl_cmd(_msg, Cmd("LOG_LEVEL ", _level));
+			_state = State::LOG_LEVEL;
+			break;
+		case State::LOG_LEVEL:
+			_state = State::COMPLETE;
+			break;
+		case State::COMPLETE:
+			break;
+		}
+	}
+
+	void check(char const *msg) override
+	{
+		using namespace Genode;
+
+		bool complete = false;
+
+		switch (_state) {
+		case State::INIT: break;
+		case State::LOG_LEVEL:
+			if (!cmd_successful(msg)) {
+				error("could not set LOG_LEVEL to ", _level);
 				Action::successful = false;
 				complete = true;
 			}
@@ -1445,6 +1515,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool verbose { DEFAULT_VERBOSE };
 		bool rfkill  { DEFAULT_RFKILL };
 
+		/* see wpa_debug.h - EXCESSIVE, MSGDUMP, DEBUG, INFO, WARNING, ERROR */
+		using Log_level = Log_level_cmd::Level;
+		Log_level log_level { "" };
+
+		using Bgscan = Genode::String<16>;
+		Bgscan bgscan { "" };
+
 		bool intervals_changed(Config const &cfg) const
 		{
 			return connected_scan_interval != cfg.connected_scan_interval
@@ -1457,12 +1534,37 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return rfkill != cfg.rfkill;
 		}
 
+		bool log_level_changed(Config const &cfg) const
+		{
+			return log_level != cfg.log_level;
+		}
+
+		bool log_level_set() const
+		{
+			return log_level.length() > 1;
+		}
+
+		bool bgscan_changed(Config const &cfg) const
+		{
+			return bgscan != cfg.bgscan;
+		}
+
+		bool bgscan_set() const
+		{
+			return bgscan.length() > 1;
+		}
+
 		static Config from_xml(Genode::Xml_node const &node)
 		{
 			bool const verbose       = node.attribute_value("verbose",
 			                                                (bool)DEFAULT_VERBOSE);
 			bool const rfkill        = node.attribute_value("rfkill",
 			                                                (bool)DEFAULT_RFKILL);
+			Log_level const log_level =
+				node.attribute_value("log_level", Log_level("ERROR"));
+
+			Bgscan const bgscan =
+				node.attribute_value("bgscan", Bgscan("simple:30:-70:600"));
 
 			unsigned const connected_scan_interval =
 				Util::check_time(node.attribute_value("connected_scan_interval",
@@ -1484,7 +1586,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				.scan_interval           = scan_interval,
 				.update_quality_interval = update_quality_interval,
 				.verbose                 = verbose,
-				.rfkill                  = rfkill
+				.rfkill                  = rfkill,
+				.log_level               = log_level,
+				.bgscan                  = bgscan
 			};
 			return new_config;
 		}
@@ -1535,6 +1639,30 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				_connecting = false;
 			}
 		}
+
+		if (_config.log_level_changed(old_config) || initial_config)
+			if (_config.log_level_set())
+				try {
+					Action &act = *new (_action_alloctor) Log_level_cmd(_msg, _config.log_level);
+					_actions.enqueue(act);
+
+					if (_config.verbose)
+						Genode::log("Queue set LOG_LEVEL to: ", _config.log_level);
+
+				} catch (...) { Genode::warning("could not queue set LOG_LEVEL"); }
+
+		if (_config.bgscan_changed(old_config) || initial_config)
+			if (_config.bgscan_set())
+				try {
+					Action &act = *new (_action_alloctor)
+						Set_cmd(_msg, Set_cmd::Key("bgscan"),
+						              Set_cmd::Value(_config.bgscan));
+					_actions.enqueue(act);
+
+					if (_config.verbose)
+						Genode::log("Queue set bgscan to: '", _config.bgscan, "'");
+
+				} catch (...) { Genode::warning("could not queue set bgscan"); }
 
 		bool single_autoconnect = false;
 
