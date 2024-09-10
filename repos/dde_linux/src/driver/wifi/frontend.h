@@ -1435,7 +1435,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	 * Action queue handling
 	 */
 
-	Genode::Heap _action_alloctor;
+	Genode::Heap _action_alloc;
 	Genode::Fifo<Action> _actions { };
 
 	Action *_pending_action { nullptr };
@@ -1449,7 +1449,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool const complete = _pending_action ? fn(*_pending_action)
 		                                      : false;
 		if (complete) {
-			Genode::destroy(_action_alloctor, _pending_action);
+			Genode::destroy(_action_alloc, _pending_action);
 			_pending_action = nullptr;
 		}
 	}
@@ -1506,21 +1506,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 			DEFAULT_VERBOSE       = false,
 			DEFAULT_RFKILL        = false,
+
+			DEFAULT_NETWORK_MODE  = false,
 		};
 
 		unsigned connected_scan_interval { DEFAULT_CONNECTED_SCAN_INTERVAL };
 		unsigned scan_interval           { DEFAULT_SCAN_INTERVAL };
 		unsigned update_quality_interval { DEFAULT_UPDATE_QUAILITY_INTERVAL };
-
-		bool verbose { DEFAULT_VERBOSE };
-		bool rfkill  { DEFAULT_RFKILL };
-
-		/* see wpa_debug.h - EXCESSIVE, MSGDUMP, DEBUG, INFO, WARNING, ERROR */
-		using Log_level = Log_level_cmd::Level;
-		Log_level log_level { "" };
-
-		using Bgscan = Genode::String<16>;
-		Bgscan bgscan { "" };
 
 		bool intervals_changed(Config const &cfg) const
 		{
@@ -1529,30 +1521,45 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			    || update_quality_interval != cfg.update_quality_interval;
 		}
 
-		bool rfkill_changed(Config const &cfg) const
+		bool verbose { DEFAULT_VERBOSE };
+		bool rfkill  { DEFAULT_RFKILL };
+
+		bool rfkill_changed(Config const &cfg) const {
+			return rfkill != cfg.rfkill; }
+
+		/* see wpa_debug.h - EXCESSIVE, MSGDUMP, DEBUG, INFO, WARNING, ERROR */
+		using Log_level = Log_level_cmd::Level;
+		Log_level log_level { "" };
+
+		bool log_level_changed(Config const &cfg) const {
+			return log_level != cfg.log_level; }
+
+		bool log_level_set() const {
+			return log_level.length() > 1; }
+
+		using Bgscan = Genode::String<16>;
+		Bgscan bgscan { "" };
+
+		bool bgscan_changed(Config const &cfg) const {
+			return bgscan != cfg.bgscan; }
+
+		bool bgscan_set() const {
+			return bgscan.length() > 1; }
+
+		using Network_mode = Genode::String<16>;
+		Network_mode network_mode { "" };
+
+		bool network_mode_changed(Config const &cfg) const {
+			return network_mode != cfg.network_mode; }
+
+		bool network_mode_valid() const
 		{
-			return rfkill != cfg.rfkill;
+			return false | (network_mode == "single")
+			             | (network_mode == "list");
 		}
 
-		bool log_level_changed(Config const &cfg) const
-		{
-			return log_level != cfg.log_level;
-		}
-
-		bool log_level_set() const
-		{
-			return log_level.length() > 1;
-		}
-
-		bool bgscan_changed(Config const &cfg) const
-		{
-			return bgscan != cfg.bgscan;
-		}
-
-		bool bgscan_set() const
-		{
-			return bgscan.length() > 1;
-		}
+		bool network_mode_list() const {
+			return network_mode == "list"; }
 
 		static Config from_xml(Genode::Xml_node const &node)
 		{
@@ -1565,6 +1572,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 			Bgscan const bgscan =
 				node.attribute_value("bgscan", Bgscan("simple:30:-70:600"));
+
+			Network_mode const network_mode =
+				node.attribute_value("network_mode", Network_mode("list"));
 
 			unsigned const connected_scan_interval =
 				Util::check_time(node.attribute_value("connected_scan_interval",
@@ -1588,7 +1598,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				.verbose                 = verbose,
 				.rfkill                  = rfkill,
 				.log_level               = log_level,
-				.bgscan                  = bgscan
+				.bgscan                  = bgscan,
+				.network_mode            = network_mode
 			};
 			return new_config;
 		}
@@ -1641,30 +1652,21 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		if (_config.log_level_changed(old_config) || initial_config)
-			if (_config.log_level_set())
-				try {
-					Action &act = *new (_action_alloctor) Log_level_cmd(_msg, _config.log_level);
-					_actions.enqueue(act);
-
-					if (_config.verbose)
-						Genode::log("Queue set LOG_LEVEL to: ", _config.log_level);
-
-				} catch (...) { Genode::warning("could not queue set LOG_LEVEL"); }
+			if (_config.log_level_set()) {
+				_actions.enqueue(*new (_action_alloc)
+						Log_level_cmd(_msg, _config.log_level));
+				if (_config.verbose)
+					Genode::log("Queue set LOG_LEVEL to: ", _config.log_level);
+			}
 
 		if (_config.bgscan_changed(old_config) || initial_config)
-			if (_config.bgscan_set())
-				try {
-					Action &act = *new (_action_alloctor)
-						Set_cmd(_msg, Set_cmd::Key("bgscan"),
-						              Set_cmd::Value(_config.bgscan));
-					_actions.enqueue(act);
-
-					if (_config.verbose)
-						Genode::log("Queue set bgscan to: '", _config.bgscan, "'");
-
-				} catch (...) { Genode::warning("could not queue set bgscan"); }
-
-		bool single_autoconnect = false;
+			if (_config.bgscan_set()) {
+					_actions.enqueue(*new (_action_alloc)
+							Set_cmd(_msg, Set_cmd::Key("bgscan"),
+					                      Set_cmd::Value(_config.bgscan)));
+				if (_config.verbose)
+					Genode::log("Queue set bgscan to: '", _config.bgscan, "'");
+			}
 
 		_network_list.update_from_xml(config_node,
 
@@ -1680,22 +1682,15 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				if (pass_invalid)
 					Genode::warning("accesspoint '", ap.ssid, "' has invalid psk");
 
-				/* XXX try/catch */
-				Network &network = *new (_network_allocator) Network(ap);
-
-				if (!ssid_invalid && !pass_invalid) try {
-					Action &act = *new (_action_alloctor) Add_network_cmd(_msg, ap);
-					_actions.enqueue(act);
+				if (!ssid_invalid && !pass_invalid) {
+					_actions.enqueue(*new (_action_alloc)
+						Add_network_cmd(_msg, ap));
 
 					if (_config.verbose)
 						Genode::log("Queue add network: '", ap.ssid, "'");
-
-				} catch (...) {
-					Genode::warning("could not queue add network [", ap.id, "]: '",
-					                ap.ssid, "'");
 				}
 
-				return network;
+				return *new (_network_allocator) Network(ap);
 			},
 			[&] (Network &network) {
 
@@ -1704,16 +1699,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					if (!ap.ssid_valid() || !ap.stored())
 						return;
 
-					try {
-						Action &act = *new (_action_alloctor) Remove_network_cmd(_msg, ap.id);
-						_actions.enqueue(act);
+					_actions.enqueue(*new (_action_alloc)
+						Remove_network_cmd(_msg, ap.id));
 
-						if (_config.verbose)
-							Genode::log("Queue network removal: '", ap.ssid, "'");
-
-					} catch (...) {
-						Genode::warning("could not queue stale network removal [", ap.id, "]: '", ap.ssid, "'");
-					}
+					if (_config.verbose)
+						Genode::log("Queue network removal: '", ap.ssid, "'");
 				});
 
 				Genode::destroy(_network_allocator, &network);
@@ -1736,21 +1726,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					ap.auto_connect  = updated_ap.auto_connect;
 					ap.explicit_scan = updated_ap.explicit_scan;
 
-					single_autoconnect |= (ap.update || ap.auto_connect) && !_connected_ap.ssid_valid();
-
 					if (!ap.stored())
 						return;
 
-					try {
-						Action &act = *new (_action_alloctor) Update_network_cmd(_msg, ap);
-						_actions.enqueue(act);
-
-						if (_config.verbose)
-							Genode::log("Queue update network: '", ap.ssid, "'");
-					} catch (...) {
-						Genode::warning("could not queue update network [", ap.id, "]: '", ap.ssid, "'");
-						return;
-					}
+					_actions.enqueue(*new (_action_alloc)
+						Update_network_cmd(_msg, ap));
+					if (_config.verbose)
+						Genode::log("Queue update network: '", ap.ssid, "'");
 				});
 			});
 
@@ -1761,32 +1743,23 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		/*
 		 * To accomodate a management component that only deals
-		 * with on network, e.g. the sculpt_manager, generate a
+		 * with one network, e.g. the sculpt_manager, generate a
 		 * fake connecting event. Either a connected or disconnected
 		 * event will bring us to square one.
 		 */
-		if (!initial_config && count == 1 && single_autoconnect && !_rfkilled) {
+		_single_autoconnect = count == 1 && !_config.network_mode_list();
+		if (_single_autoconnect && !_connected_ap.ssid_valid() && !_rfkilled) {
+			_connecting = true;
 
 			_network_list.for_each([&] (Network const &network) {
 				network.with_accesspoint([&] (Accesspoint const &ap) {
 
-					if (!ap.auto_connect)
-						return;
-
-					if (_config.verbose)
-						Genode::log("Single autoconnect event for '", ap.ssid, "'");
-
-					try {
-						Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
-							xml.node("accesspoint", [&] () {
-								xml.attribute("ssid",  ap.ssid);
-								xml.attribute("state", "connecting");
-							});
+					Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
+						xml.node("accesspoint", [&] () {
+							xml.attribute("ssid",  ap.ssid);
+							xml.attribute("state", "connecting");
 						});
-
-						_single_autoconnect = true;
-
-					} catch (...) { }
+					});
 				});
 			});
 		}
@@ -1894,8 +1867,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			explicit_scan |= ap.explicit_scan; });
 		});
 
-		if (explicit_scan) try {
-			Explicit_scan_cmd &scan_cmd = *new (_action_alloctor) Explicit_scan_cmd(_msg);
+		if (explicit_scan) {
+			Explicit_scan_cmd &scan_cmd =
+				*new (_action_alloc) Explicit_scan_cmd(_msg);
+
 			scan_cmd.with_ssid_buffer([&] (char *ssid_buffer,
 			                               size_t const ssid_buffer_length) {
 
@@ -1925,18 +1900,15 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				});
 			});
 			_actions.enqueue(scan_cmd);
-
 			if (_config.verbose)
 				Genode::log("Queue explicit scan request");
-		} catch (...) { Genode::warning("could not queue explicit scan query"); }
+		}
 
-		else try {
-			Action &act = *new (_action_alloctor) Scan_cmd(_msg);
-			_actions.enqueue(act);
-
+		else {
+			_actions.enqueue(*new (_action_alloc) Scan_cmd(_msg));
 			if (_config.verbose)
 				Genode::log("Queue scan request");
-		} catch (...) { Genode::warning("could not queue scan request"); }
+		}
 
 		_dispatch_action_if_needed();
 	}
@@ -1956,13 +1928,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		try {
-			Action &act = *new (_action_alloctor) Rssi_query(_msg);
-			_actions.enqueue(act);
-
-			if (_config.verbose)
-				Genode::log("Queue RSSI query");
-		} catch (...) { Genode::warning("could not queue RSSI query"); }
+		_actions.enqueue(*new (_action_alloc) Rssi_query(_msg));
+		if (_config.verbose)
+			Genode::log("Queue RSSI query");
 
 		_dispatch_action_if_needed();
 	}
@@ -2043,36 +2011,32 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			wifi_kick_socketcall();
 
-			try {
-				Action &act = *new (_action_alloctor) Scan_results_cmd(_msg, *_ap_reporter);
-				_actions.enqueue(act);
+			_actions.enqueue(*new (_action_alloc)
+				Scan_results_cmd(_msg, *_ap_reporter));
 
-				if (_config.verbose)
-					Genode::log("Queue scan results");
-			} catch (...) { Genode::warning("could not queue scan results"); }
-
+			if (_config.verbose)
+				Genode::log("Queue scan results");
 		} else
 
 		if (connecting_to_network(msg)) {
-			if (!_single_autoconnect) {
-				Accesspoint::Bssid const &bssid =
-					_extract_bssid(msg, Bssid_offset::CONNECTING);
-				_connecting = true;
 
-				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
-					xml.node("accesspoint", [&] () {
-						xml.attribute("bssid", bssid);
-						xml.attribute("state", "connecting");
-					});
+			Accesspoint::Bssid const &bssid =
+				_extract_bssid(msg, Bssid_offset::CONNECTING);
+
+			_connecting = true;
+
+			Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
+				xml.node("accesspoint", [&] () {
+					xml.attribute("bssid", bssid);
+					xml.attribute("state", "connecting");
 				});
-			}
+			});
 		} else
 
 		if (network_not_found(msg)) {
 
-			if (_single_autoconnect && ++_scan_attempts >= MAX_ATTEMPTS) {
-				_scan_attempts = 0;
-				_single_autoconnect = false;
+			if (_connecting && _single_autoconnect) {
+				_connecting = false;
 
 				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 					xml.node("accesspoint", [&] () {
@@ -2138,26 +2102,19 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 						if (ap.ssid != ssid)
 							return;
 
-						try {
-							Action &act = *new (_action_alloctor) Disable_network_cmd(_msg, ap.id);
-							_actions.enqueue(act);
-
-							if (_config.verbose)
-								Genode::log("Queue disable network: [", ap.id, "]: '", ap.ssid, "'");
-						} catch (...) { Genode::warning("could not queue disable network [", ap.id, "]: '", ap.ssid, "'"); }
+						_actions.enqueue(*new (_action_alloc) Disable_network_cmd(_msg, ap.id));
+						if (_config.verbose)
+							Genode::log("Queue disable network: [", ap.id, "]: '", ap.ssid, "'");
 					});
 				});
 			} else
 
 			if (_connected_event) {
 
-				try {
-					Action &act = *new (_action_alloctor) Status_query(_msg);
-					_actions.enqueue(act);
+				_actions.enqueue(*new (_action_alloc) Status_query(_msg));
 
-					if (_config.verbose)
-						Genode::log("Queue status query");
-				} catch (...) { Genode::warning("could not queue status query"); }
+				if (_config.verbose)
+					Genode::log("Queue status query");
 
 				_network_list.for_each([&] (Network const &network) {
 					network.with_accesspoint([&] (Accesspoint const &ap) {
@@ -2177,9 +2134,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 				xml.node("accesspoint", [&] () {
 					xml.attribute("bssid", bssid);
-					xml.attribute("state", connected ? "connected"
-					                                 : "disconnected");
-					if (disconnected) {
+					xml.attribute("state", _connected_event ? "connected"
+					                                        : "disconnected");
+					if (_disconnected_event) {
 						xml.attribute("rfkilled", _rfkilled);
 						if (auth_failed) {
 							xml.attribute("auth_failure", auth_failed);
@@ -2187,9 +2144,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					}
 				});
 			});
-
-			/* reset */
-			_single_autoconnect = false;
 		}
 
 		_notify_lock_unlock();
@@ -2292,16 +2246,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					 * update while we are still adding it to the supplicant by removing the
 					 * network directly afterwards.
 					 */
-					if (!handled) try {
-						Action &act = *new (_action_alloctor) Disable_network_cmd(_msg, added_ap.id);
-						_actions.enqueue(act);
-
+					if (!handled) {
+						_actions.enqueue(*new (_action_alloc)
+							Disable_network_cmd(_msg, added_ap.id));
 						if (_config.verbose)
 							Genode::log("Queue disable network: [", added_ap.id, "]: '",
 							            added_ap.ssid, "'");
-					} catch (...) {
-						Genode::warning("could not queue disable network [",
-						                 added_ap.id, "]: '", added_ap.ssid, "'");
 					}
 
 					break;
@@ -2324,7 +2274,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Frontend(Genode::Env &env, Msg_buffer &msg_buffer)
 	:
 		_network_allocator(env.ram(), env.rm()),
-		_action_alloctor(env.ram(), env.rm()),
+		_action_alloc(env.ram(), env.rm()),
 		_msg(msg_buffer),
 		_rfkill_handler(env.ep(), *this, &Wifi::Frontend::_handle_rfkill),
 		_config_rom(env, "wifi_config"),
