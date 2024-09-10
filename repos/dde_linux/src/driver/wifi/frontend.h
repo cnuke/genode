@@ -27,6 +27,7 @@
 #include <os/reporter.h>
 #include <timer_session/connection.h>
 #include <util/attempt.h>
+#include <util/list_model.h>
 #include <util/interface.h>
 #include <util/xml_node.h>
 
@@ -121,7 +122,8 @@ static void ctrl_cmd(Ctrl_msg_buffer &msg, Cmd const &cmd)
 
 
 /*
- * Central network data structure
+ * The Accesspoint object contains all information to join
+ * a wireless network.
  */
 struct Accesspoint : Genode::Interface
 {
@@ -198,6 +200,56 @@ struct Accesspoint : Genode::Interface
 	bool stored()      const { return id != -1; }
 
 	bool pass_valid()  const { return pass.length() > 8 && pass.length() <= 63 + 1; }
+
+	static Accesspoint from_xml(Genode::Xml_node const &node)
+	{
+		Accesspoint ap { };
+
+		ap.ssid  = node.attribute_value("ssid",  Accesspoint::Ssid());
+		ap.bssid = node.attribute_value("bssid", Accesspoint::Bssid());
+
+		ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
+		ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
+		ap.auto_connect  = node.attribute_value("auto_connect", true);
+		ap.explicit_scan = node.attribute_value("explicit_scan", false);
+
+		return ap;
+	}
+};
+
+
+struct Network : Genode::List_model<Network>::Element
+{
+
+	Accesspoint _accesspoint { };
+
+	Network(Accesspoint const &ap) : _accesspoint { ap } { }
+
+	virtual ~Network() { }
+
+	void with_accesspoint(auto const &fn)
+	{
+		fn(_accesspoint);
+	}
+
+	void with_accesspoint(auto const &fn) const
+	{
+		fn(_accesspoint);
+	}
+
+	/**************************
+	 ** List_model interface **
+	 **************************/
+
+	static bool type_matches(Genode::Xml_node const &node)
+	{
+		return node.has_type("network");
+	}
+
+	bool matches(Genode::Xml_node const &node)
+	{
+		return _accesspoint.ssid == node.attribute_value("ssid", Accesspoint::Ssid());
+	}
 };
 
 
@@ -1304,76 +1356,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Frontend(const Frontend&) = delete;
 	Frontend& operator=(const Frontend&) = delete;
 
-	/* accesspoint */
+	/* Network handling */
 
-	Genode::Heap _ap_allocator;
-
-	using Accesspoint_r = Genode::Registered<Accesspoint>;
-
-	Genode::Registry<Accesspoint_r> _aps { };
-
-	Accesspoint *_lookup_ap_by_ssid(Accesspoint::Ssid const &ssid)
-	{
-		Accesspoint *p = nullptr;
-		_aps.for_each([&] (Accesspoint &ap) {
-			if (ap.ssid_valid() && ap.ssid == ssid) { p = &ap; }
-		});
-		return p;
-	}
-
-	void _with_accesspoint(Accesspoint::Ssid const &ssid,
-	                       auto const found_fn,
-	                       auto const err_fn)
-	{
-		Accesspoint *p = nullptr;
-		_aps.for_each([&] (Accesspoint &ap) {
-			if (ap.ssid_valid() && ap.ssid == ssid)
-				p = &ap;
-		});
-
-		if (!p)
-			try {
-				p = new (&_ap_allocator) Accesspoint_r(_aps);
-			} catch (...) {
-				err_fn();
-				return;
-			}
-
-		found_fn(*p);
-	}
-
-	void _free_ap(Accesspoint &ap)
-	{
-		Genode::destroy(&_ap_allocator, &ap);
-	}
-
-	template <typename FUNC>
-	void _for_each_ap(FUNC const &func)
-	{
-		_aps.for_each([&] (Accesspoint &ap) {
-			func(ap);
-		});
-	}
-
-	unsigned _count_to_be_enabled()
-	{
-		unsigned count = 0;
-		auto enable = [&](Accesspoint const &ap) {
-			count += ap.auto_connect;
-		};
-		_for_each_ap(enable);
-		return count;
-	}
-
-	unsigned _count_enabled()
-	{
-		unsigned count = 0;
-		auto enabled = [&](Accesspoint const &ap) {
-			count += ap.enabled;
-		};
-		_for_each_ap(enabled);
-		return count;
-	}
+	Genode::Heap                _network_allocator;
+	Genode::List_model<Network> _network_list { };
 
 	/*
 	 * Action queue handling
@@ -1510,9 +1496,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		_config_rom.update();
 
-		if (!_config_rom.valid()) { return; }
+		if (!_config_rom.valid())
+			return;
 
-		Genode::Xml_node config_node = _config_rom.xml();
+		Genode::Xml_node const config_node = _config_rom.xml();
 
 		Config const old_config = _config;
 
@@ -1551,49 +1538,98 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		bool single_autoconnect = false;
 
-		/* update AP list */
-		auto parse = [&] ( Genode::Xml_node node) {
+		_network_list.update_from_xml(config_node,
 
-			Accesspoint ap;
-			ap.ssid  = node.attribute_value("ssid",  Accesspoint::Ssid());
-			ap.bssid = node.attribute_value("bssid", Accesspoint::Bssid());
+			[&] (Genode::Xml_node const &node) -> Network & {
 
-			if (!ap.ssid_valid()) {
-				Genode::warning("ignoring accesspoint with invalid ssid");
-				return;
-			}
+				Accesspoint ap = Accesspoint::from_xml(node);
 
-			ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
-			ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
-			ap.auto_connect  = node.attribute_value("auto_connect", true);
-			ap.explicit_scan = node.attribute_value("explicit_scan", false);
+				bool const ssid_invalid = !ap.ssid_valid();
+				if (ssid_invalid)
+					Genode::warning("accesspoint has invalid ssid: '", ap.ssid, "'");
 
-			if (ap.wpa() && !ap.pass_valid()) {
-					Genode::warning("ignoring accesspoint '", ap.ssid,
-					                "' with invalid psk");
-					return;
-			}
+				bool const pass_invalid = ap.wpa() && !ap.pass_valid();
+				if (pass_invalid)
+					Genode::warning("accesspoint '", ap.ssid, "' has invalid psk");
 
-			_with_accesspoint(ap.ssid, [&] (Accesspoint &p) {
+				/* XXX try/catch */
+				Network &network = *new (_network_allocator) Network(ap);
 
-				p.update = ((ap.bssid_valid() && ap.bssid != p.bssid)
-				         || ap.pass  != p.pass
-				         || ap.prot  != p.prot
-				         || ap.auto_connect != p.auto_connect);
+				if (!ssid_invalid && !pass_invalid) try {
+					Action &act = *new (_action_alloctor) Add_network_cmd(_msg, ap);
+					_actions.enqueue(act);
 
-				if (ap.bssid_valid()) { p.bssid = ap.bssid; }
+					if (_config.verbose)
+						Genode::log("Queue add network: '", ap.ssid, "'");
 
-				p.ssid          = ap.ssid;
-				p.prot          = ap.prot;
-				p.pass          = ap.pass;
-				p.auto_connect  = ap.auto_connect;
-				p.explicit_scan = ap.explicit_scan;
+				} catch (...) {
+					Genode::warning("could not queue add network [", ap.id, "]: '",
+					                ap.ssid, "'");
+				}
 
-				single_autoconnect |= (p.update || p.auto_connect) && !_connected_ap.ssid_valid();
+				return network;
 			},
-			[&] { Genode::error("could not add accesspoint"); });
-		};
-		config_node.for_each_sub_node("network", parse);
+			[&] (Network &network) {
+
+				network.with_accesspoint([&] (Accesspoint &ap) {
+
+					if (!ap.ssid_valid() || !ap.stored())
+						return;
+
+					try {
+						Action &act = *new (_action_alloctor) Remove_network_cmd(_msg, ap.id);
+						_actions.enqueue(act);
+
+						if (_config.verbose)
+							Genode::log("Queue network removal: '", ap.ssid, "'");
+
+					} catch (...) {
+						Genode::warning("could not queue stale network removal [", ap.id, "]: '", ap.ssid, "'");
+					}
+				});
+
+				Genode::destroy(_network_allocator, &network);
+			},
+			[&] (Network &network, Genode::Xml_node const &node) {
+				Accesspoint updated_ap = Accesspoint::from_xml(node);
+
+				network.with_accesspoint([&] (Accesspoint &ap) {
+
+					bool const update = ((updated_ap.bssid_valid() && updated_ap.bssid != ap.bssid)
+					                 || ap.pass         != updated_ap.pass
+					                 || ap.prot         != updated_ap.prot
+					                 || ap.auto_connect != updated_ap.auto_connect);
+
+					if (!update)
+						return;
+
+					ap.bssid         = updated_ap.bssid;
+					ap.prot          = updated_ap.prot;
+					ap.auto_connect  = updated_ap.auto_connect;
+					ap.explicit_scan = updated_ap.explicit_scan;
+
+					single_autoconnect |= (ap.update || ap.auto_connect) && !_connected_ap.ssid_valid();
+
+					if (!ap.stored())
+						return;
+
+					try {
+						Action &act = *new (_action_alloctor) Update_network_cmd(_msg, ap);
+						_actions.enqueue(act);
+
+						if (_config.verbose)
+							Genode::log("Queue update network: '", ap.ssid, "'");
+					} catch (...) {
+						Genode::warning("could not queue update network [", ap.id, "]: '", ap.ssid, "'");
+						return;
+					}
+				});
+			});
+
+		unsigned count = 0;
+		_network_list.for_each([&] (Network const &network) {
+			network.with_accesspoint([&] (Accesspoint const &ap) {
+				count += ap.auto_connect; }); });
 
 		/*
 		 * To accomodate a management component that only deals
@@ -1601,33 +1637,31 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 * fake connecting event. Either a connected or disconnected
 		 * event will bring us to square one.
 		 */
-		if (!initial_config && _count_to_be_enabled() == 1 && single_autoconnect && !_rfkilled) {
+		if (!initial_config && count == 1 && single_autoconnect && !_rfkilled) {
 
-			auto lookup = [&] (Accesspoint const &ap) {
-				if (!ap.auto_connect) { return; }
+			_network_list.for_each([&] (Network const &network) {
+				network.with_accesspoint([&] (Accesspoint const &ap) {
 
-				if (_config.verbose) { Genode::log("Single autoconnect event for '", ap.ssid, "'"); }
+					if (!ap.auto_connect)
+						return;
 
-				try {
-					Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
-						xml.node("accesspoint", [&] () {
-							xml.attribute("ssid",  ap.ssid);
-							xml.attribute("state", "connecting");
+					if (_config.verbose)
+						Genode::log("Single autoconnect event for '", ap.ssid, "'");
+
+					try {
+						Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
+							xml.node("accesspoint", [&] () {
+								xml.attribute("ssid",  ap.ssid);
+								xml.attribute("state", "connecting");
+							});
 						});
-					});
 
-					_single_autoconnect = true;
+						_single_autoconnect = true;
 
-				} catch (...) { }
-			};
-			_for_each_ap(lookup);
+					} catch (...) { }
+				});
+			});
 		}
-
-		/*
-		 * Marking removes stale APs first and triggers adding of
-		 * new ones afterwards.
-		 */
-		_mark_stale_aps(config_node);
 
 		_dispatch_action_if_needed();
 	}
@@ -1727,8 +1761,10 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 
 		bool explicit_scan = false;
-		_for_each_ap([&] (Accesspoint const &ap) {
+		_network_list.for_each([&] (Network const &network) {
+			network.with_accesspoint([&] (Accesspoint const &ap) {
 			explicit_scan |= ap.explicit_scan; });
+		});
 
 		if (explicit_scan) try {
 			Explicit_scan_cmd &scan_cmd = *new (_action_alloctor) Explicit_scan_cmd(_msg);
@@ -1736,28 +1772,29 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			                               size_t const ssid_buffer_length) {
 
 				size_t buffer_pos = 0;
-				auto explicit_ssids = [&] (Accesspoint const &ap) {
+				_network_list.for_each([&] (Network const &network) {
+					network.with_accesspoint([&] (Accesspoint const &ap) {
 
-					enum { SSID_ARG_LEN = 6 + 64, /* " ssid " + "a5a5a5a5..." */ };
-					if (buffer_pos + SSID_ARG_LEN >= ssid_buffer_length)
-						return;
+						enum { SSID_ARG_LEN = 6 + 64, /* " ssid " + "a5a5a5a5..." */ };
+						if (buffer_pos + SSID_ARG_LEN >= ssid_buffer_length)
+							return;
 
-					if (!ap.explicit_scan)
-						return;
+						if (!ap.explicit_scan)
+							return;
 
-					char ssid_hex[64+1] = { };
-					char const *ssid = ap.ssid.string();
+						char ssid_hex[64+1] = { };
+						char const *ssid = ap.ssid.string();
 
-					for (size_t i = 0; i < ap.ssid.length() - 1; i++)
-						Util::byte2hex((ssid_hex + i * 2), ssid[i]);
+						for (size_t i = 0; i < ap.ssid.length() - 1; i++)
+							Util::byte2hex((ssid_hex + i * 2), ssid[i]);
 
-					Genode::String<SSID_ARG_LEN + 1> tmp(" ssid ", (char const*)ssid_hex);
-					size_t const tmp_len = tmp.length() - 1;
+						Genode::String<SSID_ARG_LEN + 1> tmp(" ssid ", (char const*)ssid_hex);
+						size_t const tmp_len = tmp.length() - 1;
 
-					Genode::memcpy((ssid_buffer + buffer_pos), tmp.string(), tmp_len);
-					buffer_pos += tmp_len;
-				};
-				_for_each_ap(explicit_ssids);
+						Genode::memcpy((ssid_buffer + buffer_pos), tmp.string(), tmp_len);
+						buffer_pos += tmp_len;
+					});
+				});
 			});
 			_actions.enqueue(scan_cmd);
 
@@ -1800,101 +1837,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		} catch (...) { Genode::warning("could not queue RSSI query"); }
 
 		_dispatch_action_if_needed();
-	}
-
-	/* network commands */
-
-	void _mark_stale_aps(Genode::Xml_node const &config)
-	{
-		auto mark_stale = [&] (Accesspoint &ap) {
-			ap.stale = true;
-
-			config.for_each_sub_node("network", [&] ( Genode::Xml_node node) {
-				Accesspoint::Ssid ssid = node.attribute_value("ssid",  Accesspoint::Ssid(""));
-
-				if (ap.ssid == ssid) { ap.stale = false; }
-			});
-		};
-		_for_each_ap(mark_stale);
-
-		_remove_stale_aps();
-	}
-
-	void _remove_stale_aps()
-	{
-		bool remove_any = false;
-
-		_aps.for_each([&] (Accesspoint &ap) {
-			if (!ap.ssid_valid() || !ap.stale || !ap.stored())
-				return;
-
-			try {
-				Action &act = *new (_action_alloctor) Remove_network_cmd(_msg, ap.id);
-				_actions.enqueue(act);
-
-				if (_config.verbose)
-					Genode::log("Queue network removal: '", ap.ssid, "'");
-
-				Genode::destroy(_ap_allocator, &ap);
-
-				remove_any = true;
-			} catch (...) {
-				Genode::warning("could not queue stale network removal [", ap.id, "]: '", ap.ssid, "'");
-				return;
-			}
-		});
-
-		if (!remove_any)
-			_add_new_aps();
-	}
-
-	void _update_aps()
-	{
-		bool update_any = false;
-		_aps.for_each([&] (Accesspoint &ap) {
-			if (!ap.stored() || !ap.update)
-				return;
-
-			try {
-				Action &act = *new (_action_alloctor) Update_network_cmd(_msg, ap);
-				_actions.enqueue(act);
-
-				if (_config.verbose)
-					Genode::log("Queue update network: '", ap.ssid, "'");
-
-				update_any = true;
-			} catch (...) {
-				Genode::warning("could not queue update network [", ap.id, "]: '", ap.ssid, "'");
-				return;
-			}
-
-		});
-	}
-
-	void _add_new_aps()
-	{
-		bool add_any = false;
-		_aps.for_each([&] (Accesspoint &ap) {
-			if (!ap.ssid_valid() || ap.stored())
-				return;
-
-			try {
-				Action &act = *new (_action_alloctor) Add_network_cmd(_msg, ap);
-				_actions.enqueue(act);
-
-				if (_config.verbose)
-					Genode::log("Queue add network: '", ap.ssid, "'");
-
-				add_any = true;
-			} catch (...) {
-				Genode::warning("could not queue add network [", ap.id, "]: '", ap.ssid, "'");
-				return;
-			}
-
-		});
-
-		if (!add_any)
-			_update_aps();
 	}
 
 	/* connection state */
@@ -2062,19 +2004,20 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				 * In case that failes the supplicant will try to join the
 				 * network again and again...
 				 */
-				_for_each_ap([&] (Accesspoint const &lap) {
-					if (lap.ssid != ssid)
-						return;
+				_network_list.for_each([&] (Network const &network) {
+					network.with_accesspoint([&] (Accesspoint const &ap) {
 
-					Accesspoint const &ap = lap;
+						if (ap.ssid != ssid)
+							return;
 
-					try {
-						Action &act = *new (_action_alloctor) Disable_network_cmd(_msg, ap.id);
-						_actions.enqueue(act);
+						try {
+							Action &act = *new (_action_alloctor) Disable_network_cmd(_msg, ap.id);
+							_actions.enqueue(act);
 
-						if (_config.verbose)
-							Genode::log("Queue disable network: [", ap.id, "]: '", ap.ssid, "'");
-					} catch (...) { Genode::warning("could not queue disable network [", ap.id, "]: '", ap.ssid, "'"); }
+							if (_config.verbose)
+								Genode::log("Queue disable network: [", ap.id, "]: '", ap.ssid, "'");
+						} catch (...) { Genode::warning("could not queue disable network [", ap.id, "]: '", ap.ssid, "'"); }
+					});
 				});
 			} else
 
@@ -2088,12 +2031,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 						Genode::log("Queue status query");
 				} catch (...) { Genode::warning("could not queue status query"); }
 
-				_for_each_ap([&] (Accesspoint const &lap) {
-					if (lap.ssid != ssid)
+				_network_list.for_each([&] (Network const &network) {
+					network.with_accesspoint([&] (Accesspoint const &ap) {
+					if (ap.ssid != ssid)
 						return;
 
-					_connected_ap = lap;
-				});
+					_connected_ap = ap;
+				}); });
 
 				_arm_poll_timer();
 			}
@@ -2200,17 +2144,19 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 					bool handled = false;
 					Accesspoint const &added_ap = add_cmd.accesspoint();
-					_for_each_ap([&] (Accesspoint &ap) {
-						if (ap.ssid != added_ap.ssid)
-							return;
+					_network_list.for_each([&] (Network &network) {
+						network.with_accesspoint([&] (Accesspoint &ap) {
+							if (ap.ssid != added_ap.ssid)
+								return;
 
-						if (ap.stored()) {
-							Genode::error("accesspoint for SSID '", ap.ssid, "' already stored ", ap.id);
-							return;
-						}
+							if (ap.stored()) {
+								Genode::error("accesspoint for SSID '", ap.ssid, "' already stored ", ap.id);
+								return;
+							}
 
-						ap.id = added_ap.id;
-						handled = true;
+							ap.id = added_ap.id;
+							handled = true;
+						});
 					});
 
 					/*
@@ -2249,7 +2195,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	 */
 	Frontend(Genode::Env &env, Msg_buffer &msg_buffer)
 	:
-		_ap_allocator(env.ram(), env.rm()),
+		_network_allocator(env.ram(), env.rm()),
 		_action_alloctor(env.ram(), env.rm()),
 		_msg(msg_buffer),
 		_rfkill_handler(env.ep(), *this, &Wifi::Frontend::_handle_rfkill),
