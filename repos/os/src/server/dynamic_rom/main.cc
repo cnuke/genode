@@ -75,7 +75,7 @@ class Dynamic_rom::Session_component : public Rpc_object<Genode::Rom_session>
 				return;
 
 			using Name = Genode::String<160>;
-			Genode::log(_rom_node.attribute_value("name", Name()), ": ", args...);
+			Genode::log("\033[35m", _rom_node.attribute_value("name", Name()), ": ", args..., "\033[0m");
 		}
 
 		enum Execution_state { EXEC_CONTINUE, EXEC_BLOCK };
