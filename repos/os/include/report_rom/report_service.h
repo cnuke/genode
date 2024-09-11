@@ -53,7 +53,7 @@ struct Report::Session_component : Genode::Rpc_object<Session>, Rom::Writer
 		{
 			Genode::print_lines<200>(string, len,
 			                         [&] (char const *line)
-			                         { Genode::log("  ", line); });
+			                         { Genode::log("  \033[36m", line, "\033[0m"); });
 		}
 
 	public:
