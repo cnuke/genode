@@ -133,6 +133,9 @@ struct Accesspoint : Genode::Interface
 	using Ssid  = Genode::String<32+1>;
 	using Pass  = Genode::String<63+1>;
 
+	static bool valid(Ssid const &ssid) {
+		return ssid.length() > 1 && ssid.length() <= 32 + 1; }
+
 	/*
 	 * Accesspoint information fields used by the front end
 	 */
@@ -168,6 +171,9 @@ struct Accesspoint : Genode::Interface
 	 */
 	Accesspoint() { }
 
+	Accesspoint(Bssid const &bssid, Ssid const &ssid)
+	: bssid { bssid }, ssid { ssid } { }
+
 	/**
 	 * Constructor that initializes information fields
 	 */
@@ -190,6 +196,8 @@ struct Accesspoint : Genode::Interface
 		                   " stale: ", stale,
 		                   " explicit_scan: ", explicit_scan);
 	}
+
+	bool valid() const { return bssid_valid(); }
 
 	void invalidate() { ssid = Ssid(); bssid = Bssid(); }
 
@@ -1496,6 +1504,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
 
 	bool _single_autoconnect { false };
+	Accesspoint _connecting  { };
 
 	struct Config
 	{
@@ -1647,7 +1656,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				});
 
 				_connected_ap.invalidate();
-				_connecting = false;
+				_connecting.invalidate();
 			}
 		}
 
@@ -1749,8 +1758,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		 */
 		_single_autoconnect = count == 1 && !_config.network_mode_list();
 		if (_single_autoconnect && !_connected_ap.ssid_valid() && !_rfkilled) {
-			_connecting = true;
-
 			_network_list.for_each([&] (Network const &network) {
 				network.with_accesspoint([&] (Accesspoint const &ap) {
 
@@ -1760,6 +1767,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 							xml.attribute("state", "connecting");
 						});
 					});
+
+					_connecting = ap;
 				});
 			});
 		}
@@ -1848,7 +1857,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	void _handle_scan_timeout(Genode::Duration)
 	{
-		if (_rfkilled || _connecting) {
+		if (_rfkilled || _connecting.valid()) {
 			if (_config.verbose)
 				Genode::log("Scanning: suspend due to RFKILL or connection"
 				            " attempt");
@@ -1915,7 +1924,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	void _handle_quality_timeout(Genode::Duration)
 	{
-		if (_rfkilled || _connecting) {
+		if (_rfkilled || _connecting.valid()) {
 			if (_config.verbose)
 				Genode::log("Quality polling: suspend due to RFKILL or connection"
 				            " attempt");
@@ -1939,8 +1948,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	Genode::Constructible<Genode::Reporter> _state_reporter { };
 
-	bool _connecting = false;
-
 	enum class Bssid_offset : unsigned {
 		/* by the power of wc -c, I have the start pos... */
 		CONNECT = 37, CONNECTING = 33, DISCONNECT = 30, };
@@ -1954,6 +1961,26 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		Genode::memcpy(bssid, msg + start, len);
 		return Accesspoint::Bssid((char const*)bssid);
+	}
+
+	Accesspoint::Ssid const _extract_ssid(char const *msg)
+	{
+		char ssid[64] = { };
+		size_t const start = 58;
+
+		/* XXX assume "SME:.*SSID='xx xx' ...)", so look for the
+		 *     closing ' but we _really_ should use something like
+		 *     printf_encode/printf_deccode functions
+		 *     (see wpa_supplicant/src/utils/common.c) and
+		 *     remove our patch…
+		 */
+		size_t const len = Util::next_char(msg, start, 0x27);
+		if (!len || len >= 33)
+			return Accesspoint::Ssid();
+
+		Genode::memcpy(ssid, msg + start, len);
+
+		return Accesspoint::Ssid((char const *)ssid);
 	}
 
 	bool _auth_failure(char const *msg)
@@ -1981,7 +2008,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	bool _disconnected_fail  { false };
 	bool _was_connected      { false };
 
-	enum { MAX_REAUTH_ATTEMPTS = 1 };
+	enum { MAX_REAUTH_ATTEMPTS = 3 };
 	unsigned _reauth_attempts { 0 };
 
 	enum { MAX_ATTEMPTS = 3, };
@@ -2001,6 +2028,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			_notify_lock_unlock();
 			return;
 		}
+
+		Genode::error(msg);
 
 		if (results_available(msg)) {
 
@@ -2023,10 +2052,15 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			Accesspoint::Bssid const &bssid =
 				_extract_bssid(msg, Bssid_offset::CONNECTING);
 
-			_connecting = true;
+			Accesspoint::Ssid const &ssid = _extract_ssid(msg);
+
+			_connecting = Accesspoint(bssid, ssid);
 
 			Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 				xml.node("accesspoint", [&] () {
+					if (Accesspoint::valid(ssid))
+						xml.attribute("ssid", ssid);
+
 					xml.attribute("bssid", bssid);
 					xml.attribute("state", "connecting");
 				});
@@ -2035,16 +2069,18 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		if (network_not_found(msg)) {
 
-			if (_connecting && _single_autoconnect) {
-				_connecting = false;
-
+			if (_connecting.valid() && _single_autoconnect) {
 				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 					xml.node("accesspoint", [&] () {
+						if (Accesspoint::valid(_connecting.ssid))
+							xml.attribute("ssid", _connecting.ssid);
+
 						xml.attribute("state", "disconnected");
 						xml.attribute("rfkilled", _rfkilled);
 						xml.attribute("not_found", true);
 					});
 				});
+				_connecting.invalidate();
 			}
 
 		} else
@@ -2079,7 +2115,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			_connected_ap.invalidate();
 			if (connected) { _connected_ap.bssid = bssid; }
-			if (connected || disconnected) { _connecting = false; }
+			if (connected || disconnected) { _connecting.invalidate(); }
 
 			/*
 			 * Save local connection state here for later re-use when
@@ -2090,6 +2126,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			_disconnected_fail  = auth_failed;
 
 			if (_disconnected_fail) {
+
+				Genode::error("SSID check will fail");
+
 				/*
 				 * Being able to remove a failed network from the internal
 				 * state of the supplicant relies on a sucessful BSS request.
