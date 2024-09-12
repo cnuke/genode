@@ -205,7 +205,9 @@ struct Accesspoint : Genode::Interface
 	bool bssid_valid() const { return bssid.length() == 17 + 1; }
 	bool wpa()         const { return prot != "NONE"; }
 	bool wpa3()        const { return prot == "WPA3"; }
+
 	bool stored()      const { return id != -1; }
+	bool id_valid()    const { return id != -1; }
 
 	bool pass_valid()  const { return pass.length() > 8 && pass.length() <= 63 + 1; }
 
@@ -765,6 +767,7 @@ struct Update_network_cmd : Action
 
 	void execute() override
 	{
+		// XXX change to disable -> psk ?-> enable
 		switch (_state) {
 		case State::INIT:
 			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
@@ -1503,7 +1506,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Genode::Attached_rom_dataspace         _config_rom;
 	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
 
-	bool _single_autoconnect { false };
 	Accesspoint _connecting  { };
 
 	struct Config
@@ -1515,8 +1517,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 			DEFAULT_VERBOSE       = false,
 			DEFAULT_RFKILL        = false,
-
-			DEFAULT_NETWORK_MODE  = false,
 		};
 
 		unsigned connected_scan_interval { DEFAULT_CONNECTED_SCAN_INTERVAL };
@@ -1555,21 +1555,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool bgscan_set() const {
 			return bgscan.length() > 1; }
 
-		using Network_mode = Genode::String<16>;
-		Network_mode network_mode { "" };
-
-		bool network_mode_changed(Config const &cfg) const {
-			return network_mode != cfg.network_mode; }
-
-		bool network_mode_valid() const
-		{
-			return false | (network_mode == "single")
-			             | (network_mode == "list");
-		}
-
-		bool network_mode_list() const {
-			return network_mode == "list"; }
-
 		static Config from_xml(Genode::Xml_node const &node)
 		{
 			bool const verbose       = node.attribute_value("verbose",
@@ -1581,9 +1566,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 			Bgscan const bgscan =
 				node.attribute_value("bgscan", Bgscan("simple:30:-70:600"));
-
-			Network_mode const network_mode =
-				node.attribute_value("network_mode", Network_mode("list"));
 
 			unsigned const connected_scan_interval =
 				Util::check_time(node.attribute_value("connected_scan_interval",
@@ -1607,8 +1589,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				.verbose                 = verbose,
 				.rfkill                  = rfkill,
 				.log_level               = log_level,
-				.bgscan                  = bgscan,
-				.network_mode            = network_mode
+				.bgscan                  = bgscan
 			};
 			return new_config;
 		}
@@ -1656,7 +1637,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				});
 
 				_connected_ap.invalidate();
-				_connecting.invalidate();
+				_connecting = Accesspoint();
 			}
 		}
 
@@ -1745,40 +1726,21 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				});
 			});
 
-		unsigned count = 0;
-		_network_list.for_each([&] (Network const &network) {
-			network.with_accesspoint([&] (Accesspoint const &ap) {
-				count += ap.auto_connect; }); });
-
-		/*
-		 * To accomodate a management component that only deals
-		 * with one network, e.g. the sculpt_manager, generate a
-		 * fake connecting event. Either a connected or disconnected
-		 * event will bring us to square one.
-		 */
-		_single_autoconnect = count == 1 && !_config.network_mode_list();
-		if (_single_autoconnect && !_connected_ap.ssid_valid() && !_rfkilled) {
-			_network_list.for_each([&] (Network const &network) {
-				network.with_accesspoint([&] (Accesspoint const &ap) {
-
-					Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
-						xml.node("accesspoint", [&] () {
-							xml.attribute("ssid",  ap.ssid);
-							xml.attribute("state", "connecting");
-						});
-					});
-
-					_connecting = ap;
-				});
-			});
-		}
-
 		_dispatch_action_if_needed();
 	}
 
 	void _handle_config_update() { _config_update(false); }
 
 	/* state */
+
+	bool _single_autoconnect() const
+	{
+		unsigned count = 0;
+		_network_list.for_each([&] (Network const &network) {
+			network.with_accesspoint([&] (Accesspoint const &ap) {
+				count += ap.auto_connect; }); });
+		return count == 1;
+	}
 
 	Accesspoint _connected_ap { };
 
@@ -2069,18 +2031,33 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 		if (network_not_found(msg)) {
 
-			if (_connecting.valid() && _single_autoconnect) {
-				Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
-					xml.node("accesspoint", [&] () {
-						if (Accesspoint::valid(_connecting.ssid))
-							xml.attribute("ssid", _connecting.ssid);
+			bool const single_autoconnect = _single_autoconnect();
 
-						xml.attribute("state", "disconnected");
-						xml.attribute("rfkilled", _rfkilled);
-						xml.attribute("not_found", true);
+			Genode::error("valid: ", _connecting.valid(), " ", _connecting, " single_autoconnect: ", single_autoconnect);
+
+			if (_connecting.ssid_valid() && single_autoconnect) {
+				_network_list.for_each([&] (Network &network) {
+					network.with_accesspoint([&] (Accesspoint &ap) {
+
+						if (ap.ssid != _connecting.ssid)
+							return;
+
+						if (!ap.id_valid())
+							return;
+
+						Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
+							xml.node("accesspoint", [&] () {
+								if (Accesspoint::valid(_connecting.ssid))
+									xml.attribute("ssid", _connecting.ssid);
+
+								xml.attribute("state", "disconnected");
+								xml.attribute("rfkilled", _rfkilled);
+								xml.attribute("not_found", true);
+							});
+						});
+						_connecting = Accesspoint();
 					});
 				});
-				_connecting.invalidate();
 			}
 
 		} else
@@ -2113,9 +2090,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			/*
 			 * Always reset the "global" connection state first
 			 */
-			_connected_ap.invalidate();
+			_connected_ap = Accesspoint();
 			if (connected) { _connected_ap.bssid = bssid; }
-			if (connected || disconnected) { _connecting.invalidate(); }
+			if (connected || disconnected) { _connecting = Accesspoint(); }
 
 			/*
 			 * Save local connection state here for later re-use when
@@ -2135,15 +2112,17 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				 * In case that failes the supplicant will try to join the
 				 * network again and again...
 				 */
-				_network_list.for_each([&] (Network const &network) {
-					network.with_accesspoint([&] (Accesspoint const &ap) {
+				_network_list.for_each([&] (Network &network) {
+					network.with_accesspoint([&] (Accesspoint &ap) {
 
 						if (ap.ssid != ssid)
 							return;
 
-						_actions.enqueue(*new (_action_alloc) Disable_network_cmd(_msg, ap.id));
+						ap.auto_connect = false;
+
+						_actions.enqueue(*new (_action_alloc) Update_network_cmd(_msg, ap));
 						if (_config.verbose)
-							Genode::log("Queue disable network: [", ap.id, "]: '", ap.ssid, "'");
+							Genode::log("Queue disable failed network: [", ap.id, "]: '", ap.ssid, "'");
 					});
 				});
 			} else
@@ -2172,6 +2151,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
 				xml.node("accesspoint", [&] () {
+
+					Accesspoint::Ssid const ssid = _connected_ap.ssid;
+					if (Accesspoint::valid(ssid))
+						xml.attribute("ssid", ssid);
+
 					xml.attribute("bssid", bssid);
 					xml.attribute("state", _connected_event ? "connected"
 					                                        : "disconnected");
@@ -2271,7 +2255,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 								return;
 
 							if (ap.stored()) {
-								Genode::error("accesspoint for SSID '", ap.ssid, "' already stored ", ap.id);
+								Genode::error("accesspoint for SSID '", ap.ssid, "' "
+								              "already stored ", ap.id);
 								return;
 							}
 
@@ -2287,11 +2272,35 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					 */
 					if (!handled) {
 						_actions.enqueue(*new (_action_alloc)
-							Disable_network_cmd(_msg, added_ap.id));
+							Remove_network_cmd(_msg, added_ap.id));
 						if (_config.verbose)
-							Genode::log("Queue disable network: [", added_ap.id, "]: '",
-							            added_ap.ssid, "'");
-					}
+							Genode::log("Queue clear already removed network: [",
+							            added_ap.id, "]: '", added_ap.ssid, "'");
+					} else
+
+					if (handled && _single_autoconnect())
+						/*
+						 * To accomodate a management component that only deals
+						 * with one network, e.g. the sculpt_manager, generate a
+						 * fake connecting event. Either a connected or disconnected
+						 * event will bring us to square one.
+						 */
+						/* XXX if the network is replaced _connecting will not get updated */
+						if (!_connected_ap.ssid_valid() && !_rfkilled) {
+							_network_list.for_each([&] (Network const &network) {
+								network.with_accesspoint([&] (Accesspoint const &ap) {
+
+									Genode::Reporter::Xml_generator xml(*_state_reporter, [&] () {
+										xml.node("accesspoint", [&] () {
+											xml.attribute("ssid",  ap.ssid);
+											xml.attribute("state", "connecting");
+										});
+									});
+
+									_connecting = ap;
+								});
+							});
+						}
 
 					break;
 				}
