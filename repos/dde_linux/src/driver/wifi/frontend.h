@@ -397,7 +397,7 @@ struct Add_network_cmd : Action
 	enum class State : unsigned {
 		INIT, ADD_NETWORK, FILL_NETWORK_SSID, FILL_NETWORK_BSSID,
 		FILL_NETWORK_KEY_MGMT, SET_NETWORK_PMF, FILL_NETWORK_PSK,
-		ENABLE_NETWORK, COMPLETE
+		SET_SCAN_SSID, ENABLE_NETWORK, COMPLETE
 	};
 
 	Ctrl_msg_buffer &_msg;
@@ -466,6 +466,12 @@ struct Add_network_cmd : Action
 			_state = State::FILL_NETWORK_PSK;
 			break;
 		case State::FILL_NETWORK_PSK:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " scan_ssid ",
+			                       _accesspoint.explicit_scan ? "1" : "0"));
+			_state = State::SET_SCAN_SSID;
+			break;
+		case State::SET_SCAN_SSID:
 			if (_accesspoint.auto_connect) {
 				ctrl_cmd(_msg, Cmd("ENABLE_NETWORK ", _accesspoint.id));
 				_state = State::ENABLE_NETWORK;
@@ -506,6 +512,7 @@ struct Add_network_cmd : Action
 		case State::FILL_NETWORK_KEY_MGMT: [[fallthrough]];
 		case State::SET_NETWORK_PMF:       [[fallthrough]];
 		case State::FILL_NETWORK_PSK:      [[fallthrough]];
+		case State::SET_SCAN_SSID:         [[fallthrough]];
 		case State::ENABLE_NETWORK:
 			if (!cmd_successful(msg)) {
 				error("ADD_NETWORK(", (unsigned)_state, ") failed: ", msg);
@@ -535,6 +542,7 @@ struct Add_network_cmd : Action
 		case State::FILL_NETWORK_KEY_MGMT: break;
 		case State::SET_NETWORK_PMF:       break;
 		case State::FILL_NETWORK_PSK:      break;
+		case State::SET_SCAN_SSID:         break;
 		case State::ENABLE_NETWORK:        break;
 		case State::COMPLETE:              break;
 		}
@@ -628,8 +636,9 @@ struct Remove_network_cmd : Action
 struct Update_network_cmd : Action
 {
 	enum class State : unsigned {
-		INIT, UPDATE_NETWORK_PSK, DISABLE_NETWORK, ENABLE_NETWORK,
-		COMPLETE
+		INIT, UPDATE_NETWORK_PSK,
+		DISABLE_NETWORK, SET_SCAN_SSID,
+		ENABLE_NETWORK, COMPLETE
 	};
 	Ctrl_msg_buffer &_msg;
 	Accesspoint      _accesspoint;
@@ -660,6 +669,12 @@ struct Update_network_cmd : Action
 			break;
 		case State::UPDATE_NETWORK_PSK:
 			ctrl_cmd(_msg, Cmd("DISABLE_NETWORK ", _accesspoint.id));
+			_state = State::SET_SCAN_SSID;
+			break;
+		case State::SET_SCAN_SSID:
+			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
+			                       " scan_ssid ",
+			                       _accesspoint.explicit_scan ? "1" : "0"));
 			_state = State::DISABLE_NETWORK;
 			break;
 		case State::DISABLE_NETWORK:
@@ -687,6 +702,7 @@ struct Update_network_cmd : Action
 		case State::INIT: break;
 		case State::UPDATE_NETWORK_PSK: [[fallthrough]];
 		case State::ENABLE_NETWORK:     [[fallthrough]];
+		case State::SET_SCAN_SSID:      [[fallthrough]];
 		case State::DISABLE_NETWORK:
 			if (!cmd_successful(msg)) {
 				error("UPDATE_NETWORK(", (unsigned)_state, ") failed: ", msg);
@@ -752,94 +768,6 @@ struct Scan_cmd : Action
 
 		switch (_state) {
 		case State::INIT: break;
-		case State::SCAN:
-			if (!cmd_successful(msg)) {
-				/* ignore busy fails silently */
-				bool const scan_busy = strcmp(msg, "FAIL-BUSY");
-				if (!scan_busy) {
-					error("could not initiate scan: ", msg);
-					Action::successful = false;
-					complete = true;
-				}
-			}
-			break;
-		case State::COMPLETE: break;
-		}
-
-		if (complete)
-			_state = State::COMPLETE;
-	}
-
-	bool complete() const override {
-		return _state == State::COMPLETE; }
-};
-
-
-/*
- * Action for initiating a explicit scan request
- */
-struct Explicit_scan_cmd : Action
-{
-	enum class State : unsigned {
-		INIT, FILL_SSID, SCAN, COMPLETE
-	};
-	Ctrl_msg_buffer &_msg;
-	State            _state;
-
-	/*
-	 * The number of explicit networks is limited by the
-	 * message buffer that is 4096 bytes larger. Thus its
-	 * possible to store around 58 explicit SSID (64 + 6)
-	 * request, which should be plenty - limit the buffer
-	 * to that amount.
-	 */
-	char _ssid_buffer[4060] { };
-
-	Explicit_scan_cmd(Ctrl_msg_buffer &msg)
-	:
-		Action      { Command::EXPLICIT_SCAN },
-		_msg        { msg },
-		_state      { State::INIT }
-	{ }
-
-	void print(Genode::Output &out) const override
-	{
-		Genode::print(out, "Explicit_scan_cmd[", (unsigned)_state, "]");
-	}
-
-	void with_ssid_buffer(auto const fn)
-	{
-		fn(_ssid_buffer, sizeof(_ssid_buffer));
-
-		_state = State::FILL_SSID;
-	}
-
-	void execute() override
-	{
-		switch (_state) {
-		case State::INIT:
-			break;
-		case State::FILL_SSID:
-			ctrl_cmd(_msg, Cmd("SCAN", (char const *)_ssid_buffer));
-			_state = State::SCAN;
-			break;
-		case State::SCAN:
-			_state = State::COMPLETE;
-			break;
-		case State::COMPLETE:
-			break;
-		}
-	}
-
-	void check(char const *msg) override
-	{
-		using namespace Genode;
-
-		bool complete = false;
-
-		switch (_state) {
-		case State::INIT:      break;
-		case State::FILL_SSID: break;
 		case State::SCAN:
 			if (!cmd_successful(msg)) {
 				/* ignore busy fails silently */
@@ -1687,50 +1615,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return;
 		}
 
-		bool explicit_scan = false;
-		_network_list.for_each([&] (Network const &network) {
-			network.with_accesspoint([&] (Accesspoint const &ap) {
-			explicit_scan |= ap.explicit_scan; });
-		});
-
-		if (explicit_scan) {
-			Explicit_scan_cmd &scan_cmd =
-				*new (_action_alloc) Explicit_scan_cmd(_msg);
-
-			scan_cmd.with_ssid_buffer([&] (char *ssid_buffer,
-			                               size_t const ssid_buffer_length) {
-
-				size_t buffer_pos = 0;
-				_network_list.for_each([&] (Network const &network) {
-					network.with_accesspoint([&] (Accesspoint const &ap) {
-
-						enum { SSID_ARG_LEN = 6 + 64, /* " ssid " + "a5a5a5a5..." */ };
-						if (buffer_pos + SSID_ARG_LEN >= ssid_buffer_length)
-							return;
-
-						if (!ap.explicit_scan)
-							return;
-
-						char ssid_hex[64+1] = { };
-						char const *ssid = ap.ssid.string();
-
-						for (size_t i = 0; i < ap.ssid.length() - 1; i++)
-							Util::byte2hex((ssid_hex + i * 2), ssid[i]);
-
-						Genode::String<SSID_ARG_LEN + 1> tmp(" ssid ", (char const*)ssid_hex);
-						size_t const tmp_len = tmp.length() - 1;
-
-						Genode::memcpy((ssid_buffer + buffer_pos), tmp.string(), tmp_len);
-						buffer_pos += tmp_len;
-					});
-				});
-			});
-			_queue_action(scan_cmd, _config.verbose);
-		}
-
-		else {
-			_queue_action(*new (_action_alloc) Scan_cmd(_msg), _config.verbose);
-		}
+		_queue_action(*new (_action_alloc) Scan_cmd(_msg), _config.verbose);
 
 		_dispatch_action_if_needed();
 	}
