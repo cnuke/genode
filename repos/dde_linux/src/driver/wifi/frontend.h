@@ -39,6 +39,8 @@ using Ctrl_msg_buffer = Msg_buffer;
 /* local includes */
 #include <util.h>
 
+using namespace Genode;
+
 /* declare manually as it is a internal hack^Winterface */
 extern void wifi_kick_socketcall();
 
@@ -110,11 +112,11 @@ static bool scan_results(char const *msg) {
 	return Genode::strcmp("bssid", msg, 5) == 0; }
 
 
-using Cmd = Genode::String<sizeof(Msg_buffer::send)>;
+using Cmd = String<sizeof(Msg_buffer::send)>;
 static void ctrl_cmd(Ctrl_msg_buffer &msg, Cmd const &cmd)
 {
-	Genode::memset(msg.send, 0, sizeof(msg.send));
-	Genode::memcpy(msg.send, cmd.string(), cmd.length());
+	memset(msg.send, 0, sizeof(msg.send));
+	memcpy(msg.send, cmd.string(), cmd.length());
 	++msg.send_id;
 
 	wpa_ctrl_set_fd();
@@ -132,13 +134,13 @@ static void ctrl_cmd(Ctrl_msg_buffer &msg, Cmd const &cmd)
  * The Accesspoint object contains all information to join
  * a wireless network.
  */
-struct Accesspoint : Genode::Interface
+struct Accesspoint : Interface
 {
-	using Bssid = Genode::String<17+1>;
-	using Freq  = Genode::String< 4+1>;
-	using Prot  = Genode::String< 7+1>;
-	using Ssid  = Genode::String<32+1>;
-	using Pass  = Genode::String<63+1>;
+	using Bssid = String<17+1>;
+	using Freq  = String< 4+1>;
+	using Prot  = String< 7+1>;
+	using Ssid  = String<32+1>;
+	using Pass  = String<63+1>;
 
 	static bool valid(Ssid const &ssid) {
 		return ssid.length() > 1 && ssid.length() <= 32 + 1; }
@@ -165,7 +167,7 @@ struct Accesspoint : Genode::Interface
 	bool auto_connect  { false };
 	bool explicit_scan { false };
 
-	static Accesspoint from_xml(Genode::Xml_node const &node)
+	static Accesspoint from_xml(Xml_node const &node)
 	{
 		Accesspoint ap { };
 
@@ -210,7 +212,7 @@ struct Accesspoint : Genode::Interface
 	: bssid(bssid), freq(freq), prot(prot), ssid(ssid), quality(quality)
 	{ }
 
-	void print(Genode::Output &out) const
+	void print(Output &out) const
 	{
 		Genode::print(out, "SSID: '",         ssid, "'",  " "
 		                   "BSSID: '",        bssid, "'", " "
@@ -247,7 +249,7 @@ struct Accesspoint : Genode::Interface
 };
 
 
-struct Network : Genode::List_model<Network>::Element
+struct Network : List_model<Network>::Element
 {
 
 	Accesspoint _accesspoint { };
@@ -266,10 +268,10 @@ struct Network : Genode::List_model<Network>::Element
 	 ** List_model interface **
 	 **************************/
 
-	static bool type_matches(Genode::Xml_node const &node) {
+	static bool type_matches(Xml_node const &node) {
 		return node.has_type("network"); }
 
-	bool matches(Genode::Xml_node const &node) {
+	bool matches(Xml_node const &node) {
 		return _accesspoint.ssid == node.attribute_value("ssid", Accesspoint::Ssid()); }
 };
 
@@ -285,7 +287,7 @@ static void for_each_line(char const *msg, auto const &fn)
 			Genode::error(__func__, ": line too large, abort processing");
 			return;
 		}
-		Genode::memcpy(line_buffer, &msg[cur], until);
+		memcpy(line_buffer, &msg[cur], until);
 		line_buffer[until] = 0;
 		cur += until + 1;
 
@@ -309,7 +311,7 @@ static void for_each_result_line(char const *msg, auto const &fn)
 			Genode::error(__func__, ": line too large, abort processing");
 			return;
 		}
-		Genode::memcpy(line_buffer, &msg[cur], until);
+		memcpy(line_buffer, &msg[cur], until);
 		line_buffer[until] = 0;
 		cur += until + 1;
 
@@ -337,7 +339,7 @@ static void for_each_result_line(char const *msg, auto const &fn)
 }
 
 
-struct Action : Genode::Fifo<Action>::Element
+struct Action : Fifo<Action>::Element
 {
 	enum class Type    : unsigned { COMMAND, QUERY };
 	enum class Command : unsigned {
@@ -406,7 +408,7 @@ struct Add_network_cmd : Action
 		_state       { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Add_network_cmd[", (unsigned)_state,
 		                   "] '", _accesspoint.ssid, "'");
@@ -527,7 +529,7 @@ struct Add_network_cmd : Action
 		case State::ADD_NETWORK:
 		{
 			long id = -1;
-			Genode::ascii_to(msg, id);
+			ascii_to(msg, id);
 			_accesspoint.id = static_cast<int>(id);
 			break;
 		}
@@ -573,7 +575,7 @@ struct Remove_network_cmd : Action
 		_state      { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Remove_network_cmd[", (unsigned)_state, "] id: ", _id);
 	}
@@ -646,7 +648,7 @@ struct Update_network_cmd : Action
 		_state       { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Update_network_cmd[", (unsigned)_state,
 		                   "] id: ", _accesspoint.id);
@@ -734,7 +736,7 @@ struct Scan_cmd : Action
 		_state      { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Scan_cmd[", (unsigned)_state, "]");
 	}
@@ -796,7 +798,7 @@ struct Scan_results_cmd : Action
 	Ctrl_msg_buffer &_msg;
 	State            _state;
 
-	Genode::Expanding_reporter &_reporter;
+	Expanding_reporter &_reporter;
 
 	void _generate_report(char const *msg)
 	{
@@ -807,7 +809,7 @@ struct Scan_results_cmd : Action
 			return;
 
 		try {
-			_reporter.generate([&] (Genode::Xml_generator &xml) {
+			_reporter.generate([&] (Xml_generator &xml) {
 
 				for_each_result_line(msg, [&] (Accesspoint const &ap) {
 
@@ -837,7 +839,7 @@ struct Scan_results_cmd : Action
 		_reporter   { reporter }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Scan_results_cmd[", (unsigned)_state, "]");
 	}
@@ -886,8 +888,8 @@ struct Scan_results_cmd : Action
  */
 struct Set_cmd : Action
 {
-	using Key   = Genode::String<64>;
-	using Value = Genode::String<128>;
+	using Key   = String<64>;
+	using Value = String<128>;
 
 	enum class State : unsigned {
 		INIT, SET, COMPLETE
@@ -907,7 +909,7 @@ struct Set_cmd : Action
 		_value      { value }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Set_cmd[", (unsigned)_state, "] key: '",
 		                   _key, "' value: '", _value, "'");
@@ -978,7 +980,7 @@ struct Log_level_cmd : Action
 		_level      { level }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Log_level_cmd[", (unsigned)_state, "] '", _level, "'");
 	}
@@ -1045,7 +1047,7 @@ struct Bss_query : Action
 		_state      { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Bss_query[", (unsigned)_state, "] ", _bssid);
 	}
@@ -1117,7 +1119,7 @@ struct Rssi_query : Action
 		_state      { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Rssi_query[", (unsigned)_state, "]");
 	}
@@ -1144,7 +1146,7 @@ struct Rssi_query : Action
 		using Rssi = Genode::String<5>;
 		Rssi rssi { };
 		auto get_rssi = [&] (char const *line) {
-			if (Genode::strcmp(line, "RSSI=", 5) != 0)
+			if (strcmp(line, "RSSI=", 5) != 0)
 				return;
 
 			rssi = Rssi(line + 5);
@@ -1182,7 +1184,7 @@ struct Status_query : Action
 		_state      { State::INIT }
 	{ }
 
-	void print(Genode::Output &out) const override
+	void print(Output &out) const override
 	{
 		Genode::print(out, "Status_query[", (unsigned)_state, "]");
 	}
@@ -1216,15 +1218,15 @@ struct Status_query : Action
 			return;
 
 		auto fill_ap = [&] (char const *line) {
-			if (Genode::strcmp(line, "ssid=", 5) == 0) {
+			if (strcmp(line, "ssid=", 5) == 0) {
 				ap.ssid = Accesspoint::Ssid(line+5);
 			} else
 
-			if (Genode::strcmp(line, "bssid=", 6) == 0) {
+			if (strcmp(line, "bssid=", 6) == 0) {
 				ap.bssid = Accesspoint::Bssid(line+6);
 			} else
 
-			if (Genode::strcmp(line, "freq=", 5) == 0) {
+			if (strcmp(line, "freq=", 5) == 0) {
 				ap.freq = Accesspoint::Freq(line+5);
 			}
 		};
@@ -1246,15 +1248,15 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	/* Network handling */
 
-	Genode::Heap                _network_allocator;
-	Genode::List_model<Network> _network_list { };
+	Heap                _network_allocator;
+	List_model<Network> _network_list { };
 
 	/*
 	 * Action queue handling
 	 */
 
-	Genode::Heap _action_alloc;
-	Genode::Fifo<Action> _actions { };
+	Heap _action_alloc;
+	Fifo<Action> _actions { };
 
 	Action *_pending_action { nullptr };
 
@@ -1274,7 +1276,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool const complete = _pending_action ? fn(*_pending_action)
 		                                      : false;
 		if (complete) {
-			Genode::destroy(_action_alloc, _pending_action);
+			destroy(_action_alloc, _pending_action);
 			_pending_action = nullptr;
 		}
 	}
@@ -1297,9 +1299,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	Msg_buffer &_msg;
 
-	Genode::Blockade _notify_blockade { };
-
-	Genode::Signal_handler<Wifi::Frontend> _rfkill_handler;
+	Blockade _notify_blockade { };
 
 	void _handle_rfkill()
 	{
@@ -1310,12 +1310,14 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			_try_arming_any_timer();
 	}
 
+	Signal_handler<Wifi::Frontend> _rfkill_handler;
+
 	/*
 	 * Configuration handling
 	 */
 
-	Genode::Attached_rom_dataspace         _config_rom;
-	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
+	Attached_rom_dataspace         _config_rom;
+	Signal_handler<Wifi::Frontend> _config_sigh;
 
 	struct Config
 	{
@@ -1364,7 +1366,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		bool bgscan_set() const {
 			return bgscan.length() > 1; }
 
-		static Config from_xml(Genode::Xml_node const &node)
+		static Config from_xml(Xml_node const &node)
 		{
 			bool const verbose       = node.attribute_value("verbose",
 			                                                (bool)DEFAULT_VERBOSE);
@@ -1413,7 +1415,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (!_config_rom.valid())
 			return;
 
-		Genode::Xml_node const config_node = _config_rom.xml();
+		Xml_node const config_node = _config_rom.xml();
 
 		Config const old_config = _config;
 
@@ -1455,11 +1457,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 				bool const ssid_invalid = !Accesspoint::valid(ap.ssid);
 				if (ssid_invalid)
-					Genode::warning("accesspoint has invalid ssid: '", ap.ssid, "'");
+					warning("accesspoint has invalid ssid: '", ap.ssid, "'");
 
 				bool const pass_invalid = ap.wpa() && !Accesspoint::valid(ap.pass);
 				if (pass_invalid)
-					Genode::warning("accesspoint '", ap.ssid, "' has invalid psk");
+					warning("accesspoint '", ap.ssid, "' has invalid psk");
 
 				/*
 				 * Only make the supplicant acquainted with the network
@@ -1531,7 +1533,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			return 0u;
 		};
 
-		Genode::Microseconds const us { seconds_from_type(type) * 1000'000u };
+		Microseconds const us { seconds_from_type(type) * 1000'000u };
 		if (!us.value)
 			return false;
 
@@ -1545,7 +1547,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				return "";
 			};
 
-			Genode::log("Arm timer for ", name_from_type(type), ": ", us);
+			log("Arm timer for ", name_from_type(type), ": ", us);
 		}
 
 		switch (type) {
@@ -1581,13 +1583,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		if (_join.rfkilled) {
 			if (_config.verbose)
-				Genode::log("Scanning: suspend due to RFKILL");
+				log("Scanning: suspend due to RFKILL");
 			return;
 		}
 
 		if (!_arm_scan_timer()) {
 			if (_config.verbose)
-				Genode::log("Timer: scanning disabled");
+				log("Timer: scanning disabled");
 			return;
 		}
 
@@ -1600,13 +1602,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		if (_join.rfkilled) {
 			if (_config.verbose)
-				Genode::log("Quality polling: suspend due to RFKIL");
+				log("Quality polling: suspend due to RFKIL");
 			return;
 		}
 
 		if (!_arm_poll_timer()) {
 			if (_config.verbose)
-				Genode::log("Timer: signal-strength polling disabled");
+				log("Timer: signal-strength polling disabled");
 			return;
 		}
 
@@ -1619,8 +1621,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	 * CTRL interface event handling
 	 */
 
-	Genode::Constructible<Genode::Expanding_reporter> _state_reporter { };
-	Genode::Constructible<Genode::Expanding_reporter> _ap_reporter    { };
+	Constructible<Expanding_reporter> _state_reporter { };
+	Constructible<Expanding_reporter> _ap_reporter    { };
 
 	enum class Bssid_offset : unsigned {
 		/* by the power of wc -c, I have the start pos... */
@@ -1633,7 +1635,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		size_t const len   = 17;
 		size_t const start = (size_t)offset;
 
-		Genode::memcpy(bssid, msg + start, len);
+		memcpy(bssid, msg + start, len);
 		return Accesspoint::Bssid((char const*)bssid);
 	}
 
@@ -1652,7 +1654,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		if (!len || len >= 33)
 			return Accesspoint::Ssid();
 
-		Genode::memcpy(ssid, msg + start, len);
+		memcpy(ssid, msg + start, len);
 
 		return Accesspoint::Ssid((char const *)ssid);
 	}
@@ -1661,7 +1663,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		enum { REASON_OFFSET = 55, };
 		unsigned reason = 0;
-		Genode::ascii_to((msg + REASON_OFFSET), reason);
+		ascii_to((msg + REASON_OFFSET), reason);
 		switch (reason) {
 		case  2: /* prev auth no longer valid */
 		case 15: /* 4-way handshake timeout/failed */
@@ -1687,7 +1689,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		enum { MAX_REAUTH_ATTEMPTS = 3 };
 		unsigned reauth_attempts { 0 };
 
-		void generate_state_report_if_needed(Genode::Expanding_reporter &reporter,
+		void generate_state_report_if_needed(Expanding_reporter &reporter,
 		                                     Join_state const &old)
 		{
 			/*
@@ -1701,7 +1703,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 && ap.freq    == old.ap.freq)
 				return;
 
-			reporter.generate([&] (Genode::Xml_generator &xml) {
+			reporter.generate([&] (Xml_generator &xml) {
 				xml.node("accesspoint", [&] () {
 					xml.attribute("ssid",  ap.ssid);
 					xml.attribute("bssid", ap.bssid);
@@ -1838,7 +1840,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					_extract_bssid(msg, Bssid_offset::DISCONNECT);
 
 				if (bssid != _join.ap.bssid)
-					Genode::warning(bssid, " does not match stored ", _join.ap.bssid);
+					warning(bssid, " does not match stored ", _join.ap.bssid);
 
 				/*
 				 * Use a simplistic heuristic to ignore re-authentication requests
@@ -1846,7 +1848,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 				 */
 				if ((_join.state == Join_state::State::CONNECTED) && _join.auth_failure)
 					if (_join.reauth_attempts < Join_state::MAX_REAUTH_ATTEMPTS) {
-						Genode::log("ignore deauth from: ", bssid);
+						log("ignore deauth from: ", bssid);
 						_join.reauth_attempts++;
 						return;
 					}
@@ -1898,7 +1900,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_dispatch_action_if_needed();
 	}
 
-	Genode::Signal_handler<Wifi::Frontend> _events_handler;
+	Signal_handler<Wifi::Frontend> _events_handler;
 
 	/*
 	 * CTRL interface command handling
@@ -1965,8 +1967,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 									return;
 
 								if (ap.stored()) {
-									Genode::error("accesspoint for SSID '", ap.ssid, "' "
-									              "already stored ", ap.id);
+									error("accesspoint for SSID '", ap.ssid, "' "
+									       "already stored ", ap.id);
 									return;
 								}
 
@@ -2018,12 +2020,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_dispatch_action_if_needed();
 	}
 
-	Genode::Signal_handler<Wifi::Frontend> _cmd_handler;
+	Signal_handler<Wifi::Frontend> _cmd_handler;
 
 	/**
 	 * Constructor
 	 */
-	Frontend(Genode::Env &env, Msg_buffer &msg_buffer)
+	Frontend(Env &env, Msg_buffer &msg_buffer)
 	:
 		_network_allocator(env.ram(), env.rm()),
 		_action_alloc(env.ram(), env.rm()),
@@ -2082,7 +2084,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	 * Used by the wpa_supplicant to notify front end after processing
 	 * a command.
 	 */
-	Genode::Signal_context_capability result_sigh() {
+	Signal_context_capability result_sigh() {
 		return _cmd_handler; }
 
 	/**
@@ -2091,7 +2093,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	 * Used by the wpa_supplicant to notify front whenever a event
 	 * was triggered.
 	 */
-	Genode::Signal_context_capability event_sigh() {
+	Signal_context_capability event_sigh() {
 		return _events_handler; }
 
 	/**
