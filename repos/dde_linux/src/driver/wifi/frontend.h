@@ -46,7 +46,7 @@ extern void wifi_kick_socketcall();
 
 
 namespace Wifi {
-	struct Frontend;
+	struct Manager;
 }
 
 
@@ -1241,10 +1241,10 @@ struct Status_query : Action
 /*
  * Wifi driver front end
  */
-struct Wifi::Frontend : Wifi::Rfkill_notification_handler
+struct Wifi::Manager : Wifi::Rfkill_notification_handler
 {
-	Frontend(const Frontend&) = delete;
-	Frontend& operator=(const Frontend&) = delete;
+	Manager(const Manager&) = delete;
+	Manager& operator=(const Manager&) = delete;
 
 	/* Network handling */
 
@@ -1310,14 +1310,14 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			_try_arming_any_timer();
 	}
 
-	Signal_handler<Wifi::Frontend> _rfkill_handler;
+	Signal_handler<Wifi::Manager> _rfkill_handler;
 
 	/*
 	 * Configuration handling
 	 */
 
 	Attached_rom_dataspace         _config_rom;
-	Signal_handler<Wifi::Frontend> _config_sigh;
+	Signal_handler<Wifi::Manager> _config_sigh;
 
 	struct Config
 	{
@@ -1514,11 +1514,11 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	Timer::Connection _timer;
 
-	Timer::One_shot_timeout<Wifi::Frontend> _scan_timeout {
-		_timer, *this, &Wifi::Frontend::_handle_scan_timeout };
+	Timer::One_shot_timeout<Wifi::Manager> _scan_timeout {
+		_timer, *this, &Wifi::Manager::_handle_scan_timeout };
 
-	Timer::One_shot_timeout<Wifi::Frontend> _quality_timeout {
-		_timer, *this, &Wifi::Frontend::_handle_quality_timeout };
+	Timer::One_shot_timeout<Wifi::Manager> _quality_timeout {
+		_timer, *this, &Wifi::Manager::_handle_quality_timeout };
 
 	enum class Timer_type : uint8_t { CONNECTED_SCAN, SCAN, SIGNAL_POLL };
 
@@ -1900,7 +1900,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_dispatch_action_if_needed();
 	}
 
-	Signal_handler<Wifi::Frontend> _events_handler;
+	Signal_handler<Wifi::Manager> _events_handler;
 
 	/*
 	 * CTRL interface command handling
@@ -2020,22 +2020,22 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_dispatch_action_if_needed();
 	}
 
-	Signal_handler<Wifi::Frontend> _cmd_handler;
+	Signal_handler<Wifi::Manager> _cmd_handler;
 
 	/**
 	 * Constructor
 	 */
-	Frontend(Env &env, Msg_buffer &msg_buffer)
+	Manager(Env &env, Msg_buffer &msg_buffer)
 	:
 		_network_allocator(env.ram(), env.rm()),
 		_action_alloc(env.ram(), env.rm()),
 		_msg(msg_buffer),
-		_rfkill_handler(env.ep(), *this, &Wifi::Frontend::_handle_rfkill),
+		_rfkill_handler(env.ep(), *this, &Wifi::Manager::_handle_rfkill),
 		_config_rom(env, "wifi_config"),
-		_config_sigh(env.ep(), *this, &Wifi::Frontend::_handle_config_update),
+		_config_sigh(env.ep(), *this, &Wifi::Manager::_handle_config_update),
 		_timer(env),
-		_events_handler(env.ep(), *this, &Wifi::Frontend::_handle_events),
-		_cmd_handler(env.ep(),    *this, &Wifi::Frontend::_handle_cmds)
+		_events_handler(env.ep(), *this, &Wifi::Manager::_handle_events),
+		_cmd_handler(env.ep(),    *this, &Wifi::Manager::_handle_cmds)
 	{
 		_config_rom.sigh(_config_sigh);
 

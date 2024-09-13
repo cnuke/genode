@@ -35,7 +35,7 @@ using namespace Genode;
 
 
 static Msg_buffer      _wifi_msg_buffer;
-static Wifi::Frontend *_wifi_frontend = nullptr;
+static Wifi::Manager *_wifi_manager = nullptr;
 
 
 /**
@@ -46,7 +46,7 @@ static Wifi::Frontend *_wifi_frontend = nullptr;
  */
 void wifi_block_for_processing(void)
 {
-	if (!_wifi_frontend) {
+	if (!_wifi_manager) {
 		warning("frontend not available, dropping notification");
 		return;
 	}
@@ -55,7 +55,7 @@ void wifi_block_for_processing(void)
 	 * Next time we block as long as the front end has not finished
 	 * handling our previous request
 	 */
-	_wifi_frontend->block_for_processing();
+	_wifi_manager->block_for_processing();
 
 	/* XXX hack to trick poll() into returning faster */
 	wpa_ctrl_set_fd();
@@ -64,12 +64,12 @@ void wifi_block_for_processing(void)
 
 void wifi_notify_cmd_result(void)
 {
-	if (!_wifi_frontend) {
+	if (!_wifi_manager) {
 		warning("frontend not available, dropping notification");
 		return;
 	}
 
-	Signal_transmitter(_wifi_frontend->result_sigh()).submit();
+	Signal_transmitter(_wifi_manager->result_sigh()).submit();
 }
 
 
@@ -81,12 +81,12 @@ void wifi_notify_cmd_result(void)
  */
 void wifi_notify_event(void)
 {
-	if (!_wifi_frontend) {
+	if (!_wifi_manager) {
 		Genode::warning("frontend not available, dropping notification");
 		return;
 	}
 
-	Signal_transmitter(_wifi_frontend->event_sigh()).submit();
+	Signal_transmitter(_wifi_manager->event_sigh()).submit();
 }
 
 
@@ -102,7 +102,7 @@ struct Main
 	Env  &env;
 
 	Constructible<Wpa_thread>     _wpa;
-	Constructible<Wifi::Frontend> _frontend;
+	Constructible<Wifi::Manager> _manager;
 
 	struct Request_handler : Wifi::Firmware_request_handler
 	{
@@ -173,10 +173,10 @@ struct Main
 		/* prepare Lx_kit::Env */
 		wifi_init(env, _wpa_startup_blockade);
 
-		_frontend.construct(env, _wifi_msg_buffer);
-		_wifi_frontend = &*_frontend;
+		_manager.construct(env, _wifi_msg_buffer);
+		_wifi_manager = &*_manager;
 
-		Wifi::rfkill_establish_handler(*_wifi_frontend);
+		Wifi::rfkill_establish_handler(*_wifi_manager);
 		Wifi::firmware_establish_handler(_request_handler);
 
 		_wpa.construct(env, _wpa_startup_blockade);
