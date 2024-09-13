@@ -161,15 +161,30 @@ struct Accesspoint : Genode::Interface
 	unsigned signal { 0 };
 
 	/*
-	 * CTRL interface fields
-	 */
-	int id { -1 };
-
-	/*
 	 * Internal configuration fields
 	 */
 	bool auto_connect  { false };
 	bool explicit_scan { false };
+
+	static Accesspoint from_xml(Genode::Xml_node const &node)
+	{
+		Accesspoint ap { };
+
+		ap.ssid  = node.attribute_value("ssid",  Accesspoint::Ssid());
+		ap.bssid = node.attribute_value("bssid", Accesspoint::Bssid());
+
+		ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
+		ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
+		ap.auto_connect  = node.attribute_value("auto_connect", false);
+		ap.explicit_scan = node.attribute_value("explicit_scan", false);
+
+		return ap;
+	}
+
+	/*
+	 * CTRL interface fields
+	 */
+	int id { -1 };
 
 	/**
 	 * Default constructor
@@ -200,8 +215,6 @@ struct Accesspoint : Genode::Interface
 
 	bool valid() const { return Accesspoint::valid(bssid); }
 
-	void invalidate() { ssid = Ssid(); bssid = Bssid(); }
-
 	bool wpa()         const { return prot != "NONE"; }
 	bool wpa3()        const { return prot == "WPA3"; }
 
@@ -220,27 +233,13 @@ struct Accesspoint : Genode::Interface
 		if (Accesspoint::valid(other.bssid))
 			bssid = other.bssid;
 
-		pass          = other.prot;
+		pass          = other.pass;
 		prot          = other.prot;
 		auto_connect  = other.auto_connect;
 		explicit_scan = other.explicit_scan;
 		return true;
 	}
 
-	static Accesspoint from_xml(Genode::Xml_node const &node)
-	{
-		Accesspoint ap { };
-
-		ap.ssid  = node.attribute_value("ssid",  Accesspoint::Ssid());
-		ap.bssid = node.attribute_value("bssid", Accesspoint::Bssid());
-
-		ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
-		ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
-		ap.auto_connect  = node.attribute_value("auto_connect", true);
-		ap.explicit_scan = node.attribute_value("explicit_scan", false);
-
-		return ap;
-	}
 };
 
 
@@ -1323,8 +1322,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	Genode::Attached_rom_dataspace         _config_rom;
 	Genode::Signal_handler<Wifi::Frontend> _config_sigh;
 
-	Accesspoint _connecting  { };
-
 	Genode::Constructible<Genode::Expanding_reporter> _ap_reporter { };
 
 	struct Config
@@ -1441,12 +1438,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 * by the singal handler but is not expected to be any different
 			 * as the rfkill call is not supposed to fail.
 			 */
-			if (_config.rfkill && !_rfkilled) {
+			if (_config.rfkill && !_rfkilled)
 				_rfkilled = true;
-
-				_connected_ap.invalidate();
-				_connecting = Accesspoint();
-			}
 		}
 
 		if (_config.log_level_changed(old_config) || initial_config)
@@ -1526,8 +1519,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		return count == 1;
 	}
 
-	Accesspoint _connected_ap { };
-
 	/* scan */
 
 	enum class Timer_type : uint8_t { CONNECTED_SCAN, SCAN, SIGNAL_POLL };
@@ -1581,7 +1572,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	bool _arm_scan_timer()
 	{
-		Timer_type const type = Accesspoint::valid(_connected_ap.bssid)
+		Timer_type const type = _join.state == Join_state::State::CONNECTED
 		                      ? Timer_type::CONNECTED_SCAN
 		                      : Timer_type::SCAN;
 		return _arm_timer(type);
@@ -1589,7 +1580,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 
 	bool _arm_poll_timer()
 	{
-		if (!Accesspoint::valid(_connected_ap.bssid))
+		if (_join.state != Join_state::State::CONNECTED)
 			return false;
 
 		return _arm_timer(Timer_type::SIGNAL_POLL);
@@ -1639,7 +1630,9 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		_dispatch_action_if_needed();
 	}
 
-	/* connection state */
+	/*
+	 * CTRL interface event handling
+	 */
 
 	Genode::Constructible<Genode::Expanding_reporter> _state_reporter { };
 
@@ -1692,13 +1685,19 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 		}
 	}
 
-	/*
-	 * CTRL interface event handling
-	 */
+	struct Join_state
+	{
+		enum class State : unsigned {
+			DISCONNECTED, CONNECTING, CONNECTED };
 
-	bool _connected_event    { false };
-	bool _disconnected_event { false };
-	bool _disconnected_fail  { false };
+		Accesspoint ap { };
+
+		State state { DISCONNECTED };
+
+		bool auth_failure { false };
+	};
+
+	Join_state _join { };
 
 	enum { MAX_REAUTH_ATTEMPTS = 3 };
 	unsigned _reauth_attempts { 0 };
@@ -1724,10 +1723,6 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 	{
 		_with_new_event([&] (char const *msg) {
 
-			_connected_event    = false;
-			_disconnected_event = false;
-			_disconnected_fail  = false;
-
 			/*
 			 * CTRL-EVENT-SCAN-RESULTS
 			 */
@@ -1749,12 +1744,13 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			if (connecting_to_network(msg)) {
 
-				Accesspoint::Bssid const &bssid =
+				Accesspoint::Bssid const bssid =
 					_extract_bssid(msg, Bssid_offset::CONNECTING);
 
-				Accesspoint::Ssid const &ssid = _extract_ssid(msg);
+				Accesspoint::Ssid const ssid = _extract_ssid(msg);
 
-				_connecting = Accesspoint(bssid, ssid);
+				_join.ap    = Accesspoint(bssid, ssid);
+				_join.state = Join_state::State::CONNECTING;
 
 				_state_reporter->generate([&] (Genode::Xml_generator &xml) {
 
@@ -1773,23 +1769,23 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			if (network_not_found(msg)) {
 
-				if (Accesspoint::valid(_connecting.ssid) && _single_autoconnect()) {
+				if ((_join.state == Join_state::State::CONNECTING) && _single_autoconnect()) {
 					_network_list.for_each([&] (Network &network) {
 						network.with_accesspoint([&] (Accesspoint &ap) {
 
-							if (ap.ssid != _connecting.ssid)
+							if (ap.ssid != _join.ap.ssid)
 								return;
 
 							_state_reporter->generate([&] (Genode::Xml_generator &xml) {
 								xml.node("accesspoint", [&] () {
-									if (Accesspoint::valid(_connecting.ssid))
-										xml.attribute("ssid", _connecting.ssid);
-
+									xml.attribute("ssid", _join.ap.ssid);
 									xml.attribute("state", "disconnected");
 									xml.attribute("not_found", true);
 								});
 							});
-							_connecting = Accesspoint();
+
+							_join.ap    = Accesspoint();
+							_join.state = Join_state::State::DISCONNECTED;
 						});
 					});
 				}
@@ -1801,34 +1797,28 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			if (disconnected_from_network(msg)) {
 
+				_join.state = Join_state::State::DISCONNECTED;
+
 				bool const auth_failed = _auth_failure(msg);
+				_join.auth_failure = auth_failed;
 
-				_disconnected_event = true;
-				_disconnected_fail  = auth_failed;
-
-				Accesspoint::Bssid const &bssid =
+				Accesspoint::Bssid const bssid =
 					_extract_bssid(msg, Bssid_offset::DISCONNECT);
 
 				/* simplistic heuristic to ignore re-authentication requests */
-				if (Accesspoint::valid(_connected_ap.bssid) && auth_failed) {
+				if ((_join.state == Join_state::State::CONNECTED) && auth_failed)
 					if (_reauth_attempts < MAX_REAUTH_ATTEMPTS) {
-						Genode::log("ignore deauth from: ", _connected_ap.bssid);
+						Genode::log("ignore deauth from: ", bssid);
 						_reauth_attempts++;
 						return;
 					}
-				}
+
 				_reauth_attempts = 0;
-
-				Accesspoint::Ssid const ssid            = _connected_ap.ssid;
-				Accesspoint::Ssid const connecting_ssid = _connecting.ssid;
-
-				_connected_ap = Accesspoint();
-				_connecting   = Accesspoint();
 
 				_network_list.for_each([&] (Network &network) {
 					network.with_accesspoint([&] (Accesspoint &ap) {
 
-						if (ap.ssid != (auth_failed ? connecting_ssid : ssid))
+						if (ap.ssid != _join.ap.ssid)
 							return;
 
 						if (auth_failed) {
@@ -1841,16 +1831,12 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 						_state_reporter->generate([&] (Genode::Xml_generator &xml) {
 							xml.node("accesspoint", [&] () {
 
-								if (auth_failed) {
-									if (Accesspoint::valid(connecting_ssid))
-										xml.attribute("ssid", connecting_ssid);
-								} else
-									if (Accesspoint::valid(ssid))
-										xml.attribute("ssid", ssid);
+								xml.attribute("ssid", ap.ssid);
 
-								xml.attribute("bssid", bssid);
+								xml.attribute("bssid", _join.ap.bssid);
 								xml.attribute("state", "disconnected");
 								xml.attribute("auth_failure", auth_failed);
+								xml.attribute("rfkilled", _rfkilled);
 							});
 						});
 					});
@@ -1862,29 +1848,15 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 			 */
 			if (connected_to_network(msg)) {
 
-				_connected_event = true;
+				_join.state = Join_state::State::CONNECTED;
 
 				Accesspoint::Bssid const &bssid =
 					_extract_bssid(msg, Bssid_offset::CONNECT);
 
-				Accesspoint::Ssid const connecting_ssid = _connecting.ssid;
-
-				_connected_ap = Accesspoint();
-				_connecting   = Accesspoint();
-
-				_connected_ap.bssid = bssid;
+				_join.ap.bssid = bssid;
 
 				_queue_action(*new (_action_alloc) Status_query(_msg),
 					_config.verbose);
-
-				_network_list.for_each([&] (Network const &network) {
-					network.with_accesspoint([&] (Accesspoint const &ap) {
-						if (ap.ssid != connecting_ssid)
-							return;
-
-						_connected_ap = ap;
-					});
-				});
 
 				_arm_poll_timer();
 			}
@@ -1928,32 +1900,38 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 					break;
 
 				case Action::Type::QUERY:
-					action.response(msg, _connected_ap);
-					{
-						_state_reporter->generate([&] (Genode::Xml_generator &xml) {
-							xml.node("accesspoint", [&] () {
-								xml.attribute("ssid",  _connected_ap.ssid);
-								xml.attribute("bssid", _connected_ap.bssid);
-								xml.attribute("freq",  _connected_ap.freq);
+				{
+					action.response(msg, _join.ap);
 
-								xml.attribute("state", _connected_event ? "connected"
-								                                        : "disconnected");
-								if (!_connected_event) {
-									xml.attribute("rfkilled", _rfkilled);
-									xml.attribute("auth_failure", _disconnected_fail);
-								}
+					_state_reporter->generate([&] (Genode::Xml_generator &xml) {
+						xml.node("accesspoint", [&] () {
+							xml.attribute("ssid",  _join.ap.ssid);
+							xml.attribute("bssid", _join.ap.bssid);
+							xml.attribute("freq",  _join.ap.freq);
 
-								/*
-								 * Only add the attribute when we have something
-								 * to report so that a consumer of the state report
-								 * may take appropriate actions.
-								 */
-								if (_connected_ap.signal)
-									xml.attribute("quality", _connected_ap.signal);
-							});
+							if (_join.state == Join_state::State::CONNECTED)
+								xml.attribute("state", "connected");
+							else
+
+							if (_join.state == Join_state::State::DISCONNECTED) {
+								xml.attribute("state", "disconnected");
+								xml.attribute("rfkilled", _rfkilled);
+								xml.attribute("auth_failure", _join.auth_failure);
+							}
+
+							/*
+							 * Only add the attribute when we have something
+							 * to report so that a consumer of the state report
+							 * may take appropriate actions.
+							 */
+							if (_join.ap.signal)
+								xml.attribute("quality", _join.ap.signal);
 						});
-					}
+					});
 					break;
+				}
+
+				default: break;
 				}
 
 				/*
@@ -2007,7 +1985,7 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 							 * event will bring us to square one.
 							 */
 							/* XXX if the network is replaced _connecting will not get updated */
-							if (!Accesspoint::valid(_connected_ap.ssid) && !_rfkilled) {
+							if ((_join.state != Join_state::State::CONNECTED) && !_rfkilled) {
 								_network_list.for_each([&] (Network const &network) {
 									network.with_accesspoint([&] (Accesspoint const &ap) {
 
@@ -2018,7 +1996,8 @@ struct Wifi::Frontend : Wifi::Rfkill_notification_handler
 											});
 										});
 
-										_connecting = ap;
+										_join.ap    = ap;
+										_join.state = Join_state::State::CONNECTING;
 									});
 								});
 							}
