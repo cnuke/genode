@@ -4,15 +4,6 @@ The configuration contained in this repository relies on the fact that
 all test machines follow the same partition-table scheme and provides
 the necessary recipes and required presets and launchers.
 
-A suitable build.conf is included.
-
-Build steps:
-tools/create_builddir x86_64
-cp repos/modular_sculpt/build.conf build/x86_64/etc/build.conf
-cd build/x86_64
-make SCULPT=modular_sculpt_Slot_A_B-U7411 KERNEL=nova BOARD=pc run/modular_sculpt
-
-
 # USB
 
 Some usb devices are already passed through to both compartments (see the
