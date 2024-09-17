@@ -32,7 +32,6 @@
       <RemoteDisplay enabled="false"/>
       <Paravirt provider="HyperV"/>
       <HPET enabled="true"/>
-      <Chipset type="ICH9"/>
       <BIOS>
         <APIC enabled="true"/>
         <IOAPIC enabled="true"/>
