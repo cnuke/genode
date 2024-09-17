@@ -5,10 +5,7 @@ parentCID=ffffffff
 createType="fullDevice"
 
 # Extent description
-# 96GB U7411
-#RW 187500000 FLAT "/dev/block0" 0
-# ca 64GB S938
-RW 131072000 FLAT "/dev/block0" 0
+RW 134217728 FLAT "/dev/block0" 0
 
 # The disk Data Base
 #DDB
