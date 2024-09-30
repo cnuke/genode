@@ -35,6 +35,8 @@
 
 #include <../mm/slab.h>
 
+extern bool no_hash_pointers;
+
 /* definitions in drivers/base/base.h */
 extern int devices_init(void);
 extern int buses_init(void);
@@ -131,6 +133,8 @@ int lx_emul_init_task_function(void * dtb)
 	/**
 	 * Here we do the minimum normally done start_kernel() of init/main.c
 	 */
+
+	no_hash_pointers = true;
 
 	jump_label_init();
 	kmem_cache_init();
