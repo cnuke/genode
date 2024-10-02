@@ -1,0 +1,11 @@
+<!-- name differently than regular Sculpt mixer launcher -->
+<launcher pkg="mixer" priority="0">
+	<affinity xpos="0" width="1"/>
+	<config>
+		<default out_volume="100" volume="100"/>
+	</config>
+	<route>
+		<service name="Audio_out"> <child name="sof_audio_legacy"/> </service>
+		<service name="Report"> <parent/> </service>
+	</route>
+</launcher>
