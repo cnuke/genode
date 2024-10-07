@@ -176,7 +176,7 @@ struct Accesspoint : Interface
 
 		ap.pass          = node.attribute_value("passphrase", Accesspoint::Pass(""));
 		ap.prot          = node.attribute_value("protection", Accesspoint::Prot("NONE"));
-		ap.auto_connect  = node.attribute_value("auto_connect", false);
+		ap.auto_connect  = node.attribute_value("auto_connect", true);
 		ap.explicit_scan = node.attribute_value("explicit_scan", false);
 
 		return ap;

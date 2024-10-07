@@ -141,7 +141,7 @@ a network and has the following attributes.
   network be protected.
 
 * :auto_connect: allows for joining a network automatically. The
-  default value is 'false'. When more than one network is configured
+  default value is 'true'. When more than one network is configured
   with enabled 'auto_connect' the driver will try to select the best
   one it gets a response from.
 
