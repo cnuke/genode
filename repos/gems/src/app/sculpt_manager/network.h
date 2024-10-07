@@ -149,7 +149,6 @@ struct Sculpt::Network : Noncopyable
 
 				xml.node("network", [&]() {
 					xml.attribute("ssid", ap.ssid);
-					xml.attribute("auto_connect", true);
 
 					/* for now always try to use WPA2 */
 					if (ap.protection == Access_point::WPA_PSK) {
