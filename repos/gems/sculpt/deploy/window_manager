@@ -39,7 +39,7 @@
 		</route>
 	</start>
 
-	<start name="themed_decorator" priority="-1" pkg="themed_decorator">
+	<start name="motif_decorator" priority="-1" pkg="motif_decorator">
 		<route>
 			<service name="ROM" label="window_layout"> <child name="wm"/> </service>
 			<service name="ROM" label="pointer">       <child name="wm"/> </service>
