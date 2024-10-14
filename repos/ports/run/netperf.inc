@@ -325,7 +325,7 @@ append  config { </wifi_config>
 	append config {
 
 	<start name="nic" caps="1200" managing_system="yes" priority="-1">
-		<resource name="RAM" quantum="32M"/>
+		<resource name="RAM" quantum="36M"/>
 		<binary name="init"/>
 		<route>
 			<service name="ROM" label="config"> <parent label="drivers.config"/> </service>
