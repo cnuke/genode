@@ -219,7 +219,8 @@ struct Gpu::Vram
 
 	Genode::Constructible<Genode::Attached_dataspace> _attached_buffer { };
 
-	Vram(Gpu::Connection      &gpu,
+	Vram(Genode::Region_map   &rm,
+	     Gpu::Connection      &gpu,
 	     size_t                size,
 	     Gpu::Virtual_address  va,
 	     Vram_id_space        &space)
@@ -240,21 +241,13 @@ struct Gpu::Vram
 		if (!_gpu.map_gpu(_elem.id(), size, 0, va))
 			throw Allocation_failed();
 
-		cap = _gpu.map_cpu(_elem.id(), Gpu::Mapping_attributes());
+		_attached_buffer.construct(rm, _gpu.map_cpu(_elem.id(),
+		                           Gpu::Mapping_attributes()));
 	}
 
 	~Vram()
 	{
 		_gpu.unmap_gpu(_elem.id(), 0, Virtual_address());
-	}
-
-	bool mmap(Genode::Env &env)
-	{
-		if (!_attached_buffer.constructed()) {
-			_attached_buffer.construct(env.rm(), cap);
-		}
-
-		return _attached_buffer.constructed();
 	}
 
 	Genode::addr_t mmap_addr()
@@ -446,7 +439,8 @@ class Lima::Call
 
 				static constexpr size_t _exec_buffer_size = { 256u << 10 };
 
-				Gpu_context(Genode::Allocator &alloc,
+				Gpu_context(Genode::Env       &env,
+				            Genode::Allocator &alloc,
 				            Genode::Id_space<Gpu_context> &space,
 				            Va_allocator &va_alloc)
 				:
@@ -455,9 +449,10 @@ class Lima::Call
 					_id { _stat_gpu(_fd) },
 					_elem { *this, space },
 					_va_alloc { va_alloc },
-					_exec_buffer { new (alloc) Gpu::Vram(_gpu, _exec_buffer_size,
-						                                 _va_alloc.alloc(_exec_buffer_size),
-						                                 _vram_space) }
+					_exec_buffer { new (alloc) Gpu::Vram(env.rm(),
+					                                     _gpu, _exec_buffer_size,
+					                                     _va_alloc.alloc(_exec_buffer_size),
+					                                     _vram_space) }
 				{ }
 
 				~Gpu_context()
@@ -542,17 +537,15 @@ class Lima::Call
 				}
 
 				template <typename FN>
-				void access_exec_buffer(Genode::Env &env, FN const &fn)
+				void access_exec_buffer(FN const &fn)
 				{
 					/*
 					 * 'env' is solely needed for mapping the exec buffer
 					 * and is therefor used here locally.
 					 */
-					if (_exec_buffer->mmap(env)) {
-						char *ptr = (char*)_exec_buffer->mmap_addr();
-						if (ptr)
-							fn(ptr, _exec_buffer_size);
-					}
+					char *ptr = (char*)_exec_buffer->mmap_addr();
+					if (ptr)
+						fn(ptr, _exec_buffer_size);
 				}
 
 				Gpu::Vram_id exec_buffer_id() const
@@ -621,7 +614,7 @@ class Lima::Call
 		Syncobj_space _syncobj_space { };
 
 		Gpu_context *_main_ctx {
-			new (_heap) Gpu_context(_heap, _gpu_context_space, _va_alloc) };
+			new (_heap) Gpu_context(_env, _heap, _gpu_context_space, _va_alloc) };
 
 		Gpu::Info_lima const &_gpu_info {
 			*_main_ctx->gpu().attached_info<Gpu::Info_lima>() };
@@ -723,8 +716,7 @@ class Lima::Call
 		{
 			int result = -1;
 			(void)_apply_handle(arg.handle, [&] (Vram &b) {
-				if (!b.mmap(_env))
-					return;
+
 				arg.offset = reinterpret_cast<::uint64_t>(b.mmap_addr());
 
 				Gpu::Virtual_address const va = b.va;
@@ -754,7 +746,8 @@ class Lima::Call
 					retry<Gpu::Session::Out_of_caps>(
 					[&] () {
 						buffer =
-							new (&_heap) Vram(_main_ctx->gpu(), size, va,
+							new (&_heap) Vram(_env.rm(),
+							                  _main_ctx->gpu(), size, va,
 							                  _main_ctx->vram_space());
 					},
 					[&] () {
@@ -841,7 +834,7 @@ class Lima::Call
 						return;
 
 					bool serialized = false;
-					gc.access_exec_buffer(_env, [&] (char *ptr, size_t size) {
+					gc.access_exec_buffer([&] (char *ptr, size_t size) {
 
 						size_t const payload_size = Lima::get_payload_size(arg);
 						if (payload_size > size) {
@@ -908,7 +901,7 @@ class Lima::Call
 		{
 			try {
 				Gpu_context * ctx =
-					new (_heap) Gpu_context(_heap, _gpu_context_space, _va_alloc);
+					new (_heap) Gpu_context(_env, _heap, _gpu_context_space, _va_alloc);
 
 				arg.id = ctx->id();
 				return 0;
