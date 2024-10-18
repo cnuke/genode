@@ -140,7 +140,7 @@ struct Sculpt::Fb_driver : private Noncopyable
 		                        .name      = "fb",
 		                        .priority  = Priority::MULTIMEDIA,
 		                        .cpu_quota = 20,
-		                        .initial   = { Ram_quota { 16*1024*1024 },
+		                        .initial   = { Ram_quota { 32*1024*1024 },
 		                                       Cap_quota { 250 } },
 		                        .max       = { } } );
 
