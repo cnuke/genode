@@ -29,7 +29,10 @@ struct Sculpt::Nic_driver : private Noncopyable
 		xml.node("start", [&] {
 			_nic->gen_start_node_content(xml);
 			gen_named_node(xml, "binary", "nic");
-			xml.node("config", [&] { });
+			xml.node("config", [&] {
+				xml.attribute("dtb", "nic.dtb");
+				xml.attribute("mac_address_by_rom", false);
+			});
 			xml.node("route", [&] {
 				gen_service_node<Platform::Session>(xml, [&] {
 					xml.node("parent", [&] {
