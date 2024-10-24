@@ -739,7 +739,24 @@ struct Sculpt::Main : Input_event_handler,
 
 	double _font_size_px = 14;
 
-	Area _screen_size { };
+	Area  _screen_size { };
+	Point _screen_pos  { };
+
+	Rom_handler<Main> _nitpicker_hover_handler {
+		_env, "nitpicker_hover", *this, &Main::_handle_nitpicker_hover };
+
+	Expanding_reporter _gui_fb_config { _env, "config", "gui_fb_config" };
+
+	Constructible<Gui::Point> _pointer_pos { };
+
+	void _handle_nitpicker_hover(Xml_node const &hover)
+	{
+		if (hover.has_attribute("xpos"))
+			_pointer_pos.construct(Gui::Point::from_xml(hover));
+
+		/* place leitzentrale at the display under the pointer */
+		_handle_gui_mode();
+	}
 
 	Panel_dialog::Tab _selected_tab = Panel_dialog::Tab::COMPONENTS;
 
@@ -1674,9 +1691,10 @@ struct Sculpt::Main : Input_event_handler,
 			if (_fb_connectors.update(_heap, node).progress) {
 				_fb_config.apply_connectors(_fb_connectors);
 				_generate_fb_config();
+				_handle_gui_mode();
+				_graph_view.refresh();
 			}
 		});
-		_graph_view.refresh();
 	}
 
 	/**
@@ -2061,9 +2079,38 @@ void Sculpt::Main::_handle_gui_mode()
 {
 	_panorama = _gui.panorama();
 
-	_screen_size = _panorama.convert<Gui::Area>(
-		[&] (Gui::Rect rect) { return rect.area; },
-		[&] (Gui::Undefined) { return Gui::Area { 1024, 768 }; });
+	/* place leitzentrale at pointed display */
+	{
+		Rect rect { };
+
+		_gui.with_info([&] (Xml_node const &info) {
+			rect = Rect::from_xml(info); /* entire panorama */
+
+			if (!_pointer_pos.constructed())
+				return;
+
+			Gui::Point const at = *_pointer_pos;
+
+			info.for_each_sub_node("capture", [&] (Xml_node const &capture) {
+				Rect const display = Rect::from_xml(capture);
+				if (display.contains(at))
+					rect = display;
+			});
+		});
+
+		if (!rect.valid() || rect == Rect { _screen_pos, _screen_size })
+			return;
+
+		_screen_pos  = rect.at;
+		_screen_size = rect.area;
+	}
+
+	_gui_fb_config.generate([&] (Xml_generator &xml) {
+		xml.attribute("xpos",   _screen_pos.x);
+		xml.attribute("ypos",   _screen_pos.y);
+		xml.attribute("width",  _screen_size.w);
+		xml.attribute("height", _screen_size.h);
+	});
 
 	_update_window_layout();
 
