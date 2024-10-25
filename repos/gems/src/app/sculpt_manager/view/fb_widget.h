@@ -121,7 +121,7 @@ struct Sculpt::Fb_widget : Widget<Vbox>
 						if (count == num_merged || count == num_merged + 1) {
 							if (s.hovered() && !s.dragged())
 								s.attribute("hovered", "yes");
-						} else  {
+						} else {
 							s.attribute("style", "unimportant");
 						}
 						s.sub_scope<Label>("=");
@@ -130,7 +130,7 @@ struct Sculpt::Fb_widget : Widget<Vbox>
 						s.sub_scope<Label>("Swap");
 						if (s.hovered() && !s.dragged())
 							s.attribute("hovered", "yes");
-						if (s.dragged())
+						if (s.hovered() && s.dragged())
 							s.attribute("selected", "yes");
 					});
 				});
