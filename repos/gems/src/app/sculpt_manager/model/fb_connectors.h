@@ -227,6 +227,7 @@ struct Sculpt::Fb_connectors : private Noncopyable
 				},
 				[&] (Connector &conn) {
 					progress = true;
+					conn.update(alloc, Xml_node("<empty/>"));
 					destroy(alloc, &conn);
 				},
 				[&] (Connector &conn, Xml_node const &node) {
@@ -272,7 +273,6 @@ struct Sculpt::Fb_connectors : private Noncopyable
 				if (mode.id == id)
 					fn(mode.attr); }); });
 	}
-
 };
 
 #endif /* _MODEL__FB_CONNECTORS_H_ */
