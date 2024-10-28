@@ -328,15 +328,28 @@ struct Sculpt::Fb_config
 
 	void with_merge_info(auto const &fn) const
 	{
-		/* merged screen size and name corresponds to first connector */
+		Merge_info info { };
+
+		/* merged screen size and name corresponds to first enabled connector */
 		for (unsigned i = 0; i < _num_merged; i++) {
-			Merge_info const info { .name = _entries[i].name,
-			                        .px   = _entries[i].mode_attr.px };
-			if (info.px.valid() && _entries[i].present) {
-				fn(info);
-				return;
+			info = { .name = _entries[i].name,
+			         .px   = _entries[i].mode_attr.px };
+			if (info.px.valid() && _entries[i].present)
+				break;
+		}
+
+		/* if all merged connectors are switched of, use name of first one */
+		if (!info.px.valid()) {
+			for (unsigned i = 0; i < _num_merged; i++) {
+				info = { .name = _entries[i].name,
+				         .px   = _entries[i].mode_attr.px };
+				if (_entries[i].present)
+					break;
 			}
 		}
+
+		if (info.name.length() > 1)
+			fn(info);
 	};
 
 	void _gen_merge_node(Xml_generator &xml) const
