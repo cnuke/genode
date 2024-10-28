@@ -2080,6 +2080,7 @@ void Sculpt::Main::_handle_gui_mode()
 	_panorama = _gui.panorama();
 
 	/* place leitzentrale at pointed display */
+	Rect const orig_screen_rect { _screen_pos, _screen_size };
 	{
 		Rect rect { };
 
@@ -2098,25 +2099,36 @@ void Sculpt::Main::_handle_gui_mode()
 			});
 		});
 
-		if (!rect.valid() || rect == Rect { _screen_pos, _screen_size })
-			return;
-
 		_screen_pos  = rect.at;
 		_screen_size = rect.area;
 	}
 
-	_gui_fb_config.generate([&] (Xml_generator &xml) {
-		xml.attribute("xpos",   _screen_pos.x);
-		xml.attribute("ypos",   _screen_pos.y);
-		xml.attribute("width",  _screen_size.w);
-		xml.attribute("height", _screen_size.h);
-	});
+	bool const screen_changed = (orig_screen_rect != Rect { _screen_pos, _screen_size });
 
-	_update_window_layout();
+	if (screen_changed) {
+		_gui_fb_config.generate([&] (Xml_generator &xml) {
+			xml.attribute("xpos",   _screen_pos.x);
+			xml.attribute("ypos",   _screen_pos.y);
+			xml.attribute("width",  _screen_size.w);
+			xml.attribute("height", _screen_size.h);
+		});
+
+		_panel_dialog.min_width = _screen_size.w;
+		unsigned const menu_width = max((unsigned)(_font_size_px*21.0), 320u);
+		_diag_dialog.min_width = menu_width;
+		_network_dialog.min_width = menu_width;
+
+		_panel_dialog.refresh();
+		_network_dialog.refresh();
+		_diag_dialog.refresh();
+		_update_window_layout();
+	}
 
 	_settings.manual_fonts_config = _fonts_config.try_generate_manually_managed();
 
 	if (!_settings.manual_fonts_config) {
+
+		double const orig_font_size_px = _font_size_px;
 
 		_font_size_px = (double)_screen_size.h / 60.0;
 
@@ -2129,57 +2141,53 @@ void Sculpt::Main::_handle_gui_mode()
 		 */
 		_font_size_px = max(_font_size_px, _min_font_size_px);
 
-		_fonts_config.generate([&] (Xml_generator &xml) {
-			xml.attribute("copy",  true);
-			xml.attribute("paste", true);
-			xml.node("vfs", [&] {
-				gen_named_node(xml, "rom", "Vera.ttf");
-				gen_named_node(xml, "rom", "VeraMono.ttf");
-				gen_named_node(xml, "dir", "fonts", [&] {
+		if (orig_font_size_px != _font_size_px) {
+			_fonts_config.generate([&] (Xml_generator &xml) {
+				xml.attribute("copy",  true);
+				xml.attribute("paste", true);
+				xml.node("vfs", [&] {
+					gen_named_node(xml, "rom", "Vera.ttf");
+					gen_named_node(xml, "rom", "VeraMono.ttf");
+					gen_named_node(xml, "dir", "fonts", [&] {
 
-					auto gen_ttf_dir = [&] (char const *dir_name,
-					                        char const *ttf_path, double size_px) {
+						auto gen_ttf_dir = [&] (char const *dir_name,
+						                        char const *ttf_path, double size_px) {
 
-						gen_named_node(xml, "dir", dir_name, [&] {
-							gen_named_node(xml, "ttf", "regular", [&] {
-								xml.attribute("path",    ttf_path);
-								xml.attribute("size_px", size_px);
-								xml.attribute("cache",   "256K");
+							gen_named_node(xml, "dir", dir_name, [&] {
+								gen_named_node(xml, "ttf", "regular", [&] {
+									xml.attribute("path",    ttf_path);
+									xml.attribute("size_px", size_px);
+									xml.attribute("cache",   "256K");
+								});
 							});
-						});
-					};
+						};
 
-					gen_ttf_dir("title",      "/Vera.ttf",     _font_size_px*1.25);
-					gen_ttf_dir("text",       "/Vera.ttf",     _font_size_px);
-					gen_ttf_dir("annotation", "/Vera.ttf",     _font_size_px*0.8);
-					gen_ttf_dir("monospace",  "/VeraMono.ttf", _font_size_px);
-				});
-			});
-			xml.node("default-policy", [&] { xml.attribute("root", "/fonts"); });
-
-			auto gen_color = [&] (unsigned index, Color color) {
-				xml.node("palette", [&] {
-					xml.node("color", [&] {
-						xml.attribute("index", index);
-						xml.attribute("value", String<16>(color));
+						gen_ttf_dir("title",      "/Vera.ttf",     _font_size_px*1.25);
+						gen_ttf_dir("text",       "/Vera.ttf",     _font_size_px);
+						gen_ttf_dir("annotation", "/Vera.ttf",     _font_size_px*0.8);
+						gen_ttf_dir("monospace",  "/VeraMono.ttf", _font_size_px);
 					});
 				});
-			};
+				xml.node("default-policy", [&] { xml.attribute("root", "/fonts"); });
 
-			Color const background = Color::rgb(0x1c, 0x22, 0x32);
+				auto gen_color = [&] (unsigned index, Color color) {
+					xml.node("palette", [&] {
+						xml.node("color", [&] {
+							xml.attribute("index", index);
+							xml.attribute("value", String<16>(color));
+						});
+					});
+				};
 
-			gen_color(0, background);
-			gen_color(8, background);
-		});
+				Color const background = Color::rgb(0x1c, 0x22, 0x32);
+
+				gen_color(0, background);
+				gen_color(8, background);
+			});
+			/* propagate fonts config of runtime view */
+			generate_runtime_config();
+		}
 	}
-
-	_panel_dialog.min_width = _screen_size.w;
-	unsigned const menu_width = max((unsigned)(_font_size_px*21.0), 320u);
-	_diag_dialog.min_width = menu_width;
-	_network_dialog.min_width = menu_width;
-
-	/* font size may has changed, propagate fonts config of runtime view */
-	generate_runtime_config();
 }
 
 
