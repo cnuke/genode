@@ -269,7 +269,7 @@ void Menu_view::Dialog::_handle_dialog()
 		_gui_sync_enabled = true;
 	}
 
-	_redraw();
+	_handle_gui_sync();
 }
 
 
