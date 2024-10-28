@@ -151,6 +151,18 @@ struct Sculpt::Main : Input_event_handler,
 
 	void _handle_gui_mode();
 
+	Rom_handler<Main> _leitzentrale_rom {
+		_env, "leitzentrale", *this, &Main::_handle_leitzentrale };
+
+	void _handle_leitzentrale(Xml_node const &leitzentrale)
+	{
+		bool const orig_leitzentrale_visibile = _leitzentrale_visible;
+		_leitzentrale_visible = leitzentrale.attribute_value("enabled", false);
+
+		if (orig_leitzentrale_visibile != _leitzentrale_visible)
+			_handle_gui_mode();
+	}
+
 	Rom_handler<Main> _config { _env, "config", *this, &Main::_handle_config };
 
 	void _handle_config(Xml_node const &config)
@@ -742,6 +754,8 @@ struct Sculpt::Main : Input_event_handler,
 	Area  _screen_size { };
 	Point _screen_pos  { };
 
+	bool _leitzentrale_visible = false;
+
 	Rom_handler<Main> _nitpicker_hover_handler {
 		_env, "nitpicker_hover", *this, &Main::_handle_nitpicker_hover };
 
@@ -930,6 +944,9 @@ struct Sculpt::Main : Input_event_handler,
 	 */
 	void handle_input_event(Input::Event const &ev) override
 	{
+		ev.handle_absolute_motion([&] (int x, int y) {
+			_pointer_pos.construct(x, y); });
+
 		Keyboard_focus_guard focus_guard { *this };
 
 		Dialog::Event::Seq_number const seq_number { _global_input_seq_number.value };
