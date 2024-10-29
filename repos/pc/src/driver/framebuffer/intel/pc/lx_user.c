@@ -1003,6 +1003,7 @@ static void _report_connectors(void * genode_data, bool const discrete)
 		lx_emul_i915_report_connector(connector, genode_data,
 		                              connector->name,
 		                              connector->status != connector_status_disconnected,
+		                              !!connector->probed_modes.next,
 		                              get_brightness(connector, INVALID_BRIGHTNESS),
 		                              connector->display_info.width_mm,
 		                              connector->display_info.height_mm);
