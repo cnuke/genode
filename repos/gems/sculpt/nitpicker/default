@@ -1,7 +1,7 @@
 <config focus="rom">
 	<capture/> <event/>
 	<report hover="yes" focus="yes" clicked="yes" keystate="no" panorama="yes"/>
-	<background color="#000000"/>
+	<background color="#161616"/>
 
 	<domain name="overlay"        layer="0" label="no" hover="always" focus="transient" content="client"/>
 	<domain name="pointer"        layer="1" content="client" label="no" origin="pointer" />
