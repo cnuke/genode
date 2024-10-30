@@ -728,7 +728,7 @@ void Sandbox::Child::announce_service(Service::Name const &service_name)
 
 void Sandbox::Child::resource_request(Parent::Resource_args const &args)
 {
-	log("child \"", name(), "\" requests resources: ", args);
+	log("\033[36m" "child \"", name(), "\" requests resources: ", args, "\033[0m\n");
 
 	_requested_resources.construct(args);
 	_report_update_trigger.trigger_immediate_report_update();
