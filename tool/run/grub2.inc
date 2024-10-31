@@ -32,7 +32,7 @@ proc create_header_grub2_config { } {
 
 	# choose best graphic mode
 	# uncomment line to get vga console working in hypervisor
-	puts $fh "set gfxpayload=auto"
+	puts $fh "set gfxpayload=1920x1080"
 
 	if {[have_include image/uefi]} {
 		puts $fh "insmod gfxterm"
