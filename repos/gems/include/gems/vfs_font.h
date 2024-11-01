@@ -60,11 +60,19 @@ class Genode::Vfs_font : public Text_painter::Font
 
 				Glyph_header() { }
 
-				Glyph glyph() const { return Glyph { .width   = _width,
-				                                     .height  = _height,
-				                                     .vpos    = _vpos,
-				                                     .advance = _advance(),
-				                                     .values  = _values }; }
+				Advance_info advance_info() const
+				{
+					return { .width = _width, .advance = _advance() };
+				}
+
+				void with_glyph(Text_painter::Area const bb, auto const &fn) const
+				{
+					fn(Glyph { .width   = min(unsigned(_width),  bb.w),
+					           .height  = min(unsigned(_height), bb.h),
+					           .vpos    = _vpos,
+					           .advance = _advance(),
+					           .values  = _values });
+				}
 
 		} __attribute__((packed));
 
@@ -149,7 +157,8 @@ class Genode::Vfs_font : public Text_painter::Font
 		{
 			_glyphs_file.read(_file_pos(c), _buffer);
 
-			fn.apply(_buffer.header.glyph());
+			_buffer.header.with_glyph(_bounding_box, [&] (Glyph const &glyph) {
+				fn.apply(glyph); });
 		}
 
 		Advance_info advance_info(Codepoint c) const override
@@ -158,9 +167,7 @@ class Genode::Vfs_font : public Text_painter::Font
 
 			_glyphs_file.read(_file_pos(c), header_buffer);
 
-			Glyph const glyph = _buffer.header.glyph();
-
-			return Advance_info { .width = glyph.width, .advance = glyph.advance };
+			return _buffer.header.advance_info();
 		}
 
 		unsigned baseline() const override { return _baseline; }
