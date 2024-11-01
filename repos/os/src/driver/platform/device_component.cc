@@ -100,6 +100,7 @@ Genode::Irq_session_capability Device_component::irq(unsigned idx)
 		if (irq.idx != idx)
 			return;
 
+		try {
 		if (!irq.shared && !irq.irq.constructed()) {
 			addr_t pci_cfg_addr = 0;
 			if (irq.type != Irq_session::TYPE_LEGACY) {
@@ -124,6 +125,9 @@ Genode::Irq_session_capability Device_component::irq(unsigned idx)
 			});
 
 		cap = irq.shared ? irq.sirq->cap() : irq.irq->cap();
+		} catch (...) {
+			Genode::error(__func__, ":", __LINE__, ": could not construct irq: ", irq.number);
+		}
 	});
 
 	return cap;
