@@ -189,6 +189,7 @@ void Driver::Device::update(Allocator &alloc, Xml_node const &node,
 {
 	using Bar = Device::Pci_bar;
 
+	try {
 	_irq_list.update_from_xml(node,
 
 		/* create */
@@ -220,6 +221,10 @@ void Driver::Device::update(Allocator &alloc, Xml_node const &node,
 		/* update */
 		[&] (Irq &, Xml_node const &) { }
 	);
+	} catch (...) {
+		Genode::error(__func__, ":", __LINE__, ": could not update IRQ from node: "
+		              "'", node, "'");
+	}
 
 	_io_mem_list.update_from_xml(node,
 
