@@ -84,6 +84,7 @@ void Graph::_view_selected_node_content(Scope<Depgraph, Frame, Vbox> &s,
 	if (_deploy_children.exists(name)) {
 
 		s.sub_scope<Frame>([&] (Scope<Depgraph, Frame, Vbox, Frame> &s) {
+			s.attribute("style", "invisible");
 			s.sub_scope<Hbox>([&] (Scope<Depgraph, Frame, Vbox, Frame, Hbox> &s) {
 				s.widget(_remove);
 				s.widget(_restart); }); });
