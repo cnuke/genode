@@ -432,6 +432,8 @@ struct Menu_view::Depgraph_widget : Widget
 	 */
 	Rect _bounding_box { Point(0, 0), Area(0, 0) };
 
+	Color _color { Color::black() };
+
 	template <typename FN>
 	void apply_to_primary_dependency(Node &node, FN const &fn)
 	{
@@ -451,6 +453,9 @@ struct Menu_view::Depgraph_widget : Widget
 
 	void update(Xml_node node) override
 	{
+		_factory.styles.with_label_style(node, [&] (Label_style style) {
+			_color = style.color; });
+
 		/* update depth direction */
 		{
 			using Dir_name = String<10>;
@@ -668,17 +673,12 @@ struct Menu_view::Depgraph_widget : Widget
 				if (!alpha)
 					return;
 
-				Color color;
-
 				auto dimmed_alpha = [&] (uint8_t s) { return uint8_t((s*alpha) >> 8); };
 
-				if (shadow) {
-					color = dep.primary() ? Color { 0, 0, 0, dimmed_alpha(150) }
-					                      : Color { 0, 0, 0, dimmed_alpha(50) };
-				} else {
-					color = dep.primary() ? Color { 255, 255, 255, dimmed_alpha(190) }
-					                      : Color { 255, 255, 255, dimmed_alpha(120) };
-				}
+				Color color = shadow ? Color::black() : _color;
+
+				color.a = shadow ? dep.primary() ? dimmed_alpha(150) : dimmed_alpha(50)
+				                 : dep.primary() ? dimmed_alpha(190) : dimmed_alpha(120);
 
 				dep.apply_to_server([&] (Node const &server) {
 
