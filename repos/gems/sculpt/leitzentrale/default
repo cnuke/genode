@@ -302,7 +302,7 @@
 				<config width="300" height="150">
 					<libc/>
 					<vfs> <rom name="genode_logo.png"/> </vfs>
-					<fill color="#272f45"/>
+					<fill color="#101010"/>
 					<image png="genode_logo.png" anchor="bottom_right" alpha="100"
 					                             xpos="-20" ypos="-20" />
 				</config>
