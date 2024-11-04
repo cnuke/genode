@@ -1,4 +1,4 @@
-<launcher pkg="motif_decorator" priority="-1">
+<launcher pkg="themed_decorator" priority="-1">
 	<route>
 		<service name="ROM" label="window_layout"> <child name="wm"/> </service>
 		<service name="ROM" label="pointer">       <child name="wm"/> </service>

@@ -15,7 +15,7 @@ launcher: black_hole system_clock
 launcher: fonts_fs
 
 launcher: default_recall_fs
-launcher: wm window_layouter motif_decorator
+launcher: wm window_layouter themed_decorator
 
 launcher: touchpad
 launcher: sof_audio bsd_audio audio_mixer

@@ -20,7 +20,7 @@
 	<start name="default_recall_fs"/>
 
 	<start name="window_layouter"/>
-	<start name="motif_decorator"/>
+	<start name="themed_decorator"/>
 	<start name="wm"/>
 
 	<start name="mesa_gpu-cpu" pkg="mesa_gpu-cpu" priority="-2">
