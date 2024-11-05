@@ -164,12 +164,15 @@ struct Sculpt::Fb_driver : private Noncopyable
 		                     registry, "vesa_fb", Priority::MULTIMEDIA,
 		                     Ram_quota { 8*1024*1024 }, Cap_quota { 110 });
 
+		bool const mnt_pocket = board_info.soc.board == "mnt_pocket";
+
 		_soc_fb.conditional(board_info.soc.fb && board_info.options.display,
 		                    registry, Child_state::Attr {
 		                        .name      = "fb",
 		                        .priority  = Priority::MULTIMEDIA,
 		                        .cpu_quota = 20,
-		                        .location  = { },
+		                        .location  = mnt_pocket ? Affinity::Location { 1, 0, 1, 1 }
+		                                                : Affinity::Location { },
 		                        .initial   = { Ram_quota { 16*1024*1024 },
 		                                       Cap_quota { 250 } },
 		                        .max       = { } } );
