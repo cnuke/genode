@@ -93,6 +93,10 @@ struct Sculpt::Board_info
 	 */
 	struct Soc
 	{
+		using Board = String<64>;
+
+		Board board;
+
 		bool fb, touch, wifi, usb, mmc, modem, nic;
 
 		bool operator != (Soc const &other) const

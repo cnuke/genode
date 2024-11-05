@@ -294,6 +294,8 @@ struct Sculpt::Main : Input_event_handler,
 	 **********************/
 
 	Board_info::Soc _soc {
+		.board = _build_info.board,
+
 		.fb    = _mnt_reform || _mnt_pocket,
 		.touch = false,
 		.wifi  = _mnt_pocket, /* initialized via PCI on Reform */

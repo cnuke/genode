@@ -203,6 +203,8 @@ struct Sculpt::Main : Input_event_handler,
 	 **********************/
 
 	Board_info::Soc _soc {
+		.board = "pinephone",
+
 		.fb    = _phone_hardware,  /* immediately activated */
 		.touch = _phone_hardware,
 		.wifi  = false, /* activated at second driver stage */
