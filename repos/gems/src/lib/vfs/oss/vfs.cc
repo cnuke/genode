@@ -335,8 +335,12 @@ struct Vfs::Oss_file_system::Audio
 
 				char const * const channel_map[CHANNELS] = { "left", "right" };
 
-				for (unsigned i = 0; i < CHANNELS; i++)
-					_session[i].construct(env, channel_map[i]);
+				try {
+					for (unsigned i = 0; i < CHANNELS; i++)
+						_session[i].construct(env, channel_map[i]);
+				} catch (...) {
+					error("could not create Play sessions in OSS plugin");
+				}
 			}
 
 			void _destroy_sessions()
@@ -537,8 +541,12 @@ struct Vfs::Oss_file_system::Audio
 
 				char const * const channel_map[CHANNELS] = { "left", "right" };
 
-				for (unsigned i = 0; i < CHANNELS; i++)
-					_session[i].construct(env, channel_map[i]);
+				try {
+					for (unsigned i = 0; i < CHANNELS; i++)
+						_session[i].construct(env, channel_map[i]);
+				} catch (...) {
+					error("could not create Record sessions in OSS plugin");
+				}
 			}
 
 			void _destroy_sessions()
