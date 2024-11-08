@@ -195,6 +195,9 @@ struct Sculpt::Ap_selector_widget : Widget<Vbox>
 		 || _wifi_connection.state == Wifi_connection::CONNECTING)
 			return false;
 
+		if (_wifi_connection.rfkilled)
+			return false;
+
 		return _for_each_ap([&] (Access_point const &ap) {
 			return (_selected == ap.bssid) && ap.wpa_protected(); });
 	}
