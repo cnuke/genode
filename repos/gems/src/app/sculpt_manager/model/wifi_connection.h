@@ -26,6 +26,7 @@ struct Sculpt::Wifi_connection
 	State state;
 
 	bool auth_failed;
+	bool rfkilled;
 
 	Access_point::Bssid bssid;
 	Access_point::Ssid  ssid;
@@ -40,21 +41,25 @@ struct Sculpt::Wifi_connection
 		bool connected   = false;
 		bool connecting  = false;
 		bool auth_failed = false;
+		bool rfkilled    = false;
 
 		node.with_optional_sub_node("accesspoint", [&] (Xml_node const &ap) {
 			connected   = (ap.attribute_value("state", String<32>()) == "connected");
 			connecting  = (ap.attribute_value("state", String<32>()) == "connecting");
 			auth_failed =  ap.attribute_value("auth_failed", false);
+			rfkilled    =  ap.attribute_value("rfkilled", false);
 
 			if (!connected && !connecting)
 				result = { .state = DISCONNECTED,
 				           .auth_failed = auth_failed,
+				           .rfkilled = rfkilled,
 				           .bssid = Access_point::Bssid{},
 				           .ssid  = Access_point::Bssid{} };
 
 			else
 				result = { .state = connected ? CONNECTED : CONNECTING,
 				           .auth_failed = false,
+				           .rfkilled = false,
 				           .bssid = ap.attribute_value("bssid", Access_point::Bssid()),
 				           .ssid  = ap.attribute_value("ssid",  Access_point::Ssid()) };
 		});
@@ -63,7 +68,7 @@ struct Sculpt::Wifi_connection
 
 	static Wifi_connection disconnected_wifi_connection()
 	{
-		return Wifi_connection { DISCONNECTED, false, Access_point::Bssid{}, Access_point::Ssid{} };
+		return Wifi_connection { DISCONNECTED, false, false, Access_point::Bssid{}, Access_point::Ssid{} };
 	}
 
 	bool connected()    const { return state == CONNECTED;  }
