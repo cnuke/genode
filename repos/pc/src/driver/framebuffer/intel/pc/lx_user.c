@@ -1029,6 +1029,7 @@ static bool mirrored_fb(struct drm_client_dev * client,
 
 static void _report_connectors(void * genode_data, bool const discrete)
 {
+	struct drm_connector_list_iter conn_iter;
 	struct drm_connector    *connector = NULL;
 	struct drm_display_mode *mode      = NULL;
 	struct drm_mode_set     *modeset   = NULL;
@@ -1068,6 +1069,30 @@ static void _report_connectors(void * genode_data, bool const discrete)
 		                              connector->display_info.height_mm);
 	}
 	mutex_unlock(&dev_client->modeset_mutex);
+
+	/* report disconnected connectors */
+	drm_connector_list_iter_begin(dev_client->dev, &conn_iter);
+	drm_client_for_each_connector_iter(connector, &conn_iter) {
+
+		/* read configuration for connector */
+		struct genode_mode conf_mode = {};
+		lx_emul_i915_connector_config(connector->name, &conf_mode);
+
+		if ((discrete && conf_mode.mirror) || (!discrete && !conf_mode.mirror))
+			continue;
+
+		if (connector->status != connector_status_disconnected)
+			continue;
+
+		lx_emul_i915_report_connector(connector, genode_data,
+		                              connector->name,
+		                              connector->status != connector_status_disconnected,
+		                              false, /* has modes */
+		                              get_brightness(connector, INVALID_BRIGHTNESS),
+		                              connector->display_info.width_mm,
+		                              connector->display_info.height_mm);
+	}
+	drm_connector_list_iter_end(&conn_iter);
 }
 
 
