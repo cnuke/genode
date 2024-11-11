@@ -47,6 +47,9 @@ Platform_thread::~Platform_thread()
 			                  Address_space::Core_local_addr{0});
 	}
 
+	/* detach UTCB from core/kernel */
+	core_env().rm_session()->detach((addr_t)_utcb_core_addr);
+
 	/* free UTCB */
 	core_env().pd_session()->free(_utcb);
 }
