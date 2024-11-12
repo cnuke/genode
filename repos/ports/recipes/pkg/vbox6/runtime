@@ -51,7 +51,6 @@
 		<rom label="expat.lib.so"/>
 		<rom label="glapi.lib.so"/>
 		<rom label="ld.lib.so"/>
-		<rom label="init"/>
 		<rom label="virtualbox6"/>
 		<rom label="jpeg.lib.so"/>
 		<rom label="libc.lib.so"/>
