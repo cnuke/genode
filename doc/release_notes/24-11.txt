@@ -15,7 +15,39 @@
 New "Genode Applications" book
 ##############################
 
-; @jschlatow
+Complementary to our _Genode Foundations_ and _Genode Platforms_ books, we have
+been working on a new book that concentrates on application development.
+The _Genode Applications_ book centers on the Goa SDK that we introduced with
+[https://genode.org/documentation/release-notes/19.11#New_tooling_for_bridging_existing_build_systems_with_Genode - Genode 19.11]
+and which has seen significant improvements over the past year (
+[https://genode.org/documentation/release-notes/23.08#Goa_tool_gets_usability_improvements_and_depot-index_publishing_support],
+[https://genode.org/documentation/release-notes/24.02#Sculpt_OS_as_remote_test_target_for_the_Goa_SDK - 24.02],
+[https://genode.org/documentation/release-notes/24.08#Goa_SDK - 24.08]).
+
+The book intends to provide a beginner-friendly starting point for application
+development and porting for Genode and Sculpt OS in particular.
+It starts off with a getting-started tutorial for the Goa tool. It
+further recapitulates Genode's architecture and a subset of its
+libraries, components and conventions such as the C runtime, VFS, NIC router and
+package management. With these essentials in place, the book is topped off with
+instructions for application debugging and a collection of advanced tutorials.
+
+Aligned with the release of Sculpt 24.10, we updated the Goa tool with the
+corresponding depot archive versions. Furthermore, the Sculpt-integrated and
+updated _Goa testbed_ preset is now prepared for remote debugging.
+
+: <div class="visualClear"><!-- --></div>
+: <p>
+:  <div style="clear: both; float: left; margin-right:20px;">
+:   <a class="internal-link" href="https://genode.org">
+:    <img class="image-inline" src="https://genode.org/documentation/genode-applications-title.png">
+:   </a>
+:  </div>
+: </p>
+
+:First revision of the Genode Applications document:
+
+  [https://genode.org/documentation/genode-applications-24-11.pdf]
 
 
 Multi-monitor support
