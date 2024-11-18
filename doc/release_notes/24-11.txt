@@ -1,0 +1,1331 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 24.11
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+New "Genode Applications" book
+##############################
+
+; @jschlatow
+
+
+Multi-monitor support
+#####################
+
+; @nfeske @chelmuth
+
+commit dd13a976afe195e444f2c170d3be28d5107ce156
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 2 14:59:06 2024 +0200
+
+    wm: alloc real view IDs locally
+    
+    Don't use client-provided view IDs as IDs for the wrapped nitpicker
+    views. There is no 1:1 relation of IDs and physical views. So if a wm
+    client re-uses an ID, the physical view is expected to stay in tact.
+    If the corresponding view object within the wm is not destroyed, however,
+    its ID remains allocated, which may then conflict the ID of a new view
+    if the ID is reused by the client. This scenario resulted in the
+    following error:
+    
+      Error: Uncaught exception of type 'Genode::Id_space<Gui::View_ref>::Conflicting_id'
+    
+    This patch handles the situation by keeping the allocator of physical
+    views (_real_view) decoupled from the client's ID allocator.
+    
+    Issue #5242
+
+commit e4af72605669d01011d04db00528b611d9e1af10
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 2 15:40:31 2024 +0200
+
+    nitpicker: alloc view caps only when needed
+    
+    This patch moves the eager allocation of view capabilities from the
+    'view' and 'child_view' RPC functions to the 'view_capability' RPC
+    function, reducing the consumption of capabilities in all scenarios
+    where views don't need to be shared between GUI sessions.
+    
+    Issue #5340
+
+commit e8e499ae9e16b9cbe7343c482b25873e4463f27b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 3 16:48:40 2024 +0200
+
+    nitpicker: account input and framebuffer caps
+    
+    This patch deduces the caps needed for the framebuffer and input RPC
+    objects from the resources accounted locally within the session. It also
+    takes precautions for the situation where a client offers too little
+    resources, prompting the mid-way cancelling of the 'Session_component'
+    creation. With the patch, the 'ep.manage' operations are rolled back
+    by the corresponding 'ep.dissolve' operations.
+    
+    Issue #5340
+
+commit a9b2d9bdc64ceceedeec30bd7abc4b069b10c2d2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 3 16:35:54 2024 +0200
+
+    gui_session: adjust session quota for wm scenarios
+    
+    The current default session RAM quota of 36 KiB reflects the needs of
+    the nitpicker GUI server. However, in most commonly used scenarios, a
+    GUI client connects to nitpicker indirectly via the wm. The low value
+    worked so far because the wm did not account RAM and cap usage per
+    client so far but paid out of its own pocket and faithfully forwarded
+    all resource upgrades to nitpicker.
+    
+    When adding resource accounting to the wm, the old default value has the
+    effect that a new client has to repeatedly attempt the session creation -
+    each time offering sligthly more session quota - until both nitpicker and
+    the wm are satisfied.
+    
+    By roughly doubling the default to 80 KiB, a wm client immediately
+    succeeds with opening a GUI session without repeated attempts.
+    By specifying a custom 'cap_quota' amount to the 'Genode::Connection',
+    the Gui::Connection now donates enough caps for both the wm and
+    nitpicker.
+    
+    Issue #5340
+
+commit ec50c008bbaf4ac38f4dd1388ec238988b702798
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 2 17:20:12 2024 +0200
+
+    wm: account session resources
+    
+    With this patch, the wm accounts RAM and caps consumed on behalf of its
+    clients to the respective client's session quota instead of paying out
+    of its own pocket. This should make the wm resilient against resource
+    exhaustion and lowers the quota requirements.
+    
+    Issue #5340
+
+commit 0414e4929f054ad345109b3ae15ab0aebeab3662
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Sep 2 14:03:36 2024 +0200
+
+    intel/display: enable panel self refresh support
+    
+    Fixes #5339
+
+commit f147a1220e5c9e11357ec60de108f62d0f7ba44c
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Aug 26 17:02:28 2024 +0200
+
+    intel/display: make effective use of PSR
+    
+    - only mark framebuffer dirty if necessary
+      -> gives the hardware chance to save longer power
+    - remove extra timer connection on Genode component side
+      -> use Linux time primitives
+    
+    Issue #5339
+
+commit e83ace4242005f95cf562a9c14150cec99d43850
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 10 16:36:45 2024 +0200
+
+    decorator: fix window-stacking glitch
+    
+    This is a follow-up commit to "gui_session: manage view ID at the client
+    side", which missed to invalidate the neighbor view of a window but
+    instead wrongly assigned the (now always valid) view ID 0 as neighbor.
+    In situations where a window disappears and re-appears (e.g., repeatedly
+    launching testnit in the wm.run scenario), the new window could not
+    always be topped.
+    
+    Issue #5242
+
+commit 6d68d3297da7e465ae147a6dc4a6286d02be27d9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 16 14:28:05 2024 +0200
+
+    capture_session: propagate physical size in mm
+    
+    This patch adds the physical screen size as argument to the
+    Capture::Session::buffer RPC function, which allows drivers to
+    propagate DPI information to the GUI server. While changing the
+    the interface, the patch replaces the former use of C++ exceptions
+    by a result type. The 'Buffer_result' is handled transparently by the
+    Capture::Connection. The client.h code is now integrated in
+    connection.h.
+    
+    Issue #5344
+
+commit 3f1759a4d1a875bdd6b8dc67346bc003aa321b2c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 16 15:28:06 2024 +0200
+
+    capture_session: detection of idle capture server
+    
+    This patch enhances the Capture::Connection::Screen such that the
+    bounding box of the affected pixels can be tracked by the caller,
+    which can use this information to adjust its behavior to the
+    activity/inactivity of the capture server.
+    
+    Issue #5344
+
+commit 09461c51bdffc35b9e0d482dbf16d302bb5cfdca
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 17 17:29:00 2024 +0200
+
+    capture_session: capture stop/wakeup protocol
+    
+    With this change, a client (i.e., display driver) can register
+    a wakeup signal handler to be notified on the arrival of new data to
+    capture. The signal is delivered only when the client has stopped
+    capturing. The client propagates this condition to the server using
+    the new 'capture_stopped' RPC call.
+    
+    This change in principle enables a display driver to suspend its
+    periodic mode of operation after a few frames without capturing any
+    new data. As the first driver, the fb_sdl driver has been adapted to
+    the new protocol. This change not only eliminates the driver's CPU
+    load when idle, it also reduces the latency of sporadic output
+    because the response to such GUI updates is no longer bound by a
+    fixed periodic interval.
+    
+    Issue #5344
+
+commit ffcd08b5c778f6e540fc88c0a7b9d52cbe37e7b8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 18 16:05:15 2024 +0200
+
+    backdrop,pdf_view: remove sync handling
+    
+    The sync handling makes the code more complicated without a benefit.
+    
+    Issue #5347
+
+commit 58d20c77517580009b8237ec405358ae32fe7ed4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Sep 19 15:55:57 2024 +0200
+
+    menu_view: use timer for animation timing
+    
+    This patch removes the use of sync signals as time source. The animation
+    phase is now timed using a timer connection as tick source while sync
+    signals are used for scheduling the redraws.
+    
+    Issue #5347
+
+commit e69ade529909ac752fd9bad2221e82786769ed93
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Sep 19 18:00:38 2024 +0200
+
+    decorator: use timer for animation timing
+    
+    This patch changes the precision of the configuration's motion attribute
+    to a multiple of 10 ms (centi-seconds). The previous version used steps
+    of 20 ms. Hence, one needs to adjust existing configurations by doubling
+    the motion attribute values of the themed decorator.
+    
+    Issue #5347
+
+commit fc4b026b62b8aba56625ad5c93f848f8e090f15b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 18 16:25:02 2024 +0200
+
+    nitpicker: remove periodic mode of operation
+    
+    Unless nitpicker is used in 'request_framebuffer' mode, it no longer
+    depends on a periodic timer but merely acts as a broker between capture
+    clients and GUI clients. Sync signals as delivered to GUI clients are
+    now wired to Capture::Session::capture_at calls. So the display driver
+    defines the occurrence of those signals.
+    
+    Note that sync signals are only delivered while a driver actively calls
+    'capture_at'. If a driver stops capturing, GUI clients no longer receive
+    any sync signal. This is a change from the previous situation where GUI
+    clients could depend on the periodicity of sync signals.
+    
+    Issue #5347
+
+commit 0e33830d1fb210160e5368af499c15803662c2bc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 23 15:05:51 2024 +0200
+
+    framebuffer_session: use Rect as refresh argument
+    
+    This patch replaces basic-type arguments x, y, w, h by the 'Rect' type,
+    and imports the Genode namespace into the Framebuffer namespace.
+    
+    Issue #5350
+
+commit 8082aa980e41da8f4b534da40d9fee77d799f8b8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 23 16:54:05 2024 +0200
+
+    framebuffer_session: atomic blitting and panning
+    
+    By enhancing the Framebuffer::Session interface by the new RPC functions
+    'blit' and 'panning', GUI clients become able to attain tearing-free
+    output. Two modes of operations are supported.
+    
+    1. Atomic back-to-front blitting
+    
+       GUI clients that partially update their user interface like regular
+       application dialogs, can now implement double buffering by placing
+       both the back buffer and front buffer within the GUI session's
+       framebuffer and configuring a view that shows only the front buffer.
+       The 'blit' operation allows the client to atomically flush pixels
+       from the back buffer to the front buffer.
+    
+    2. Atomic buffer flipping
+    
+       GUI clients that always update all pixels like a media player or
+       a game can now use the 'panning' feature to atomically redirect the
+       displayed pixels to a different portion of the GUI session's virtual
+       frame buffer. The virtual framebuffer always contains two frames,
+       the displayed one and the next one. Once the next frame is complete,
+       the client changes the panning position to the portion containing
+       the next frame.
+    
+    Issue #5350
+
+commit db2f1e542c53f3bf7566827153f867ea526d01e8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 23 17:43:22 2024 +0200
+
+    decorator: double-buffered output
+    
+    This patch ensures that the displayed pixel buffer is always consistent
+    by applying intermediate drawing steps on an invisible back buffer,
+    which is blitted to the front buffer by the GUI server.
+    
+    Note that the addition of the back buffer increases the decorator's RAM
+    demand by 4*w*h (4 bytes per pixel) whereas w and h are the screen size.
+    
+    Issue #5350
+
+commit 4565cd0143ff2496ce8fbccbb909af30df733092
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 24 15:26:27 2024 +0200
+
+    demo/scout: use atomic panning and blitting
+    
+    Issue #5350
+
+commit 6522158caadfb398a8207cd304e3b8bb25669dc4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 24 17:54:34 2024 +0200
+
+    gems/gui_buffer.h: atomic back-to-front blitting
+    
+    This patch updates menu_view, themed_decorator, and rom_osci to use the
+    new frame-buffer blit operation, mitigating tearing artifacts
+    
+    Issue #5350
+
+commit e738162bdea61345517cad664c5dd32d8513da25
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 25 11:34:39 2024 +0200
+
+    framebuffer_session: alpha as Mode attribute
+    
+    Propagate the want of an alpha channel as attribute of Framebuffer::Mode
+    instead of passing this property as a separate bool argument.
+    
+    This clears the way for adding useful accessors for pixel/alpha/input
+    surfaces to the Mode type as a subsequent step.
+    
+    Issue #5351
+
+commit 5b4e1915d858b43cc38efa1c00220d99fac4c8d2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 25 16:29:06 2024 +0200
+
+    framebuffer_session: accessors for buffer surfaces
+    
+    This patch adds central and safe utilities for accessing the distinct
+    parts of the virtual framebuffer to relieve clients from pointer
+    calculations.
+    
+    Issue #5351
+
+commit e69c01aad3a31728a5a661680a49b53bd97dc7fc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Sep 26 13:45:45 2024 +0200
+
+    framebuffer_session: add sync_source selection
+    
+    The new Framebuffer::Session::sync_source RPC function allows for the
+    selection of a specific source of sync signals in the presence of
+    multiple capture clients at the GUI server.
+    
+    This patch contains only the extension of the interface. The information
+    is not evaluated by the GUI server yet.
+    
+    Issue #5347
+
+commit 50cc52a091d7b5bb4b37f13631a86c1ffdc4bbb7
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed May 4 12:01:54 2022 +0200
+
+    intel/display: use one capture session per display
+    
+    Fixes #5345
+
+commit 458458b65f2648d68668a622c20237ace128eb8c
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Sep 23 16:53:21 2024 +0200
+
+    intel/display: support stop/wakeup protocol
+    
+    Issue #5344
+
+commit f324aa902b382352f06f71c6e05938f13e44acf0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Sep 27 13:56:26 2024 +0200
+
+    nitpicker: configurable capture policies
+    
+    Capture clients used to always capture the view stack at the origin of
+    the coordinate system. So each capture client obtained a mirror of the
+    same picture. This patch allows for the placement of capture clients on
+    larger panorama using Genode's usual label-based policy-selection
+    approach. Thereby, each monitor in multi-monitor scenario can display a
+    different portion of the panorama.
+    
+    The patch takes special care to always keep the pointer in a visible
+    position. The pointer cannot be moved to any area that is not captured.
+    Should the only capture client displaying the pointer disappear, the
+    pointer is warped to the center of (any) remaining capture client.
+    
+    Fixes #5352
+
+commit 318d641266d5edb7028d9eb63d8bf29e60fbf97b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Oct 1 14:56:18 2024 +0200
+
+    gui_session: provide mode info as XML
+    
+    In multi-monitor scenarios, the mode is no longer a single rectangular
+    area but a panorama with potentially many captured rectangles. This
+    patch replaces the former 'mode' and 'mode_sigh' RPC by a new 'info'
+    ROM accessor.
+    
+    Issue #5353
+
+commit d7830a0ce6bfb030f8d26f8079a82ad888eebcc6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 3 17:46:32 2024 +0200
+
+    Add Input::Session::exclusive() interface
+    
+    This interface allows a GUI client to express the intent to exclusively
+    observe relative motion events while locking the absolute pointer
+    position. This patch merely extends the interface without implementing
+    it.
+    
+    As this change touches os/include/input/component.h, it moves the
+    manage/dissolve operations into the class, ensuring the call of
+    dissolve at destruction time.
+    
+    Issue #5355
+
+commit 75b04b38f615f9bc2a6026324b4e24157babf6c8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Oct 4 14:05:08 2024 +0200
+
+    Adjust RAM and cap quotas
+    
+    The recent changes of the GUI stack (proper accounting of cap and RAM
+    resources by the window manager and nitpicker, output buffered at the
+    server side) require quota adjustments at various GUI-related places.
+    
+    Issue #5356
+
+commit 92227df62428df658d877c9213a46a6410acf483
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Oct 6 14:00:48 2024 +0200
+
+    nitpicker: handle Input::Session::exclusive
+    
+    While the focused client has enabled exclusive input, nitpicker does
+    not translate relative motion to absolute motion but routes relative
+    motion directly to the client. Additionally, the pointer origin is
+    forcibly moved to a position outside the screen boundaries, making the
+    pointer invisible.
+    
+    Issue #5355
+
+commit ca47280ce9ee8875c85a947736dac1eda4ec1062
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Oct 6 15:13:54 2024 +0200
+
+    wm/layouter: pointer grabbing/ungrabbing
+    
+    This patch implements the following policy for applications requesting
+    exclusive input (relative motion): The pointer is grabbed as soon as the
+    user clicks inside the application window. It is forcibly ungrabbed on
+    any window-focus change or when tapping the KEY_SCREEN. An application
+    can always enable (transient) exclusive input during a key sequence,
+    e.g., when dragging the mouse while holding the mouse button. Transient
+    exclusive input is revoked when releasing the last button/key.
+    
+    Fixes #5355
+
+commit 4a6c506f37cee3f58d44871814b1391e639e7ac9
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Aug 15 12:37:54 2024 +0200
+
+    nitpicker: deliver press events to global key receiver
+    
+    Fixes the following misbehavior: If a global key is pressed (e.g., Caps
+    Lock in Sculpt) and the mouse is clicked before release, the global-keys
+    handler receives the global-key press but no further events of the
+    sequence, especially *no Caps-Lock release*.
+    
+    A more reasonable fix may address the "else branch" that deletes the
+    _input_receiver in case of mouse events without a hovered client too,
+    which is beyond the narrow scope of this fix.
+
+commit 1a5f3a2210cc80448302c326009e5295a67f10a7
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Oct 21 14:44:55 2024 +0200
+
+    intel/display: mirror unconfigured connectors
+    
+    by default.
+    
+    Issue #5356
+
+commit 71f3e5f82aa3065bc3ab79d39f47217a1e70856a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Oct 21 14:37:55 2024 +0200
+
+    intel/display: improve disrete/mirror swap support
+    
+    Issue #5345
+
+commit f7689a473c82e2d06470629610cee0170c0efa3a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Oct 24 12:07:05 2024 +0200
+
+    intel/display: adjust reported/set xml nodes
+    
+    '<connector mode_id=3 ...' becomes '<connector mode="3" ...'
+    
+    '<mode mode_id="2" ... ' becomes '<mode id="2" ...'
+    
+    '<mode unavailable="true" ...' becomes '<mode usable="false" ...'
+
+commit 44c23ca4728cba634580f10a62aafbf732bed8e1
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Oct 25 13:54:45 2024 +0200
+
+    intel/display: adjust width_mm/height_mm usage
+    
+    On capture creation for discrete usage, use the connector values
+    if display mode does not provide values. For mirror capture ever
+    report no width_mm/height_mm.
+
+commit f3b94a3b21807cb1772ae4bb75e295360cff69eb
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Oct 28 20:59:24 2024 +0100
+
+    intel/display: reconstruct merge capture session
+    
+    also when the name in the config changes.
+    
+    Issue #5356
+    Issue #5345
+
+commit 77471cc10ebdce9cda52838216243502eb55a642
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Oct 29 10:52:05 2024 +0100
+
+    intel/display: report connectors w/o modes as off
+    
+    in the XML report
+
+commit 8ec2d6a36bd484720c6455e199f09ebd2814b7f4
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Tue Oct 29 16:21:27 2024 +0100
+
+    intel/display: don't report unknown state as connected
+    
+    The changes "intel/display: report connectors w/o modes as off" still
+    need improvements to detect mode-less connectors in intermediate states.
+    Until then, don't report connector_status_unknown as connected with
+    modes.
+
+commit 3ab9173b20127fdfe387656439bb3f6ea851bfb7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 24 11:50:16 2024 +0200
+
+    gui_session: window-closed state as attribute
+    
+    With the change of "gui_session: provide mode info as XML", the
+    client-side window-close handling became dysfunct because the
+    window-close state got wrongly interpreted as initial window state, to
+    the effect that a client's initial-window size policy got applied
+    instead of closing the window.
+    
+    This patch makes the inital state of running a windowed application
+    (when no window size is defined yet) clearly distiguishable from the
+    state after which the user closed the window. Prior this patch, both
+    conditions were reflected by an empty <capture/> node in the panorama.
+    Now, the latter condition is reported as <capture closed="yes"/>, which
+    alleviates the need to track the life cycle of a window at the client
+    size.
+    
+    Issue #5353
+
+commit 8c43f8aa333b09304babd976f7616b46cf02216c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 23 19:37:28 2024 +0200
+
+    sculpt_manager: interactive framebuffer settings
+    
+    This patch add a configuration dialog in the intel_fb node of the
+    component graph. The dialog displays a list of present displays labeled
+    after their respecive connectors. A mode can be selected for each
+    connector when clicking on the connector entry.
+    
+    In-between the entries there are two buttons. The connect button is
+    toggle that defines whether the two adjacent entries are mirrored.
+    It is enabled by default so that all new connectors participate in
+    the mirroring. By untoggling the last enabled connect button, the
+    entry below the button becomes a discrete (non-mirrored) display.
+    
+    A swap button allows for changing the order of the list, which has
+    to effects. First, the resolution of the very first entry defines
+    the size for mirrored display. So be changing the order of mirrored
+    displays, one can pick the preferred screen size. Second, the order
+    of discrete displays defines the layout of the panorama from left to
+    right. (the panorama config is not part of this commit though)
+    
+    Note that there is currently no safety net against locking oneself
+    out of all displays. E.g., one can make Sculpt unusable by manually
+    disabling each display, or by selecting modes not properly handled by
+    the connected monitor. In the future, we may add a confirm button with
+    a timeout to roll back such unfortunate settings.
+    
+    Fixes #5286
+commit 8c43f8aa333b09304babd976f7616b46cf02216c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 23 19:37:28 2024 +0200
+
+    sculpt_manager: interactive framebuffer settings
+    
+    This patch add a configuration dialog in the intel_fb node of the
+    component graph. The dialog displays a list of present displays labeled
+    after their respecive connectors. A mode can be selected for each
+    connector when clicking on the connector entry.
+    
+    In-between the entries there are two buttons. The connect button is
+    toggle that defines whether the two adjacent entries are mirrored.
+    It is enabled by default so that all new connectors participate in
+    the mirroring. By untoggling the last enabled connect button, the
+    entry below the button becomes a discrete (non-mirrored) display.
+    
+    A swap button allows for changing the order of the list, which has
+    to effects. First, the resolution of the very first entry defines
+    the size for mirrored display. So be changing the order of mirrored
+    displays, one can pick the preferred screen size. Second, the order
+    of discrete displays defines the layout of the panorama from left to
+    right. (the panorama config is not part of this commit though)
+    
+    Note that there is currently no safety net against locking oneself
+    out of all displays. E.g., one can make Sculpt unusable by manually
+    disabling each display, or by selecting modes not properly handled by
+    the connected monitor. In the future, we may add a confirm button with
+    a timeout to roll back such unfortunate settings.
+    
+    Fixes #5286
+
+commit 9ad711163461d4000e1bb26b26a8a9a36c348f31
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 24 19:07:25 2024 +0200
+
+    sculpt: let leitzentrale follow the pointer
+    
+    This patch places the leitzentrale GUI always at the pointer-at display
+    instead of filling the entire panorama. This ensures that the complete
+    leitzentrale GUI is always visible.
+    
+    Fixes #5370
+
+commit a5b6022fecdb05e2038e4f58ba6cc88eee1c629d
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Nov 7 15:01:31 2024 +0100
+
+    intel/display: improve mirror/discrete reporting
+    
+    Don't try to decide based on the hardware state, in which mode a
+    connector is used. If a previous configuration failed, e.g. -ENOSPC,
+    the detection whether the mirrored framebuffer is in use may fail
+    and the connectors are reported wrongly as discrete.
+    
+    During modeset traversal take the appropriate lock to synchronize irq and
+    user task, which may be de-scheduled by Linux code when invoking contrib
+    code.
+    
+    Issue #5377
+
+commit ba1c241c2b46cde15e8d65d3d24cf659bfaf7cb7
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Nov 8 15:55:10 2024 +0100
+
+    intel/display: adapt README to current implementation
+
+commit a5b6022fecdb05e2038e4f58ba6cc88eee1c629d
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Nov 7 15:01:31 2024 +0100
+
+    intel/display: improve mirror/discrete reporting
+    
+    Don't try to decide based on the hardware state, in which mode a
+    connector is used. If a previous configuration failed, e.g. -ENOSPC,
+    the detection whether the mirrored framebuffer is in use may fail
+    and the connectors are reported wrongly as discrete.
+    
+    During modeset traversal take the appropriate lock to synchronize irq and
+    user task, which may be de-scheduled by Linux code when invoking contrib
+    code.
+    
+    Issue #5377
+
+commit ba1c241c2b46cde15e8d65d3d24cf659bfaf7cb7
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Nov 8 15:55:10 2024 +0100
+
+    intel/display: adapt README to current implementation
+
+
+
+Device drivers and platforms
+############################
+
+Linux device-driver environment (DDE)
+=====================================
+
+; @skalk @ssumpf @cnuke
+
+commit 298636ff5855b54f491507e79fae45b6009c70f6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 28 15:35:38 2024 +0200
+
+    imx_linux: update port to Linux 6.6
+    
+    * Update to Linux vanilla kernel source 6.6.47
+    * Only use MNT pocket/reform patches not touching DTS files
+    * Add pre-processed DTS files for MNT reform2,
+      MNT pocket, and Compulab IOT Gateway
+    
+    issue genodelabs/genode#5264
+
+commit 443ae50508ca0c7b6411c87740b6a8d33687374b
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 28 15:39:37 2024 +0200
+
+    imx_linux: add support for MNT pocket
+
+commit c208df23a10414da804a083eecfd55da32dd4fc1
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Sep 4 11:21:57 2024 +0200
+
+    imx_linux/arm_v8: enable USBNET for module init hook
+    
+    Enable USB_USBNET to have 'usbnet_init' module init hook for host driver.
+    
+    issue genodelabs/genode#5264
+
+commit 366cc191f89e0acd1dbe5db78130b4be2a809520
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 3 13:05:40 2024 +0200
+
+    lx_emul: adjust initcall_order.h to Linux 6.6
+    
+    Update initcall_order.h headers.
+    
+    issue genodelabs/genode#5264
+
+commit 77601164787934288ff7a6d4d1a0f56e4f0c44ae
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Oct 1 11:56:33 2024 +0200
+
+    linux-firmware: add QCA9377 FW (MNT Pocket Reform)
+    
+    Issue #5360.
+
+commit 8d76eebf937408dbd0329d2c2abff1ab3991c54f
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Oct 11 13:30:14 2024 +0200
+
+    sculpt: add MNT Pocket Reform
+    
+    Fix genodelabs/genode#5360.
+
+commit a4d497cefa2a4bf360a9e9989a500e9e0f1b01d4
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 3 13:48:07 2024 +0200
+
+    driver/usb_host: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * add gpcv2 platform_driver for for driver matching (power-domain)
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit e8a8e5e1dd6bab66d1ec22c30c40b64fc9490cdc
+Author: Alice Domage <alice.domage@gapfruit.com>
+Date:   Thu Jul 18 14:39:36 2024 +0200
+
+    platform/imx8mp: add usb related clocks and iomux
+    
+    This commits adds new clock definitions according to clk-imx8mp.c from
+    Linux. Unfortunately, it seems this clocks were not documented in the
+    i.MX 8M Plus reference manual. They were discovered in Linux, while
+    investigating for imx8mp USB support.
+    
+    issue genodelabs/genode#5264
+
+commit 9cf688615fd1281bbc8e4fbcd884d1f35ebe5aa3
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 10 20:00:11 2024 +0200
+
+    imx_linux: add USB support for i.MX8MPlus
+    
+    Update kernel configuration and inticall_order.h for arm_v8a.
+    
+    issue genodelabs/genode#5264
+
+commit a9a263387ac045cff8f98e26294f1dd62cd37768
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 10 20:03:34 2024 +0200
+
+    lx_emul: add MNT Pocket Reform dts
+    
+    issue genodelabs/genode#5264
+
+commit 71ac51e9fc5a9551dc10596558c068fa161778bb
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 10 19:54:43 2024 +0200
+
+    usb_host/imx8mq: enable imx8mp
+    
+    * add basic support for i.MX8MPlus
+    * add MNT pocket reform
+    
+    issue genodelabs/genode#5264
+
+commit 81bf25740fcee979f7ee705ef2287fdb90cf8f55
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Sep 10 20:05:01 2024 +0200
+
+    mnt_pocket: recipes and board files for USB
+    
+    The 'board' USB configuration is based on commit "usb_host/imx8mq: add
+    support for imx8mp_iot_gate" by Alice Domage. Many thanks!
+    
+    issue genodelabs/genode#5264
+
+commit 402bb2ea23209836b6052f8e51d01540ef95dacf
+Author: Alice Domage <alice.domage@gapfruit.com>
+Date:   Thu Jul 18 14:43:30 2024 +0200
+
+    usb_host/imx8mq: add support for imx8mp_iot_gate
+    
+    issue genodelabs/genode#5264
+
+commit 39ec367113872bcb4502151302e9e2b21c44e70c
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Sep 11 10:03:42 2024 +0200
+
+    platform/imx8mp: service watchdog timer
+    
+    Once the watchdog timer is enabled (e.g., by the boot loader) it cannot
+    be stopped. In order to not trigger a sytem reset when the watchdog
+    fires, we have to write a service sequence upon a watchdog-timer
+    interrupt (default is 2s before timeout). We only enable this behavior
+    if the watchdog timer is already running.
+    
+    issue genodelabs/genode#5264
+
+commit dc691fd163892adcead0adbecdbcce864c478d96
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 11 11:21:18 2024 +0200
+
+    imx_linux: enable efuses for ARMv7, needed for FEC
+    
+    issue genodelabs/genode#5264
+
+commit 6923307a2c08295fc50e1ed42a76b3a751215e71
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 11 11:25:16 2024 +0200
+
+    driver/nic/fec: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use pseudo pinctrl and nvmem driver for all architectures now
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit 7f157437f7673de595467b9746d56d6894dc3ceb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 11 13:38:35 2024 +0200
+
+    driver/nic/stmmac: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit f835cce2814c3736f9024867b31e7214289a2a84
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 11 15:43:44 2024 +0200
+
+    driver/sd_card/imx8mq: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit b2112e427cd9a761983a8fc3620c6d1f4bda8fe5
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 12 16:49:41 2024 +0200
+
+    lib/imx8mq_wifi: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit 2b3e3e32c6dc07a212a8852e0ba8d06e1bb3599f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 12 17:31:01 2024 +0200
+
+    driver/gpu/imx8mq: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit 51388814a7612e9e76b0aed5b5324b8c13155f38
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Sep 12 19:39:04 2024 +0200
+
+    usb_host: rename imx8mq to imx8m
+    
+    Since now imx8mq and imx8mp are supported rename the driver and all
+    occurences to imx8m.
+    
+    issue genodelabs/genode#5264
+
+commit 59f7209c2bb2cdd21c7ca19fd14584ec1f05e786
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Sep 13 13:58:27 2024 +0200
+
+    framebuffer/imx8mq: update to Linux 6.6
+    
+    * use Linux SLUB-allocator
+    * use common_dummies.c
+    
+    issue genodelabs/genode#5264
+
+commit ddaf5a35faee28db1b0468873d36f81611f8a796
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Sep 20 13:54:45 2024 +0200
+
+    imx_linux: add support for MNT Pocket Reform LCD
+    
+    * enable features in target.inc
+    * patch the reform/0001-panel-jdi-lt070me05000-pocket-reform.patch
+      (changes from linux-mnt-6.6.15)
+    
+    genodelabs/genode#5360
+
+commit bc59d8f3b3c27de4a52fd4b1009c8cab08b99435
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Oct 1 13:28:19 2024 +0200
+
+    linux-imx: add qcacld-2.0 driver
+    
+    This commit adds the external 'qcacld-2.0' kernel driver for Qualcomm
+    Atheros wireless devices to linux-imx.
+    
+    Issue genodelabs/genode#5360
+
+commit 7ff14200fffb08ee287fc6f97962f1e0fa570b6a
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Sep 23 18:02:41 2024 +0200
+
+    board/mnt_pocket: add wifi related device
+    
+    Add the device necessary to use the QCA9377
+    based wireless device via SDIO found in the MNT Pocket Reform.
+    
+    Issue genodelabs/genode#5360
+
+commit 226a45cc91482e88b6905d8e2f466e16781c8f83
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Sep 23 18:03:36 2024 +0200
+
+    Add imx8mp_qcacld2_wifi driver
+    
+    This commit adds the wifi driver for the QCA9377 as found in the
+    MNT Pocket Reform.
+    
+    Issue genodelabs/genode#5360
+
+commit a29916409d35d7dcfa745eb7ffb64cc83b13bfc9
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Sep 25 17:54:37 2024 +0200
+
+    board/mnt_pocket: add display devices
+    
+    issue genodelabs/genode#5360
+
+commit 28175a6146c0f64fe3406e0799495a56b731bcf0
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Oct 11 10:58:28 2024 +0200
+
+    sd_card/imx8mq: add MNT Pocket Reform support
+    
+    Issue genodelabs/genode#5360.
+
+commit 33524f5b91d8a8fd5c43e5ecc62539a017c5b67f
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Oct 24 15:40:59 2024 +0200
+
+    imx8mp: add missing clocks, keep sys_pll3
+    
+    * Add missing root clocks
+    * Do not disable system_pll3, it is used implicitely by one
+      of the root-clocks enabled by default
+    
+    Issue genodelabs/genode#5360.
+
+commit b47370f5c3778fde54dfbf369508a1d1213b206a
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Oct 24 07:14:14 2024 +0200
+
+    framebuffer/imx8mq: add rotation for mnt_pocket
+    
+    The MNT Pocket Reform display is build into the case with the left
+    side up. Therefore, we need to rotate the picture 90 degrees
+    counterclockwise on Sculpt.
+    
+    features/limitations:
+    
+    * rotate pixel while blitting (pixel by pixel -> slow)
+    * switch width and height of capture area
+    * use clipping provided by Capture session
+    * avoid unnecessary multiplications
+    * use device tree in order to determine if we are on MNT Pocket Reform
+    
+    issue genodelabs/genode#5360
+
+commit 3dcf11a4458b292d6611b7069ea1cc2a0540eb91
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Oct 29 15:19:34 2024 +0100
+
+    mnt_pocket: set CPU frequency to 1.8 GHz on boot
+    
+    Issue genodelabs/genode#5360
+
+commit cf84787c09d2ffd076d7b8037c1bec1ecdd61418
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Oct 29 15:49:51 2024 +0100
+
+    sculpt_image: add MNT Pocket as target board
+    
+    Issue genodelabs/genode#5360.
+
+commit d515b5543266f814f9816b6a623e8fb9ff7cd7d7
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Nov 15 11:12:36 2024 +0100
+
+    sculpt_manager: start fb on second CPU on Pocket
+    
+    With this commit the fb driver is started on the second CPU on the
+    MNT Pocket Reform to decouple it from the other components started
+    on the first CPU during the system's boot-up and mitigates bring-up
+    issues with this driver that result in an often non-working display.
+    
+    Issue #5378.
+
+Wifi
+====
+
+; @cnuke
+
+commit 6b474e059cecceaf566e735e8b7b47c4a7167345
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Sep 2 16:07:40 2024 +0200
+
+    wpa_supplicant: update to version 2.11
+    
+    Issue #5341.
+
+commit d4e4b8bf60e016800065a7e35e8a4b82d0c91ceb
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Sep 3 16:06:02 2024 +0200
+
+    driver/wifi: rework CTRL interface manager
+    
+    This commit streamlines the interaction between the Wifi::Manager
+    and the wpa_supplicant's CTRL interface.
+    
+    As user-facing changes it alters some default settings and introduces
+    new features:
+    
+    * Every configured network now needs to explicitly have its
+      'auto_connect' (to be considered an option for joining) attribute
+      set to 'true' whereas this was previously the default value if the
+      attribute was not set at all.
+    
+    * The 'log_level' attribute is added and configures the supplicant's
+      verbosity. Valid values correspond to levels used by the supplicant
+      and are as follows 'excessive', 'msgdump', 'debug', 'info', 'warning'
+      and 'error'. The default value is 'error' and configures the least
+      amount of verbosity.
+    
+    * The 'bgscan' attribute may be used to configure the way the
+      supplicant performs background-scanning to steer or rather optimize
+      roaming decision within the same network. The default value is set
+      to 'simple:30:-70:600'. It can be disabled by specifying an empty
+      value, e.g. 'bgscan=""'.
+    
+    * The 'verbose_state' attribute was removed alltogether and similar
+      functionality is now coverted by 'verbose' attribute.
+    
+    Implementation-wise the internals changed significantly and are
+    outlined in the following paragraphs.
+    
+    Formerly the interaction between the manager and the supplicant
+    was handled in an apparent way where the internal state of each
+    interaction was in plain sight. This made the flow cumbersome to
+    follow and therefor each interaction is now confined to its own
+    'Action' object that encapsulates the ping-pong of commands and
+    responses between the manager and the supplicant. All actions are
+    processed in an sequential way and thus there is no longer any
+    need to defer pending actions depending on the interal state of
+    the current interaction. Configuration changes as well as events
+    issued by the supplicant where new actions can be created are
+    handled in this fashion. Of note are both signal-handlers,
+    '_handle_cmds' and '_handle_events' respectively.
+    
+    The state report, which provides the information about the current
+    state of connectivity to a given wireless network, was dealt with
+    in the same vein and its handling was spread across the manager
+    implementation. Again, to make it easier to follow, the generation
+    of the state report is now purely driven by the 'Join_state' object.
+    This object encapsulates the state of connectivity and is normally
+    updated by events issued from the supplicant (see '_handle_events').
+    It is also incorporated when handling command responses (see
+    '_handle_cmds').
+    
+    Handling of timed-actions, like scan and signal quality
+    update requests, was done by setting a timeout at the Timer session
+    directly and thus only one timed-action could be pending at any time.
+    This excluded dealing with timed-actions like connected-scanning
+    and signal quality polling concurrently. This was changed and now
+    a One_shot_timeout is used to programm each concurrent timed-action.
+    
+    For implementing the communication channel for the CTRL interface the
+    manager and supplicant use a shared memory buffer, the Msg_buffer.
+    Since the CTRL interface for Genode was implemented using C, some
+    shenanigans were performed to access the memory buffer. Now the
+    CTRL interface implementation uses C++ and only exports the functions
+    required by the supplicant as C. This simplifies the usage of the
+    Msg_buffer and allows for removing the global functions needed for
+    synchronizing the Msg_buffer access as those are now part of the
+    object itself via the 'Notify_interface'.
+    
+    Fixes #5341.
+
+commit e4d2a4df42f0f9484cf9afac3566f3b1d1ded20b
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Oct 7 17:16:18 2024 +0200
+
+    driver/wifi: split hidden network scanning
+    
+    This commit splits the intent to scan for a hidden network and the
+    actual configuration of a network itself by introducing
+    '<explicit_scan>' nodes. Like the '<network>' node these also feature
+    a 'ssid' attribute and each node is incorporated into the SCAN request
+    if its SSID is valid.
+    
+    For more information please consult 'repos/src/driver/wifi/README'.
+    
+    Issue #5356.
+
+commit e0874baa8fbddcdecd1920f3f494ae2ee53b931d
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Oct 7 17:35:14 2024 +0200
+
+    driver/wifi: remove auto_connect attribute
+    
+    This commit does away with controlling the join-intent via an attribute
+    but couples it to the existence of a '<network>' node. With this change
+    all '<network>' nodes within the configuration are always
+    unconditionally considered for joining.
+    
+    Issue #5356.
+
+commit 7fe7ca19686eac73bf53f2757fd5ffb5be15831d
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Nov 8 13:57:37 2024 +0100
+
+    driver/wifi: provide best practices in README
+
+
+Audio driver updated to OpenBSD 7.6
+===================================
+
+; @cnuke
+
+commit 8b06d7ff42b1328fec87e9564088ae9f0d78cd98
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Fri Aug 16 14:03:13 2024 +0200
+
+    dde_bsd: update audio driver to OpenBSD 7.5
+    
+    The update is mostly cosmetic in nature and amongst others adds PCIIDs
+    for Alder Lake-N devices.
+    
+    Issue #5331.
+
+commit 3e82422d1755dd362d8086259f511d5493e2649b
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Aug 27 13:27:27 2024 +0200
+
+    dde_bsd: update audio driver to OpenBSD -current (2024-08-16)
+    
+    This update uses a -current (that will become 7.6 later this year)
+    snapshot from 2024-08-16 that includes fixes for MSI support on
+    AMD systems.
+    
+    Fixes #5331.
+
+
+AVX and hardware-based AES in virtual machines
+==============================================
+
+; @alex-ab
+
+commit ff506b037537bf0d39f6414261d9367b07323c13
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Sep 4 15:41:29 2024 +0200
+
+    vm/x86: support extended fpu state transfer
+    
+    Extend Genode's vCPU FPU state and adjust all users to copy
+    at most FPU data they actually support.
+    
+    Issue #5314
+
+commit a07b5937d9fe15480ebb08d0200aaa44a4e184e0
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri Sep 13 10:52:38 2024 +0200
+
+    nova: handle invalid FPU guest state
+    
+    Makes the kernel robust against invalid guest FPU state provided by a VMM,
+    e.g. our port of Vbox6.
+    
+    Issue #5314
+
+commit 75266e467df13e161a8e47215e2bde5e8622f298
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Sep 5 09:54:42 2024 +0200
+
+    vbox6: enable AVX support
+    
+    Issue #5314
+
+commit e5df8da1bd696423f465bd4376c67ba4dfcc2798
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Sep 17 10:58:15 2024 +0200
+
+    vbox6: enable AES hardware instruction support
+    
+    Issue #5314
+
+commit 4084df6360d91c82ed19e3cd97cdeafd11c48eb4
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Oct 8 15:11:19 2024 +0200
+
+    vbox6: enable RDRAND hardware instruction support
+    
+    Issue #5314
+
+commit b17ec8e5f93a980f03d963b289735809ea879c1e
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Nov 13 09:28:56 2024 +0100
+
+    nova: support resume on AVX CPUs
+    
+    Issue #5314
+
+
+Build system and tools
+######################
+
+Extended depot-tool safeguards
+==============================
+
+; @nfeske
+
+commit 2f84d07bf70d3a540f4b7981cd7633822d252fca
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 8 14:14:20 2024 +0100
+
+    tool/depot/extract: annotate version with src hash
+    
+    When extracting depot archives from the source tree, retain the content
+    hash of the extracted information along the archive in <version>.hash
+    file. The .hash files of src and api archives become thereby usable for
+    checking the consistency of bin archives with their ingredients.
+    
+    Issue #5379
+
+commit 6e5836a765fbb2d41f0204d6928fb654d5fc7674
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 8 15:02:19 2024 +0100
+
+    depot/build_bin_archive: keep hash of ingredients
+    
+    This patch records the content hashes of the src and api ingredients
+    used for creating a bin archive. This information allows for the
+    detection of possible inconsistencies between a bin archive and its
+    corresponding src archive within the depot.
+    
+    Issue #5379
+
+commit 1edb1561013f0bb6f432e5a9d5e4e199f230d7e5
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 8 16:44:09 2024 +0100
+
+    depot/build: check bin against src if REBUILD=
+    
+    When using the depot/build tool with the 'REBUILD=' argument as done by
+    the run tool's --depot-auto-update feature, the depot/build tool now
+    checks that an existing bin archive was indeed created via the src and
+    api archives present in the depot for the given version. This addresses
+    consistency issues when switching between different git branches that
+    refer to the same depot versions but with different content.
+    
+    Fixes #5379
+
