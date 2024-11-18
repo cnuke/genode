@@ -1284,48 +1284,28 @@ Build system and tools
 ######################
 
 Extended depot-tool safeguards
-==============================
+------------------------------
 
-; @nfeske
+When using the run tool's '--depot-auto-update' feature while switching between
+different git branches with commited recipe hashes, a binary archive present in
+the depot may accidentally not match its ingredients because the depot/build
+tool's 'REBUILD=' mode - as used by the depot auto-update mechanism - merely
+looks at the archive versions. This situation is arguably rare. But when it
+occurs, its reach and effects are hard to predict. To rule out this corner
+case early, the depot/build tool has now been extended by recording the hashes
+of the ingredients of binary archives. When skipping a rebuild because the
+desired version presumably already exists as a binary archive, the recorded
+hashes are compared to the current state of the ingredients (src and api
+archives). Thereby inconsistencies are reported to the user.
 
-commit 2f84d07bf70d3a540f4b7981cd7633822d252fca
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 8 14:14:20 2024 +0100
+Users of the depot tool will notice .hash files appearing alongside src and
+api archives. Those files contain the hash value of the content of the
+respective archive. Each binary archive built is now also accompanied by a
+.hash file, which contains a list of hash values of the ingredients that went
+into the binary archive. Thanks to these .hash files, the consistency between
+binaries and their ingredients can be checked quickly.
 
-    tool/depot/extract: annotate version with src hash
-    
-    When extracting depot archives from the source tree, retain the content
-    hash of the extracted information along the archive in <version>.hash
-    file. The .hash files of src and api archives become thereby usable for
-    checking the consistency of bin archives with their ingredients.
-    
-    Issue #5379
-
-commit 6e5836a765fbb2d41f0204d6928fb654d5fc7674
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 8 15:02:19 2024 +0100
-
-    depot/build_bin_archive: keep hash of ingredients
-    
-    This patch records the content hashes of the src and api ingredients
-    used for creating a bin archive. This information allows for the
-    detection of possible inconsistencies between a bin archive and its
-    corresponding src archive within the depot.
-    
-    Issue #5379
-
-commit 1edb1561013f0bb6f432e5a9d5e4e199f230d7e5
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 8 16:44:09 2024 +0100
-
-    depot/build: check bin against src if REBUILD=
-    
-    When using the depot/build tool with the 'REBUILD=' argument as done by
-    the run tool's --depot-auto-update feature, the depot/build tool now
-    checks that an existing bin archive was indeed created via the src and
-    api archives present in the depot for the given version. This addresses
-    consistency issues when switching between different git branches that
-    refer to the same depot versions but with different content.
-    
-    Fixes #5379
-
+_As a note of caution, when switching to the Genode 24.11 with existing depot,_
+_one will possibly need to remove existing depot archives (as listed by the_
+_diagnostic messages) because the existing archives are not accompanied with_
+_.hash files yet._
