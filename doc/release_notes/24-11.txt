@@ -479,62 +479,13 @@ with HDA devices found in AMD-based systems.
 AVX and hardware-based AES in virtual machines
 ==============================================
 
-; @alex-ab
+With this release we added support to request and transfer the
+AVX FPU state via Genode's VM_SESSION interface. With this prerequisite
+fulfilled, we enabled the announcement of the AVX feature to guest VMs
+in our port of Virtualbox6.
 
-commit ff506b037537bf0d39f6414261d9367b07323c13
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed Sep 4 15:41:29 2024 +0200
-
-    vm/x86: support extended fpu state transfer
-    
-    Extend Genode's vCPU FPU state and adjust all users to copy
-    at most FPU data they actually support.
-    
-    Issue #5314
-
-commit a07b5937d9fe15480ebb08d0200aaa44a4e184e0
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Fri Sep 13 10:52:38 2024 +0200
-
-    nova: handle invalid FPU guest state
-    
-    Makes the kernel robust against invalid guest FPU state provided by a VMM,
-    e.g. our port of Vbox6.
-    
-    Issue #5314
-
-commit 75266e467df13e161a8e47215e2bde5e8622f298
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Sep 5 09:54:42 2024 +0200
-
-    vbox6: enable AVX support
-    
-    Issue #5314
-
-commit e5df8da1bd696423f465bd4376c67ba4dfcc2798
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Tue Sep 17 10:58:15 2024 +0200
-
-    vbox6: enable AES hardware instruction support
-    
-    Issue #5314
-
-commit 4084df6360d91c82ed19e3cd97cdeafd11c48eb4
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Oct 8 15:11:19 2024 +0200
-
-    vbox6: enable RDRAND hardware instruction support
-    
-    Issue #5314
-
-commit b17ec8e5f93a980f03d963b289735809ea879c1e
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed Nov 13 09:28:56 2024 +0100
-
-    nova: support resume on AVX CPUs
-    
-    Issue #5314
-
+Additionally, we enabled the announcement of AES and RDRAND CPU features
+to the guest VM to further improve the utilization of the hardware.
 
 Build system and tools
 ######################
