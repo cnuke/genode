@@ -304,8 +304,8 @@ With our
 [https://genode.org/documentation/release-notes/24.08#Linux_device-driver_environment__DDE_ - recent]
 update of the DDE Linux kernel to version 6.6 for PC platforms and as a
 prerequisite to support the MNT Pocket Reform (Section [MNT Pocket Reform]), we
-have adapted all i.MX drivers for the i.MX8MQ and i.MX5/6/7 platforms to Linux
-kenrel version 6.6.47. The list of drivers includes Wifi, Nic, display, GPU, USB
+have adapted all i.MX drivers for the i.MX5/6/7/8 platforms to Linux
+kernel version 6.6.47. The list of drivers includes Wifi, Nic, display, GPU, USB
 and SD-card.
 
 
@@ -320,8 +320,6 @@ chips, like the Rockchip based modules, are not officially supported by Genode,
 yet. But there is a choice of an i.MX8MP based module available which fits
 nicely into Genode's i.MX infrastructure.
 
-;; das i.MX8MP module scheint es nicht mehr zu geben
-
 Genode already supports the MNT Reform 2 i.MX8MQ based 
 [https://genodians.org/skalk/2020-06-29-mnt-reform - laptop]. So an update from
 MQ to MP doesn't sound like a big issue because only one letter changed, right?
@@ -330,22 +328,25 @@ I/O resources and interrupt numbers. Additionally, the MNT Reform team offers
 quite a large patch set for each supported Linux kernel version. Luckily there
 is
 [https://source.mnt.re/reform/reform-debian-packages/-/tree/main/linux/patches6.6?ref_type=heads - one]
-for our just updated Linux 6.6 kernel.  With this patch set we were able to
+for our just updated Linux 6.6 kernel. With this patch set we were able to
 produce a Linux source tree (imx_linux) that we used as a base for driver
 development on Genode. Note that these Linux kernel sources are shared by all
-supported i.MX platforms.
+supported i.MX platforms. Of course, additional patch series were necessary to
+include device-tree sources from other vendor kernels, for instance from
+Compulab.
 
 With the development environment in place and lots of effort put into, we were
 able to implement initial Genode support for the MNT Pocket Reform on Genode
 24.11.
 
-For low level device-resource management it was necessary to add an i.MX8MP
-specific platform driver for clocks, IRQs, power-domains, etc., that was kindly
-provided by Alice Domage. On the device driver front we did not have to port new
+On the device driver front we did not have to port lots of new
 drivers, but were able to extent drivers ported for the i.MX8MQ platform.
-Working drivers at the moment are: Wifi, network card, USB host controller,
-display driver, and SD card.
-;; fehlt einer?
+Those drivers are: network card, USB host controller, display driver, and SD card.
+
+For the Wifi card that is used within the i.MX8MP SoC we needed to port a new
+driver. It has a Qualcom QCA9377 chipset and its driver sources were not even part of
+the Linux kernel sources used by the MNT Pocket Reform. Instead, we had to
+incorporate external Linux kernel module sources for this purpose.
 
 Because this is an initial release there are still some issues to be resolved.
 For example, the display of the MNT Pocket is physically
@@ -355,364 +356,41 @@ counterclockwise. Unfortunately, there seems to be
 no hardware support, other than the GPU, to perform a fast rotation. Because GPU
 support is still missing we had to resort to software rotation, which is
 obviously far from optimal.
-;; mehr War Stories hier ...
-;; ....
 
-With all this in mind we are happy to announce basic Sulpt OS support for the
+With all this in mind we are happy to announce basic Sculpt OS support for the
 MNT Pocket Reform and wish you "Happy Sculpting".
-;; oder ne?
 
 
-
-commit 298636ff5855b54f491507e79fae45b6009c70f6
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Aug 28 15:35:38 2024 +0200
-
-    imx_linux: update port to Linux 6.6
-    
-    * Update to Linux vanilla kernel source 6.6.47
-    * Only use MNT pocket/reform patches not touching DTS files
-    * Add pre-processed DTS files for MNT reform2,
-      MNT pocket, and Compulab IOT Gateway
-    
-    issue genodelabs/genode#5264
-
-commit 443ae50508ca0c7b6411c87740b6a8d33687374b
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Aug 28 15:39:37 2024 +0200
-
-    imx_linux: add support for MNT pocket
-
-commit c208df23a10414da804a083eecfd55da32dd4fc1
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Sep 4 11:21:57 2024 +0200
-
-    imx_linux/arm_v8: enable USBNET for module init hook
-    
-    Enable USB_USBNET to have 'usbnet_init' module init hook for host driver.
-    
-    issue genodelabs/genode#5264
-
-commit 366cc191f89e0acd1dbe5db78130b4be2a809520
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 3 13:05:40 2024 +0200
-
-    lx_emul: adjust initcall_order.h to Linux 6.6
-    
-    Update initcall_order.h headers.
-    
-    issue genodelabs/genode#5264
-
-commit 77601164787934288ff7a6d4d1a0f56e4f0c44ae
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Oct 1 11:56:33 2024 +0200
-
-    linux-firmware: add QCA9377 FW (MNT Pocket Reform)
-    
-    Issue #5360.
-
-commit 8d76eebf937408dbd0329d2c2abff1ab3991c54f
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Oct 11 13:30:14 2024 +0200
-
-    sculpt: add MNT Pocket Reform
-    
-    Fix genodelabs/genode#5360.
-
-commit a4d497cefa2a4bf360a9e9989a500e9e0f1b01d4
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 3 13:48:07 2024 +0200
-
-    driver/usb_host: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * add gpcv2 platform_driver for for driver matching (power-domain)
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit e8a8e5e1dd6bab66d1ec22c30c40b64fc9490cdc
-Author: Alice Domage <alice.domage@gapfruit.com>
-Date:   Thu Jul 18 14:39:36 2024 +0200
-
-    platform/imx8mp: add usb related clocks and iomux
-    
-    This commits adds new clock definitions according to clk-imx8mp.c from
-    Linux. Unfortunately, it seems this clocks were not documented in the
-    i.MX 8M Plus reference manual. They were discovered in Linux, while
-    investigating for imx8mp USB support.
-    
-    issue genodelabs/genode#5264
-
-commit 9cf688615fd1281bbc8e4fbcd884d1f35ebe5aa3
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 10 20:00:11 2024 +0200
-
-    imx_linux: add USB support for i.MX8MPlus
-    
-    Update kernel configuration and inticall_order.h for arm_v8a.
-    
-    issue genodelabs/genode#5264
-
-commit a9a263387ac045cff8f98e26294f1dd62cd37768
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 10 20:03:34 2024 +0200
-
-    lx_emul: add MNT Pocket Reform dts
-    
-    issue genodelabs/genode#5264
-
-commit 71ac51e9fc5a9551dc10596558c068fa161778bb
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 10 19:54:43 2024 +0200
-
-    usb_host/imx8mq: enable imx8mp
-    
-    * add basic support for i.MX8MPlus
-    * add MNT pocket reform
-    
-    issue genodelabs/genode#5264
-
-commit 81bf25740fcee979f7ee705ef2287fdb90cf8f55
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Tue Sep 10 20:05:01 2024 +0200
-
-    mnt_pocket: recipes and board files for USB
-    
-    The 'board' USB configuration is based on commit "usb_host/imx8mq: add
-    support for imx8mp_iot_gate" by Alice Domage. Many thanks!
-    
-    issue genodelabs/genode#5264
-
-commit 402bb2ea23209836b6052f8e51d01540ef95dacf
-Author: Alice Domage <alice.domage@gapfruit.com>
-Date:   Thu Jul 18 14:43:30 2024 +0200
-
-    usb_host/imx8mq: add support for imx8mp_iot_gate
-    
-    issue genodelabs/genode#5264
-
-commit 39ec367113872bcb4502151302e9e2b21c44e70c
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Sep 11 10:03:42 2024 +0200
-
-    platform/imx8mp: service watchdog timer
-    
-    Once the watchdog timer is enabled (e.g., by the boot loader) it cannot
-    be stopped. In order to not trigger a sytem reset when the watchdog
-    fires, we have to write a service sequence upon a watchdog-timer
-    interrupt (default is 2s before timeout). We only enable this behavior
-    if the watchdog timer is already running.
-    
-    issue genodelabs/genode#5264
-
-commit dc691fd163892adcead0adbecdbcce864c478d96
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 11 11:21:18 2024 +0200
-
-    imx_linux: enable efuses for ARMv7, needed for FEC
-    
-    issue genodelabs/genode#5264
-
-commit 6923307a2c08295fc50e1ed42a76b3a751215e71
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 11 11:25:16 2024 +0200
-
-    driver/nic/fec: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use pseudo pinctrl and nvmem driver for all architectures now
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit 7f157437f7673de595467b9746d56d6894dc3ceb
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 11 13:38:35 2024 +0200
-
-    driver/nic/stmmac: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit f835cce2814c3736f9024867b31e7214289a2a84
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Wed Sep 11 15:43:44 2024 +0200
-
-    driver/sd_card/imx8mq: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit b2112e427cd9a761983a8fc3620c6d1f4bda8fe5
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 12 16:49:41 2024 +0200
-
-    lib/imx8mq_wifi: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit 2b3e3e32c6dc07a212a8852e0ba8d06e1bb3599f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Sep 12 17:31:01 2024 +0200
-
-    driver/gpu/imx8mq: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit 51388814a7612e9e76b0aed5b5324b8c13155f38
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Sep 12 19:39:04 2024 +0200
-
-    usb_host: rename imx8mq to imx8m
-    
-    Since now imx8mq and imx8mp are supported rename the driver and all
-    occurences to imx8m.
-    
-    issue genodelabs/genode#5264
-
-commit 59f7209c2bb2cdd21c7ca19fd14584ec1f05e786
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Sep 13 13:58:27 2024 +0200
-
-    framebuffer/imx8mq: update to Linux 6.6
-    
-    * use Linux SLUB-allocator
-    * use common_dummies.c
-    
-    issue genodelabs/genode#5264
-
-commit ddaf5a35faee28db1b0468873d36f81611f8a796
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Fri Sep 20 13:54:45 2024 +0200
-
-    imx_linux: add support for MNT Pocket Reform LCD
-    
-    * enable features in target.inc
-    * patch the reform/0001-panel-jdi-lt070me05000-pocket-reform.patch
-      (changes from linux-mnt-6.6.15)
-    
-    genodelabs/genode#5360
-
-commit bc59d8f3b3c27de4a52fd4b1009c8cab08b99435
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Oct 1 13:28:19 2024 +0200
-
-    linux-imx: add qcacld-2.0 driver
-    
-    This commit adds the external 'qcacld-2.0' kernel driver for Qualcomm
-    Atheros wireless devices to linux-imx.
-    
-    Issue genodelabs/genode#5360
-
-commit 7ff14200fffb08ee287fc6f97962f1e0fa570b6a
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Sep 23 18:02:41 2024 +0200
-
-    board/mnt_pocket: add wifi related device
-    
-    Add the device necessary to use the QCA9377
-    based wireless device via SDIO found in the MNT Pocket Reform.
-    
-    Issue genodelabs/genode#5360
-
-commit 226a45cc91482e88b6905d8e2f466e16781c8f83
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Sep 23 18:03:36 2024 +0200
-
-    Add imx8mp_qcacld2_wifi driver
-    
-    This commit adds the wifi driver for the QCA9377 as found in the
-    MNT Pocket Reform.
-    
-    Issue genodelabs/genode#5360
-
-commit a29916409d35d7dcfa745eb7ffb64cc83b13bfc9
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Sep 25 17:54:37 2024 +0200
-
-    board/mnt_pocket: add display devices
-    
-    issue genodelabs/genode#5360
-
-commit 28175a6146c0f64fe3406e0799495a56b731bcf0
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Oct 11 10:58:28 2024 +0200
-
-    sd_card/imx8mq: add MNT Pocket Reform support
-    
-    Issue genodelabs/genode#5360.
-
-commit 33524f5b91d8a8fd5c43e5ecc62539a017c5b67f
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Thu Oct 24 15:40:59 2024 +0200
-
-    imx8mp: add missing clocks, keep sys_pll3
-    
-    * Add missing root clocks
-    * Do not disable system_pll3, it is used implicitely by one
-      of the root-clocks enabled by default
-    
-    Issue genodelabs/genode#5360.
-
-commit b47370f5c3778fde54dfbf369508a1d1213b206a
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Oct 24 07:14:14 2024 +0200
-
-    framebuffer/imx8mq: add rotation for mnt_pocket
-    
-    The MNT Pocket Reform display is build into the case with the left
-    side up. Therefore, we need to rotate the picture 90 degrees
-    counterclockwise on Sculpt.
-    
-    features/limitations:
-    
-    * rotate pixel while blitting (pixel by pixel -> slow)
-    * switch width and height of capture area
-    * use clipping provided by Capture session
-    * avoid unnecessary multiplications
-    * use device tree in order to determine if we are on MNT Pocket Reform
-    
-    issue genodelabs/genode#5360
-
-commit 3dcf11a4458b292d6611b7069ea1cc2a0540eb91
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Oct 29 15:19:34 2024 +0100
-
-    mnt_pocket: set CPU frequency to 1.8 GHz on boot
-    
-    Issue genodelabs/genode#5360
-
-commit cf84787c09d2ffd076d7b8037c1bec1ecdd61418
-Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
-Date:   Tue Oct 29 15:49:51 2024 +0100
-
-    sculpt_image: add MNT Pocket as target board
-    
-    Issue genodelabs/genode#5360.
-
-commit d515b5543266f814f9816b6a623e8fb9ff7cd7d7
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Nov 15 11:12:36 2024 +0100
-
-    sculpt_manager: start fb on second CPU on Pocket
-    
-    With this commit the fb driver is started on the second CPU on the
-    MNT Pocket Reform to decouple it from the other components started
-    on the first CPU during the system's boot-up and mitigates bring-up
-    issues with this driver that result in an often non-working display.
-    
-    Issue #5378.
+Platform driver for i.MX 8M Plus
+================================
+
+When enabling support for the the MNT Pocket Reform (Section [MNT Pocket
+Reform]), it was necessary to adjust the i.MX8MP specific platform driver.
+This driver was introduced in the last Genode release 24.08. Originally, it was
+implemented to drive the Compulab i.MX 8M Plus IOT Gateway.
+
+Some of the I/O pin configurations, necessary to setup the SoC properly, are
+statically compiled into this driver, because they don't need to change at
+runtime. However, the pin configuration is specific to the actual board,
+therefore the i.MX8MP platform driver now needs to distinguish in between
+different boards (IOT Gateway and MNT Pocket) by evaluating the platform_info
+ROM delivered by core.
+
+Moreover, while working on different drivers, we detected few missing clocks
+that were add to the platform driver. It turned out that some clocks that we
+initially turned off to save energy, have to be enabled to ensure the liveliness
+of the ARM Trusted Firmware (ATF) and thereby the platform. Also we had to adapt
+the communication in between ATF and our platform driver to control
+power-domains. The first version of the i.MX8MP platform driver shared the ATF
+power-domains protocol with the i.MX8MQ version. But it turned out that the
+power-domain enumerations of the different firmwares also differ.
+
+Finally, the watchdog hardware is now served by the platform driver in a
+recurrent way. Originally our driver used the watchdog only to implement reset
+functionality. But in case of the MNT Pocket reform the watchdog hardware is
+already armed by the bootloader. Therfore, it needs to get served in time, to
+prevent the system from rebooting. As a consequence, the platform driver is
+imandatory on this platform if it needs to run longer than a minute.
 
 
 Wifi management rework
