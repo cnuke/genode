@@ -300,7 +300,69 @@ Device drivers and platforms
 Linux device-driver environment (DDE)
 =====================================
 
-; @skalk @ssumpf @cnuke
+With our
+[https://genode.org/documentation/release-notes/24.08#Linux_device-driver_environment__DDE_ - recent]
+update of the DDE Linux kernel to version 6.6 for PC platforms and as a
+prerequisite to support the MNT Pocket Reform (Section [MNT Pocket Reform]), we
+have adapted all i.MX drivers for the i.MX8MQ and i.MX5/6/7 platforms to Linux
+kenrel version 6.6.47. The list of drivers includes Wifi, Nic, display, GPU, USB
+and SD-card.
+
+
+MNT Pocket Reform
+~~~~~~~~~~~~~~~~~
+
+The [https://shop.mntre.com/products/mnt-pocket-reform - MNT Pocket Reform] is a
+Mini Laptop from MNT and aims to be modular, upgradable, and repairable while
+being assembled completely using open-source hardware. Being modular implies
+that a range of CPU modules is available for the MNT Pocket. Some of these
+chips, like the Rockchip based modules, are not officially supported by Genode,
+yet. But there is a choice of an i.MX8MP based module available which fits
+nicely into Genode's i.MX infrastructure.
+
+;; das i.MX8MP module scheint es nicht mehr zu geben
+
+Genode already supports the MNT Reform 2 i.MX8MQ based 
+[https://genodians.org/skalk/2020-06-29-mnt-reform - laptop]. So an update from
+MQ to MP doesn't sound like a big issue because only one letter changed, right?
+It turns out that there are more changes to the platform than mere adjustments of
+I/O resources and interrupt numbers. Additionally, the MNT Reform team offers
+quite a large patch set for each supported Linux kernel version. Luckily there
+is
+[https://source.mnt.re/reform/reform-debian-packages/-/tree/main/linux/patches6.6?ref_type=heads - one]
+for our just updated Linux 6.6 kernel.  With this patch set we were able to
+produce a Linux source tree (imx_linux) that we used as a base for driver
+development on Genode. Note that these Linux kernel sources are shared by all
+supported i.MX platforms.
+
+With the development environment in place and lots of effort put into, we were
+able to implement initial Genode support for the MNT Pocket Reform on Genode
+24.11.
+
+For low level device-resource management it was necessary to add an i.MX8MP
+specific platform driver for clocks, IRQs, power-domains, etc., that was kindly
+provided by Alice Domage. On the device driver front we did not have to port new
+drivers, but were able to extent drivers ported for the i.MX8MQ platform.
+Working drivers at the moment are: Wifi, network card, USB host controller,
+display driver, and SD card.
+;; fehlt einer?
+
+Because this is an initial release there are still some issues to be resolved.
+For example, the display of the MNT Pocket is physically
+[https://mntre.com/documentation/pocket-reform-handbook.pdf - rotated] by 90
+degrees. So, we had to find a way to rotate the Genode GUI 90 degrees
+counterclockwise. Unfortunately, there seems to be
+no hardware support, other than the GPU, to perform a fast rotation. Because GPU
+support is still missing we had to resort to software rotation, which is
+obviously far from optimal.
+;; mehr War Stories hier ...
+;; ....
+
+With all this in mind we are happy to announce basic Sulpt OS support for the
+MNT Pocket Reform and wish you "Happy Sculpting".
+;; oder ne?
+
+
 
 commit 298636ff5855b54f491507e79fae45b6009c70f6
 Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
