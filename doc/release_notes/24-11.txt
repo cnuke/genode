@@ -53,690 +53,245 @@ updated _Goa testbed_ preset is now prepared for remote debugging.
 Multi-monitor support
 #####################
 
-; @nfeske @chelmuth
-
-commit dd13a976afe195e444f2c170d3be28d5107ce156
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 2 14:59:06 2024 +0200
-
-    wm: alloc real view IDs locally
-    
-    Don't use client-provided view IDs as IDs for the wrapped nitpicker
-    views. There is no 1:1 relation of IDs and physical views. So if a wm
-    client re-uses an ID, the physical view is expected to stay in tact.
-    If the corresponding view object within the wm is not destroyed, however,
-    its ID remains allocated, which may then conflict the ID of a new view
-    if the ID is reused by the client. This scenario resulted in the
-    following error:
-    
-      Error: Uncaught exception of type 'Genode::Id_space<Gui::View_ref>::Conflicting_id'
-    
-    This patch handles the situation by keeping the allocator of physical
-    views (_real_view) decoupled from the client's ID allocator.
-    
-    Issue #5242
-
-commit e4af72605669d01011d04db00528b611d9e1af10
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 2 15:40:31 2024 +0200
-
-    nitpicker: alloc view caps only when needed
-    
-    This patch moves the eager allocation of view capabilities from the
-    'view' and 'child_view' RPC functions to the 'view_capability' RPC
-    function, reducing the consumption of capabilities in all scenarios
-    where views don't need to be shared between GUI sessions.
-    
-    Issue #5340
-
-commit e8e499ae9e16b9cbe7343c482b25873e4463f27b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 3 16:48:40 2024 +0200
-
-    nitpicker: account input and framebuffer caps
-    
-    This patch deduces the caps needed for the framebuffer and input RPC
-    objects from the resources accounted locally within the session. It also
-    takes precautions for the situation where a client offers too little
-    resources, prompting the mid-way cancelling of the 'Session_component'
-    creation. With the patch, the 'ep.manage' operations are rolled back
-    by the corresponding 'ep.dissolve' operations.
-    
-    Issue #5340
-
-commit a9b2d9bdc64ceceedeec30bd7abc4b069b10c2d2
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 3 16:35:54 2024 +0200
-
-    gui_session: adjust session quota for wm scenarios
-    
-    The current default session RAM quota of 36 KiB reflects the needs of
-    the nitpicker GUI server. However, in most commonly used scenarios, a
-    GUI client connects to nitpicker indirectly via the wm. The low value
-    worked so far because the wm did not account RAM and cap usage per
-    client so far but paid out of its own pocket and faithfully forwarded
-    all resource upgrades to nitpicker.
-    
-    When adding resource accounting to the wm, the old default value has the
-    effect that a new client has to repeatedly attempt the session creation -
-    each time offering sligthly more session quota - until both nitpicker and
-    the wm are satisfied.
-    
-    By roughly doubling the default to 80 KiB, a wm client immediately
-    succeeds with opening a GUI session without repeated attempts.
-    By specifying a custom 'cap_quota' amount to the 'Genode::Connection',
-    the Gui::Connection now donates enough caps for both the wm and
-    nitpicker.
-    
-    Issue #5340
-
-commit ec50c008bbaf4ac38f4dd1388ec238988b702798
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 2 17:20:12 2024 +0200
-
-    wm: account session resources
-    
-    With this patch, the wm accounts RAM and caps consumed on behalf of its
-    clients to the respective client's session quota instead of paying out
-    of its own pocket. This should make the wm resilient against resource
-    exhaustion and lowers the quota requirements.
-    
-    Issue #5340
-
-commit 0414e4929f054ad345109b3ae15ab0aebeab3662
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Sep 2 14:03:36 2024 +0200
-
-    intel/display: enable panel self refresh support
-    
-    Fixes #5339
-
-commit f147a1220e5c9e11357ec60de108f62d0f7ba44c
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Aug 26 17:02:28 2024 +0200
-
-    intel/display: make effective use of PSR
-    
-    - only mark framebuffer dirty if necessary
-      -> gives the hardware chance to save longer power
-    - remove extra timer connection on Genode component side
-      -> use Linux time primitives
-    
-    Issue #5339
-
-commit e83ace4242005f95cf562a9c14150cec99d43850
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 10 16:36:45 2024 +0200
-
-    decorator: fix window-stacking glitch
-    
-    This is a follow-up commit to "gui_session: manage view ID at the client
-    side", which missed to invalidate the neighbor view of a window but
-    instead wrongly assigned the (now always valid) view ID 0 as neighbor.
-    In situations where a window disappears and re-appears (e.g., repeatedly
-    launching testnit in the wm.run scenario), the new window could not
-    always be topped.
-    
-    Issue #5242
-
-commit 6d68d3297da7e465ae147a6dc4a6286d02be27d9
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 16 14:28:05 2024 +0200
-
-    capture_session: propagate physical size in mm
-    
-    This patch adds the physical screen size as argument to the
-    Capture::Session::buffer RPC function, which allows drivers to
-    propagate DPI information to the GUI server. While changing the
-    the interface, the patch replaces the former use of C++ exceptions
-    by a result type. The 'Buffer_result' is handled transparently by the
-    Capture::Connection. The client.h code is now integrated in
-    connection.h.
-    
-    Issue #5344
-
-commit 3f1759a4d1a875bdd6b8dc67346bc003aa321b2c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 16 15:28:06 2024 +0200
-
-    capture_session: detection of idle capture server
-    
-    This patch enhances the Capture::Connection::Screen such that the
-    bounding box of the affected pixels can be tracked by the caller,
-    which can use this information to adjust its behavior to the
-    activity/inactivity of the capture server.
-    
-    Issue #5344
-
-commit 09461c51bdffc35b9e0d482dbf16d302bb5cfdca
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 17 17:29:00 2024 +0200
-
-    capture_session: capture stop/wakeup protocol
-    
-    With this change, a client (i.e., display driver) can register
-    a wakeup signal handler to be notified on the arrival of new data to
-    capture. The signal is delivered only when the client has stopped
-    capturing. The client propagates this condition to the server using
-    the new 'capture_stopped' RPC call.
-    
-    This change in principle enables a display driver to suspend its
-    periodic mode of operation after a few frames without capturing any
-    new data. As the first driver, the fb_sdl driver has been adapted to
-    the new protocol. This change not only eliminates the driver's CPU
-    load when idle, it also reduces the latency of sporadic output
-    because the response to such GUI updates is no longer bound by a
-    fixed periodic interval.
-    
-    Issue #5344
-
-commit ffcd08b5c778f6e540fc88c0a7b9d52cbe37e7b8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 18 16:05:15 2024 +0200
-
-    backdrop,pdf_view: remove sync handling
-    
-    The sync handling makes the code more complicated without a benefit.
-    
-    Issue #5347
-
-commit 58d20c77517580009b8237ec405358ae32fe7ed4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Sep 19 15:55:57 2024 +0200
-
-    menu_view: use timer for animation timing
-    
-    This patch removes the use of sync signals as time source. The animation
-    phase is now timed using a timer connection as tick source while sync
-    signals are used for scheduling the redraws.
-    
-    Issue #5347
-
-commit e69ade529909ac752fd9bad2221e82786769ed93
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Sep 19 18:00:38 2024 +0200
-
-    decorator: use timer for animation timing
-    
-    This patch changes the precision of the configuration's motion attribute
-    to a multiple of 10 ms (centi-seconds). The previous version used steps
-    of 20 ms. Hence, one needs to adjust existing configurations by doubling
-    the motion attribute values of the themed decorator.
-    
-    Issue #5347
-
-commit fc4b026b62b8aba56625ad5c93f848f8e090f15b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 18 16:25:02 2024 +0200
-
-    nitpicker: remove periodic mode of operation
-    
-    Unless nitpicker is used in 'request_framebuffer' mode, it no longer
-    depends on a periodic timer but merely acts as a broker between capture
-    clients and GUI clients. Sync signals as delivered to GUI clients are
-    now wired to Capture::Session::capture_at calls. So the display driver
-    defines the occurrence of those signals.
-    
-    Note that sync signals are only delivered while a driver actively calls
-    'capture_at'. If a driver stops capturing, GUI clients no longer receive
-    any sync signal. This is a change from the previous situation where GUI
-    clients could depend on the periodicity of sync signals.
-    
-    Issue #5347
-
-commit 0e33830d1fb210160e5368af499c15803662c2bc
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 23 15:05:51 2024 +0200
-
-    framebuffer_session: use Rect as refresh argument
-    
-    This patch replaces basic-type arguments x, y, w, h by the 'Rect' type,
-    and imports the Genode namespace into the Framebuffer namespace.
-    
-    Issue #5350
-
-commit 8082aa980e41da8f4b534da40d9fee77d799f8b8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 23 16:54:05 2024 +0200
-
-    framebuffer_session: atomic blitting and panning
-    
-    By enhancing the Framebuffer::Session interface by the new RPC functions
-    'blit' and 'panning', GUI clients become able to attain tearing-free
-    output. Two modes of operations are supported.
-    
-    1. Atomic back-to-front blitting
-    
-       GUI clients that partially update their user interface like regular
-       application dialogs, can now implement double buffering by placing
-       both the back buffer and front buffer within the GUI session's
-       framebuffer and configuring a view that shows only the front buffer.
-       The 'blit' operation allows the client to atomically flush pixels
-       from the back buffer to the front buffer.
-    
-    2. Atomic buffer flipping
-    
-       GUI clients that always update all pixels like a media player or
-       a game can now use the 'panning' feature to atomically redirect the
-       displayed pixels to a different portion of the GUI session's virtual
-       frame buffer. The virtual framebuffer always contains two frames,
-       the displayed one and the next one. Once the next frame is complete,
-       the client changes the panning position to the portion containing
-       the next frame.
-    
-    Issue #5350
-
-commit db2f1e542c53f3bf7566827153f867ea526d01e8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 23 17:43:22 2024 +0200
-
-    decorator: double-buffered output
-    
-    This patch ensures that the displayed pixel buffer is always consistent
-    by applying intermediate drawing steps on an invisible back buffer,
-    which is blitted to the front buffer by the GUI server.
-    
-    Note that the addition of the back buffer increases the decorator's RAM
-    demand by 4*w*h (4 bytes per pixel) whereas w and h are the screen size.
-    
-    Issue #5350
-
-commit 4565cd0143ff2496ce8fbccbb909af30df733092
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 24 15:26:27 2024 +0200
-
-    demo/scout: use atomic panning and blitting
-    
-    Issue #5350
-
-commit 6522158caadfb398a8207cd304e3b8bb25669dc4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 24 17:54:34 2024 +0200
-
-    gems/gui_buffer.h: atomic back-to-front blitting
-    
-    This patch updates menu_view, themed_decorator, and rom_osci to use the
-    new frame-buffer blit operation, mitigating tearing artifacts
-    
-    Issue #5350
-
-commit e738162bdea61345517cad664c5dd32d8513da25
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 25 11:34:39 2024 +0200
-
-    framebuffer_session: alpha as Mode attribute
-    
-    Propagate the want of an alpha channel as attribute of Framebuffer::Mode
-    instead of passing this property as a separate bool argument.
-    
-    This clears the way for adding useful accessors for pixel/alpha/input
-    surfaces to the Mode type as a subsequent step.
-    
-    Issue #5351
-
-commit 5b4e1915d858b43cc38efa1c00220d99fac4c8d2
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 25 16:29:06 2024 +0200
-
-    framebuffer_session: accessors for buffer surfaces
-    
-    This patch adds central and safe utilities for accessing the distinct
-    parts of the virtual framebuffer to relieve clients from pointer
-    calculations.
-    
-    Issue #5351
-
-commit e69c01aad3a31728a5a661680a49b53bd97dc7fc
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Sep 26 13:45:45 2024 +0200
-
-    framebuffer_session: add sync_source selection
-    
-    The new Framebuffer::Session::sync_source RPC function allows for the
-    selection of a specific source of sync signals in the presence of
-    multiple capture clients at the GUI server.
-    
-    This patch contains only the extension of the interface. The information
-    is not evaluated by the GUI server yet.
-    
-    Issue #5347
-
-commit 50cc52a091d7b5bb4b37f13631a86c1ffdc4bbb7
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Wed May 4 12:01:54 2022 +0200
-
-    intel/display: use one capture session per display
-    
-    Fixes #5345
-
-commit 458458b65f2648d68668a622c20237ace128eb8c
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Sep 23 16:53:21 2024 +0200
-
-    intel/display: support stop/wakeup protocol
-    
-    Issue #5344
-
-commit f324aa902b382352f06f71c6e05938f13e44acf0
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Sep 27 13:56:26 2024 +0200
-
-    nitpicker: configurable capture policies
-    
-    Capture clients used to always capture the view stack at the origin of
-    the coordinate system. So each capture client obtained a mirror of the
-    same picture. This patch allows for the placement of capture clients on
-    larger panorama using Genode's usual label-based policy-selection
-    approach. Thereby, each monitor in multi-monitor scenario can display a
-    different portion of the panorama.
-    
-    The patch takes special care to always keep the pointer in a visible
-    position. The pointer cannot be moved to any area that is not captured.
-    Should the only capture client displaying the pointer disappear, the
-    pointer is warped to the center of (any) remaining capture client.
-    
-    Fixes #5352
-
-commit 318d641266d5edb7028d9eb63d8bf29e60fbf97b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Oct 1 14:56:18 2024 +0200
-
-    gui_session: provide mode info as XML
-    
-    In multi-monitor scenarios, the mode is no longer a single rectangular
-    area but a panorama with potentially many captured rectangles. This
-    patch replaces the former 'mode' and 'mode_sigh' RPC by a new 'info'
-    ROM accessor.
-    
-    Issue #5353
-
-commit d7830a0ce6bfb030f8d26f8079a82ad888eebcc6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 3 17:46:32 2024 +0200
-
-    Add Input::Session::exclusive() interface
-    
-    This interface allows a GUI client to express the intent to exclusively
-    observe relative motion events while locking the absolute pointer
-    position. This patch merely extends the interface without implementing
-    it.
-    
-    As this change touches os/include/input/component.h, it moves the
-    manage/dissolve operations into the class, ensuring the call of
-    dissolve at destruction time.
-    
-    Issue #5355
-
-commit 75b04b38f615f9bc2a6026324b4e24157babf6c8
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Oct 4 14:05:08 2024 +0200
-
-    Adjust RAM and cap quotas
-    
-    The recent changes of the GUI stack (proper accounting of cap and RAM
-    resources by the window manager and nitpicker, output buffered at the
-    server side) require quota adjustments at various GUI-related places.
-    
-    Issue #5356
-
-commit 92227df62428df658d877c9213a46a6410acf483
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sun Oct 6 14:00:48 2024 +0200
-
-    nitpicker: handle Input::Session::exclusive
-    
-    While the focused client has enabled exclusive input, nitpicker does
-    not translate relative motion to absolute motion but routes relative
-    motion directly to the client. Additionally, the pointer origin is
-    forcibly moved to a position outside the screen boundaries, making the
-    pointer invisible.
-    
-    Issue #5355
-
-commit ca47280ce9ee8875c85a947736dac1eda4ec1062
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sun Oct 6 15:13:54 2024 +0200
-
-    wm/layouter: pointer grabbing/ungrabbing
-    
-    This patch implements the following policy for applications requesting
-    exclusive input (relative motion): The pointer is grabbed as soon as the
-    user clicks inside the application window. It is forcibly ungrabbed on
-    any window-focus change or when tapping the KEY_SCREEN. An application
-    can always enable (transient) exclusive input during a key sequence,
-    e.g., when dragging the mouse while holding the mouse button. Transient
-    exclusive input is revoked when releasing the last button/key.
-    
-    Fixes #5355
-
-commit 4a6c506f37cee3f58d44871814b1391e639e7ac9
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Thu Aug 15 12:37:54 2024 +0200
-
-    nitpicker: deliver press events to global key receiver
-    
-    Fixes the following misbehavior: If a global key is pressed (e.g., Caps
-    Lock in Sculpt) and the mouse is clicked before release, the global-keys
-    handler receives the global-key press but no further events of the
-    sequence, especially *no Caps-Lock release*.
-    
-    A more reasonable fix may address the "else branch" that deletes the
-    _input_receiver in case of mouse events without a hovered client too,
-    which is beyond the narrow scope of this fix.
-
-commit 1a5f3a2210cc80448302c326009e5295a67f10a7
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Oct 21 14:44:55 2024 +0200
-
-    intel/display: mirror unconfigured connectors
-    
-    by default.
-    
-    Issue #5356
-
-commit 71f3e5f82aa3065bc3ab79d39f47217a1e70856a
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Oct 21 14:37:55 2024 +0200
-
-    intel/display: improve disrete/mirror swap support
-    
-    Issue #5345
-
-commit f7689a473c82e2d06470629610cee0170c0efa3a
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Oct 24 12:07:05 2024 +0200
-
-    intel/display: adjust reported/set xml nodes
-    
-    '<connector mode_id=3 ...' becomes '<connector mode="3" ...'
-    
-    '<mode mode_id="2" ... ' becomes '<mode id="2" ...'
-    
-    '<mode unavailable="true" ...' becomes '<mode usable="false" ...'
-
-commit 44c23ca4728cba634580f10a62aafbf732bed8e1
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Fri Oct 25 13:54:45 2024 +0200
-
-    intel/display: adjust width_mm/height_mm usage
-    
-    On capture creation for discrete usage, use the connector values
-    if display mode does not provide values. For mirror capture ever
-    report no width_mm/height_mm.
-
-commit f3b94a3b21807cb1772ae4bb75e295360cff69eb
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Mon Oct 28 20:59:24 2024 +0100
-
-    intel/display: reconstruct merge capture session
-    
-    also when the name in the config changes.
-    
-    Issue #5356
-    Issue #5345
-
-commit 77471cc10ebdce9cda52838216243502eb55a642
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Tue Oct 29 10:52:05 2024 +0100
-
-    intel/display: report connectors w/o modes as off
-    
-    in the XML report
-
-commit 8ec2d6a36bd484720c6455e199f09ebd2814b7f4
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Tue Oct 29 16:21:27 2024 +0100
-
-    intel/display: don't report unknown state as connected
-    
-    The changes "intel/display: report connectors w/o modes as off" still
-    need improvements to detect mode-less connectors in intermediate states.
-    Until then, don't report connector_status_unknown as connected with
-    modes.
-
-commit 3ab9173b20127fdfe387656439bb3f6ea851bfb7
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 24 11:50:16 2024 +0200
-
-    gui_session: window-closed state as attribute
-    
-    With the change of "gui_session: provide mode info as XML", the
-    client-side window-close handling became dysfunct because the
-    window-close state got wrongly interpreted as initial window state, to
-    the effect that a client's initial-window size policy got applied
-    instead of closing the window.
-    
-    This patch makes the inital state of running a windowed application
-    (when no window size is defined yet) clearly distiguishable from the
-    state after which the user closed the window. Prior this patch, both
-    conditions were reflected by an empty <capture/> node in the panorama.
-    Now, the latter condition is reported as <capture closed="yes"/>, which
-    alleviates the need to track the life cycle of a window at the client
-    size.
-    
-    Issue #5353
-
-commit 8c43f8aa333b09304babd976f7616b46cf02216c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 23 19:37:28 2024 +0200
-
-    sculpt_manager: interactive framebuffer settings
-    
-    This patch add a configuration dialog in the intel_fb node of the
-    component graph. The dialog displays a list of present displays labeled
-    after their respecive connectors. A mode can be selected for each
-    connector when clicking on the connector entry.
-    
-    In-between the entries there are two buttons. The connect button is
-    toggle that defines whether the two adjacent entries are mirrored.
-    It is enabled by default so that all new connectors participate in
-    the mirroring. By untoggling the last enabled connect button, the
-    entry below the button becomes a discrete (non-mirrored) display.
-    
-    A swap button allows for changing the order of the list, which has
-    to effects. First, the resolution of the very first entry defines
-    the size for mirrored display. So be changing the order of mirrored
-    displays, one can pick the preferred screen size. Second, the order
-    of discrete displays defines the layout of the panorama from left to
-    right. (the panorama config is not part of this commit though)
-    
-    Note that there is currently no safety net against locking oneself
-    out of all displays. E.g., one can make Sculpt unusable by manually
-    disabling each display, or by selecting modes not properly handled by
-    the connected monitor. In the future, we may add a confirm button with
-    a timeout to roll back such unfortunate settings.
-    
-    Fixes #5286
-commit 8c43f8aa333b09304babd976f7616b46cf02216c
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 23 19:37:28 2024 +0200
-
-    sculpt_manager: interactive framebuffer settings
-    
-    This patch add a configuration dialog in the intel_fb node of the
-    component graph. The dialog displays a list of present displays labeled
-    after their respecive connectors. A mode can be selected for each
-    connector when clicking on the connector entry.
-    
-    In-between the entries there are two buttons. The connect button is
-    toggle that defines whether the two adjacent entries are mirrored.
-    It is enabled by default so that all new connectors participate in
-    the mirroring. By untoggling the last enabled connect button, the
-    entry below the button becomes a discrete (non-mirrored) display.
-    
-    A swap button allows for changing the order of the list, which has
-    to effects. First, the resolution of the very first entry defines
-    the size for mirrored display. So be changing the order of mirrored
-    displays, one can pick the preferred screen size. Second, the order
-    of discrete displays defines the layout of the panorama from left to
-    right. (the panorama config is not part of this commit though)
-    
-    Note that there is currently no safety net against locking oneself
-    out of all displays. E.g., one can make Sculpt unusable by manually
-    disabling each display, or by selecting modes not properly handled by
-    the connected monitor. In the future, we may add a confirm button with
-    a timeout to roll back such unfortunate settings.
-    
-    Fixes #5286
-
-commit 9ad711163461d4000e1bb26b26a8a9a36c348f31
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 24 19:07:25 2024 +0200
-
-    sculpt: let leitzentrale follow the pointer
-    
-    This patch places the leitzentrale GUI always at the pointer-at display
-    instead of filling the entire panorama. This ensures that the complete
-    leitzentrale GUI is always visible.
-    
-    Fixes #5370
-
-commit a5b6022fecdb05e2038e4f58ba6cc88eee1c629d
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Nov 7 15:01:31 2024 +0100
-
-    intel/display: improve mirror/discrete reporting
-    
-    Don't try to decide based on the hardware state, in which mode a
-    connector is used. If a previous configuration failed, e.g. -ENOSPC,
-    the detection whether the mirrored framebuffer is in use may fail
-    and the connectors are reported wrongly as discrete.
-    
-    During modeset traversal take the appropriate lock to synchronize irq and
-    user task, which may be de-scheduled by Linux code when invoking contrib
-    code.
-    
-    Issue #5377
-
-commit ba1c241c2b46cde15e8d65d3d24cf659bfaf7cb7
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Fri Nov 8 15:55:10 2024 +0100
-
-    intel/display: adapt README to current implementation
-
-commit a5b6022fecdb05e2038e4f58ba6cc88eee1c629d
-Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
-Date:   Thu Nov 7 15:01:31 2024 +0100
-
-    intel/display: improve mirror/discrete reporting
-    
-    Don't try to decide based on the hardware state, in which mode a
-    connector is used. If a previous configuration failed, e.g. -ENOSPC,
-    the detection whether the mirrored framebuffer is in use may fail
-    and the connectors are reported wrongly as discrete.
-    
-    During modeset traversal take the appropriate lock to synchronize irq and
-    user task, which may be de-scheduled by Linux code when invoking contrib
-    code.
-    
-    Issue #5377
-
-commit ba1c241c2b46cde15e8d65d3d24cf659bfaf7cb7
-Author: Christian Helmuth <christian.helmuth@genode-labs.com>
-Date:   Fri Nov 8 15:55:10 2024 +0100
-
-    intel/display: adapt README to current implementation
-
+Among the users of the Genode-based Sculpt OS, the flexible use of multiple
+monitors was certainly the most longed-after desire raised during our public
+road-map discussion roughly one year ago. We quickly identified that a
+profound solution cannot focus on piecemeal extensions of individual
+components but must embrace an architectural step forward. The step turned
+out being quite a leap.
+In fact, besides reconsidering the roles of display and input drivers in
+[https://genode.org/documentation/release-notes/20.08#The_GUI_stack__restacked - version 20.08],
+the GUI stack has remained largely unchanged since
+[https://genode.org/documentation/release-notes/14.08#New_GUI_architecture - version 14.08].
+So we took our multi-monitor ambitions as welcome opportunity to incorporate
+our experiences of the past ten years into a new design for the next ten
+years.
+
+
+Tickless GUI server and display drivers
+=======================================
+
+Up to now, the nitpicker GUI server as well as the display drivers used to
+operate in a strictly periodic fashion. At a rate of 10 milliseconds, the GUI
+server would route input events to the designated GUI clients and flush
+graphical changes of the GUI clients to the display driver.
+This simple mode of execution has benefits such as the natural ability of
+batching input events and the robustness of the GUI server against overload
+situations. However, in Sculpt OS, we observed that the fixed rate induces
+little but constant load into an otherwise idle system, rendering
+energy-saving regimes of modern CPUs less effective.
+This problem would become amplified in the presence of multiple output channels
+operating at independent frame rates. Moreover, with panel self-refresh
+support of recent Intel graphics devices, the notion of a fixed continuous
+frame rate is antiquated.
+
+Hence, it was time to move to a tickless GUI-server design where the GUI
+server acts a mere broker between events triggered by applications (e.g.,
+pushing pixels) and drivers (e.g., occurrence of input, scanout of a display).
+Depending on the behavior of its clients (GUI applications and drivers alike),
+the GUI server notifies the affected parties about events of interest but
+does not assert an active role.
+
+For example, if a display driver does not observe any changed pixels for 50
+ms, it goes to sleep. Once an application updates pixels affecting a display,
+the GUI server wakes up the respective display driver, which then polls the
+pixels at a driver-defined frame rate until observing that the pixels remain
+static for 50 ms. Vice versa, the point in time when a display driver requests
+a pixel update is reflected as a sync event to GUI applications visible on
+that display, enabling such applications to synchronize their output to the
+frame rate of the driver. The GUI server thereby asserts the role of steering
+the sleep cycles of drivers and applications. Unless anything happens on
+screen, neither the GUI server nor the display driver is active. When two
+applications are visible on distinct monitors, the change of one application
+does not induce any activity regarding the unrelated display. This allows for
+scaling up the number of monitors without increasing the idle CPU load.
+
+This change implies that the former practice of using sync signals as a
+time source for application-side animation timing is no longer viable.
+Sync signals occur only when a driver is active after all. GUI applications
+need to use a real time source as basis for animation timing instead.
+
+
+Paving the ground for tearing-free motion
+=========================================
+
+Tearing artifacts during animations are rightfully frowned upon. It goes without
+saying that we strive to attain tearing-free motion in Genode. Two
+preconditions must be met. First, the GUI server must be able to get hold
+of a _consistent_ picture at any time. Second, the flushing of the picture
+to the display hardware must by timed with _vsync_ of the display.
+
+Up to now, the GUI stack was unable to meet the first precondition by design.
+If the picture is composed of multiple
+clients, each client must be present in a consistent state.
+The textures used as input of the compositing of the final picture
+are buffers shared between server and client. Even though clients employed
+double-buffering to hide intermediate drawing states, the final back-to-front
+copy into the shared buffer violated the consistency of the buffer during
+the client-side copy operation, when looking at the buffer from the server
+side. To overcome this deficiency, we have now equipped the GUI server with
+atomic blitting and panning, which support atomic updates in two fashions.
+
+_Atomic back-to-front blitting_ allows GUI clients that partially update their
+user interface like regular application dialogs to implement double buffering
+by placing both the back buffer and front buffer within the GUI session's
+shared buffer and configuring a view that shows only the front buffer. The new
+blit operation ('Framework::Session::blit') allows the client to atomically
+flush pixels from the back buffer to the front buffer.
+
+_Atomic buffer flipping_ allows GUI clients that always update all pixels like
+a media player or a game to leverage panning ('Framework::Session::panning')
+to atomically redirect the displayed pixels to a different portion of the GUI
+session's shared buffer. This buffer contains two frames, the displayed one
+and the next one. Once the next frame is complete, the client changes the
+panning position to the portion containing the next frame.
+
+Almost all GUI clients of the Genode OS framework have been updated to use
+the new facilities.
+
+The vsync timing as the second precondition for tearing-free motion lies in
+the hands of the display driver, which can in principle capture pixel updates
+from the GUI server driven by vsync interrupts. In the presence of multiple
+monitors with different vsync rates each, a GUI client may deliberately select
+a synchronization source ('Framebuffer::Session::sync_source'). That said,
+even though the interfaces are in place, vsync timing is not yet provided by
+the current display drivers.
+
+
+Mirrored and panoramic monitor setups
+=====================================
+
+A display driver interacts with the nitpicker GUI server as a capture client.
+Up until now, the nitpicker GUI server handed out the same picture to each
+capture client. So each client obtained a mirror the same picture. By
+subjecting each client to a policy defining a window within a larger panorama,
+a driver creating one capture session per monitor becomes able to display the
+larger panorama spanning the connected displays. The assignment of capture
+clients to different parts of the panorama follows Genode's established
+label-based policy-selection approach as explained in the
+nitpicker
+[https://github.com/genodelabs/genode/blob/master/repos/os/src/server/nitpicker/README - documentation].
+
+Special care has been taken to ensure that the pointer is always visible. It
+cannot be moved to any area that is not captured. Should the only capture
+client displaying the pointer disappear, the pointer is warped to the center
+of (any) remaining capture client.
+
+A mirrored monitor setup can in principle be attained by placing multiple
+capture clients at the same part of nitpicker's panorama. However, there is
+a better way: Our Intel display-driver component supports both discrete and
+merged output channels. The driver's configuration subsumes all connectors
+listed within a '<merge>' node as a single encompassing capture session at the
+GUI server. The mirroring of the picture is done by the hardware. Each
+connector declared outside the '<merge>' node is handled as a discrete capture
+session labeled after the corresponding connector. The driver's
+[https://github.com/genodelabs/genode/blob/master/repos/pc/src/driver/framebuffer/intel/pc/README - documentation]
+describes the configuration in detail.
+
+
+Sculpt OS integration
+=====================
+
+All the changes described above are featured in the recently released
+Sculpt OS version 24.10, which gives the user the ability to attain mirrored
+or panoramic monitor setups by the means of manual configuration or by using
+interactive controls.
+
+[image sculpt_24_10_intel_fb]
+
+You can find the multi-monitor use of Sculpt OS covered by the
+[https://genode.org/documentation/articles/sculpt-24-10#Multi-monitor_support - documenation].
+
+
+Revised inter-component interfaces
+==================================
+
+Strict resource partitioning between GUI clients
+------------------------------------------------
+
+Even though Genode gives server components the opportunity to operate on
+client-provided resources only, the two prominent GUI servers - nitpicker and
+the window manager (wm) - did not leverage these mechanisms to full extent. In
+particular the wm eschewed strict resource accounting by paying out of its own
+pocket. These deficiencies have been rectified by the current release, thereby
+making the GUI stack much more robust against potential resource
+denial-of-service issues. Both the nitpicker GUI server and the window manager
+now account all allocations to the resource budgets of the respective clients.
+This change has the effect that GUI clients must now be equipped with the
+actual cap and RAM quotas needed.
+
+
+Structured mode information for applications
+--------------------------------------------
+
+Up to now, GUI clients were able to request mode information via a plain
+RPC call that returned the dimensions and color depth of the display.
+Multi-monitor setups call for more flexibility, which prompted us to
+replace the mode information by XML-structured information delivered as
+an 'info' dataspace. This is in line with how meta information is handled
+in other modern session interfaces like the platform or USB sessions.
+
+This new representation gives us room to annotate information that could
+previously not exposed to GUI clients, in particular:
+
+* The total panorama dimensions.
+* Captured areas within the panorama, which can be used by multi-monitor
+  aware GUI clients as intelligence for placing GUI views.
+* DPI information carried by 'width_mm' and 'height_mm' attributes.
+  This information is defined by the display driver and passed to the GUI
+  server as 'Capture::Connection::buffer' argument.
+* The closed state of a window interactively closed by the user.
+
+Note that the wm virtualizes the information of the nitpicker GUI server.
+Instead of exposing nitpicker's panorama to its client, the wm reports
+the screen hosting the client's window as panorama and the window size as
+a single captured rectangle within the panorama.
+
+
+Mouse grabbing
+--------------
+
+Up to now, GUI clients observed absolute pointer positions only. The nitpicker
+GUI server unconditionally translated relative mouse-motion events to absolute
+motion events. To accommodate applications like games or a VM emulating a
+relative pointer device, we extended the GUI server(s) with the ability
+to (selectively) expose relative motion events
+while locking the absolute pointer position. This is usually called pointer
+grabbing. It goes without saying that the user must always retain a way to
+forcefully "ungrab" the pointer without the cooperation of the application.
+
+The solution is the enhancement of the Input::Session interface by a new RPC
+function that allows a client to request exclusive input. The nitpicker GUI
+server grants this request if the application owns the focus. In scenarios
+using the window manager, the focus is always defined by the wm, which also
+intercepts all input sessions of GUI applications. Hence the wm is in the
+natural position of arbitrating the grabbing/ungrabbing of the pointer. For
+each GUI client, the wm records whether the client is interested in exclusive
+input but does not forward this request to nitpicker. Only if a GUI client
+receives the focus and has requested exclusive input, the wm enables exclusive
+input for this client at nitpicker when observing a mouse click. Whenever the
+user presses the global wm key (super), the wm forcefully releases the
+exclusive input at nitpicker until the user clicks into the client window the
+next time.
+
+While operating in exclusive input mode, there is no useful notion of an
+absolute pointer position at the nitpicker GUI server. Hence, nitpicker
+hides GUI domains that use the pointer position as coordinate origin.
+Thereby, the mouse cursor automatically disappears while the pointer is
+grabbed.
+
+
+Current state and ongoing work
+==============================
+
+All the advances described above are in full effect in the recently released
+version 24.10 of [https://genode.org/download/sculpt - Sculpt OS]. All
+components hosted in Genode's main and world repositories have been updated
+accordingly, including Genode-specific components like the widget toolkit
+used by Sculpt OS, over Qt5 and Qt6, to SDL and SDL2.
+
+Current work is underway to implement multi-monitor window management and make
+multiple monitors available to guest OSes hosted in VirtualBox.
 
 
 Device drivers and platforms
