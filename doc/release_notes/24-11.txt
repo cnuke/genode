@@ -652,159 +652,83 @@ Date:   Fri Nov 15 11:12:36 2024 +0100
     
     Issue #5378.
 
-Wifi
-====
 
-; @cnuke
+Wifi management rework
+======================
 
-commit 6b474e059cecceaf566e735e8b7b47c4a7167345
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Sep 2 16:07:40 2024 +0200
+Our management interface in the wifi driver served us well over the years
+and concealed the underlying complexity of the wireless stack. At the same
+time it gained some complexity itself to satisfy a variety of use-cases.
+Thus, we spent some time in the last release cycle and reworked the management
+layer to reduce this complexity by streamlining the interaction between the
+various parts, like the manager layer itself and 'wpa_supplicant' as well as
+the device driver, and to provide a more sound foundation for future
+adaptions.
 
-    wpa_supplicant: update to version 2.11
-    
-    Issue #5341.
+Included is also the update of the 'wpa_supplicant' to version 2.11.
 
-commit d4e4b8bf60e016800065a7e35e8a4b82d0c91ceb
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Sep 3 16:06:02 2024 +0200
+The following segments detail the changes made to the configuration
+as it was altered quiet a bit to no longer mix different tasks, e.g.
+joining a network and scanning for hidden networks, and removes no longer
+needed options.
 
-    driver/wifi: rework CTRL interface manager
-    
-    This commit streamlines the interaction between the Wifi::Manager
-    and the wpa_supplicant's CTRL interface.
-    
-    As user-facing changes it alters some default settings and introduces
-    new features:
-    
-    * Every configured network now needs to explicitly have its
-      'auto_connect' (to be considered an option for joining) attribute
-      set to 'true' whereas this was previously the default value if the
-      attribute was not set at all.
-    
-    * The 'log_level' attribute is added and configures the supplicant's
-      verbosity. Valid values correspond to levels used by the supplicant
-      and are as follows 'excessive', 'msgdump', 'debug', 'info', 'warning'
-      and 'error'. The default value is 'error' and configures the least
-      amount of verbosity.
-    
-    * The 'bgscan' attribute may be used to configure the way the
-      supplicant performs background-scanning to steer or rather optimize
-      roaming decision within the same network. The default value is set
-      to 'simple:30:-70:600'. It can be disabled by specifying an empty
-      value, e.g. 'bgscan=""'.
-    
-    * The 'verbose_state' attribute was removed alltogether and similar
-      functionality is now coverted by 'verbose' attribute.
-    
-    Implementation-wise the internals changed significantly and are
-    outlined in the following paragraphs.
-    
-    Formerly the interaction between the manager and the supplicant
-    was handled in an apparent way where the internal state of each
-    interaction was in plain sight. This made the flow cumbersome to
-    follow and therefor each interaction is now confined to its own
-    'Action' object that encapsulates the ping-pong of commands and
-    responses between the manager and the supplicant. All actions are
-    processed in an sequential way and thus there is no longer any
-    need to defer pending actions depending on the interal state of
-    the current interaction. Configuration changes as well as events
-    issued by the supplicant where new actions can be created are
-    handled in this fashion. Of note are both signal-handlers,
-    '_handle_cmds' and '_handle_events' respectively.
-    
-    The state report, which provides the information about the current
-    state of connectivity to a given wireless network, was dealt with
-    in the same vein and its handling was spread across the manager
-    implementation. Again, to make it easier to follow, the generation
-    of the state report is now purely driven by the 'Join_state' object.
-    This object encapsulates the state of connectivity and is normally
-    updated by events issued from the supplicant (see '_handle_events').
-    It is also incorporated when handling command responses (see
-    '_handle_cmds').
-    
-    Handling of timed-actions, like scan and signal quality
-    update requests, was done by setting a timeout at the Timer session
-    directly and thus only one timed-action could be pending at any time.
-    This excluded dealing with timed-actions like connected-scanning
-    and signal quality polling concurrently. This was changed and now
-    a One_shot_timeout is used to programm each concurrent timed-action.
-    
-    For implementing the communication channel for the CTRL interface the
-    manager and supplicant use a shared memory buffer, the Msg_buffer.
-    Since the CTRL interface for Genode was implemented using C, some
-    shenanigans were performed to access the memory buffer. Now the
-    CTRL interface implementation uses C++ and only exports the functions
-    required by the supplicant as C. This simplifies the usage of the
-    Msg_buffer and allows for removing the global functions needed for
-    synchronizing the Msg_buffer access as those are now part of the
-    object itself via the 'Notify_interface'.
-    
-    Fixes #5341.
+At the top-level '<wifi_config>' node the following alterations where made.
 
-commit e4d2a4df42f0f9484cf9afac3566f3b1d1ded20b
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Oct 7 17:16:18 2024 +0200
+* The 'log_level' attribute was added and configures the supplicant's
+  verbosity. Valid values correspond to levels used by the supplicant
+  and are as follows 'excessive', 'msgdump', 'debug', 'info', 'warning'
+  and 'error'. The default value is 'error' and configures the least
+  amount of verbosity. This option was introduced to ease the investigation
+  of connectivity issues.
 
-    driver/wifi: split hidden network scanning
-    
-    This commit splits the intent to scan for a hidden network and the
-    actual configuration of a network itself by introducing
-    '<explicit_scan>' nodes. Like the '<network>' node these also feature
-    a 'ssid' attribute and each node is incorporated into the SCAN request
-    if its SSID is valid.
-    
-    For more information please consult 'repos/src/driver/wifi/README'.
-    
-    Issue #5356.
+* The 'bgscan' attribute may be used to configure the way the
+  supplicant performs background-scanning to steer or rather optimize
+  roaming decision within the same network. The default value is set
+  to 'simple:30:-70:600'. It can be disabled by specifying an empty
+  value, e.g. 'bgscan=""'.
 
-commit e0874baa8fbddcdecd1920f3f494ae2ee53b931d
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Mon Oct 7 17:35:14 2024 +0200
+* The 'connected_scan_interval' attribute was removed as this functionality
+  is now covered by the background-scanning.
 
-    driver/wifi: remove auto_connect attribute
-    
-    This commit does away with controlling the join-intent via an attribute
-    but couples it to the existence of a '<network>' node. With this change
-    all '<network>' nodes within the configuration are always
-    unconditionally considered for joining.
-    
-    Issue #5356.
+* The 'verbose_state' attribute was removed altogether and similar
+  functionality is now covered by the 'verbose' attribute.
 
-commit 7fe7ca19686eac73bf53f2757fd5ffb5be15831d
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Nov 8 13:57:37 2024 +0100
+The network management received the following changes.
 
-    driver/wifi: provide best practices in README
+* Every configured network, denoted by a '<network>' node, is now implicitly
+  considered an option for joining. The 'auto_connect' attribute was
+  removed and a '<network> node must by renamed or removed instead.
+
+* The intent to scan for a hidden network is now managed by the newly
+  introduced '<explicit_scan>' node that like the '<network>' node has
+  an 'ssid' attribute. If the specified SSID is valid, it is incorporated
+  into the scan request to actively probe for this network.
+  The 'explicit_scan' attribute of the '<network>' node was removed.
+
+The following exemplary configuration shows how to configure the driver
+for attempting to join two different networks and one of them is hidden.
+The initial scan interval is set 10 seconds and the signal quality will be
+updated every 30 seconds while connected to a network.
+
+!<wifi_config scan_interval="10" update_quality_interval="30">
+!  <explicit_scan ssid="Skynet"/>
+!  <network ssid="Zero"   protection="WPA2" passphrase="allyourbase"/>
+!  <network ssid="Skynet" protection="WPA3" passphrase="illbeback"/>
+!</wifi_config>
+
+For more information please consult 'repos/dde_linux/src/driver/wifi/README'
+that now contains a 'Best practices' section that explains how the driver
+should best be operated and highlights the difference between a managed
+(as used in Sculpt) and user generated configuration.
 
 
 Audio driver updated to OpenBSD 7.6
 ===================================
 
-; @cnuke
-
-commit 8b06d7ff42b1328fec87e9564088ae9f0d78cd98
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Fri Aug 16 14:03:13 2024 +0200
-
-    dde_bsd: update audio driver to OpenBSD 7.5
-    
-    The update is mostly cosmetic in nature and amongst others adds PCIIDs
-    for Alder Lake-N devices.
-    
-    Issue #5331.
-
-commit 3e82422d1755dd362d8086259f511d5493e2649b
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Aug 27 13:27:27 2024 +0200
-
-    dde_bsd: update audio driver to OpenBSD -current (2024-08-16)
-    
-    This update uses a -current (that will become 7.6 later this year)
-    snapshot from 2024-08-16 that includes fixes for MSI support on
-    AMD systems.
-    
-    Fixes #5331.
+With this release we updated the audio driver based on OpenBSD to a
+more recent revision that correlates to version 7.6. It supports
+newer devices, e.g. Alder Lake-N, and includes a fix for using MSI
+with HDA devices found in AMD-based systems.
 
 
 AVX and hardware-based AES in virtual machines
