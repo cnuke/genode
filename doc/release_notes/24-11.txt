@@ -335,30 +335,35 @@ supported i.MX platforms. Of course, additional patch series were necessary to
 include device-tree sources from other vendor kernels, for instance from
 Compulab.
 
-With the development environment in place and lots of effort put into, we were
-able to implement initial Genode support for the MNT Pocket Reform on Genode
-24.11.
+With the development environment in place and after putting lots of effort in,
+we are able to provide initial Genode support for the MNT Pocket Reform with
+Genode 24.11.
 
-On the device driver front we did not have to port lots of new
-drivers, but were able to extent drivers ported for the i.MX8MQ platform.
-Those drivers are: network card, USB host controller, display driver, and SD card.
+On the device driver side of things we did not have to port lots of new
+drivers, but were able to extent drivers already available for the i.MX8MQ platform.
+In particular these drivers are for the wired network card, USB host controller,
+display, and SD card.
 
-For the Wifi card that is used within the i.MX8MP SoC we needed to port a new
-driver. It has a Qualcom QCA9377 chipset and its driver sources were not even part of
-the Linux kernel sources used by the MNT Pocket Reform. Instead, we had to
-incorporate external Linux kernel module sources for this purpose.
+For the wireless network device that is found on the i.MX8MP SoM in MNT Pocket
+Reform, we needed to port a new driver. It has a Qualcom QCA9377 chipset and is
+attached via SDIO. Unfortunately the available 'ath10k' driver in the vanilla
+kernel does not work properly with such a device and therefore is also not used
+in the regular Linux kernel for the MNT Pocket Reform. Even there a slighty
+adapted external QCACLD2 reference driver is used and so we followed suit by
+incorporating its sources in our 'imx_linux' source tree as well.
 
 Because this is an initial release there are still some issues to be resolved.
 For example, the display of the MNT Pocket is physically
 [https://mntre.com/documentation/pocket-reform-handbook.pdf - rotated] by 90
-degrees. So, we had to find a way to rotate the Genode GUI 90 degrees
-counterclockwise. Unfortunately, there seems to be
-no hardware support, other than the GPU, to perform a fast rotation. Because GPU
-support is still missing we had to resort to software rotation, which is
-obviously far from optimal.
+degrees. So, we had to find a way to accommodate for that. Unfortunately,
+there seems to be no hardware support, other than using the GPU, to perform
+a fast rotation. With GPU support still missing on this system we had to
+resort to perform the rotation in software on the CPU, which is obviously
+far from optimal.
 
-With all this in mind we are happy to announce basic Sculpt OS support for the
-MNT Pocket Reform and wish you "Happy Sculpting".
+With all this in mind basic Sculpt OS support for the MNT Pocket Reform is
+possible and we will provide a preview image that exercises the available
+features soon.
 
 
 Platform driver for i.MX 8M Plus
@@ -387,7 +392,7 @@ power-domain enumerations of the different firmwares also differ.
 
 Finally, the watchdog hardware is now served by the platform driver in a
 recurrent way. Originally our driver used the watchdog only to implement reset
-functionality. But in case of the MNT Pocket reform the watchdog hardware is
+functionality. But in case of the MNT Pocket Reform the watchdog hardware is
 already armed by the bootloader. Therfore, it needs to get served in time, to
 prevent the system from rebooting. As a consequence, the platform driver is
 imandatory on this platform if it needs to run longer than a minute.
