@@ -290,6 +290,8 @@ components hosted in Genode's main and world repositories have been updated
 accordingly, including Genode-specific components like the widget toolkit
 used by Sculpt OS, over Qt5 and Qt6, to SDL and SDL2.
 
+[image multiple_monitors]
+
 Current work is underway to implement multi-monitor window management and make
 multiple monitors available to guest OSes hosted in VirtualBox.
 
