@@ -167,7 +167,7 @@ Mirrored and panoramic monitor setups
 A display driver interacts with the nitpicker GUI server as a capture client.
 One can think of a display driver as a screen-capturing application.
 Up until now, the nitpicker GUI server handed out the same picture to each
-capture client. So each client obtained a mirror the same picture. By
+capture client. So each client obtained a mirror of the same picture. By
 subjecting each client to a policy defining a window within a larger panorama,
 a driver creating one capture session per monitor becomes able to display the
 larger panorama spanning the connected displays. The assignment of capture
@@ -346,7 +346,7 @@ chips, like the Rockchip based modules, are not officially supported by Genode,
 yet. But there is a choice of an i.MX8MP based module available which fits
 nicely into Genode's i.MX infrastructure.
 
-Genode already supports the MNT Reform 2 i.MX8MQ based 
+Genode already supports the MNT Reform 2 i.MX8MQ based
 [https://genodians.org/skalk/2020-06-29-mnt-reform - laptop]. So an update from
 MQ to MP doesn't sound like a big issue because only one letter changed, right?
 It turns out that there are more changes to the platform than mere adjustments of
@@ -370,13 +370,13 @@ drivers but were able to extent drivers already available for the i.MX8MQ platfo
 In particular these drivers are for the wired network card, USB host controller,
 display, and SD card.
 
-For the wireless network device that is found on the i.MX8MP SoM in MNT Pocket
+For the wireless network device that is found on the i.MX8MP SoM in the MNT Pocket
 Reform, we needed to port a new driver. It has a Qualcom QCA9377 chipset and is
-attached via SDIO. Unfortunately the available 'ath10k' driver in the vanilla
+attached via SDIO. Unfortunately the available _ath10k_ driver in the vanilla
 kernel does not work properly with such a device and therefore is also not used
 in the regular Linux kernel for the MNT Pocket Reform. A slightly
 adapted external QCACLD2 reference driver is used instead. So we followed suit by
-incorporating this particular driver in our 'imx_linux' source tree as well.
+incorporating this particular driver in our _imx_linux_ source tree as well.
 
 Being the initial enablement, there are still some limitations.
 For example, the display of the MNT Pocket is physically
@@ -403,7 +403,7 @@ to drive the Compulab i.MX 8M Plus IOT Gateway.
 Some of the I/O pin configurations necessary to setup the SoC properly are
 statically compiled into this driver because they do not change at
 runtime. However, the pin configuration is specific to the actual board.
-Therefore the i.MX8MP platform driver now needs to distinguish in between
+Therefore the i.MX8MP platform driver now needs to distinguish between
 different boards (IOT Gateway and MNT Pocket) by evaluating the
 'platform_info' ROM provided by core.
 
@@ -413,8 +413,9 @@ initially turned off to save energy, have to be enabled to ensure the liveliness
 of the ARM Trusted Firmware (ATF) and thereby the platform. Also we had to adapt
 the communication in between ATF and our platform driver to control
 power-domains. The first version of the i.MX8MP platform driver shared the ATF
-power-domains protocol with the i.MX8MQ version. But it turned out that the
-power-domain enumerations of the different firmwares also differ.
+power-domains protocol with the i.MX8MQ version. However, the
+power-domain enumerations of the different firmwares varies also and we
+adapted that.
 
 Finally, the watchdog hardware is now served by the platform driver in a
 recurrent way. Originally our driver used the watchdog only to implement reset
@@ -430,7 +431,7 @@ Wifi management rework
 Our management interface in the wifi driver served us well over the years
 and concealed the underlying complexity of the wireless stack. At the same
 time it gained some complexity itself to satisfy a variety of use-cases.
-Thus, we took past release cycle as opportunity to rework the management
+Thus, we took the past release cycle as opportunity to rework the management
 layer to reduce this complexity by streamlining the interaction between the
 various parts, like the manager layer itself and 'wpa_supplicant' as well as
 the device driver, and to provide a more sound foundation for future
@@ -491,7 +492,7 @@ For more information please consult the driver's
 [https://github.com/genodelabs/genode/blob/master/repos/dde_linux/src/driver/wifi/README - documentation]
 that now features a best-practices section explaining how the driver
 should best be operated, and highlights the difference between a managed
-(as used in Sculpt OS) and user-generated configuration.
+(as used in Sculpt OS) and a user-generated configuration.
 
 
 Audio driver updated to OpenBSD 7.6
