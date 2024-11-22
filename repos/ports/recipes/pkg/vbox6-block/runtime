@@ -1,4 +1,4 @@
-<runtime ram="8G" caps="2500" binary="init">
+<runtime ram="8G" caps="2500" binary="virtualbox6">
 
 	<requires>
 		<file_system label="vm"/>
@@ -55,7 +55,6 @@
 		<rom label="egl.lib.so"/>
 		<rom label="expat.lib.so"/>
 		<rom label="glapi.lib.so"/>
-		<rom label="init"/>
 		<rom label="jpeg.lib.so"/>
 		<rom label="ld.lib.so"/>
 		<rom label="libc.lib.so"/>
