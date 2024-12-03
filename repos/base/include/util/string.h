@@ -130,7 +130,7 @@ namespace Genode {
 	/**
 	 * Return length of null-terminated string in bytes
 	 */
-	__attribute((optimize("no-tree-loop-distribute-patterns")))
+	 __attribute((optimize("no-tree-loop-distribute-patterns")))
 	inline size_t strlen(const char *s)
 	{
 		size_t res = 0;
@@ -281,7 +281,7 @@ namespace Genode {
 	 * generation of a 'memset()' call in the 'while' loop
 	 * with gcc 10.
 	 */
-	__attribute((optimize("no-tree-loop-distribute-patterns")))
+	 __attribute((optimize("no-tree-loop-distribute-patterns")))
 	inline void *memset(void *dst, uint8_t i, size_t size)
 	{
 		using word_t = unsigned long;
