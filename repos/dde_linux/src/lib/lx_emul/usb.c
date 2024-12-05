@@ -349,6 +349,14 @@ handle_isoc_request(genode_usb_request_handle_t        handle,
 		urb->iso_frame_desc[i].length = packets[i].size;
 		offset += packets[i].size;
 	}
+	urb->transfer_buffer_length = offset;
+
+	static unsigned last_offset = 0;
+	if (last_offset != offset) {
+		printk("%s:%d last_offset: %u offset: %u\n", __func__, __LINE__, last_offset, offset);
+		last_offset = offset;
+	}
+
 	anchor_and_submit_urb(handle, urb, &data->submitted);
 }
 
