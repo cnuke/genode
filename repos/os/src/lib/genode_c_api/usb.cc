@@ -818,7 +818,7 @@ Interface_component::_handle_request(Constructible<Packet_descriptor> &cpd,
 				         sizeof(genode_usb_isoc_transfer_header) +
 				         (hdr.number_of_packets *
 				          sizeof(genode_usb_isoc_descriptor))),
-				payload.size - sizeof(genode_usb_isoc_transfer_header) +
+				payload.size - sizeof(genode_usb_isoc_transfer_header) -
 				hdr.number_of_packets * sizeof(genode_usb_isoc_descriptor) };
 			cbs->isoc_fn(handle, cpd->index, hdr.number_of_packets,
 			             hdr.packets, isoc_payload, opaque_data);
