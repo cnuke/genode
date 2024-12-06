@@ -48,5 +48,5 @@
 	<start name="storage_nvme"/>
 
 	<start name="vm_ubuntu_fs"/>
-	<start name="vm_ubuntu_nvme_Slot_A-U7411"/>
+	<start name="vm_ubuntu_nvme_Slot_A"/>
 </config>
