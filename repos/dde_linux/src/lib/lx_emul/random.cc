@@ -136,7 +136,7 @@ class Xoroshiro_128_plus_reseeding
 			_nr_of_gen_bytes += 8;
 			if (_nr_of_gen_bytes >= _nr_of_gen_bytes_limit) {
 				_reseed();
-				_nr_of_gen_bytes += 8;
+				_nr_of_gen_bytes = 8;
 			}
 			return _xoroshiro->get_u64();
 		}
