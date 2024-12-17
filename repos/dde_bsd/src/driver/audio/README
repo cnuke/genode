@@ -1,0 +1,109 @@
+The audio driver includes support for Intel HD Audio devices (azalia).
+It is primarily tested on real hardware but might also work in VMs like
+VirtualBox.
+
+
+Usage and configuration
+=======================
+
+Reporting of the mixer state is enabled by adding the 'report_mixer'
+attribute to the drivers configuration and setting its value to 'yes'.
+
+The following snippets illustrates the format of the report:
+
+!<mixer_state>
+!  <mixer field="inputs.beep" value="108"/>
+!  <mixer field="outputs.hp_sense" value="plugged"/>
+!  <mixer field="outputs.master" value="128,128"/>
+!  <mixer field="outputs.mic_sense" value="unplugged"/>
+!  <mixer field="outputs.spkr_muters" value="hp,mic"/>
+!</mixer_state>
+
+The mixer state may expose other mixer fields as well, depending on the
+used sound card. The naming scheme of the attributes intentionally
+matches the naming scheme of OpenBSD's mixerctl(1) program.
+
+Each 'mixer' node can be used to configure the audio driver by using it
+in its configuration, e.g.:
+
+!<config report_mixer="yes">
+!  <mixer field="outputs.master" value="255,255"/>
+!</config>
+
+This configuration will set the output volume to the highest possible
+value. Although it is now also possible to update the configuration
+at run-time it should not be done while the driver is currently playing
+or recording because it may provoke the generation of artefacts.
+
+The driver supports using the Audio_out and Audio_in sessions as well as
+the Play and Record sessions. It defaults to Audio_out/Audio_in but can
+be switched by setting the 'record_play' attribute to 'true' in the
+config node.
+
+The following snippet shows the driver configured for playback and recording
+using the Play and Record sessions:
+
+! <start name="pci_audio">
+!   <resource name="RAM" quantum="2M"/>
+!   <config record_play="true">
+!     <mixer field="outputs.master" value="255"/>
+!     <mixer field="record.enable" value="on"/>
+!     <mixer field="record.adc-0:1_source" value="mic3"/>
+!     <mixer field="record.volume" value="128"/>
+!   </config>
+! </start>
+
+In case the Audio_out and Audio_in sessions are used the driver operates
+as a server and should provide the sessions:
+
+! <start name="pci_audio">
+!   <resource name="RAM" quantum="2M"/>
+!   <provides>
+!     <service name="Audio_out"/>
+!     <service name="Audio_in"/>
+!   </provides>
+!   <config>
+!     ...
+!   </config>
+! </start>
+
+It is vital to enable recording by setting 'record.enable' to 'on' as
+otherwise only silence will be delievered to the Audio_in session.
+In addition to selecting the recording source, the playback as well as the
+recording volume are set. When a single value is given the same value is
+used for all channels. Depending on the used HDA device or rather the used
+codec the available fields might differ and a different recording source
+must be set for 'adc-0:1'. For example on a Thinkpad X220 the source must
+be set to 'mic3' to select the internal microphone.
+
+Information about the available mixers and settings in general
+may be obtained by setting the 'verbose' to 'yes' in the config
+node.
+
+When multiple microphones are present (e.g., internal microphone in a notebook
+and a headset with a microphone), the preferred microphone can be configured
+using the 'mic_priority' attribute in the '<config>' node. Valid values are
+"internal" and "external" (default).
+
+! <config mic_priority="internal"/>
+
+The example above tells the driver to prioritize the internal microphone over a
+headset.
+
+
+Examples
+========
+
+Playback can be tested by executing the run script
+'repos/dde_bsd/run/audio_out.run'.
+It will play a raw sample file in a loop. The file format is header less
+two channel float 32 at 44100 Hz. You may use the 'sox' utility to create
+such an audio file:
+
+! sox -c 2 -r 44100 foo.wav foo.f32
+
+Recording, on the other hand, can be tested by executing the run script
+'repos/dde_bsd/run/audio_in.run'.
+
+It will use a simply audio monitor test component that records samples
+and plays them back immediately.
