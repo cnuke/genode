@@ -84,8 +84,25 @@ class Log_log::Session_component : public Genode::Rpc_object<Genode::Log_session
 			if (err) { Genode::warning("could not convert timestamp"); }
 
 			using Time = Genode::String<128>;
-			Time time { tm.tm_year + 1900LL, "-", tm.tm_mon + 1, "-", tm.tm_mday, " ",
-			            tm.tm_hour, ":", tm.tm_min, ":", tm.tm_sec };
+			auto convert = [&] (struct tm &tm) -> Time {
+
+				tm.tm_year += 1900LL;
+				tm.tm_mon  += 1;
+
+				bool const pad_month  = tm.tm_mon  < 10;
+				bool const pad_day    = tm.tm_mday < 10;
+				bool const pad_hour   = tm.tm_hour < 10;
+				bool const pad_minute = tm.tm_min  < 10;
+				bool const pad_second = tm.tm_sec  < 10;
+				return Time(tm.tm_year, "-",
+				            pad_month  ? "0" : "", tm.tm_mon,  "-",
+				            pad_day    ? "0" : "", tm.tm_mday, " ",
+				            pad_hour   ? "0" : "", tm.tm_hour, ":",
+				            pad_minute ? "0" : "", tm.tm_min,  ":",
+				            pad_second ? "0" : "", tm.tm_sec);
+			};
+
+			Time const &time = convert(tm);
 
 			Genode::log(time, " [", _label, "] ", (char const*)_string_buffer);
 		}
