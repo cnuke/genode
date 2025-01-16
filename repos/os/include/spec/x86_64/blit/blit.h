@@ -11,15 +11,15 @@
  * under the terms of the GNU Affero General Public License version 3.
  */
 
-#ifndef _INCLUDE__BLIT_H_
-#define _INCLUDE__BLIT_H_
+#ifndef _INCLUDE__SPEC__X86_64__BLIT_H_
+#define _INCLUDE__SPEC__X86_64__BLIT_H_
 
 #include <blit/types.h>
-#include <blit/internal/slow.h>
+#include <blit/internal/sse3.h>
 
 namespace Blit {
 
-	static inline void back2front(auto &&... args) { _b2f<Slow>(args...); }
+	static inline void back2front(auto &&... args) { _b2f<Sse3>(args...); }
 }
 
-#endif /* _INCLUDE__BLIT_H_ */
+#endif /* _INCLUDE__SPEC__X86_64__BLIT_H_ */
