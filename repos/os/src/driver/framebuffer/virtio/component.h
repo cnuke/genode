@@ -22,6 +22,7 @@
 namespace Virtio_fb {
 	using namespace Genode;
 	class Driver;
+	using uint64_t = Genode::uint64_t;
 }
 
 /*
@@ -357,8 +358,10 @@ class Virtio_fb::Driver
 
 			using Attr = Capture::Connection::Screen::Attr;
 			_captured_screen.construct(_capture, _env.rm(), Attr {
-				.px = _display_area,
-				.mm = { } });
+				.px     = _display_area,
+				.mm     = { },
+				.rotate = { },
+				.flip   = { } });
 		}
 
 		void _shutdown_display()
