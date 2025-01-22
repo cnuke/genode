@@ -1,4 +1,4 @@
-assert_spec linux
+assert {[have_spec linux]}
 
 build {
 	core init timer lib/ld
@@ -248,6 +248,9 @@ install_config {
 </config>}
 
 build_boot_image [build_artifacts]
+
+assert {![have_cmd_arg --autopilot]} \
+	"Autopilot mode is not supported by this run script."
 
 run_genode_until forever
 

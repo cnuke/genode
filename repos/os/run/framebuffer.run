@@ -1,3 +1,6 @@
+assert {[have_recipe pkg/[drivers_interactive_pkg]]} \
+	"Recipe for 'pkg/[drivers_interactive_pkg]' not available."
+
 create_boot_directory
 
 import_from_depot [depot_user]/src/[base_src] \
@@ -51,5 +54,8 @@ install_config {
 </config>}
 
 build_boot_image [build_artifacts]
+
+assert {![have_cmd_arg --autopilot]} \
+	"Autopilot mode is not supported by this run script."
 
 run_genode_until forever
