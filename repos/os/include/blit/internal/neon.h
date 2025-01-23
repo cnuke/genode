@@ -31,8 +31,6 @@ namespace Blit { struct Neon; }
 
 struct Blit::Neon
 {
-	template <typename PTR> struct Ptr4;
-
 	static inline uint32x4_t _reversed(uint32x4_t const v)
 	{
 		return vrev64q_u32(vcombine_u32(vget_high_u32(v), vget_low_u32(v)));
@@ -59,44 +57,129 @@ struct Blit::Neon
 			*d++ = *s++;
 	};
 
-	static inline void _rotate_4_lines(auto src_ptr, auto dst_ptr,
-	                                   unsigned len, auto const src_step)
+	struct Src_ptr4
 	{
-		union Tile { uint32x4x4_t all; uint32x4_t row[4]; };
-		Tile t;
-		while (len--) {
-			t.all = vld4q_lane_u32(src_ptr.p0, t.all, 3);
-			t.all = vld4q_lane_u32(src_ptr.p1, t.all, 2);
-			t.all = vld4q_lane_u32(src_ptr.p2, t.all, 1);
-			t.all = vld4q_lane_u32(src_ptr.p3, t.all, 0);
+		uint32x4_t const *p0, *p1, *p2, *p3;
 
-			dst_ptr.append(t.row[0], t.row[1], t.row[2], t.row[3]);
-			src_ptr.incr(src_step);
-		};
+		inline Src_ptr4(uint32x4_t const *p, int const step)
+		:
+			p0(p), p1(p0 + step), p2(p1 + step), p3(p2 + step)
+		{ }
+
+		void incr_4x(int v) { p0 += v, p1 += v, p2 += v, p3 += v; }
+		void incr_y (int v) { p0 += v, p1 += v, p2 += v, p3 += v; }
+
+		void prefetch() const
+		{
+			__builtin_prefetch(p0); __builtin_prefetch(p1);
+			__builtin_prefetch(p2); __builtin_prefetch(p3);
+		}
+
+		void load(uint32x4x4_t &tile) const { tile = { *p0, *p1, *p2, *p3 }; }
 	};
 
-	template <typename PTR>
-	struct Ptr4
+	struct Dst_ptr4
 	{
-		PTR *p0, *p1, *p2, *p3;
+		uint32_t *p0, *p1, *p2, *p3;
 
-		Ptr4(PTR *p, int w) : p0(p), p1(p + w), p2(p + 2*w), p3(p + 3*w) { }
+		Dst_ptr4(uint32_t *p, int const step)
+		:
+			p0(p), p1(p0 + step), p2(p1 + step), p3(p2 + step)
+		{ }
 
-		void incr(int v) { p0 += v, p1 += v, p2 += v, p3 += v; }
+		void incr_x(int v) { p0 += v, p1 += v, p2 += v, p3 += v; }
+		void incr_y(int v) { p0 += v, p1 += v, p2 += v, p3 += v; }
 
-		void append(auto v0, auto v1, auto v2, auto v3)
+		void store(uint32x4x4_t const &tile)
 		{
-			*p0++ = v0; *p1++ = v1; *p2++ = v2; *p3++ = v3;
+			vst4q_lane_u32(p0, tile, 0);
+			vst4q_lane_u32(p1, tile, 1);
+			vst4q_lane_u32(p2, tile, 2);
+			vst4q_lane_u32(p3, tile, 3);
 		}
 	};
 
+	struct Steps
+	{
+		int const src_4x, src_y, dst_x, dst_y;
+
+		void incr_x_4 (Src_ptr4 &p) const { p.incr_4x(src_4x     ); };
+		void incr_x_16(Src_ptr4 &p) const { p.incr_4x(src_4x << 2); };
+		void incr_y_4 (Src_ptr4 &p) const { p.incr_y (src_y  << 2); };
+		void incr_y_16(Src_ptr4 &p) const { p.incr_y (src_y  << 4); };
+		void incr_x_4 (Dst_ptr4 &p) const { p.incr_x (dst_x  << 2); };
+		void incr_x_16(Dst_ptr4 &p) const { p.incr_x (dst_x  << 4); };
+		void incr_y_4 (Dst_ptr4 &p) const { p.incr_y (dst_y  << 2); };
+		void incr_y_16(Dst_ptr4 &p) const { p.incr_y (dst_y  << 4); };
+	};
+
+	__attribute__((optimize("-O3")))
+	static inline void _load_prefetch_store(Src_ptr4 &src, Dst_ptr4 &dst, Steps const steps)
+	{
+		uint32x4x4_t tile;
+		src.load(tile);
+		steps.incr_y_4(src);
+		src.prefetch();
+		dst.store(tile);
+		steps.incr_x_4(dst);
+	}
+
+	__attribute__((optimize("-O3")))
+	static inline void _rotate_16x4(Src_ptr4 src, Dst_ptr4 dst, Steps const steps)
+	{
+		for (unsigned i = 0; i < 4; i++)
+			_load_prefetch_store(src, dst, steps);
+	}
+
+	__attribute__((optimize("-O3")))
+	static inline void _rotate_16x4_last(Src_ptr4 src, Dst_ptr4 dst, Steps const steps)
+	{
+		for (unsigned i = 0; i < 3; i++)
+			_load_prefetch_store(src, dst, steps);
+
+		uint32x4x4_t tile;
+		src.load(tile);
+		dst.store(tile);
+	}
+
+	__attribute__((optimize("-O3")))
+	static inline void _rotate_16x16(Src_ptr4 src, Dst_ptr4 dst, Steps const steps)
+	{
+		for (unsigned i = 0; i < 3; i++) {
+			_rotate_16x4(src, dst, steps);
+			steps.incr_y_4(dst);
+			steps.incr_x_4(src);
+		}
+		_rotate_16x4_last(src, dst, steps);
+	}
+
+	static inline void _rotate_16_lines(Src_ptr4 src, Dst_ptr4 dst,
+	                                    Steps const steps, unsigned n)
+	{
+		for (; n > 1; n--) {
+			_rotate_16x16(src, dst, steps);
+			steps.incr_x_16(dst);
+			steps.incr_y_16(src);
+		};
+		_rotate_16x16(src, dst, steps);
+	};
+
+	static inline void _rotate(Src_ptr4 src, Dst_ptr4 dst,
+	                           Steps const steps, unsigned w, unsigned h)
+	{
+		for (unsigned i = w; i; i--) {
+			_rotate_16_lines(src, dst, steps, h);
+			steps.incr_x_16(src);
+			steps.incr_y_16(dst);
+		}
+	}
 
 	struct B2f
 	{
-		static inline void r0    (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned);
-		static inline void r90   (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned, unsigned);
-		static inline void r180  (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned);
-		static inline void r270  (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned, unsigned);
+		static inline void r0  (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned);
+		static inline void r90 (uint32_t *, unsigned, uint32_t const *, unsigned, unsigned, unsigned);
+		static inline void r180(uint32_t *, unsigned, uint32_t const *, unsigned, unsigned);
+		static inline void r270(uint32_t *, unsigned, uint32_t const *, unsigned, unsigned, unsigned);
 	};
 
 	struct B2f_flip
@@ -127,14 +210,12 @@ void Blit::Neon::B2f::r90(uint32_t       *dst, unsigned const dst_w,
                           uint32_t const *src, unsigned const src_w,
                           unsigned const w, unsigned const h)
 {
-	Ptr4<uint32_t const> src_ptr4 (src + 16*src_w*(16*h - 4), 16*src_w);
-	Ptr4<uint32x4_t>     dst_ptr4 ((uint32x4_t *)dst, 4*dst_w);
+	Steps const steps { 1, -4*int(src_w), 1, 16*int(dst_w) };
 
-	for (unsigned i = 4*w; i; i--) {
-		_rotate_4_lines(src_ptr4, dst_ptr4, 4*h, -4*16*src_w);
-		src_ptr4.incr(4);
-		dst_ptr4.incr(4*4*dst_w);
-	}
+	Src_ptr4 src_ptr4 ((uint32x4_t *)src + 4*src_w*(16*h - 1), steps.src_y);
+	Dst_ptr4 dst_ptr4 (dst,                                    steps.dst_y);
+
+	_rotate(src_ptr4, dst_ptr4, steps, w, h);
 }
 
 
@@ -156,14 +237,12 @@ void Blit::Neon::B2f::r270(uint32_t       *dst, unsigned const dst_w,
                            uint32_t const *src, unsigned const src_w,
                            unsigned const w, const unsigned h)
 {
-	Ptr4<uint32_t const> src_ptr4 (src + 3*16*src_w + 16*w - 4, -16*src_w);
-	Ptr4<uint32x4_t>     dst_ptr4 ((uint32x4_t *)dst + 3*4*dst_w, -4*dst_w);
+	Steps const steps { 1, 4*int(src_w), 1, -16*int(dst_w) };
 
-	for (unsigned i = 4*w; i; i--) {
-		_rotate_4_lines(src_ptr4, dst_ptr4, 4*h, 4*16*src_w);
-		src_ptr4.incr(-4);
-		dst_ptr4.incr(4*4*dst_w);
-	}
+	Src_ptr4 src_ptr4 ((uint32x4_t *)src,              steps.src_y);
+	Dst_ptr4 dst_ptr4 (dst + 16*int(dst_w)*(w*16 - 1), steps.dst_y);
+
+	_rotate(src_ptr4, dst_ptr4, steps, w, h);
 }
 
 
@@ -185,14 +264,12 @@ void Blit::Neon::B2f_flip::r90(uint32_t       *dst, unsigned const dst_w,
                                uint32_t const *src, unsigned const src_w,
                                unsigned const w, unsigned const h)
 {
-	Ptr4<uint32_t const> src_ptr4 (src + 3*16*src_w, -16*src_w);
-	Ptr4<uint32x4_t>     dst_ptr4 ((uint32x4_t *)dst, 4*dst_w);
+	Steps const steps { 1, 4*int(src_w), 1, 16*int(dst_w) };
 
-	for (unsigned i = 4*w; i; i--) {
-		_rotate_4_lines(src_ptr4, dst_ptr4, 4*h, 4*16*src_w);
-		src_ptr4.incr(4);
-		dst_ptr4.incr(4*4*dst_w);
-	}
+	Src_ptr4 src_ptr4 ((uint32x4_t *)src, steps.src_y);
+	Dst_ptr4 dst_ptr4 (dst,               steps.dst_y);
+
+	_rotate(src_ptr4, dst_ptr4, steps, w, h);
 }
 
 
@@ -214,14 +291,12 @@ void Blit::Neon::B2f_flip::r270(uint32_t       *dst, unsigned const dst_w,
                                 uint32_t const *src, unsigned const src_w,
                                 unsigned const w, const unsigned h)
 {
-	Ptr4<uint32_t const> src_ptr4 (src + (16*h - 4)*16*src_w + 16*w, 16*src_w);
-	Ptr4<uint32x4_t>     dst_ptr4 ((uint32x4_t *)dst + 3*4*dst_w, -4*dst_w);
+	Steps const steps { 1, -4*int(src_w), 1, -16*int(dst_w) };
 
-	for (unsigned i = 4*w; i; i--) {
-		src_ptr4.incr(-4);
-		_rotate_4_lines(src_ptr4, dst_ptr4, 4*h, -4*16*src_w);
-		dst_ptr4.incr(4*4*dst_w);
-	}
+	Src_ptr4 src_ptr4 ((uint32x4_t *)src + 4*src_w*(16*h - 1), steps.src_y);
+	Dst_ptr4 dst_ptr4 (dst + 16*int(dst_w)*(w*16 - 1),         steps.dst_y);
+
+	_rotate(src_ptr4, dst_ptr4, steps, w, h);
 }
 
 #endif /* _INCLUDE__BLIT__INTERNAL__NEON_H_ */
