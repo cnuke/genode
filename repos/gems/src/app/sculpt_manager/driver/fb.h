@@ -165,7 +165,7 @@ struct Sculpt::Fb_driver : private Noncopyable
 		                     Ram_quota { 8*1024*1024 }, Cap_quota { 110 });
 
 		Affinity::Location const fb_affinity =
-			board_info.soc.fb_on_dedicated_cpu ? Affinity::Location { 1, 0, 1, 1 }
+			board_info.soc.fb_on_dedicated_cpu ? Affinity::Location { 2, 0, 1, 1 }
 			                                   : Affinity::Location { };
 
 		_soc_fb.conditional(board_info.soc.fb && board_info.options.display,
