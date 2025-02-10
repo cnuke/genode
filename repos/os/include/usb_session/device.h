@@ -159,6 +159,7 @@ class Usb::Urb_handler
 							Byte_range_ptr dst { (char*)(payload+off), _size-off };
 							genode_uint32_t real_size = 0;
 							uint32_t psize = isoc_out_fn(urb, i, dst, real_size);
+							real_size = 200;
 							hdr.packets[i].actual_size = real_size;
 							hdr.packets[i].size = psize;
 							off += real_size;

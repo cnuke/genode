@@ -528,7 +528,7 @@ void Isoc_cache::_new_urb()
 		_urbs[i].construct(_usb_session()->_urb_registry,
 		                   _iface, _ep,
 		                   USB_ENDPOINT_XFER_ISOC,
-		                   _ep.max_packet_size()*PACKETS_PER_URB,
+		                   (_ep.max_packet_size() + 8) *PACKETS_PER_URB,
 		                   PACKETS_PER_URB);
 		--urbs;
 		sent = true;
