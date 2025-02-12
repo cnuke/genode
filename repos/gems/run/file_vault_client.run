@@ -245,7 +245,7 @@ append config {
 			</route>
 		</start>
 
-		<start name="report_rom" caps="70">
+		<start name="report_rom" caps="70" ram="1M">
 			<provides>
 				<service name="ROM" />
 				<service name="Report" />
