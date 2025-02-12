@@ -13,7 +13,7 @@ install_config {
 		<default-route>
 			<any-service> <parent/> <any-child/> </any-service>
 		</default-route>
-		<default caps="100" ram="1M"/
+		<default caps="100" ram="1M"/>
 		<start name="test-lx_hybrid_pthread_ipc" ld="no"/>
 	</config>
 }

@@ -157,7 +157,7 @@ append config {
 
 					<default caps="100"/>
 
-					<start name="vfs_tresor" caps="200" ram="16G">
+					<start name="vfs_tresor" caps="200" ram="16M">
 						<binary name="vfs"/>
 						<provides><service name="File_system"/></provides>
 						<config>
