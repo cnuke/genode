@@ -159,7 +159,7 @@ append config {
 		</route>
 	</start>
 
-	<start name="ahci" priority="-1" ram="10M"d>
+	<start name="ahci" priority="-1" ram="10M">
 		<provides><service name="Block"/></provides>
 		<config>
 			<policy label_prefix="part_block" device="0" writeable="yes"/>
