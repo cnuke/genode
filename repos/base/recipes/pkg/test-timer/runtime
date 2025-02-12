@@ -26,6 +26,8 @@
 		<default-route>
 			<any-service><parent/><any-child/></any-service>
 		</default-route>
-		<start name="client" caps="300" ram="10M"/>
+		<start name="client" caps="300" ram="10M">
+			<binary name="test-timer"/>
+		</start>
 	</config>
 </runtime>
