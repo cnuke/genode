@@ -140,7 +140,7 @@
 							</config>
 						</start>
 
-						<start name="recv" ram="10M"
+						<start name="recv" ram="10M">
 							<binary name="test-tcp"/>
 							<exit propagate="yes"/>
 							<config>
