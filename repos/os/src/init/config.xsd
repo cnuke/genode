@@ -11,6 +11,7 @@
      <xs:attribute name="identity"        type="Session_label" />
      <xs:attribute name="resource"        type="Session_label" />
      <xs:attribute name="prefix_resource" type="Session_label" />
+     <xs:attribute name="diag"            type="Boolean" />
     </xs:complexType>
    </xs:element>
    <xs:element name="any-child"/>
