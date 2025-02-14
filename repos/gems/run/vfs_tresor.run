@@ -222,9 +222,9 @@ append config {
 							<libc stdin="/dev/terminal" stdout="/dev/terminal"
 								  stderr="/dev/terminal" rtc="/dev/rtc" pipe="/dev/pipe"/>
 							<vfs>
-								<fs label="shell -> /" buffer_size="1M"/>
+								<fs label="shell" buffer_size="1M"/>
 								<dir name="dev">
-									<fs label="tresor -> /" buffer_size="1M"/>
+									<fs label="tresor" buffer_size="1M"/>
 								</dir>
 								<rom name=".profile" label="vfs_tresor.sh"/>
 							</vfs>
@@ -235,8 +235,8 @@ append config {
 							<env key="PATH" value="/bin"/>
 						</config>
 						<route>
-							<service name="File_system" label_prefix="shell ->"> <child name="vfs"/> </service>
-							<service name="File_system" label_prefix="tresor ->"> <child name="vfs_tresor"/> </service>
+							<service name="File_system" label="shell"> <child name="vfs" label="/"/> </service>
+							<service name="File_system" label="tresor"> <child name="vfs_tresor" label="/"/> </service>
 							<service name="ROM" label_suffix=".lib.so"> <parent/> </service>
 							<service name="ROM" label_last="/bin/bash"> <child name="vfs_rom"/> </service>
 							<service name="ROM" label_prefix="/bin"> <child name="vfs_rom"/> </service>

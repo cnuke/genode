@@ -898,7 +898,7 @@ append config {
 			</config>
 
 			<route>
-				<service name="File_system" label_last="trust_anchor -> /"> <child name="trust_anchor_fs"/> </service>
+				<service name="File_system" label="trust_anchor -> /"> <child name="trust_anchor_fs"/> </service>
 				<service name="File_system"> <child name="block_io_fs"/> </service>
 				<service name="Terminal"> <child name="log_terminal"/> </service>
 				<service name="Timer"> <child name="timer"/> </service>
