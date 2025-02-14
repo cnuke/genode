@@ -39,7 +39,7 @@
 						<fifo name="downstream"/>
 					</pipe>
 				</vfs>
-				<policy label_prefix="fifo-pipe-test -> in  ->" root="/.upstream/in"    writeable="yes"/>
+				<policy label_prefix="fifo-pipe-test -> in ->"  root="/.upstream/in"    writeable="yes"/>
 				<policy label_prefix="fifo-pipe-test -> out ->" root="/.downstream/out" writeable="no"/>
 				<default-policy root="/" writeable="yes"/>
 			</config>
