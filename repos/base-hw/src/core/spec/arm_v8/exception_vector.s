@@ -14,7 +14,7 @@
 .section .text.crt0
 
 	.rept 16
-	sub  sp,  sp,  #0x340 /* overall cpu state size */
+	sub  sp,  sp,  #0x340 /* keep room for cpu state */
 	stp  x0,  x1,   [sp], #16
 	stp  x2,  x3,   [sp], #16
 	stp  x4,  x5,   [sp], #16
@@ -37,10 +37,11 @@
 	mrs  x4, mdscr_el1
 	adr  x5, .
 	and  x5, x5, #0xf80
+	mrs  x6,  fpsr
 	stp  x30, x0, [sp], #16
 	stp  x1,  x2, [sp], #16
 	stp  x3,  x4, [sp], #16
-	str  x5, [sp], #8
+	stp  x5,  x6, [sp], #16
 	b _kernel_entry
 	.balign 128
 	.endr
@@ -62,12 +63,11 @@ _kernel_entry:
 	stp  q26, q27, [sp], #32
 	stp  q28, q29, [sp], #32
 	stp  q30, q31, [sp], #32
-	mrs  x0,  fpsr
-	mrs  x1,  fpcr
-	stp  x0,   x1, [sp], #24
+	mrs  x0,  fpcr
+	str  x0,  [sp], #8
 	msr  fpsr, xzr
+	sub  sp,  sp,  #0x338 /* overall cpu state size */
 	mov  x0,  sp
-	sub  x0,  x0,  #0x340 /* overall cpu state size */
 	bl _ZN6Kernel24main_handle_kernel_entryEPN6Genode9Cpu_stateE
 
 
@@ -97,6 +97,8 @@ _kernel_entry:
 	msr  elr_el1,  x3
 	msr  spsr_el1, x4
 	msr  mdscr_el1, x5
+	ldr  x2, [x1], #8
+	msr  fpsr, x2
 	ldp  q0,  q1,  [x1], #32
 	ldp  q2,  q3,  [x1], #32
 	ldp  q4,  q5,  [x1], #32
@@ -113,9 +115,8 @@ _kernel_entry:
 	ldp  q26, q27, [x1], #32
 	ldp  q28, q29, [x1], #32
 	ldp  q30, q31, [x1], #32
-	ldp  x2,  x3,  [x1], #16
-	msr  fpcr, x2
-	msr  fpsr, x3
+	ldr  x3,  [x1], #8
+	msr  fpcr, x3
 	add  x0,  x0,  #8
 	ldp  x1,  x2,  [x0], #16
 	ldp  x3,  x4,  [x0], #16
