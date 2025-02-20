@@ -215,23 +215,24 @@ _vm_to_host:
 	 ** Restore host context **
 	 **************************/
 
-	pop   { r1, r0 }
-	ldmia r1!, {r2-r9}
-	mcrr  p15, 6, r2,  r3,  c2    /* write VTTBR            */
-	mcr   p15, 4, r4,  c1,  c1, 0 /* write HCR register     */
-	mcr   p15, 4, r5,  c1,  c1, 3 /* write HSTR register    */
-	mcr   p15, 0, r6,  c1,  c0, 2 /* write CPACR            */
-	msr   sp_svc,    r7
-	msr   elr_hyp,   r8
-	msr   spsr_cxfs, r9
-	ldmia r1!, {r2-r10}
-	mcrr  p15, 0, r2,  r3, c2     /* write TTBR0            */
-	mcrr  p15, 1, r4,  r5, c2     /* write TTBR1            */
-	mcr   p15, 0, r6,  c1,  c0, 0 /* write SCTRL            */
-	mcr   p15, 0, r7,  c2,  c0, 2 /* write TTBRC            */
-	mcr   p15, 0, r8,  c10, c2, 0 /* write MAIR0            */
-	mcr   p15, 0, r9,  c3,  c0, 0 /* write DACR             */
-	mcr   p15, 4, r10, c0,  c0, 5 /* write VMPIDR           */
+	pop   { r0 }
+	ldmia r0!, {r1-r12}
+	mcrr  p15, 6, r1,  r2,  c2    /* write VTTBR            */
+	mcr   p15, 4, r3,  c1,  c1, 0 /* write HCR register     */
+	mcr   p15, 4, r4,  c1,  c1, 3 /* write HSTR register    */
+	mcr   p15, 0, r5,  c1,  c0, 2 /* write CPACR            */
+	msr   sp_svc,    r6
+	msr   elr_hyp,   r7
+	msr   spsr_cxfs, r8
+	mcrr  p15, 0, r9,  r10, c2    /* write TTBR0            */
+	mcrr  p15, 1, r11, r12, c2    /* write TTBR1            */
+	ldmia r0!, {r1-r5}
+	mcr   p15, 0, r1,  c1,  c0, 0 /* write SCTRL            */
+	mcr   p15, 0, r2,  c2,  c0, 2 /* write TTBRC            */
+	mcr   p15, 0, r3,  c10, c2, 0 /* write MAIR0            */
+	mcr   p15, 0, r4,  c3,  c0, 0 /* write DACR             */
+	mcr   p15, 4, r5,  c0,  c0, 5 /* write VMPIDR           */
+	pop   { r0 }
 	eret
 
 
