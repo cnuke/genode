@@ -16,7 +16,7 @@ DIR(libgpg-error) := src/lib/libgpg-error
 
 HASH_INPUT += $(REP_DIR)/src/lib/libgpg-error/config.h
 
-$(call check_tool,mawk)
+$(call check_tool,nawk)
 
 gen_files := include/libgcrypt/gcrypt.h \
              include/libgcrypt/gpg-error.h \
