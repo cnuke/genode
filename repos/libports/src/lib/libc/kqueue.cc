@@ -427,7 +427,9 @@ struct Libc::Kqueue
 					}
 					break;
 				default:
-					assert(false && "Element with unknown filter inserted");
+					Genode::error("Element with unknown filter ",
+					              Genode::Hex((unsigned)ele.filter), " inserted");
+					abort();
 				}
 
 				/* Delete oneshot event */
