@@ -426,6 +426,9 @@ struct Libc::Kqueue
 						num_events++;
 					}
 					break;
+				case EVFILT_USER:
+					/* TODO */
+					break;
 				default:
 					Genode::error("Element with unknown filter ",
 					              Genode::Hex((unsigned)ele.filter), " inserted");
