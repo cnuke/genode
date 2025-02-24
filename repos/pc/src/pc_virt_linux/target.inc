@@ -1,0 +1,65 @@
+#
+# Linux kernel configuration
+#
+
+# kernel fundamentals
+LX_ENABLE += TTY SERIAL_EARLYCON SERIAL_OF_PLATFORM PRINTK HAS_IOMEM SMP
+
+# support disabling ticking during idle
+LX_ENABLE  += NO_HZ_IDLE HIGH_RES_TIMERS
+
+# initrd support
+LX_ENABLE += BINFMT_ELF BINFMT_SCRIPT BLK_DEV_INITRD
+
+# support for extended usage
+LX_ENABLE += CMDLINE_FROM_BOOTLOADER IKCONFIG IKCONFIG_PROC
+LX_ENABLE += MULTIUSER UNIX EPOLL FILE_LOCKING
+LX_ENABLE += POSIX_TIMERS TMPFS DEVTMPFS DEVTMPFS_MOUNT FUTEX
+
+# kmem_cache allocator
+LX_DISABLE += SLOB SLUB_DEBUG
+LX_ENABLE  += SLUB
+
+# UART device
+LX_ENABLE += SERIAL_8250 SERIAL_8250_CONSOLE
+
+# PCI support
+LX_ENABLE += PCI PCI_MSI
+
+# ACPI support
+LX_ENABLE += ACPI
+
+# EFI support
+LX_ENABLE += EFI EFI_STUB
+
+# general network
+LX_ENABLE += NET NETDEVICES PACKET FILTER
+LX_ENABLE += INET IP_PNP IP_PNP_DHCP
+
+# Ethernet NIC support
+LX_ENABLE += E1000 E1000E PCNET32
+
+# USB support
+LX_ENABLE += USB_SUPPORT USB USB_ARCH_HAS_HCD USB_PCI
+LX_ENABLE += USB_XHCI_HCD USB_EHCI_HCD USB_OHCI_HCD USB_UHCI_HCD
+
+# mandatory fs support
+LX_ENABLE += PROC_FS SYSFS
+
+# vbox shared folders
+LX_ENABLE += MISC_FILESYSTEMS
+LX_ENABLE += VIRT_DRIVERS
+LX_ENABLE += VBOXGUEST VBOXSF_FS
+
+# to automatically set up screen mode at boot time
+#LX_ENABLE += FB
+#LX_ENABLE += FRAMEBUFFER_CONSOLE
+
+# disable cpu frequency scaling
+LX_DISABLE += SCHED_MC CPU_FREQ
+
+# disable optimization not possible in PIC code under Genode
+LX_DISABLE += CC_HAS_ASM_GOTO
+
+# slim down kernel by removing superfluous drivers
+LX_DISABLE += USB_HID VGA_CONSOLE DUMMY_CONSOLE VGA_ARB DEBUG_LIST
