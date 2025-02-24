@@ -1,0 +1,136 @@
+if {![have_spec "x86_64"]} {
+	puts "Not supported on this architecture"
+	exit 1
+}
+
+set use_uefi 0
+
+set arch    "x86_64"
+set ramdisk [run_dir]/rootfs.cpio
+
+set linux   pc_virt_linux
+
+create_boot_directory
+
+build { pc_virt_linux busybox/x86_64 }
+
+# Create expected boot directory, as we cannot use build_boot_image
+exec mkdir -p [run_dir]/boot
+
+#
+# Create script to run inside the initramfs under /etc/init.d/rcS
+#
+proc _init_rcs { } {
+	set file_path [run_dir]/rcS
+	set fd [open $file_path w]
+	puts $fd {#!bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t tmpfs none /var
+mount -t vboxsf rw /rw
+/sbin/mdev -s
+echo root::0:0:root:/root:/bin/sh > /etc/passwd
+
+cat << 'EOF' > /etc/profile
+if [ -f "/rw/init.sh" ]; then
+	echo "Found /rw/init.sh, execute it"
+	sh /rw/init.sh
+fi
+EOF
+}
+	close $fd
+	return $file_path
+}
+
+set init_rcs [_init_rcs]
+
+proc _inittab { } {
+	set file_path [run_dir]/inittab
+	set fd [open $file_path w]
+	puts $fd {
+::sysinit:/etc/init.d/rcS
+::ctrlaltdel:/sbin/reboot
+::shutdown:/sbin/swapoff -a
+::shutdown:/bin/umount -a -r
+::restart:/sbin/init
+#::respawn:/sbin/getty -L ttyS0 115200 vt100
+ttyS0::respawn:-/bin/sh -l
+}
+	close $fd
+	return $file_path
+}
+
+set inittab [_inittab]
+
+#
+# CPIO content description used by `gen_init_cpio`
+#
+proc _cpio_desc { } {
+	global init_rcs inittab arch
+	set bblist [open busybox/$arch/busybox.links r]
+	set file_path [run_dir]/cpio.desc
+	set fd        [open $file_path w]
+
+	puts $fd "dir  /bin         0755 0 0"
+	puts $fd "dir  /dev         0755 0 0"
+	puts $fd "dir  /etc         0755 0 0"
+	puts $fd "dir  /etc/init.d  0755 0 0"
+	puts $fd "dir  /proc        0755 0 0"
+	puts $fd "dir  /root        0700 0 0"
+	puts $fd "dir  /sbin        0755 0 0"
+	puts $fd "dir  /sys         0755 0 0"
+	puts $fd "dir  /usr         0755 0 0"
+	puts $fd "dir  /usr/bin     0755 0 0"
+	puts $fd "dir  /usr/sbin    0755 0 0"
+	puts $fd "dir  /var         0755 0 0"
+	puts $fd "dir  /var/log     0755 0 0"
+	puts $fd "dir  /mnt         0755 0 0"
+	puts $fd "dir  /rw          0755 0 0"
+	puts $fd "nod  /dev/console 0622 0 0 c 5 1"
+	puts $fd "nod  /dev/null    0666 0 0 c 1 3"
+	puts $fd "file /bin/busybox busybox/$arch/busybox 0755 0 0"
+	puts $fd "file /etc/init.d/rcS $init_rcs 0755 0 0"
+	puts $fd "file /etc/inittab $inittab 0755 0 0"
+
+	foreach line [split [read $bblist] \n] {
+		if {[string trim $line] != ""} {
+			puts $fd "slink $line /bin/busybox 0755 0 0"
+		}
+	}
+	close $bblist
+	close $fd
+
+	return $file_path
+}
+
+set cpio_desc [_cpio_desc]
+
+# Provide kernel image and create initial-ram-filesystem
+file copy $linux/$arch/arch/x86/boot/bzImage [run_dir]/
+exec $linux/$arch/usr/gen_init_cpio $cpio_desc > $ramdisk
+exec gzip $ramdisk
+
+source [genode_dir]/tool/run/image/iso
+install_iso_bootloader_to_run_dir
+
+if {$use_uefi} {
+	exec mkdir -p [run_dir]/efi/boot
+	exec cp [get_grub2_dir]/boot/grub2/grub2_32.efi [run_dir]/efi/boot/bootia32.efi
+	exec cp [get_grub2_dir]/boot/grub2/grub2_64.efi [run_dir]/efi/boot/bootx64.efi
+	exec mkdir -p [run_dir]/boot/grub
+}
+
+set fh [open "[run_dir]/boot/grub/grub.cfg" "WRONLY CREAT TRUNC"]
+puts $fh "set timeout=0"
+puts $fh "menuentry [grub_menuentry] {"
+puts $fh " insmod linux"
+puts $fh " linux /bzImage amd_iommu=off intel_iommu=off rdinit=/linuxrc initrd=rootfs.cpio.gz"
+puts $fh " initrd /rootfs.cpio.gz"
+puts $fh "}"
+close $fh
+
+run_image
+
+#qemu-system-x86_64 -cdrom pc_linux_iso.iso -serial mon:stdio -nographic
+
+exit 0
