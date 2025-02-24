@@ -1,0 +1,1244 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 25.02
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro -> @nfeske
+
+
+Multi-monitor window management and virtual machines
+####################################################
+
+; @nfeske, @chelmuth
+
+commit c3c217b0c5495fe50639e8752c78016d478d6b6e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 12 15:57:05 2024 +0100
+
+    window_layouter: assignment of screens to displays
+    
+    This patch enhances the window layouter with the notion of displays
+    and the assignment of screens to displays.
+    
+    Issue #5390
+
+commit b7c97a61c01102fc5310c04a9b405a6760523718
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 15 13:13:32 2024 +0100
+
+    wm/decorator/layouter: window clipping
+    
+    This patch changes the window-layout format to support the rectangular
+    clipping of windows at screen boundaries. The new <boundary> node defines
+    the clipping boundary for the windows listed within the node. Boundaries
+    are expected to be disjoint. In the example below, the "vbox" window is
+    placed partially outside the screen area of "screen_2".
+    
+    <window_layout>
+      <boundary name="screen_1" xpos="0" ypos="0" width="640" height="480">
+        <window id="1" title="launchpad" xpos="10" ypos="140" width="400" height=">
+      </boundary>
+      <boundary name="screen_2" xpos="640" ypos="0" width="800" height="600">
+        <window id="2" title="vbox"     xpos="520" ypos="52" width="800" height="600">
+        <window id="3" title="terminal" xpos="650" ypos="72" width="500" height="400">
+      </boundary>
+    </window_layout>
+    
+    The layouter uses boundaries to restrict the visiblilty of windows to
+    their respective target areas.
+    
+    Until now, Sculpt relied on the fact that the window-layout ROM had the
+    same structure as the resize-request ROM. With the addition of the
+    <boundary> nodes, this is no longer the case. Therefore, the Sculpt
+    manager generates a dedicated resize-request ROM now.
+    
+    Issue #5390
+
+commit ad57ca1ce4b27329bab20467c4d18dfb481483c3
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Nov 27 19:24:09 2024 +0100
+
+    window_layouter: drag windows between displays
+    
+    This patch allows the user to drag windows from one target area (i.e.,
+    display) to another whereas the resizing of windows is restricted to
+    the window's original target area. The latter point is important to
+    ensure that the window's resize handles remain reachable at all times.
+    
+    Issue #5390
+
+commit 9541fbb1c95a67b5fef9ece250c31c955374ac66
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Nov 28 16:54:35 2024 +0100
+
+    window_layouter: allow screen-change during drag
+    
+    This patch enables the user to interactively change the assignment of
+    windows to screens. For screens visible side by side in a multi-monitor
+    setup, one can now move a window from one screen to another by dragging
+    the window title. When using screens as virtual desktops on one display,
+    a window can be moved to another screen by switching the screen (by
+    pressing a key matching a desired screen) while the window is dragged
+    with the mouse. So the user can drag the window between virtual desktops.
+    
+    Issue #5390
+
+commit b8147afe4f2246783cab00089d675092dd758d58
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 29 15:45:11 2024 +0100
+
+    window_layouter: modernized coding style
+    
+    Replace the use of pointers and the copying of XML nodes by the 'with_'
+    pattern. Use plain struct where appropriate, replace constructors by { }
+    initialization. Use C++20 function template syntax. Replace accessors by
+    public constants where possible. Follow 'from_xml' convention. Follow
+    usual 'Action' interface naming.
+    
+    Issue #5390
+
+commit 9855dcb3afe577cb93433f72676d880b51fa4f77
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 3 17:32:38 2024 +0100
+
+    window_layouter: restrict focus to visible windows
+    
+    This patch restricts the focus switching via the keyboard (Super-Tab) to
+    windows located at visible screens.
+    
+    Should the currently focused window become invible, switch the focus to the
+    most recently focused visible window.
+    
+    Issue #5390
+
+commit 4fff0f7b0cc62023d0a3f5eb71b4e9cfcef51687
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Dec 6 13:55:47 2024 +0100
+
+    window_layouter: "pick_up" and "place_down" action
+    
+    The new 'action' attribute values can be used to realize the
+    keyboard-based assignement of windows to screens. The "pick_up" action
+    (on a key press) selects the focused window to be held at the current
+    position until the "place_down" action is issued (by a key release).
+    While the focused window is held, "screen" actions can be executed
+    taking the picked up window to the selected screen.
+    
+    Issue #5390
+
+commit 7ad94a06829abb6d2baa40a89b65d2769f4ba6f5
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 26 14:05:06 2024 +0100
+
+    pkg/window_layouter: rules format change -> 24.12
+    
+    To accommodate multi-monitor window management, the window-layouter
+    rules must be extended. By renaming the rules file to a version number
+    reflecting the date of change (24.12), we prevent the loss of
+    window-layout state when switching back and forth between different
+    versions of the window-layouter.
+    
+    The default rules contain now the definition of three displays
+    ("primary", "secondary", and "ternary") and map 3 screens to each
+    display.
+    
+    Issue #5390
+
+commit d8c6e74142a8c1fa13f08800095dcaf97e2c4a6f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 10 17:30:10 2024 +0100
+
+    window_layouter: handle drag/drop as actions
+    
+    This patch moves the formerly hard-wired drag-and-drop handling
+    to the configuration level by introducing the actions "drag" and "drop".
+    
+    To aid the robust handling of release events matching their
+    corresponding press events, the patch refines the policy-matching of the
+    current combination of keys against the hierarchy of <press> and
+    <release> nodes. If no policy for a concrete combination exists, a
+    release event also considers the policy of its matching <press> node.
+    This way, the regular drag-and-drop rules can be expressed as
+    
+      <press key="BTN_LEFT" action="drag">
+         <release key="BTN_LEFT" action="drop"/>
+      </press>
+    
+    This also works when releasing BTN_LEFT while pressing additional keys,
+    for which no policy exists.
+    
+    With this change, the layouter supports the matching of multiple key
+    sequences instead of only one, thereby supporting multiple actions at
+    once and allowing for decoupling different user interactions in the
+    configuration.
+    
+    Issue #5403
+
+commit c444aadc46fd64871de41a9ecec2de61cd590655
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Dec 10 17:53:45 2024 +0100
+
+    window_layouter: free-arrange mode
+    
+    This patch adds the feature of moving and resizing windows by clicking
+    anywhere within a window while the global window-management key is held.
+    Depending on the position within the window, the click is interpreted as
+    click on the title (when clicking at inner 50% of the window, or as a
+    click on the border (when clicking at an area nearby the window
+    boundary).
+    
+    This mode of interaction requires more flexibility of the handling of
+    key sequences. The formerly hard-wired handling of the drag and drop as
+    response to BTN_LEFT events does not suffice. Therefore, this patch
+    moves the driving of the drag-and-drop state to the config level by
+    introducing the actions "drag" and "drop"
+    
+    Fixes #5403
+
+commit 0166291121ab87d0a926182f8c2af3c2e7eeac13
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu Nov 14 16:44:27 2024 +0100
+
+    vbox6: multi-monitor support
+    
+    Support dynamic panorama of virtual displays. Virtual monitors for
+    VirtualBox must be configured in two steps.
+    
+    - <Display monitorCount="<num>"> nodes in the .vbox file defines the
+      number of _connectors_ and, thus, the maximum number of connected
+      virtual monitors.
+    
+    - Each enabled VirtualBox monitor requests a dedicated GUI session.
+      Enablement and labeling of these sessions is done via <monitor>
+      nodes in the component configuration like follows.
+    
+      <monitor label="DP-1"/>
+      <monitor label="HDMI-A-1"/>
+    
+    Labels can be used by the window manager to configure and place the
+    corresponding window. The order of the nodes directly controls the
+    connection order at the virtual graphics card.
+    
+    Fixes #5449
+
+commit c7bdc9dced95a9e4c561decfe09dda552420c716
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Mon Feb 10 12:27:32 2025 +0100
+
+    Amend vbox6 runtimes / run scripts for monitor config
+    
+    Issue #5449
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+Init configuration improvements
+===============================
+
+; @nfeske
+
+Simplified RAM assignments
+--------------------------
+
+commit 1bbda2b963dbd6a0bf7044293ed7ea4bdc634bdd
+author: norman feske <norman.feske@genode-labs.com>
+date:   fri feb 7 17:29:35 2025 +0100
+
+    init: ram quota as start-node attribute
+    
+    this patch allows for the assignment of ram to a start node via a new
+    'ram' attribute as an alternative to traditional '<resource name="ram">'
+    nodes. this makes configurations more concise.
+    
+    it also adds support for defining a configuration-global default ram
+    quota, following the existing pattern of the default caps definition,
+    e.g. the following <default> node alleviates the need to repeatedly
+    state reasonable 'ram' and 'caps' values in each single start node.
+    
+      <default caps="100" ram="1m"/>
+    
+    fixes #5448
+
+Partial session-label rewriting
+-------------------------------
+
+commit 00aef2643c702475f2d3709de8ac0dbf301959fe
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Feb 12 15:17:35 2025 +0100
+
+    init: make label rewriting more flexible
+    
+    This patch complements the existing 'label' attribute of session-route
+    target nodes with the new 'identity', 'resource', and 'prepend_resource'
+    attributes that allow for the partial rewriting of the label.
+    
+    Fixes #5447
+
+
+Enriched file-system session-label convention
+=============================================
+
+; @nfeske
+
+commit fb65e97eb0ffabf4c75065a357905a247d813b96
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Feb 5 16:01:26 2025 +0100
+
+    file-system session: root dir via session label
+    
+    This patch changes the way of how the client-selected sub directory is
+    communicated to the server. The former opaque session argument is now
+    passed as last label element, which allows for the flexible tweaking
+    of this argument by init's session-routing and label-rewriting
+    mechansims. In particular, it alleviates the need for creating chroot
+    component instances.
+    
+    This change requires the following four adaptations at the
+    configuration level:
+    
+    - Each file-system session request must now carry a path starting
+      with / as last session arguments. Hence, <vfs> <fs> nodes that
+      feature a 'label' attributes must extend the attribute value
+      with " -> /". For <fs> nodes with no label attribute, "/" is
+      used as last label argument by default.
+    
+    - For matching session-routing rules at init's configuration,
+      the matching of full labels should be replaced by 'label_prefix'
+      matches, excluding the last (path) argument.
+    
+    - Wherever a label of a file-system session is rewritten by using
+      init's 'label' attribute of a <parent> or <child> target node,
+      the new attribute 'identity' should be used instead. This replaces
+      the identity part of the label while preserving the client's
+      directory argument.
+    
+    - Analogously to the matching of session-routing rules, server-side
+      policy-selection rules that formerly matched a concrete 'label'
+      must be changed to match a 'label_prefix' instead.
+    
+    As a good practice, 'label_prefix' values should end with " ->" if
+    possible, which clearly delimits the identity part of the label
+    used by the matching.
+    
+    Issue #5445
+
+
+SIMD optimizations
+==================
+
+; @nfeske
+
+commit 0a756e44abf8b5e5a0a561700c88fde4fc7f98fe
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Jan 16 19:35:01 2025 +0100
+
+    blit: SIMD-based back2front copy
+    
+    Issue #5428
+
+commit d0d0b69228772dc79d2ef770079af207992fbab1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 20 16:51:00 2025 +0100
+
+    Capture::Connection::Screen: use Blit::back2front
+    
+    Issue #5428
+
+commit 1eca184f18baadf95ed09bf11499085d8dc409d7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 20 17:35:39 2025 +0100
+
+    fb_sdl: support rotate and flip
+    
+    Issue #5428
+
+commit c9863e51e39b0716a0259b5b1173c80bc57af0dc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Jan 25 13:08:37 2025 +0100
+
+    blit: Blit::blend_xrgb_a
+    
+    This commit adds support for SIMD-based alpha blending, which speeds up
+    the alpha-compositing of the nitpicker GUI server by circa 300% on ARM
+    Neon and x86_64 using SSE4.1
+    
+    Issue #5428
+
+
+Qt, WebEngine, and Falkon browser
+#################################
+
+; @cproc
+
+commit dd64164ed64a11e06cf61b490fc9b10e8eb57cef
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Mon Dec 9 08:36:53 2024 +0100
+
+    qt6: split port into modules
+    
+    Fixes #5402
+
+commit fe18db4d34df010631c45550ebb73bdfa2a6e217
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue Jan 14 14:16:36 2025 +0100
+
+    qt6: add 'SvgWidgets' files
+    
+    Fixes #5419
+
+commit 6c1af53909f4ab6aa71d2bf8894a27ccdc47a490
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Jan 15 04:22:29 2025 +0100
+
+    qt6: add 'i18n' example
+    
+    Fixes #5421
+
+commit 9beb47812e07c25e8c86e5e35333e1f8a253ca4f
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu Feb 13 14:11:18 2025 +0100
+
+    qt5: move WebEngine-related API recipes to genode-world
+    
+    Fixes #5452
+
+commit e3f5f16ba4631dfcda58c5f5fe83e986336dd424
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 14 10:04:32 2025 +0100
+
+    qt5: set CMAKE_SHARED_LIBRARY_SONAME_C_FLAG variable
+    
+    Fixes #5453
+
+commit cc0fa54cbfbe05db7948f7445af86991245278ab
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 14 10:27:11 2025 +0100
+
+    qt: support extra CMake flags
+    
+    Fixes #5454
+
+commit 060c242afc78546049b7c86c47cbdacccb5ddcc5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 21 08:44:34 2025 +0100
+
+    qt6: add qt5compat module
+    
+    Fixes #5458
+
+commit addce529e3a39c481dd713ccb3bd3a9ad9bfee21
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 21 11:25:35 2025 +0100
+
+    qt6: add qtwebchannel and qtwebengine APIs
+    
+    Fixes #5459
+
+; genode-world.git:
+
+commit ae21e7930fb6f6241b7fa3f8ba4b2f879c9b13f0
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu Feb 13 13:34:25 2025 +0100
+
+    Add Qt5WebEngine-related API recipes
+    
+    Fixes #387
+
+commit 78a4aefe2a3533bed5ad5f742f0da5fdaf4eb7fe
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Sep 8 19:32:43 2024 +0200
+
+    qt5_webengine: add REQUIRES in target.mk
+    
+    Fixes #388
+
+commit 837d14ba0e8a89f27a19998371cb9a562df3e4b7
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 14 10:47:02 2025 +0100
+
+    falkon: build with CMake
+    
+    Fixes #389
+
+commit 74533a5f89fed29184835efde4fade53df8bc2a5
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue Feb 18 11:45:30 2025 +0100
+
+    falkon: update to version 24.01.75
+    
+    Fixes #390
+
+commit 229bedf016449a769a842036773ad2787625d303
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 21 11:04:41 2025 +0100
+
+    add Qt6 webchannel and webengine modules
+    
+    Fixes #391
+
+commit c9f3ca917dd2b702906b5434fc3812b2c8ae198a
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri Feb 21 15:11:32 2025 +0100
+
+    add Qt6-based Falkon
+    
+    Fixes #392
+
+
+Device drivers
+##############
+
+User-space IOMMU support for IRQ remapping
+==========================================
+
+; @jschlatow
+
+commit ce70b44087d98623fe933abcb6f4f8b5211afb9d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 20 12:40:26 2024 +0100
+
+    acpi_drv: reflect DMAR properties in report
+    
+    genodelabs/genode#5066
+
+commit f85068e1f2ce4f11e9a4228f0544bf11da781cdb
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 20 13:45:59 2024 +0100
+
+    acpi_drv: report IOAPIC devices
+    
+    genodelabs/genode#5066
+
+commit b136ed0dfc826b8aaad027ed2edfcf7136fab796
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 20 14:46:47 2024 +0100
+
+    pci_decode: report IOAPIC devices
+    
+    genodelabs/genode#5066
+
+commit 5006b009cbf23969928b6f726c6133cd8897ce3a
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 20 18:17:38 2024 +0100
+
+    platform: add IRQ remapping support
+    
+    genodelabs/genode#5066
+
+commit c767c2b129a77539f8d8ddfb0a29a501147c2e12
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 20 18:18:09 2024 +0100
+
+    platform/pc: implement IOAPIC
+    
+    genodelabs/genode#5066
+
+commit 4790bc03fc65d59481e2201beb4ae1fc6d43ed62
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Mar 21 09:49:53 2024 +0100
+
+    platform/pc: move register-based invalidation
+    
+    This is in preparation of implementing the queued-invalidation
+    interface.
+    
+    genodelabs/genode#5066
+
+commit 3c5b88111c87508bd639c8e06c104ffc41acb668
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Mar 22 16:26:25 2024 +0100
+
+    platform/pc: use queued invalidation interface
+    
+    genodelabs/genode#5066
+
+commit 4a0ce32faa53ad5017a64b47271c9d2576957466
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Nov 24 14:10:31 2023 +0100
+
+    platform/pc: implement IRQ remapping for Intel
+    
+    genodelabs/genode#5066
+
+commit aaeb21136b51668ccda801682058285e5eb57f55
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Apr 12 09:11:05 2024 +0200
+
+    platform/pc: remove Env from generate() methods
+    
+    This was a relic from a time where we dumped the page tables from NOVA
+    and therefore needed to attach the corresponding dataspaces.
+    
+    genodelabs/genode#5066
+
+commit b07107c8c636a6349da3387b24adca1da2ad830e
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Apr 18 11:28:56 2024 +0200
+
+    platform/pc: re-use init code during resume
+    
+    genodelabs/genode#5066
+
+commit a0366120efef95e30b207a3a8f8e1043c6848eba
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Mar 25 12:57:51 2024 +0100
+
+    base-nova: allow access to IOAPIC
+    
+    This allows the platform driver to control remapping of legacy
+    interrupts.
+    
+    genodelabs/genode#5066
+
+
+Sculpt-OS compatibility with F&S i.MX 8MP armStone
+==================================================
+
+; @skalk
+
+commit 20aa4e9e3bc4ba3d8289af558ace025bdb22f906
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Feb 18 14:48:56 2025 +0100
+
+    sculpt: add F&S i.MX 8MP Armstone
+
+commit eff4aeabc95644adf43489a59c634457b3db7d0c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Feb 12 17:12:52 2025 +0100
+
+    framebuffer/armstone: add specific driver port
+    
+    * Add F&S vendor Linux kernel port
+    * Implement HDMI display engine driver port for i.MX 8MP Armstone
+    * Add package for display driver
+
+commit 88540634549d5c3fbb9b142ea531ad2734665258
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Feb 12 17:47:51 2025 +0100
+
+    imx8mp_platform: keep relevant hdmi clocks enabled
+    
+    Otherwise, we cannot initialize the display engine of the
+    F&S Armstone device unfortunately.
+
+commit dd825cbac5c7e97f058dd479363d52bb36569053
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Feb 17 15:27:25 2025 +0100
+
+    driver/sd_card/imx8mq: enable imx8mp_armstone
+
+commit d282db8fae3aa7dcb741b3eaef147146bff04473
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Feb 17 15:28:13 2025 +0100
+
+    driver/usb_host/imx8m: enable imx8mp_armstone
+
+commit 41b49acaf6b424a6e0b0d9fcf2a4c5c06fc7e549
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Feb 20 17:26:10 2025 +0100
+
+    driver/nic/fec: enable imx8mp_armstone
+
+commit 28cc7b95a26442d9c6047c7ce1d896945ae009ef
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Feb 20 17:29:24 2025 +0100
+
+    run/image: tool to build armstone sd-card image
+    
+    * Add u-boot port to be loaded as second stage bootloader
+      that does not initialize hardware, but is able to load
+      bigger images
+    * integrate second stage u-boot and uImage into
+      sculpt-capable disk-image for SD-card
+
+commit 27088dce265498f5b6bee496874e25522f2f7c1e
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Feb 17 15:29:42 2025 +0100
+
+    sculpt: enable basic support for imx8mp_armstone
+
+
+USB
+===
+
+; @cnuke
+
+commit 96d9f5d317c25ead15dd9ec509758e3d277fd362
+Author: Josef Söntgen <jws@sysret.de>
+Date:   Fri Nov 1 17:08:24 2024 +0100
+
+    usb: consider alternate setting in endpoint select
+    
+    When constructing an Usb::Interface and implicitly corresponding
+    Usb::Endpoint instances only select endpoints relevant for the
+    given alternate setting.
+    
+    The libusb has to be changed to delegate the correct alternate
+    setting to the constructor too.
+    
+    Fix genodelabs/genode#5394
+
+
+Audio
+=====
+
+; @ssumpf
+
+commit ac5cfb59ead8333603ede6c4d72c28207fcd609d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Dec 11 19:20:21 2024 +0100
+
+    dde_bsd: support microphone selection
+    
+    Make preferred microphone configurable when a headset is plugged in by
+    introducing the 'mic_priority' attribute for the <config> node. Values
+    can be "internal" and "external".
+
+
+Platforms
+#########
+
+Execution on bare hardware (base-hw)
+====================================
+
+; @skalk, @atopia
+
+commit 4730312c1e006e60d0064e747b7d2d2a0d874a20
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Nov 26 15:12:03 2024 +0100
+
+    hw: register state and backtrace when core faults
+    
+    If one of core's threads is causing an MMU fault, dump the
+    register state and stack backtrace of the faulting stack to
+    aid debugging.
+    
+    Fix genodelabs/genode#5387
+
+commit 025043cdcf36ced296c0c0dc7e1eff7d3171a354
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Aug 7 11:34:02 2024 +0200
+
+    hw: generalize IPC-helping to a common mechanism
+    
+    * Removes helping from Ipc_node and Thread class
+    * Implement helping as mechanism of Scheduler::Context
+    
+    Ref genodelabs/genode#5318
+
+commit e275787119358e3a9da2585665129e7c30d77d10
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Aug 13 10:56:35 2024 +0200
+
+    hw: add missing six-arguments syscall for riscv
+    
+    Ref genodelabs/genode#5319
+
+commit f97c8cacde1310b6ad910ea1ab108e69b40d03ac
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Aug 12 11:23:12 2024 +0200
+
+    hw: sanitze cpu context
+    
+    * Rename Kernel::Cpu_job to Kernel::Cpu_context (alias Kernel::Cpu::Context)
+    * State first Cpu affinity of Cpu::Context at construction time
+    * Move cpu affinity argument from kernel syscall create_thread to start_thread
+    * Ensure that Cpu pointer is always valid
+    
+    Fix genodelabs/genode#5319
+
+commit ae1e4918a77bbd112a9e92b9256d44908f2ed085
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Nov 18 16:57:39 2024 +0100
+
+    hw: use enums in stack base definition
+    
+    Ref genodelabs/genode#5319
+
+commit fd78fb4de39894f33492b67746c8ab0e03b1573d
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Aug 19 09:51:19 2024 +0200
+
+    hw: pager thread per cpu
+    
+    Instatiate a separate pager thread for each cpu core. Every time a pager
+    object gets managed by the Pager_entrypoint, assign it to the pager thread
+    on the same cpu core.
+    
+    Ref genodelabs/genode#5318
+
+commit 1194652d2097301148c6596b7ce197035dea63fa
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Aug 19 10:07:18 2024 +0200
+
+    hw: move remaining pager code to pager.cc
+    
+    Consolidate core's ha-specific pager code in one and the same compilation unit.
+    
+    Ref genodelabs/genode#5318
+
+commit 272885300594b3e88ec9b05dbdfd5187438e4e7e
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Jan 10 15:15:21 2025 +0100
+
+    hw: implement helping of pager threads
+    
+    Instead of blocking in case of exceptions and MMU faults, delegate
+    the faulter's scheduling context to the assigned pager thread.
+    
+    Fix genodelabs/genode#5318
+
+commit 0d648eae62636d6bb9e0145cdda6183ee4f36315
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Jan 10 21:17:19 2025 +0100
+
+    hw: sanitize kernel's signal datastructures
+    
+    * Move all Kernel::Signal_* structures to kernel/signal.*
+    * Remove return value of kill_signal_context, which wasn't evaluated
+    * Remove Kernel::Signal_context::can_kill
+    * Remove Kernel::Signal_context::can_submit
+    * Remove Kernel::Signal_receiver::can_add_handler
+    * Turn nullptr into cxx nullptr instead of just zero
+    * Turn boolean values into true/false instead of one/zero
+    * Always add to signal FIFO also if submit counter
+      cannot get increased enough
+    
+    Fix genodelabs/genode#5416
+
+commit b0052a71be079cdffaca10e45c7414d26ec5b526
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Jan 13 13:30:01 2025 +0100
+
+    hw: remove unused object pool of pager ojects
+    
+    Fix genodelabs/genode#5417
+
+commit 89f7834b1752e42aefbd718b85a08da43fb88b2e
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Wed Jan 8 10:45:33 2025 +0100
+
+    hw: calibrate TSC via ACPI timer
+    
+    To get the Time Stamp Counter's frequency, hw relied on a complex and
+    incomplete algorithm.
+    
+    Since this is a one-time initialization issue, move TSC calibration to
+    bootstrap and implement it using the ACPI timer.
+    
+    Issue #5215
+
+commit ec5e1a6b4b4039cb25987b1784b56ff7ad624e2e
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Thu Jan 9 11:31:42 2025 +0100
+
+    hw: calibrate Local APIC via ACPI timer
+    
+    Upto now, bootstrap used the Programmable Interval Timer to set a
+    suitable divider and determine the frequency of the Local APIC.
+    The PIT is not available on recent x86_64 hardware anymore.
+    
+    Move Local APIC calibration to bootstrap and use the ACPI timer as a
+    reference. Clean up hw's timer implementation a little and disable the
+    PIT in bootstrap.
+    
+    Fixes #5215
+
+commit 02b7878229b605a25ea0e21cc5e3e4e2d300b84e
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Tue Jan 21 16:26:52 2025 +0100
+
+    hw: always serialize rdtsc reads
+    
+    While implementing TSC calibration in #5215, the issue of properly serializing
+    TSC reads came up. Some learnings of the discussion were noted in #5430.
+    
+    Using `cpuid` for serialization as in Trace::timestamp() is portable,
+    but will cause VM exits on VMX and SVM and is therefore unsuitable to
+    retain a roughly working calibration loop while running virtualized.
+    On the other hand on most AMD systems, dispatch serializing `lfence`
+    needs to be explicitly enabled via a non-architectural MSR.
+    
+    Enable setting up dispatch serializing lfence on AMD systems and always
+    serialize rdtsc accesses in Hw::Tsc::rdtsc() for maximum reliability.
+    
+    Issues #5215, #5430
+
+commit 7a1c060952ec52dfa49fdc0e96820c0a6796eec5
+Author: Benjamin Lamowski <benjamin.lamowski@genode-labs.com>
+Date:   Mon Feb 3 13:54:21 2025 +0100
+
+    hw: x86_64: clean up vCPU startup
+    
+    - and store the vCPU startup state in a dedicated enum
+    - return the STARTUP exit from Vm::run()
+    - initialize the vCPU from Vm::proceed() instead of Vm::exception()
+    
+    Fix genodelabs/genode#5450
+
+commit 58d94e800cde9a89723d0be707b407e74b533e10
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Feb 12 15:06:25 2025 +0100
+
+    vmm_x86: test x86 virtualization nightly with hw
+    
+    Ref genodelabs/genode#5450
+
+commit 22651771f46a365b5618eba8ab6d7b1d7471a838
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Jan 24 13:22:12 2025 +0100
+
+    hw: re-implement kernel mutex
+    
+    * Rename Kernel::Lock into Kernel::Mutex
+    * Replace Guard object by template function that expects
+      lambda to handle re-entrance by same cpu
+    
+    Ref genodelabs/genode#5425
+
+commit 494793ecaaf97feb74319637cee65cbbfcba1dea
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Feb 12 15:18:03 2025 +0100
+
+    hw: explicit cpu state argument in kernel entry
+    
+    * Instead of only implicitely update the last scheduled Cpu context with
+      the CPU state, when entering the architecture-speficic machine
+      exception vector, cache this data on kernel context stack, and deliver
+      it as argument when entering the kernel via high-level language
+    * Handle Cpu context's exception explicitely in kernel main routine
+    * Make cached CPU state available to error handling lambda in case of
+      Kernel::Mutex double entering (aka kernel fault)
+    * Rename Cpu::schedule to Cpu::assign
+    
+    Ref genodelabs/genode#5425
+
+commit 4c062a562a78c483468ffa553d44e2332a09a2db
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Jan 27 14:22:24 2025 +0100
+
+    hw: dump cpu context when kernel faults
+    
+    * Introduce architecture-specific Cpu::panic routine
+    * Dump stored CPU state in panic routine
+    * Try to backtrace kernel context's stack
+    
+    Fix genodelabs/genode#5425
+
+
+NOVA microhypervisor
+====================
+
+; @alex-ab
+
+commit 12f87260c03152feb0c51b5d4808ac2f43fd5ad5
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Jan 7 11:12:30 2025 +0100
+
+    nova: add x2apic support
+    
+    Fixes #5413
+
+
+Lifted limitations on Fiasco.OC and seL4
+========================================
+
+; @alex-ab
+
+commit 8a5fd27b46cc27942b2e312e9081c146e5ba78eb
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Dec 12 23:31:02 2024 +0100
+
+    foc: add support to add ACPI rsdp in platform info
+    
+    which is required for UEFI boots.
+    
+    Issue #5406
+
+commit 91a58d3e98930814bd95d1b614756e84f99aca16
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Dec 12 17:13:26 2024 +0100
+
+    foc: increase max count for RPC caps in core
+    
+    to boot Sculpt
+    
+    Issue #5406
+
+commit 9239b36f0503788a873bf54c70272764fa45606f
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Jan 15 11:16:55 2025 +0100
+
+    platform: be robust on IRQ creation failure
+    
+    In case invalid IRQ numbers are used (255 on x86), the IRQ session creation
+    request may be denied and the platform driver is killed because of the
+    uncatched exception, which must be avoided.
+    
+    Issue #5406
+    
+commit a8b3193d738339082fef97e59547973623606c49
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Jan 15 18:29:17 2025 +0100
+
+    tool: use bender hwp options also for foc and seL4
+    
+    Issue #5406
+
+commit 935681a7f4e32c8b20ce63c5039c220b1dc7ec1a
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Jan 20 19:18:25 2025 +0100
+
+    foc: support more caps
+    
+    by increasing the base-foc internal cap indices implementation from 16bit
+    size to 28 bit.
+    
+    Issue #5406
+
+commit ea3ed25431a6e36c2ecc4776e970eae4c4774b98
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Jan 16 13:30:30 2025 +0100
+
+    base: support specifying PCI bdf on irq creation
+    
+    Required by the seL4 kernel interface for MSI creation and by another upstream
+    kernel.
+    
+    Issue #5423
+
+commit 2ad1c450eeb2697705db3553bb86cf55c6bf330e
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Jan 16 09:41:48 2025 +0100
+
+    sel4: add MSI support for x86
+    
+    Fixes #5423
+
+commit db914eb952585a5175c7944c1d13a46efb7c3097
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sat Feb 8 19:09:37 2025 +0100
+
+    foc: avoid unsynchronized vm state tracking
+    
+    _extra_dispatch_up is used by the ep and the vcpu
+    thread unsynchronized, which leads under sufficient load to race situations,
+    where both wait for each other and no one ever will continue. Remove
+    _extra_dispatch_up completely, which is not required, as the kernel interface
+    handles this specific state already.
+    
+    Fixes #5461
+
+commit 3fd747d4de58fc7d90e3bcce35e96168e3d28fb4
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sun Feb 9 11:20:19 2025 +0100
+
+    sel4: avoid unsynchronized vm state tracking
+    
+    Remove _extra_dispatch_up which is not required and racy which may lead
+    to hangs between ep and vcpu thread.
+    
+    Issue #5461
+
+
+Build system and tools
+######################
+
+Goa SDK
+=======
+
+; @jschlatow
+
+commit 96e8b4626996ddd7513265cfa09ce08531b1b84d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 6 23:31:48 2025 +0100
+
+    build/make: propagate linker flags for shared libs
+    
+    Fixes #116
+
+commit 9b730cdcf4deaaba867f2148c037c8bd0817526f
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 6 23:33:38 2025 +0100
+
+    build/make: propagate CROSS_DEV_PREFIX
+    
+    This is required when writing a custom Makefile as wrapper to invoke a
+    custom (non-autoconf) configure script.
+    
+    Fixes #114
+
+commit 151e25a0a4103107be7326fcd13a10283ee76111
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 20 16:47:55 2025 +0100
+
+    Update to Sculpt 24.10.3
+
+commit e0d360e5a99ba26c135a30a206e4c19ea39af5b1
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Jan 16 13:47:15 2024 +0100
+
+    autoconf: use API archives for pkg-config
+    
+    genodelabs/goa#81
+
+commit 37530b74615a7d5c83faed655dac9034cb50da4d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Feb 12 14:47:04 2025 +0100
+
+    util: do not replace generated files in build_dir
+    
+    Upon build, the content from src/ is symlinked into the build directory.
+    If the build system replaces one of those symlinks with
+    a generated (regular) file, goa will restore the symlink on the next
+    build. For autoconf projects, this likely breaks the configure step.
+    
+    Fixes #119
+
+commit 21c2c85b07db8defcde69d72700636b62febb824
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 13 07:50:19 2025 +0100
+
+    autoconf: execute install target if it exists
+    
+    genodelabs/goa #120
+
+commit 07067897a2e858511b315c24792beded20f8344b
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 20 16:46:55 2025 +0100
+
+    make: execute install target if it exists
+    
+    genodelabs/goa#120
+
+
+Compilation changes
+===================
+
+; @nfeske
+
+commit a5d3613f506b068b2f3fa891901b15ff9e9d63f0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 28 17:20:59 2025 +0100
+
+    build: set -march=x86-64-v2 for x86_64
+    
+    This allows for the use of SSE4.1 intrinsics.
+    
+    Fixes #5440
+
+commit 63b49fcdb32e6503b31b80f2dea64a7b787f5a87
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Jan 21 12:19:56 2025 +0100
+
+    Enable -ffreestanding by default
+    
+    Fixes #5429
+
+
+Streamlined handling of run-script preconditions
+================================================
+
+; @nfeske
+
+commit c87f0f77c25e60d4cce6c2f3f519902a8bc94ee2
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Tue Feb 11 12:08:00 2025 +0100
+
+    tool/run: introduce 'have_recipe'-proc
+    
+    This procedure is useful for run scripts that depend for example on a
+    board support package that is provided only for certain boards, possibly
+    by a third-party repo.
+    
+    Issue #5432
+
+commit 9aa11f94377e84e048c83905387648d1cf911843
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Feb 5 16:27:18 2025 +0100
+
+    tool/run: introduce '[have_]cmd_arg'-procs
+    
+    Renaming 'get_cmd_switch' and 'get_cmd_arg' to 'have_cmd_arg' and
+    'cmd_arg' respectively blends in nicely with the now omnipresent pattern
+    with 'have_[spec|board|installed|include]'.
+    
+    This commit deprecates 'get_cmd_switch' and 'get_cmd_arg', which will be
+    removed in a later commit.
+    
+    Issue #5432
+
+commit d622059d84de6dcc7803d6f42da14fe39f406d0e
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Feb 5 18:14:44 2025 +0100
+
+    tool/dts: rename 'get_cmd_[arg|switch]'-proc
+    
+    ...to be consistent with the naming in tool/run.
+    
+    Related to #5432
+
+commit 2153c3cce79c57b76f830e4d9e8a39615d367225
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Feb 5 18:10:51 2025 +0100
+
+    tool/autopilot: rename 'get_cmd_[arg|switch]'-proc
+    
+    ...to be consistent with the naming in tool/run.
+    
+    Related to #5432
+
+commit e4a726e20a5b4ea607cef891b5ad5deca6c4a041
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Jan 22 10:06:43 2025 +0100
+
+    tool/autopilot: mark incompletely executed tests
+    
+    ...with "ABORT", in case of an unmet 'assert_spec' in the run scenario.
+    
+    Issue #5432
+
+commit 71f203d802040ece29df0f67d06b9e2ffa0e0e82
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Jan 22 10:07:24 2025 +0100
+
+    tool/run: introduce generalized 'assert'-proc
+    
+    Issue #5432
+
+commit e87b82d04b42c946199bbe5ebde3a88986b177e7
+Author: Roman Iten <roman.iten@gapfruit.com>
+Date:   Wed Jan 22 10:49:56 2025 +0100
+
+    os: use 'assert'-proc in run scripts
+    
+    Issue #5432
+
+
+Meshcmd as alternative AMT tool
+===============================
+
+; @alex-ab
+
+commit b50bbef3036e5e656eadf5e04e83937012149728
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Nov 14 11:31:28 2024 +0100
+
+    tool: support meshcmd as AMT alternative tool
+    
+    which may be used as alternative for
+    
+    - AMT log grabbing, default: amtterm
+    - AMT power cycling, default: wsman, alternative: amttool
+    
+    https://www.meshcommander.com
+    https://github.com/Ylianst/MeshCommander
+    https://www.intel.com/content/www/us/en/developer/articles/news/meshcmd-new-intel-amt-command-line-tool.html
+
+
