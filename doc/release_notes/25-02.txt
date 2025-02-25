@@ -593,22 +593,20 @@ Date:   Mon Feb 17 15:29:42 2025 +0100
 USB
 ===
 
-; @cnuke
+We addressed a short-coming when selecting USB endpoints, where only the
+interface number was considered in the selection process and the alternate
+settings number was ignored. Thereby the order in which the interface
+descriptors were iterated was accidentally determining the endpoint addresses
+that were communicated to the client, i.e. the USB device driver.
 
-commit 96d9f5d317c25ead15dd9ec509758e3d277fd362
-Author: Josef Söntgen <jws@sysret.de>
-Date:   Fri Nov 1 17:08:24 2024 +0100
+In case of mass-storage devices, like external SSDs, the 'usb_block' driver
+tried to operate the device with the endpoint addresses belonging to the
+USB-Attached-SCSI (UAS) alternate setting rather than the bulk-only interface
+it supports.
 
-    usb: consider alternate setting in endpoint select
-    
-    When constructing an Usb::Interface and implicitly corresponding
-    Usb::Endpoint instances only select endpoints relevant for the
-    given alternate setting.
-    
-    The libusb has to be changed to delegate the correct alternate
-    setting to the constructor too.
-    
-    Fix genodelabs/genode#5394
+With the fix that includes the alternate setting number in the selection
+process in place the order is now of no consequence and the affected devices
+are working again.
 
 
 Audio
