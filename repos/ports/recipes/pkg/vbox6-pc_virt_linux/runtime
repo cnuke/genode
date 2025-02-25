@@ -1,6 +1,7 @@
 <runtime ram="1024M" caps="1000" binary="virtualbox6">
 
 	<requires>
+		<block label="block"/>
 		<file_system label="rw"/>
 		<file_system label="vm"/>
 		<gpu/>
@@ -26,21 +27,23 @@
 		<vfs>
 			<dir name="dev">
 				<log/> <rtc/> <null/> <gpu/> <terminal/> <zero/>
+				<block name="block" label="block" block_buffer_count="128"/>
 				<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
 			</dir>
 			<dir name="pipe"> <pipe/> </dir>
-			<dir name="shared"> <fs label="rw" writeable="yes"/> </dir>
+			<dir name="rw"> <fs label="rw" writeable="yes"/> </dir>
 			<dir name="tmp"> <ram/> </dir>
 			<rom name="VBoxSharedClipboard.so"/>
 			<rom name="VBoxSharedFolders.so"/>
 			<rom name="machine.vbox6"/>
+			<rom name="disk.vmdk"/>
 			<rom name="pc_virt_linux.iso"/>
 		</vfs>
 		<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe">
 			<pthread placement="single-cpu"/>
 		</libc>
 		<arg value="virtualbox"/>
-		<env key="VBOX_USER_HOME" value="/tmp"/>
+		<env key="VBOX_USER_HOME" value="/"/>
 		<env key="VBOX_LOG_DEST"          value="file=/dev/log"/>
 		<env key="VBOX_LOG"               value="+dbgf+gim"/>
 		<env key="VBOX_LOG_FLAGS"         value="thread"/>
@@ -50,6 +53,7 @@
 	</config>
 
 	<content>
+		<rom label="disk.vmdk"/>
 		<rom label="egl.lib.so"/>
 		<rom label="expat.lib.so"/>
 		<rom label="glapi.lib.so"/>
