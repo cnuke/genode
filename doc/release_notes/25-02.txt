@@ -614,17 +614,14 @@ Date:   Fri Nov 1 17:08:24 2024 +0100
 Audio
 =====
 
-; @ssumpf
-
-commit ac5cfb59ead8333603ede6c4d72c28207fcd609d
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Wed Dec 11 19:20:21 2024 +0100
-
-    dde_bsd: support microphone selection
-    
-    Make preferred microphone configurable when a headset is plugged in by
-    introducing the 'mic_priority' attribute for the <config> node. Values
-    can be "internal" and "external".
+In order to improve user experience, especially with regard to video
+conferencing, we extended our [https://www.openbsd.org - OpenBSD] based audio
+driver with an option to customize microphone selection. The <config> node of
+the audio driver now supports a 'mic_priority' attribute. Supported values are
+"internal" and "external" (default). In case two microphones are present, e.g., a
+headset and an internal microphone on a notebook, a value of "internal" will
+enable the speakers of the headset and the microphone of the notebook, while
+"external" will enable the microphone of the headset.
 
 
 Platforms
