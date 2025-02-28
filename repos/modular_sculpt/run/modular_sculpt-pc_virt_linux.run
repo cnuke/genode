@@ -1,0 +1,21 @@
+set ::env(LOG) core
+set ::env(SCULPT) modular_sculpt_pc_virt_linux-U7411
+
+set build_iso 0
+
+set raw_archive cnuke/raw/pc_virt_linux_iso/2025-02-25
+
+if {$build_iso} {
+	set depot_path [depot_dir]/$raw_archive
+	# use catch to prevent nested execution of the run tool
+	# from abort prematurely
+	catch {exec make run/pc_virt_linux_iso}
+	exec mkdir -p $depot_path
+	exec cp var/run/pc_virt_linux_iso.iso $depot_path/pc_virt_linux.iso
+} else {
+	exec ${genode_dir}/tool/depot/download $raw_archive
+}
+
+source ${genode_dir}/repos/gems/run/sculpt.run
+
+run_genode_until {.*finished dd tests.*} 300
