@@ -1,0 +1,55 @@
+<config arch="" info="screensaver demo">
+
+	<common_routes>
+		<service name="ROM" label_last="ld.lib.so"> <parent/> </service>
+		<service name="CPU">   <parent/> </service>
+		<service name="PD">    <parent/> </service>
+		<service name="LOG">   <parent/> </service>
+		<service name="Timer"> <parent/> </service>
+	</common_routes>
+
+	<start name="black_hole"/>
+	<start name="system_clock"/>
+	<start name="recall_fs"/>
+
+	<start name="window_layouter" priority="-1" pkg="window_layouter">
+		<route>
+			<service name="Gui">                           <child name="wm"/> </service>
+			<service name="ROM" label="window_list">       <child name="wm"/> </service>
+			<service name="ROM" label="focus_request">     <child name="wm"/> </service>
+			<service name="ROM" label="hover">             <child name="wm"/> </service>
+			<service name="ROM" label="decorator_margins"> <child name="black_hole"/> </service>
+			<service name="Report">                        <child name="wm"/> </service>
+			<service name="File_system" label="recall">    <child name="recall_fs"/> </service>
+		</route>
+	</start>
+
+	<start name="themed_decorator" priority="-1" pkg="motif_decorator">
+		<route>
+			<service name="ROM" label="window_layout"> <child name="wm"/> </service>
+			<service name="ROM" label="pointer">       <child name="wm"/> </service>
+			<service name="Report">                    <child name="wm"/> </service>
+			<service name="Gui">                       <child name="wm"/> </service>
+		</route>
+	</start>
+
+	<start name="wm" priority="-1" pkg="wm">
+		<route>
+			<service name="Gui" label="focus"> <parent label="focus"/> </service>
+			<service name="Gui">                           <parent/> </service>
+			<service name="Report" label_last="shape">     <parent/> </service>
+			<service name="Report" label_last="clipboard"> <parent/> </service>
+			<service name="ROM"    label_last="clipboard"> <parent/> </service>
+		</route>
+	</start>
+
+	<start name="avplay" pkg="cnuke/pkg/screensaver/2025-02-28" priority="-2">
+		<affinity xpos="0" ypos="0" width="4" height="1"/>
+		<route>
+			<service name="Gui"> <child name="wm"/> </service>
+			<service name="Play"> <child name="black_hole"/> </service>
+		</route>
+	</start>
+
+</config>
+
