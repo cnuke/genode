@@ -1,0 +1,13 @@
+<runtime ram="2M" caps="100" binary="log_terminal">
+
+	<requires> <log/> </requires>
+	<provides> <terminal/> </provides>
+
+	<config/>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="log_terminal"/>
+	</content>
+
+</runtime>
