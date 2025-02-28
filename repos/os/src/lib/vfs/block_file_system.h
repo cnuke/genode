@@ -94,6 +94,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 
 					Block::Packet_descriptor packet;
 
+
+
 					/* sanity check */
 					if (packet_count > _block_buffer_count) {
 						packet_count = _block_buffer_count;
@@ -438,7 +440,7 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 	Genode::Allocator_avl _tx_block_alloc { &_env.alloc() };
 
 	Block::Connection<> _block {
-		_env.env(), &_tx_block_alloc, 128*1024, _label.string() };
+		_env.env(), &_tx_block_alloc, (4u << 20) + (128u << 10), _label.string() };
 
 	Block::Session::Info const _info { _block.info() };
 
@@ -471,9 +473,9 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 		return config.attribute_value("name", Name("block"));
 	}
 
-	static unsigned buffer_count(Xml_node config)
+	static unsigned buffer_count(Xml_node)
 	{
-		return config.attribute_value("block_buffer_count", 1U);
+		return 4096U;
 	}
 
 	Local_factory(Vfs::Env &env, Xml_node config)
