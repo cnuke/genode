@@ -138,7 +138,7 @@ struct genode_sockaddr
 	union {
 		/* AF_INET (or IPv4) */
 		struct {
-			genode_uint16_t port; /* big endian = network bute order */
+			genode_uint16_t port; /* big endian = network byte order */
 			genode_uint32_t addr; /* big endian = network byte order */
 		} in;
 	};
