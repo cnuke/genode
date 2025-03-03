@@ -143,7 +143,11 @@ struct Vfs::Xoroshiro_file_system : Single_file_system
 	using File_path = String<256>;
 	static File_path _get_seed_file_path(Xml_node const config)
 	{
-		return config.attribute_value("seed_path", File_path("/dev/entropy"));
+		if (!config.has_attribute("seed_path"))
+			error("seed_path is unset");
+
+		/* open Readonly_file with empty path fails when reading */
+		return config.attribute_value("seed_path", File_path(""));
 	}
 
 	struct File_entropy_source : Entropy_source
@@ -243,8 +247,10 @@ struct Vfs::Xoroshiro_file_system : Single_file_system
 				                                 _seed_file_path);
 			return OPEN_OK;
 		}
-		catch (Genode::Out_of_ram)  { return OPEN_ERR_OUT_OF_RAM; }
-		catch (Genode::Out_of_caps) { return OPEN_ERR_OUT_OF_CAPS; }
+		catch (Genode::Out_of_ram)        { return OPEN_ERR_OUT_OF_RAM; }
+		catch (Genode::Out_of_caps)       { return OPEN_ERR_OUT_OF_CAPS; }
+		/* handled non-existing path */
+		catch (Genode::File::Open_failed) { return OPEN_ERR_UNACCESSIBLE; }
 	}
 
 	Stat_result stat(char const *path, Stat &out) override {
