@@ -1,5 +1,5 @@
 /*
- * \brief  Genode-socket based file system
+ * \brief  Socket-based file system
  * \author Christian Helmuth
  * \author Josef Soentgen
  * \author Emery Hemingway
