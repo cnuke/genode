@@ -49,7 +49,6 @@ if {[have_cmd_switch --autopilot]} {
 	        [have_board imx8q_evk]       ||
 	        [have_board imx6q_sabrelite]} \
 		"Autopilot mode is not supported on this platform."
-	}
 }
 
 create_boot_directory
