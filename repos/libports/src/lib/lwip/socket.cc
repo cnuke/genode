@@ -79,7 +79,7 @@ struct Socket::Main
 
 	Io_signal_handler<Main> nic_client_handler { _env.ep(), *this,
 		&Main::handle_nic_client };
-	
+
 	Io_signal_handler<Main> link_state_handler { _env.ep(), *this,
 		&Main::handle_link_state };
 
