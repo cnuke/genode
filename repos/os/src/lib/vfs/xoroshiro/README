@@ -8,13 +8,13 @@ The plugin supports the following configuration options:
          to the VFS, the default is 'xoroshiro'.
 
 * :seed_path: specifies the file in the VFS that is read to reseed
-              the PRNG, the default is '/dev/entropy'.
+              the PRNG.
 
 The following examplary config snippets illustrates its usage:
 
 ! <vfs>
 !   <dir name="dev">
 !     <jitterentropy name="entropy"/>
-!     <xoroshiro     name="random"/>
+!     <xoroshiro     name="random" seed_path="/dev/entropy"/>
 !   </dir>
 ! </vfs>
