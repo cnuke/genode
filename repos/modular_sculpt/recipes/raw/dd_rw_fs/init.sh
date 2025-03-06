@@ -21,8 +21,10 @@ execute_dd() {
 	dst_file="$2"
 	dd_bs="$3"
 	cmd="dd if=$src_file of=$dst_file bs=$dd_bs oflag=direct iflag=direct conv=fsync"
+	echo "START $dd_bs"|tee -a $LOG_FILE
 	echo "$cmd"|tee -a $LOG_FILE
 	$cmd 2>&1|tee -a $LOG_FILE
+	echo "END $dd_bs"|tee -a $LOG_FILE
 }
 
 read_block_size() {
@@ -59,6 +61,7 @@ block_size)
 		execute_dd "$SRC_FILE" "/mnt/dst.img" "$NEW_BS"
 		reboot
 	else
+		cat /rw/log
 		echo "finished dd tests"
 	fi
 	break ;;
