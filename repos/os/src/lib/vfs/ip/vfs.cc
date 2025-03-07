@@ -199,7 +199,8 @@ struct Vfs::File : Vfs::Node
 	/**
 	 * Check for data to read or write
 	 */
-	virtual bool poll(bool /* read */) { return true; }
+	virtual bool read_ready()  const { return true; }
+	virtual bool write_ready() const { return true; };
 
 	virtual long write(Lxip_vfs_file_handle &,
 	                   Const_byte_range_ptr const &, file_size)
@@ -327,10 +328,10 @@ struct Vfs::Lxip_vfs_file_handle final : Vfs::Lxip_vfs_handle
 	}
 
 	bool read_ready() const override {
-		return (file) ? file->poll(true) : false; }
+		return (file) ? file->read_ready() : false; }
 
 	bool write_ready() const override {
-		return (file) ? file->poll(false) : false; }
+		return (file) ? file->write_ready() : false; }
 
 	Read_result read(Byte_range_ptr const &dst, size_t &out_count) override
 	{
@@ -398,7 +399,7 @@ static void poll_all()
 			[&] (Vfs::Lxip_vfs_file_handle::Fifo_element &elem) {
 		Vfs::Lxip_vfs_file_handle &handle = elem.object();
 		if (handle.file) {
-			if (handle.file->poll(true)) {
+			if (handle.file->read_ready()) {
 				/* do not notify again until notify_read_ready */
 				_read_ready_waiters_ptr->remove(elem);
 
@@ -462,13 +463,14 @@ class Vfs::Lxip_data_file final : public Vfs::Lxip_file
 		 ** File interface **
 		 ********************/
 
-		bool poll(bool read) override
+		bool read_ready() const override
 		{
-			unsigned result = genode_socket_poll(&_sock);
+			return genode_socket_poll(&_sock) & genode_socket_pollin_set();
+		}
 
-			if (read) return result & genode_socket_pollin_set();
-
-			return result & genode_socket_pollout_set();
+		bool write_ready() const override
+		{
+			return genode_socket_poll(&_sock) & genode_socket_pollout_set();
 		}
 
 		long write(Lxip_vfs_file_handle &,
@@ -518,11 +520,9 @@ class Vfs::Lxip_peek_file final : public Vfs::Lxip_file
 		 ** File interface **
 		 ********************/
 
-		bool poll(bool read) override
-		{
-			/* can always peek */
-			return read ? true : false;
-		}
+		/* can always peek */
+		bool read_ready()  const override { return true;  }
+		bool write_ready() const override { return false; }
 
 		long write(Lxip_vfs_file_handle &,
 		     Const_byte_range_ptr const &, file_size) override
@@ -674,16 +674,16 @@ class Vfs::Lxip_connect_file final : public Vfs::Lxip_file
 		 ** File interface **
 		 ********************/
 
-		bool poll(bool read) override
+		bool read_ready() const override
 		{
-			if(!read) return true;
-
 			/*
 			 * The connect file is considered readable when the socket is
 			 * writeable (connected or error).
 			 */
 			return genode_socket_poll(&_sock) & genode_socket_pollout_set();
 		}
+
+		bool write_ready() const override { return true; };
 
 		long write(Lxip_vfs_file_handle &handle,
 		           Const_byte_range_ptr const &src,
@@ -806,10 +806,8 @@ class Vfs::Lxip_remote_file final : public Vfs::Lxip_file
 		 ** File interface **
 		 ********************/
 
-		bool poll(bool read) override
+		bool read_ready() const override
 		{
-			if (!read) return false;
-
 			switch (_parent.parent().type()) {
 			case Lxip::Protocol_dir::TYPE_DGRAM:
 				return genode_socket_poll(&_sock) & genode_socket_pollin_set();
@@ -820,6 +818,8 @@ class Vfs::Lxip_remote_file final : public Vfs::Lxip_file
 
 			return false;
 		}
+
+		bool write_ready() const override { return false; }
 
 		long read(Lxip_vfs_file_handle &handle,
 		          Byte_range_ptr const &dst,
@@ -886,12 +886,12 @@ class Vfs::Lxip_accept_file final : public Vfs::Lxip_file
 		 ** File interface **
 		 ********************/
 
-		bool poll(bool read) override
+		bool read_ready() const override
 		{
-			if (!read) return false;
-
 			return genode_socket_poll(&_sock) & genode_socket_pollin_set();
 		}
+
+		bool write_ready() const override { return false; }
 
 		long read(Lxip_vfs_file_handle &,
 		          Byte_range_ptr const &dst,
