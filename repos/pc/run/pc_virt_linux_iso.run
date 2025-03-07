@@ -36,7 +36,27 @@ if [ -f "/rw/init.sh" ]; then
 	echo "Found /rw/init.sh, execute it"
 	sh /rw/init.sh
 fi
+if [ -f "/dd.sh" ]; then
+	echo "Found /dd.sh, execute it"
+	sh /dd.sh
+fi
 EOF
+
+# cat << 'EOF' > /dd.sh
+# #!/bin/sh
+# 
+# #set -x
+# 
+# mkfs.ext2 /dev/sda  || exit 1
+# mount /dev/sda /mnt || exit 3
+# 
+# dd if=/dev/zero of=/mnt/src.img bs=1M count=1024
+# 
+# for block_size in 512 2K 4K 8K 32K 128K 512K 2M 8M; do
+#         echo 1 > /proc/sys/vm/drop_caches
+#         dd if=/mnt/src.img of=/mnt/dst.img bs=$block_size oflag=direct iflag=direct conv=fsync
+# done
+# EOF
 }
 	close $fd
 	return $file_path
