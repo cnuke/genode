@@ -1,0 +1,7 @@
+set ::env(LOG) core
+
+exec ${genode_dir}/tool/depot/download cnuke/raw/pc_virt_linux_iso/2025-03-11 cnuke/raw/fio_rw_fs/2025-03-11
+
+source ${genode_dir}/repos/gems/run/sculpt.run
+
+run_genode_until {.*finished testing.*} 600
