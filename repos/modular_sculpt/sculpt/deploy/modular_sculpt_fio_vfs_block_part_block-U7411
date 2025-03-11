@@ -1,0 +1,85 @@
+<config arch="x86_64">
+
+	<common_routes>
+		<service name="ROM" label_last="ld.lib.so"> <parent/> </service>
+		<service name="CPU">   <parent/> </service>
+		<service name="PD">    <parent/> </service>
+		<service name="LOG">   <parent/> </service>
+		<service name="Timer"> <parent/> </service>
+	</common_routes>
+
+	<default-route>
+		<service name="Timer"> <parent/> </service>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<start name="acpi_support"/>
+	<start name="black_hole"/>
+	<start name="system_clock"/>
+	<start name="fonts_fs"/>
+	<start name="default_recall_fs"/>
+
+	<start name="window_layouter"/>
+	<start name="themed_decorator"/>
+	<start name="wm"/>
+
+	<start name="mesa_gpu-cpu" pkg="mesa_gpu-cpu" priority="-2">
+		<route>
+			<service name="RM"> <parent/> </service>
+		</route>
+	</start>
+
+	<start name="touchpad"/>
+
+	<start name="default_fs_shell"/>
+
+	<start name="log_terminal" pkg="log_terminal"/>
+
+	<start name="ram_block_backend" pkg="ram_block" ram="8G" caps="8000">
+		<config>
+			<vfs>
+				<ram/>
+				<import>
+					<zero name="block_file" size="7G"/>
+				</import>
+			</vfs>
+			<policy label_prefix="ram_block" file="/block_file" block_size="512" writeable="yes"/>
+		</config>
+	</start>
+
+	<start name="ram_block" pkg="part_block" ram="32M" caps="100">
+		<config>
+			<policy label_prefix="vm_pc_virt_linux" partition="0" writeable="yes"/>
+		</config>
+		<route>
+			<service name="Block"> <child name="ram_block_backend"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="rw_fs"/>
+
+	<start name="vm_pc_virt_linux" pkg="vbox6-fio">
+		<affinity xpos="1" ypos="0" width="2" height="2"/>
+		<route>
+			<service name="File_system" label="rw">       <child name="rw_fs"/> </service>
+			<service name="Block" label="block">          <child name="ram_block"/> </service>
+			<service name="Report" label_last="shape">    <child name="wm"/> </service>
+			<service name="Report" label="clipboard">     <child name="wm"/> </service>
+			<service name="ROM" label="clipboard">        <child name="wm"/> </service>
+			<service name="ROM" label="mesa_gpu.lib.so">  <child name="mesa_gpu-cpu"/> </service>
+			<service name="ROM" label="capslock">         <parent label="capslock"/> </service>
+			<service name="ROM" label="platform_info">    <parent label="platform_info"/> </service>
+			<service name="Capture">                      <child name="black_hole"/> </service>
+			<service name="Gui">                          <child name="wm"/> </service>
+			<service name="Nic">                          <child name="nic_router"/> </service>
+			<service name="Rtc">                          <child name="system_clock"/> </service>
+			<service name="Terminal">                     <child name="log_terminal"/> </service>
+			<service name="Usb">                          <child name="black_hole"/> </service>
+			<service name="VM">                           <parent/> </service>
+			<service name="RM">                           <parent/> </service>
+			<service name="Gpu">                          <parent/> </service>
+		</route>
+	</start>
+
+</config>
