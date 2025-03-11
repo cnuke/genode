@@ -1,0 +1,27 @@
+<runtime ram="64M" caps="150" binary="vfs">
+
+	<provides> <file_system/> </provides>
+
+	<config>
+		<vfs>
+			<ram/>
+			<import>
+				<rom name="fio.tar"/>
+				<rom name="init.sh"/>
+				<rom name="run_fio.sh"/>
+			</import>
+		</vfs>
+		<default-policy root="/" writeable="yes"/>
+	</config>
+
+	<content>
+		<rom label="init.sh"/>
+		<rom label="ld.lib.so"/>
+		<rom label="run_fio.sh"/>
+		<rom label="vfs"/>
+		<rom label="vfs.lib.so"/>
+		<rom label="vfs_import.lib.so"/>
+		<rom label="fio.tar"/>
+	</content>
+
+</runtime>
