@@ -35,7 +35,7 @@
 
 	<start name="log_terminal" pkg="log_terminal"/>
 
-	<start name="rw_fs" pkg="fio_rw_fs"/>
+	<start name="rw_fs"/>
 
 	<start name="vm_pc_virt_linux" pkg="vbox6-fio_vfs_ram">
 		<affinity xpos="1" ypos="0" width="2" height="2"/>

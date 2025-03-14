@@ -19,3 +19,4 @@ launcher: wm window_layouter themed_decorator
 launcher: touchpad
 
 launcher: default_fs_shell
+launcher: rw_fs

@@ -17,5 +17,6 @@ launcher: default_recall_fs
 launcher: wm window_layouter themed_decorator
 
 launcher: default_fs_shell
+launcher: rw_fs
 
 launcher: ahci storage_ahci

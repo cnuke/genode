@@ -57,7 +57,7 @@
 		</route>
 	</start>
 
-	<start name="rw_fs" pkg="fio_rw_fs"/>
+	<start name="rw_fs"/>
 
 	<start name="vm_pc_virt_linux" pkg="vbox6-fio">
 		<affinity xpos="1" ypos="0" width="2" height="2"/>

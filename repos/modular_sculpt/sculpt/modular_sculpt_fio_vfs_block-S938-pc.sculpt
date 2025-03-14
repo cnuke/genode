@@ -14,6 +14,8 @@ launcher: black_hole system_clock
 launcher: fonts_fs
 
 launcher: default_recall_fs
+launcher: rw_fs
+
 launcher: wm window_layouter themed_decorator
 
 launcher: default_fs_shell
