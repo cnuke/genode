@@ -1,6 +1,10 @@
 set ::env(LOG) core
 
-exec ${genode_dir}/tool/depot/download cnuke/raw/pc_virt_linux_iso/2025-03-11 cnuke/raw/fio_rw_fs/2025-03-11
+catch { exec rm ${genode_dir}/repos/modular_sculpt/sculpt/launcher/rm_fs }
+
+#exec cp ${genode_dir}/repos/modular_sculpt/sculpt/launcher/fio_krenn.rw_fs ${genode_dir}/repos/modular_sculpt/sculpt/launcher/rw_fs
+
+#exec ${genode_dir}/tool/depot/download cnuke/raw/pc_virt_linux_iso/2025-03-11 cnuke/raw/fio_rw_fs/2025-03-11
 
 source ${genode_dir}/repos/gems/run/sculpt.run
 
