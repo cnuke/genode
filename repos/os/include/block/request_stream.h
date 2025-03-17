@@ -19,7 +19,23 @@
 #include <packet_stream_tx/rpc_object.h>
 #include <block/request.h>
 
-namespace Block { struct Request_stream; }
+namespace Block {
+
+	struct Request_stream;
+
+	Session::Info sanitize_info(Block::Session::Info const &info,
+	                            Block::Range         const &range)
+	{
+		using namespace Genode;
+
+		return {
+			.block_size  = info.block_size,
+			.block_count = min(range.num_blocks ? range.num_blocks : ~0ull,
+			                   info.block_count),
+			.align_log2  = info.align_log2,
+			.writeable   = range.writeable };
+	}
+}
 
 
 class Block::Request_stream : Genode::Noncopyable
@@ -45,6 +61,7 @@ class Block::Request_stream : Genode::Noncopyable
 				Genode::addr_t       const _base;
 				Genode::size_t       const _size;
 				Block::Session::Info const _info;
+				Block::Range         const _range;
 
 				/**
 				 * Return pointer to the first byte of the request content
@@ -84,9 +101,9 @@ class Block::Request_stream : Genode::Noncopyable
 				}
 
 				Payload(Genode::addr_t base, Genode::size_t size,
-				        Block::Session::Info info)
+				        Block::Session::Info info, Block::Range range)
 				:
-					_base(base), _size(size), _info(info)
+					_base(base), _size(size), _info(info), _range(range)
 				{ }
 
 			public:
@@ -109,6 +126,8 @@ class Block::Request_stream : Genode::Noncopyable
 
 		Block::Session::Info const _info;
 
+		Block::Range const _range;
+
 		Packet_stream_tx::Rpc_object<Block::Session::Tx> _tx;
 
 		using Tx_sink = Genode::Packet_stream_sink<Block::Session::Tx_policy>;
@@ -121,11 +140,13 @@ class Block::Request_stream : Genode::Noncopyable
 		               Genode::Dataspace_capability      ds,
 		               Genode::Entrypoint               &ep,
 		               Genode::Signal_context_capability sigh,
-		               Block::Session::Info        const info)
+		               Block::Session::Info        const info,
+		               Block::Range                const range = { 0, 0, false })
 		:
 			_info(info),
+			_range(range),
 			_tx(ds, rm, ep.rpc_ep()),
-			_payload(_tx.sink()->ds_local_base(), _tx.sink()->ds_size(), info)
+			_payload(_tx.sink()->ds_local_base(), _tx.sink()->ds_size(), info, range)
 		{
 			_tx.sigh_ready_to_ack(sigh);
 			_tx.sigh_packet_avail(sigh);
@@ -190,7 +211,7 @@ class Block::Request_stream : Genode::Noncopyable
 				                       && (packet.offset() >= 0);
 
 				Operation operation { .type         = packet.operation_type(),
-				                      .block_number = packet.block_number(),
+				                      .block_number = packet.block_number() + _range.offset,
 				                      .count        = packet.block_count() };
 
 				Request request { .operation = operation,
@@ -247,10 +268,11 @@ class Block::Request_stream : Genode::Noncopyable
 
 				bool _submitted = false;
 
-				Genode::size_t const _block_size;
+				Genode::size_t   const _block_size;
+				Genode::uint64_t const _offset;
 
-				Ack(Tx_sink &tx_sink, Genode::size_t block_size)
-				: _tx_sink(tx_sink), _block_size(block_size) { }
+				Ack(Tx_sink &tx_sink, Genode::size_t block_size, Genode::uint64_t offset)
+				: _tx_sink(tx_sink), _block_size(block_size), _offset(offset) { }
 
 			public:
 
@@ -266,6 +288,7 @@ class Block::Request_stream : Genode::Noncopyable
 						payload { .offset = request.offset,
 						          .bytes  = request.operation.count * _block_size };
 
+					request.operation.block_number -= _offset;
 					Packet_descriptor packet(request.operation, payload, request.tag);
 
 					packet.succeeded(request.success);
@@ -289,7 +312,7 @@ class Block::Request_stream : Genode::Noncopyable
 
 			while (tx_sink.ack_slots_free()) {
 
-				Ack ack(tx_sink, _payload._info.block_size);
+				Ack ack(tx_sink, _payload._info.block_size, _payload._range.offset);
 
 				fn(ack);
 
