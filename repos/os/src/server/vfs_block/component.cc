@@ -309,15 +309,39 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 	Vfs::Simple_env _vfs_env { _env, _heap,
 		_config_rom.xml().sub_node("vfs"), *this };
 
-	Constructible<Attached_ram_dataspace>  _block_ds { };
-	Constructible<Vfs_block::File>         _block_file { };
-	Constructible<Block_session_component> _block_session { };
+	struct Block_session
+	{
+		Attached_ram_dataspace  _bulk_dataspace;
+		Vfs_block::File         _file;
+		Block_session_component _session_component;
+
+		Block_session(Vfs::Simple_env      &vfs_env,
+		              size_t                tx_buf_size,
+		              Vfs_block::File_info  file_info,
+		              Signal_handler<Main> &request_handler)
+		:
+			_bulk_dataspace    { vfs_env.env().ram(), vfs_env.env().rm(),
+			                     tx_buf_size },
+			_file              { vfs_env.alloc(), vfs_env.root_dir(),
+			                     file_info },
+			_session_component { vfs_env.env().rm(), vfs_env.env().ep(),
+			                     _bulk_dataspace.cap(), request_handler,
+			                     _file, vfs_env.io() }
+		{ }
+
+		void handle_request() {
+			_session_component.handle_request(); }
+
+		Capability<Block::Session> cap() const {
+			return _session_component.cap(); }
+	};
+
+	Constructible<Block_session> _block_session { };
 
 	void _handle_requests()
 	{
-		if (!_block_session.constructed()) {
+		if (!_block_session.constructed())
 			return;
-		}
 
 		_block_session->handle_request();
 	}
@@ -366,13 +390,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			Vfs_block::file_info_from_policy(policy);
 
 		try {
-			_block_ds.construct(_env.ram(), _env.rm(), tx_buf_size);
-			_block_file.construct(_heap, _vfs_env.root_dir(), file_info);
-			_block_session.construct(_env.rm(), _env.ep(),
-			                         _block_ds->cap(),
-			                         _request_handler, *_block_file,
-			                         _vfs_env.io());
-
+			_block_session.construct(_vfs_env, tx_buf_size, file_info, _request_handler);
 			return { _block_session->cap() };
 		} catch (...) {
 			return Service::Create_error::DENIED;
@@ -386,11 +404,8 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 		if (!_block_session.constructed())
 			return;
 
-		if (cap == _block_session->cap()) {
+		if (cap == _block_session->cap())
 			_block_session.destruct();
-			_block_file.destruct();
-			_block_ds.destruct();
-		}
 	}
 
 	Main(Env &env) : _env(env)
