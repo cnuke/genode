@@ -80,14 +80,20 @@ class Vfs_block::File
 
 		Block::Session::Info _block_info { };
 
+		Block::block_number_t _file_block_count { 0 };
+
+		Block::Range const _block_range;
+
 	public:
 
 		File(Genode::Allocator &alloc,
 		     Vfs::File_system  &vfs,
-		     File_info   const &info)
+		     File_info    const &info,
+		     Block::Range const &block_range)
 		:
-			_vfs        { vfs },
-			_vfs_handle { nullptr }
+			_vfs         { vfs },
+			_vfs_handle  { nullptr },
+			_block_range { block_range }
 		{
 			using DS = Vfs::Directory_service;
 
@@ -101,7 +107,7 @@ class Vfs_block::File
 			if (res != Open_result::OPEN_OK) {
 				error("Could not open '", info.path.string(), "'");
 				throw Genode::Exception();
-			}
+		}
 
 			using Stat_result = DS::Stat_result;
 			Vfs::Directory_service::Stat stat { };
@@ -112,8 +118,10 @@ class Vfs_block::File
 				throw Genode::Exception();
 			}
 
+			_file_block_count = stat.size / info.block_size;
+
 			Block::block_number_t const block_count =
-				stat.size / info.block_size;
+				min(_file_block_count, max(block_range.num_blocks, ~0ull));
 
 			_block_info = Block::Session::Info {
 				.block_size  = info.block_size,
@@ -133,6 +141,8 @@ class Vfs_block::File
 		}
 
 		Block::Session::Info block_info() const { return _block_info; }
+
+		Block::Range const &block_range() const { return _block_range; }
 
 		bool execute()
 		{
@@ -163,7 +173,7 @@ class Vfs_block::File
 			case Type::READ: [[fallthrough]];
 			case Type::WRITE:
 				return op.count
-				    && (op.block_number + op.count) <= _block_info.block_count;
+				    && (_block_range.offset + op.block_number + op.count) <= _file_block_count;
 
 			case Type::TRIM: [[fallthrough]];
 			case Type::SYNC: return true;
@@ -173,6 +183,8 @@ class Vfs_block::File
 
 		void submit(Block::Request req, void *ptr, size_t length)
 		{
+			req.operation.block_number += _block_range.offset;
+
 			file_offset const base_offset =
 				req.operation.block_number * _block_info.block_size;
 
@@ -291,6 +303,9 @@ struct Block_session_component : Rpc_object<Block::Session>,
 
 		wakeup_client_if_needed();
 	}
+
+	Block::Range const & block_range() const {
+		return _file.block_range(); }
 };
 
 
@@ -315,6 +330,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 		Block_session_component _session_component;
 
 		Block_session(Vfs::Simple_env      &vfs_env,
+		              Block::Range   const &block_range,
 		              size_t                tx_buf_size,
 		              Vfs_block::File_info  file_info,
 		              Signal_handler<Main> &request_handler)
@@ -322,7 +338,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			_bulk_dataspace    { vfs_env.env().ram(), vfs_env.env().rm(),
 			                     tx_buf_size },
 			_file              { vfs_env.alloc(), vfs_env.root_dir(),
-			                     file_info },
+			                     file_info, block_range },
 			_session_component { vfs_env.env().rm(), vfs_env.env().ep(),
 			                     _bulk_dataspace.cap(), request_handler,
 			                     _file, vfs_env.io() }
@@ -333,6 +349,9 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 
 		Capability<Block::Session> cap() const {
 			return _session_component.cap(); }
+
+		Block::Range const & block_range() const {
+			return _file.block_range(); }
 	};
 
 	Constructible<Block_session> _block_session { };
@@ -389,8 +408,15 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 		Vfs_block::File_info const file_info =
 			Vfs_block::file_info_from_policy(policy);
 
+		Block::Range const block_range {
+			.offset     = Arg_string::find_arg(args.string(),
+			                                   "offset").ulong_value(0),
+			.num_blocks = Arg_string::find_arg(args.string(),
+			                                   "num_blocks").ulong_value(0) };
+
 		try {
-			_block_session.construct(_vfs_env, tx_buf_size, file_info, _request_handler);
+			_block_session.construct(_vfs_env, block_range, tx_buf_size,
+			                         file_info, _request_handler);
 			return _block_session->cap();
 		} catch (...) {
 			throw Service_denied();
