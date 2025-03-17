@@ -33,8 +33,8 @@ namespace Block {
 
 struct Block::Range
 {
-	Genode::uint64_t offset;
-	Genode::uint64_t num_blocks;
+	Genode::size_t offset;
+	Genode::size_t num_blocks;
 };
 
 
