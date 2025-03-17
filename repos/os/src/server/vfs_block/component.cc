@@ -80,14 +80,20 @@ class Vfs_block::File
 
 		Block::Session::Info _block_info { };
 
+		Block::block_number_t _file_block_count { 0 };
+
+		Block::Range const _block_range;
+
 	public:
 
 		File(Genode::Allocator &alloc,
 		     Vfs::File_system  &vfs,
-		     File_info   const &info)
+		     File_info    const &info,
+		     Block::Range const &block_range)
 		:
-			_vfs        { vfs },
-			_vfs_handle { nullptr }
+			_vfs         { vfs },
+			_vfs_handle  { nullptr },
+			_block_range { block_range }
 		{
 			using DS = Vfs::Directory_service;
 
@@ -112,8 +118,10 @@ class Vfs_block::File
 				throw Genode::Exception();
 			}
 
+			_file_block_count = stat.size / info.block_size;
+
 			Block::block_number_t const block_count =
-				stat.size / info.block_size;
+				min(_file_block_count, max(block_range.num_blocks, ~0ull));
 
 			_block_info = Block::Session::Info {
 				.block_size  = info.block_size,
@@ -133,6 +141,8 @@ class Vfs_block::File
 		}
 
 		Block::Session::Info block_info() const { return _block_info; }
+
+		Block::Range const &block_range() const { return _block_range; }
 
 		bool execute()
 		{
@@ -159,11 +169,15 @@ class Vfs_block::File
 			 */
 
 			Block::Operation const op = request.operation;
+
+			bool const valid_range = op.count
+			                      && (_block_range.offset + op.block_number + op.count)
+			                      <= _file_block_count;
 			switch (op.type) {
-			case Type::READ: [[fallthrough]];
 			case Type::WRITE:
-				return op.count
-				    && (op.block_number + op.count) <= _block_info.block_count;
+				return valid_range && _block_range.writeable;
+			case Type::READ:
+				return valid_range;
 
 			case Type::TRIM: [[fallthrough]];
 			case Type::SYNC: return true;
@@ -173,6 +187,8 @@ class Vfs_block::File
 
 		void submit(Block::Request req, void *ptr, size_t length)
 		{
+			req.operation.block_number += _block_range.offset;
+
 			file_offset const base_offset =
 				req.operation.block_number * _block_info.block_size;
 
@@ -291,6 +307,9 @@ struct Block_session_component : Rpc_object<Block::Session>,
 
 		wakeup_client_if_needed();
 	}
+
+	Block::Range const & block_range() const {
+		return _file.block_range(); }
 };
 
 
@@ -308,21 +327,25 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 	Vfs::Simple_env _vfs_env { _env, _heap,
 		_config_rom.xml().sub_node("vfs"), *this };
 
-	struct Block_session
+	struct Block_session : Genode::Registry<Block_session>::Element
 	{
 		Attached_ram_dataspace  _bulk_dataspace;
 		Vfs_block::File         _file;
 		Block_session_component _session_component;
 
-		Block_session(Vfs::Simple_env      &vfs_env,
-		              size_t                tx_buf_size,
-		              Vfs_block::File_info  file_info,
-		              Signal_handler<Main> &request_handler)
+		Block_session(Registry<Block_session> &registry,
+		              Vfs::Simple_env         &vfs_env,
+		              Block::Range      const &block_range,
+		              size_t                   tx_buf_size,
+		              Vfs_block::File_info     file_info,
+		              Signal_handler<Main>    &request_handler)
 		:
+			Registry<Block_session>::Element { registry, *this },
+
 			_bulk_dataspace    { vfs_env.env().ram(), vfs_env.env().rm(),
 			                     tx_buf_size },
 			_file              { vfs_env.alloc(), vfs_env.root_dir(),
-			                     file_info },
+			                     file_info, block_range },
 			_session_component { vfs_env.env().rm(), vfs_env.env().ep(),
 			                     _bulk_dataspace.cap(), request_handler,
 			                     _file, vfs_env.io() }
@@ -333,16 +356,17 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 
 		Capability<Block::Session> cap() const {
 			return _session_component.cap(); }
+
+		Block::Range const & block_range() const {
+			return _file.block_range(); }
 	};
 
-	Constructible<Block_session> _block_session { };
+	Registry<Block_session> _sessions { };
 
 	void _handle_requests()
 	{
-		if (!_block_session.constructed())
-			return;
-
-		_block_session->handle_request();
+		_sessions.for_each([&] (Block_session &session) {
+			session.handle_request(); });
 	}
 
 	/*
@@ -360,10 +384,6 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 	Capability<Session> session(Root::Session_args const &args,
 	                            Affinity const &) override
 	{
-		if (_block_session.constructed()) {
-			throw Service_denied();
-		}
-
 		size_t const tx_buf_size =
 			Arg_string::find_arg(args.string(),
 			                     "tx_buf_size").aligned_size();
@@ -386,12 +406,28 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			throw Service_denied();
 		}
 
+		bool const writeable_policy =
+			policy.attribute_value("writeable", false);
+		bool const writeable_arg    =
+			Arg_string::find_arg(args.string(), "writeable").bool_value(false);
+
 		Vfs_block::File_info const file_info =
 			Vfs_block::file_info_from_policy(policy);
 
+		Block::Range const block_range {
+			.offset     = Arg_string::find_arg(args.string(),
+			                                   "offset").ulong_value(0),
+			.num_blocks = Arg_string::find_arg(args.string(),
+			                                   "num_blocks").ulong_value(0),
+			.writeable  = writeable_policy && writeable_arg
+		};
+
 		try {
-			_block_session.construct(_vfs_env, tx_buf_size, file_info, _request_handler);
-			return _block_session->cap();
+			Block_session const &session =
+				*new (_heap) Block_session(_sessions,
+				                           _vfs_env, block_range, tx_buf_size,
+				                           file_info, _request_handler);
+			return session.cap();
 		} catch (...) {
 			throw Service_denied();
 		}
@@ -401,11 +437,10 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 
 	void close(Capability<Session> cap) override
 	{
-		if (!_block_session.constructed())
-			return;
-
-		if (cap == _block_session->cap())
-			_block_session.destruct();
+		_sessions.for_each([&] (Block_session &session) {
+			if (cap == session.cap())
+				destroy(_heap, &session);
+		});
 	}
 
 	Main(Env &env) : _env(env)
