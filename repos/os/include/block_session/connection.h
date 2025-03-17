@@ -239,6 +239,30 @@ struct Block::Connection : Genode::Connection<Session>, Session_client
 		{ }
 
 		/**
+		 * Constructor
+		 *
+		 * \param tx_buffer_alloc  allocator used for managing the
+		 *                         transmission buffer
+		 * \param tx_buf_size      size of transmission buffer in bytes
+		 * \param block_range      offset of the start LBA and number of
+		 *                         blocks covered by this connection
+		 */
+		Connection(Genode::Env             &env,
+		           Genode::Range_allocator *tx_block_alloc,
+		           Genode::size_t           tx_buf_size,
+		           Block::Range      const &range,
+		           Label             const &label = Label())
+		:
+			Genode::Connection<Session>(env, label,
+			                            Ram_quota { 14*1024 + tx_buf_size },
+			                            Args("tx_buf_size=", tx_buf_size,
+			                                 "offset=", range.offset,
+			                                 "num_blocks=", range.num_blocks)),
+			Session_client(cap(), *tx_block_alloc, env.rm()),
+			_max_block_count(_init_max_block_count(_tx.source()->bulk_buffer_size()))
+		{ }
+
+		/**
 		 * Register handler for data-flow signals
 		 *
 		 * The handler is triggered on the arrival of new acknowledgements or
