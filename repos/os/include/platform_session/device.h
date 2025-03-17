@@ -91,7 +91,13 @@ class Platform::Device::Mmio : Range, Attached_dataspace, public Genode::Mmio<SI
 
 		Dataspace_capability _ds_cap(Device &device, unsigned id)
 		{
-			Io_mem_session_client io_mem(device._io_mem(id, *this));
+			auto const cap = device._io_mem(id, *this);
+			if (!cap.valid())
+				error(__func__, " ", __LINE__, " cap=", cap);
+			if (!cap.valid())
+				return { };
+
+			Io_mem_session_client io_mem(cap);
 			return io_mem.dataspace();
 		}
 

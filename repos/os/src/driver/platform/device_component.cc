@@ -118,6 +118,9 @@ Device_component::io_mem(unsigned idx, Range &range)
 		} catch (Genode::Service_denied) { }
 	});
 
+	if (!cap.valid())
+		error(__func__, " ", _session.label(), " cap=", cap);
+
 	return cap;
 }
 
@@ -219,6 +222,9 @@ Genode::Irq_session_capability Device_component::irq(unsigned idx)
 		});
 	} catch (Service_denied) { error("irq could not be setup ", _device); }
 
+	if (!cap.valid())
+		error(__func__, " ", _session.label(), " cap=", cap);
+
 	return cap;
 }
 
@@ -238,6 +244,9 @@ Genode::Io_port_session_capability Device_component::io_port_range(unsigned idx)
 
 		cap = ipr.io_port_range->cap();
 	});
+
+	if (!cap.valid())
+		error(__func__, " ", _session.label(), " cap=", cap);
 
 	return cap;
 }
