@@ -323,18 +323,21 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 	Vfs::Simple_env _vfs_env { _env, _heap,
 		_config_rom.xml().sub_node("vfs"), *this };
 
-	struct Block_session
+	struct Block_session : Genode::Registry<Block_session>::Element
 	{
 		Attached_ram_dataspace  _bulk_dataspace;
 		Vfs_block::File         _file;
 		Block_session_component _session_component;
 
-		Block_session(Vfs::Simple_env      &vfs_env,
-		              Block::Range   const &block_range,
-		              size_t                tx_buf_size,
-		              Vfs_block::File_info  file_info,
-		              Signal_handler<Main> &request_handler)
+		Block_session(Registry<Block_session> &registry,
+		              Vfs::Simple_env         &vfs_env,
+		              Block::Range      const &block_range,
+		              size_t                   tx_buf_size,
+		              Vfs_block::File_info     file_info,
+		              Signal_handler<Main>    &request_handler)
 		:
+			Registry<Block_session>::Element { registry, *this },
+
 			_bulk_dataspace    { vfs_env.env().ram(), vfs_env.env().rm(),
 			                     tx_buf_size },
 			_file              { vfs_env.alloc(), vfs_env.root_dir(),
@@ -354,14 +357,12 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			return _file.block_range(); }
 	};
 
-	Constructible<Block_session> _block_session { };
+	Registry<Block_session> _sessions { };
 
 	void _handle_requests()
 	{
-		if (!_block_session.constructed())
-			return;
-
-		_block_session->handle_request();
+		_sessions.for_each([&] (Block_session &session) {
+			session.handle_request(); });
 	}
 
 	/*
@@ -379,10 +380,6 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 	Capability<Session> session(Root::Session_args const &args,
 	                            Affinity const &) override
 	{
-		if (_block_session.constructed()) {
-			throw Service_denied();
-		}
-
 		size_t const tx_buf_size =
 			Arg_string::find_arg(args.string(),
 			                     "tx_buf_size").aligned_size();
@@ -415,9 +412,11 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			                                   "num_blocks").ulong_value(0) };
 
 		try {
-			_block_session.construct(_vfs_env, block_range, tx_buf_size,
-			                         file_info, _request_handler);
-			return _block_session->cap();
+			Block_session const &session =
+				*new (_heap) Block_session(_sessions,
+				                           _vfs_env, block_range, tx_buf_size,
+				                           file_info, _request_handler);
+			return session.cap();
 		} catch (...) {
 			throw Service_denied();
 		}
@@ -427,11 +426,10 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 
 	void close(Capability<Session> cap) override
 	{
-		if (!_block_session.constructed())
-			return;
-
-		if (cap == _block_session->cap())
-			_block_session.destruct();
+		_sessions.for_each([&] (Block_session &session) {
+			if (cap == session.cap())
+				destroy(_heap, &session);
+		});
 	}
 
 	Main(Env &env) : _env(env)
