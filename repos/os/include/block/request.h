@@ -25,9 +25,18 @@ namespace Block {
 	using off_t          = Genode::off_t;
 	using seek_off_t     = Genode::uint64_t;
 
+	struct Range;
 	struct Operation;
 	struct Request;
 }
+
+
+struct Block::Range
+{
+	Genode::uint64_t offset;
+	Genode::uint64_t num_blocks;
+	bool             writeable;
+};
 
 
 struct Block::Operation
