@@ -31,183 +31,38 @@
 #include "disk.h"
 
 namespace Block {
-	class  Session_component;
-	struct Session_handler;
-	struct Dispatch;
-	class  Main;
-
-	template <unsigned ITEMS> struct Job_queue;
-
-	using Job_object = Constructible<Job>;
-	using Response   = Request_stream::Response;
+	class Wrapped_session;
+	class Main;
 };
 
 
-template <unsigned ITEMS>
-struct Block::Job_queue
+struct Block::Wrapped_session
 {
-	Job_object           _jobs[ITEMS];
-	Bit_allocator<ITEMS> _alloc;
+	Env &_env;
 
-	addr_t alloc()
-	{
-		addr_t index = _alloc.alloc();
-		return index;
-	}
+	Parent::Client parent_client { };
+	Id_space<Parent::Client>::Element id;
 
-	void free(addr_t index)
-	{
-		if (_jobs[index].constructed())
-			_jobs[index].destruct();
+	Block::Session_capability cap;
 
-		_alloc.free(index);
-	}
-
-	template<typename FN>
-	void with_job(addr_t index, FN const &fn)
-	{
-		fn(_jobs[index]);
-	}
-};
-
-
-struct Block::Dispatch : Interface
-{
-	virtual Response submit(long number, Request const &request, addr_t addr) = 0;
-	virtual void     update() = 0;
-	virtual void     acknowledge_completed(bool all = true, long number = -1) = 0;
-	virtual Response sync(long number, Request const &request) = 0;
-};
-
-
-struct Block::Session_handler : Interface
-{
-	Env                   &env;
-	Attached_ram_dataspace ds;
-
-	Signal_handler<Session_handler> request_handler
-	  { env.ep(), *this, &Session_handler::handle };
-
-	Session_handler(Env &env, size_t buffer_size)
-	: env(env), ds(env.ram(), env.rm(), buffer_size)
+	Wrapped_session(Env                      &env,
+	                Root::Session_args const &args,
+	                Affinity           const &affinity)
+	:
+		_env { env },
+		 id  { parent_client, _env.id_space() },
+		 cap { _env.session<Block::Session>(id.id(), args, affinity) }
 	{ }
 
-	virtual void handle_requests()= 0;
-
-	void handle()
+	virtual ~Wrapped_session()
 	{
-		handle_requests();
+		_env.close(id.id());
 	}
-};
-
-
-class Block::Session_component : public Rpc_object<Block::Session>,
-                                 public Session_handler,
-                                 public Block::Request_stream
-{
-	private:
-
-		long      _number;
-		Dispatch &_dispatcher;
-
-	public:
-
-		bool syncing { false };
-
-		Session_component(Env &env, long number, size_t buffer_size,
-		                  Session::Info info, Dispatch &dispatcher)
-		: Session_handler(env, buffer_size),
-		  Request_stream(env.rm(), ds.cap(), env.ep(), request_handler, info),
-		  _number(number), _dispatcher(dispatcher)
-		{
-			env.ep().manage(*this);
-		}
-
-		~Session_component()
-		{
-			env.ep().dissolve(*this);
-		}
-
-		Info info() const override { return Request_stream::info(); }
-
-		Capability<Tx> tx_cap() override { return Request_stream::tx_cap(); }
-
-		long number() const { return _number; }
-
-		bool acknowledge(Request &request)
-		{
-			bool progress = false;
-			try_acknowledge([&] (Ack &ack) {
-				if (progress) return;
-				ack.submit(request);
-				progress = true;
-			});
-
-			return progress;
-		}
-
-		void handle_requests() override
-		{
-			while (true) {
-
-				bool progress = false;
-
-				/*
-				 * Acknowledge any pending packets before sending new request to the
-				 * controller.
-				 */
-				_dispatcher.acknowledge_completed(false, _number);
-
-				with_requests([&] (Request request) {
-
-					Response response = Response::RETRY;
-
-					if (syncing) return response;
-
-					/* only READ/WRITE requests, others are noops for now */
-					if (request.operation.type == Operation::Type::TRIM ||
-					    request.operation.type == Operation::Type::INVALID) {
-						request.success = true;
-						progress = true;
-						return Response::REJECTED;
-					}
-
-					if (!info().writeable && request.operation.type == Operation::Type::WRITE) {
-						progress = true;
-						return Response::REJECTED;
-					}
-
-					if (request.operation.type == Operation::Type::SYNC) {
-						response = _dispatcher.sync(_number, request);
-						if (response == Response::ACCEPTED) syncing = true;
-						return response;
-					}
-
-					with_payload([&] (Request_stream::Payload const &payload) {
-						payload.with_content(request, [&] (void *addr, size_t) {
-							response = _dispatcher.submit(_number, request, addr_t(addr));
-						});
-					});
-
-					if (response != Response::RETRY)
-						progress = true;
-
-					return response;
-				});
-
-				if (progress == false) break;
-			}
-
-			_dispatcher.update();
-
-			/* poke */
-			wakeup_client_if_needed();
-		}
 };
 
 
 class Block::Main : Rpc_object<Typed_root<Session>>,
-                    Dispatch, public Sync_read::Handler
+                    public Sync_read::Handler
 {
 	private:
 
@@ -217,79 +72,25 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 
 		Attached_rom_dataspace _config { _env, "config" };
 
-		Heap                              _heap     { _env.ram(), _env.rm() };
+		Sliced_heap                       _heap     { _env.ram(), _env.rm() };
 		Constructible<Expanding_reporter> _reporter { };
 
-		Number_of_bytes const _io_buffer_size =
-			_config.xml().attribute_value("io_buffer",
-			                              Number_of_bytes(4*1024*1024));
-
-		Allocator_avl           _block_alloc { &_heap };
-		Block_connection        _block    { _env, &_block_alloc, _io_buffer_size };
-		Session::Info           _info     { _block.info() };
-		Io_signal_handler<Main> _io_sigh  { _env.ep(), *this, &Main::_handle_io };
-		Mbr                     _mbr      { *this, _heap, _info };
-		Gpt                     _gpt      { *this, _heap, _info };
-		Ahdi                    _ahdi     { *this, _heap, _info };
+		Allocator_avl    _block_alloc { &_heap };
+		Block_connection _block       { _env, &_block_alloc, 64u << 10 };
+		Session::Info    _info        { _block.info() };
+		Mbr              _mbr         { *this, _heap, _info };
+		Gpt              _gpt         { *this, _heap, _info };
+		Ahdi             _ahdi        { *this, _heap, _info };
 
 		Constructible<Disk> _disk { };
 
 		Partition_table & _partition_table { _table() };
 
-		enum { MAX_SESSIONS = 128 };
-		Session_component   *_sessions[MAX_SESSIONS] { };
-		Job_queue<128>       _job_queue { };
-		Registry<Block::Job> _job_registry { };
-
-		unsigned _wake_up_index { 0 };
-
-		void _wakeup_clients()
-		{
-			bool     first      = true;
-			unsigned next_index = 0;
-			for (long i = 0; i < MAX_SESSIONS; i++) {
-
-				unsigned index = (unsigned)((_wake_up_index + i) % MAX_SESSIONS);
-
-				if (!_sessions[index]) continue;
-
-				if (_sessions[index]->syncing) {
-					bool in_flight = false;
-
-					_job_registry.for_each([&] (Job &job) {
-						if (in_flight || i == job.number) {
-							Operation &op = job.request.operation;
-							in_flight |= (op.type == Operation::Type::WRITE ||
-							              op.type == Operation::Type::SYNC);
-						}
-					});
-
-					if (in_flight == false) _sessions[index]->syncing = false;
-					else continue;
-				}
-
-				if (first) {
-					/* to be more fair, start at index + 1 next time */
-					next_index  = (index + 1) % MAX_SESSIONS;
-					first       = false;
-				}
-
-				_sessions[index]->handle_requests();
-			}
-
-			_wake_up_index = next_index;
-		}
-
-		void _handle_io()
-		{
-			update();
-			acknowledge_completed();
-			_wakeup_clients();
-		}
+		static constexpr unsigned MAX_SESSIONS = 128;
+		Wrapped_session *_sessions[MAX_SESSIONS] { };
 
 		Main(Main const &);
 		Main &operator = (Main const &);
-
 
 	public:
 
@@ -299,20 +100,16 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 
 		Main(Env &env) : _env(env)
 		{
-			/* register final handler after initially synchronous block I/O */
-			_block.sigh(_io_sigh);
-
 			/* announce at parent */
 			env.parent().announce(env.ep().manage(*this));
 		}
-
 
 		/***********************
 		 ** Session interface **
 		 ***********************/
 
 		Genode::Session_capability session(Root::Session_args const &args,
-		                                   Affinity const &) override
+		                                   Affinity const &affinity) override
 		{
 			long num = -1;
 			bool writeable = false;
@@ -356,130 +153,57 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 			if (!tx_buf_size)
 				throw Service_denied();
 
-			/*
-			 * Check if donated ram quota suffices for both
-			 * communication buffers. Also check both sizes separately
-			 * to handle a possible overflow of the sum of both sizes.
-			 */
-			if (tx_buf_size > ram_quota.value) {
-				error("insufficient 'ram_quota', got ", ram_quota, ", need ",
+			size_t const object_size = sizeof(Block::Wrapped_session);
+			size_t const needed = object_size + _heap.overhead(object_size);
+			Ram_quota const remaining_ram_quota { ram_quota.value - needed };
+
+			if (tx_buf_size > remaining_ram_quota.value) {
+				error("insufficient 'ram_quota', got ", remaining_ram_quota, ", need ",
 				     tx_buf_size);
 				throw Insufficient_ram_quota();
 			}
 
-			Session::Info info {
-				.block_size  = _block.info().block_size,
-				.block_count = _partition_table.partition_sectors(num),
-				.align_log2  = 0,
-				.writeable   = writeable,
+			Block::Range const range {
+				.offset     = size_t(_partition_table.partition_lba(num)),
+				.num_blocks = size_t(_partition_table.partition_sectors(num)),
+				.writeable  = writeable
 			};
 
-			_sessions[num] = new (_heap) Session_component(_env, num, tx_buf_size,
-			                                               info, *this);
-			return _sessions[num]->cap();
+			char argbuf[Parent::Session_args::MAX_SIZE];
+			copy_cstring(argbuf, args.string(), sizeof(argbuf));
+
+			Arg_string::set_arg(argbuf, sizeof(argbuf), "ram_quota",   remaining_ram_quota.value);
+			Arg_string::set_arg(argbuf, sizeof(argbuf), "tx_buf_size", tx_buf_size);
+			Arg_string::set_arg(argbuf, sizeof(argbuf), "offset",      range.offset);
+			Arg_string::set_arg(argbuf, sizeof(argbuf), "num_blocks",  range.num_blocks);
+			Arg_string::set_arg(argbuf, sizeof(argbuf), "writeable",   range.writeable);
+
+			try {
+				_sessions[num] = new (_heap) Block::Wrapped_session(_env, argbuf, affinity);
+				return _sessions[num]->cap;
+			} catch (...) {
+				throw Service_denied();
+			}
 		}
 
 		void close(Genode::Session_capability cap) override
 		{
-			for (long number = 0; number < MAX_SESSIONS; number++) {
-				if (!_sessions[number] || !(cap == _sessions[number]->cap()))
+			for (unsigned i = 0; i < MAX_SESSIONS; i++) {
+				if (!_sessions[i] || !(cap == _sessions[i]->cap))
 					continue;
 
-				destroy(_heap, _sessions[number]);
-				_sessions[number] = nullptr;
-
-				break;
+				destroy(_heap, _sessions[i]);
+				_sessions[i] = nullptr;
 			}
 		}
 
-		void upgrade(Genode::Session_capability, Root::Upgrade_args const&) override { }
-
-
-		/************************
-		 ** Update_jobs_policy **
-		 ************************/
-
-		void consume_read_result(Job &job, off_t offset, char const *src, size_t length)
+		void upgrade(Genode::Session_capability, Root::Upgrade_args const&) override
 		{
-			if (!_sessions[job.number]) return;
-
-			memcpy((void *)(job.addr + offset), src, length);
-		}
-
-		void produce_write_content(Job &job, off_t offset, char *dst, size_t length)
-		{
-			memcpy(dst, (void *)(job.addr + offset), length);
-		}
-
-		void completed(Job &job, bool success)
-		{
-			job.request.success = success;
-		}
-
-
-		/**************
-		 ** Dispatch **
-		 **************/
-
-		void update() override { _block.update_jobs(*this); }
-
-		Response submit(long number, Request const &request, addr_t addr) override
-		{
-			block_number_t last = request.operation.block_number + request.operation.count;
-
-			if (last > _partition_table.partition_sectors(number))
-				return Response::REJECTED;
-
-			addr_t index = 0;
-			try {
-				index  = _job_queue.alloc();
-			} catch (...) { return Response::RETRY; }
-
-			_job_queue.with_job(index, [&](Job_object &job) {
-
-				Operation op     = request.operation;
-				op.block_number += _partition_table.partition_lba(number);
-
-				job.construct(_block, op, _job_registry, index, number, request, addr);
-			});
-
-			return Response::ACCEPTED;
-		}
-
-		Response sync(long number, Request const &request) override
-		{
-			addr_t index = 0;
-			try {
-				index = _job_queue.alloc();
-			} catch (...) { return Response::RETRY; }
-
-			_job_queue.with_job(index, [&](Job_object &job) {
-				job.construct(_block, request.operation, _job_registry,
-				              index, number, request, 0);
-			});
-
-			return Response::ACCEPTED;
-		}
-
-		void acknowledge_completed(bool all = true, long number = -1) override
-		{
-			_job_registry.for_each([&] (Job &job) {
-				if (!job.completed()) return;
-
-				addr_t index = job.index;
-
-				/* free orphans */
-				if (!_sessions[job.number]) {
-					_job_queue.free(index);
-					return;
-				}
-
-				if (!all && job.number != number)
-					return;
-
-				if (_sessions[job.number]->acknowledge(job.request))
-					_job_queue.free(index);
-			});
+			/*
+			 * As the capability is used by the client directly there should be no
+			 * upgrades here.
+			 */
+			Genode::warning("Unexpected session upgrade");
 		}
 
 		/************************
