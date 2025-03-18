@@ -2257,7 +2257,7 @@ class Nvme::Driver : Genode::Noncopyable
 			});
 		}
 
-		bool execute()
+		bool commit_pending_submits()
 		{
 			if (!_submits_pending) { return false; }
 
@@ -2268,7 +2268,7 @@ class Nvme::Driver : Genode::Noncopyable
 				_submits_pending = false;
 				success = true;
 			}, [&]() {
-				error("unexpected NVME controller state - execute");
+				error("unexpected NVME controller state - commit_pending_submits");
 			});
 
 			return success;
@@ -2382,7 +2382,7 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 			});
 
 			/* process I/O */
-			progress |= _driver.execute();
+			progress |= _driver.commit_pending_submits();
 
 			_driver.device_release_if_stopped_and_idle();
 
