@@ -6,6 +6,7 @@ build {
 	server/vfs_block
 	app/block_tester
 	lib/vfs_import
+	lib/vfs
 }
 
 install_config {
