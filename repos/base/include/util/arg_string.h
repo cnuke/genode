@@ -333,6 +333,16 @@ class Genode::Arg_string
 		}
 
 		/**
+		 * Assign new ulong integer argument
+		 */
+		static bool set_arg(char *args, size_t args_len,
+		                    const char *key, unsigned long value)
+		{
+			return remove_arg(args, key)
+			    && add_arg(args, args_len, key, String<20 + 1>(value).string());
+		}
+
+		/**
 		 * Assign new string argument
 		 */
 		static bool set_arg_string(char *args, size_t args_len,
