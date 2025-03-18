@@ -35,6 +35,7 @@ struct Block::Range
 {
 	Genode::size_t offset;
 	Genode::size_t num_blocks;
+	bool           writeable;
 };
 
 
