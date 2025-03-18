@@ -2359,6 +2359,9 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 				});
 			});
 
+			/* deferred acknowledge on the controller */
+			_driver.acknowledge_if_completed();
+
 			/* import new requests */
 			block_session.with_requests([&] (Block::Request request) {
 
@@ -2380,9 +2383,6 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 
 			/* process I/O */
 			progress |= _driver.execute();
-
-			/* deferred acknowledge on the controller */
-			_driver.acknowledge_if_completed();
 
 			_driver.device_release_if_stopped_and_idle();
 
