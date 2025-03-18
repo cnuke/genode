@@ -169,11 +169,15 @@ class Vfs_block::File
 			 */
 
 			Block::Operation const op = request.operation;
+
+			bool const valid_range = op.count
+			                      && (_block_range.offset + op.block_number + op.count)
+			                      <= _file_block_count;
 			switch (op.type) {
-			case Type::READ: [[fallthrough]];
 			case Type::WRITE:
-				return op.count
-				    && (_block_range.offset + op.block_number + op.count) <= _file_block_count;
+				return valid_range && _block_range.writeable;
+			case Type::READ:
+				return valid_range;
 
 			case Type::TRIM: [[fallthrough]];
 			case Type::SYNC: return true;
@@ -402,6 +406,11 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			throw Service_denied();
 		}
 
+		bool const writeable_policy =
+			policy.attribute_value("writeable", false);
+		bool const writeable_arg    =
+			Arg_string::find_arg(args.string(), "writeable").bool_value(false);
+
 		Vfs_block::File_info const file_info =
 			Vfs_block::file_info_from_policy(policy);
 
@@ -409,7 +418,9 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 			.offset     = Arg_string::find_arg(args.string(),
 			                                   "offset").ulong_value(0),
 			.num_blocks = Arg_string::find_arg(args.string(),
-			                                   "num_blocks").ulong_value(0) };
+			                                   "num_blocks").ulong_value(0),
+			.writeable  = writeable_policy && writeable_arg
+		};
 
 		try {
 			Block_session const &session =
