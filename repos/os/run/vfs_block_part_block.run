@@ -1,0 +1,145 @@
+create_boot_directory
+
+import_from_depot [depot_user]/src/[base_src] \
+                  [depot_user]/src/init \
+                  [depot_user]/src/report_rom
+
+
+build {
+	server/vfs_block
+	server/part_block
+	app/block_tester
+	lib/vfs_import
+	lib/vfs
+}
+
+install_config {
+<config verbose="no">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="report_rom">
+		<provides>
+			<service name="Report"/>
+			<service name="ROM"/>
+		</provides>
+		<resource name="RAM" quantum="2M"/>
+		<config verbose="yes"/>
+	</start>
+
+	<start name="vfs_block" caps="1000">
+		<resource name="RAM" quantum="1064M"/>
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<vfs>
+				<ram/>
+				<import>
+					<rom name="ata.gpt.raw"/>
+				</import>
+			</vfs>
+			<policy label_prefix="part_block"
+			        file="/ata.gpt.raw" block_size="512" writeable="yes"/>
+		</config>
+		<route>
+			<service name="File_system"> <child name="vfs"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="part_block">
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<config>
+			<report partitions="yes"/>
+			<policy label_prefix="block_tester-1" partition="1"/>
+			<policy label_prefix="block_tester-2" partition="2"/>
+			<policy label_prefix="block_tester-3" partition="3"/>
+			<policy label_prefix="block_tester-4" partition="4"/>
+		</config>
+		<route>
+			<any-service><child name="vfs_block"/> <parent/><any-child/></any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-1" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="4M" size="32K"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-2" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="4M" size="32K"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-3" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="4M" size="32K"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-4" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="4M" size="32K"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+</config>}
+
+build_boot_image [list {*}[build_artifacts] ata.gpt.raw]
+
+append qemu_args " -m 2048 -nographic "
+
+run_genode_until forever
+
+#{.*child "block_tester-1" exited with exit value 0.*\n} 60
