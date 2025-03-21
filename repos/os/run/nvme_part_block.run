@@ -1,0 +1,272 @@
+assert_spec x86
+
+# perform write tests when requested
+if {[info exists env(GENODE_TEST_WRITE)]} {
+set test_write 1
+} else {
+set test_write 0
+}
+
+set is_qemu         [have_include power_on/qemu]
+set is_old          [expr [have_spec fiasco] || [have_spec okl4] || [have_spec pistachio]]
+set is_32bit_x86_hw [expr !$is_qemu && [have_spec 32bit]]
+
+#
+# Only run tests on supported platforms
+#
+if {[expr [have_spec linux] || $is_32bit_x86_hw || [expr $is_qemu && $is_old]]} {
+	puts "This run script is not supported on this platform."
+	exit 0
+}
+
+#
+# Qemu and on certain platforms only use the small set of tests
+#
+set small_test [expr $is_qemu || [have_spec foc] || [have_spec sel4]]
+
+#
+# Check used commands
+#
+set dd [installed_command dd]
+
+#
+# Query writeable for policy
+#
+proc writeable { } {
+
+	global test_write
+
+	if {$test_write} {
+		return yes
+	} else {
+		return no
+	}
+}
+
+
+#
+#  Query part_block binary
+#
+proc part_block_binary { } {
+
+	if {[info exists ::env(GENODE_LEGACY_PART_BLOCK)]} {
+		puts "Use legacy_part_block"
+		return legacy_part_block
+	}
+	return part_block
+}
+
+
+#
+# Build
+#
+set build_components {
+	core init timer lib/ld
+	server/report_rom
+	app/pci_decode
+	driver/acpi
+	driver/platform
+	driver/nvme
+	server/part_block
+	server/part_block_legacy
+	app/block_tester
+}
+
+build $build_components
+
+
+#
+# Create raw image
+#
+#catch { exec $dd if=/dev/zero of=bin/nvme.raw bs=1M count=0 seek=32768 }
+
+create_boot_directory
+
+#
+# Generate config
+#
+append config {
+<config verbose="no">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100"/>
+
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="report_rom">
+		<resource name="RAM" quantum="2M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config>
+			<policy label="pci_decode -> system" report="acpi -> acpi"/>
+			<policy label="platform -> devices"  report="pci_decode -> devices"/>
+		</config>
+	</start>
+
+	<start name="acpi" caps="350">
+		<resource name="RAM" quantum="4M"/>
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="IO_MEM"> <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+		</route>
+	</start>
+
+	<start name="pci_decode" caps="350">
+		<resource name="RAM" quantum="2M"/>
+		<route>
+			<service name="Report">             <child name="report_rom"/> </service>
+			<service name="ROM" label="system"> <child name="report_rom"/> </service>
+			<service name="IO_MEM"> <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+		</route>
+	</start>
+
+	<start name="platform" caps="100" managing_system="yes">
+		<resource name="RAM" quantum="2M"/>
+		<provides>
+			<service name="Platform"/>
+		</provides>
+		<route>
+			<service name="ROM" label="devices"> <child name="report_rom"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="IRQ">     <parent/> </service>
+			<service name="IO_MEM">  <parent/> </service>
+			<service name="IO_PORT"> <parent/> </service>
+			<service name="ROM">     <parent/> </service>
+			<service name="PD">      <parent/> </service>
+			<service name="CPU">     <parent/> </service>
+			<service name="LOG">     <parent/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+		</route>
+		<config>
+			<report devices="yes"/>
+			<policy label="nvme -> " info="yes"> <pci class="NVME"/> </policy>
+		</config>
+	</start>
+
+	<start name="nvme" caps="200">
+		<resource name="RAM" quantum="24M"/>
+		<provides> <service name="Block"/> </provides>
+		<config max_hmb_size="16M" verbose_regs="yes" verbose_identify="yes">
+			<default-policy writeable="} [writeable] {"/>
+		</config>
+		<route>
+			<service name="Platform"><child name="platform"/> </service>
+			<service name="Timer">   <child name="timer"/>    </service>
+			<service name="CPU">     <parent/>                </service>
+			<service name="ROM">     <parent/>                </service>
+			<service name="PD">      <parent/>                </service>
+			<service name="LOG">     <parent/>                </service>
+		</route>
+	</start>
+
+	<start name="part_block">
+		<binary name="} [part_block_binary] {"/>
+		<resource name="RAM" quantum="10M"/>
+		<provides><service name="Block"/></provides>
+		<config>
+			<report partitions="yes"/>
+			<policy label_prefix="block_tester-1" partition="1"/>
+			<policy label_prefix="block_tester-2" partition="2"/>
+			<policy label_prefix="block_tester-3" partition="3"/>
+			<policy label_prefix="block_tester-4" partition="4"/>
+		</config>
+		<route>
+			<any-service><child name="nvme"/> <parent/><any-child/></any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-1" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="1G" size="4K" batch="128"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-2" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="1G" size="4K" batch="128"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-3" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="1G" size="4K" batch="128"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+
+	<start name="block_tester-4" caps="200">
+		<binary name="block_tester"/>
+		<resource name="RAM" quantum="64M"/>
+		<config verbose="no" report="no" log="yes" stop_on_error="no">
+			<tests>
+				<sequential length="1G" size="4K" batch="128"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"><child name="part_block"/></service>
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+build_boot_image [build_artifacts]
+
+append qemu_args " -nographic "
+append qemu_args " -device pcie-root-port,id=root_port1 "
+append qemu_args " -drive id=nvme0,file=bin/nvme.raw,format=raw,if=none "
+append qemu_args " -device nvme,drive=nvme0,serial=fnord,id=nvme0n1,bus=root_port1 "
+append qemu_args " -boot d "
+
+run_genode_until forever
+#{.*child "block_tester" exited with exit value 0.*\n} 300
+
+#exec rm -f bin/nvme.raw
