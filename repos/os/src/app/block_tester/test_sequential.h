@@ -72,6 +72,7 @@ struct Test::Sequential : Test_base
 		new (_alloc) Job(*_block, operation, _job_cnt);
 
 		_start += _size_in_blocks;
+		_start %= _info.block_count;
 	}
 
 	Result result() override
