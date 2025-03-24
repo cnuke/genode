@@ -205,11 +205,11 @@ class Net::Root : public Genode::Root_component<Net::Session_component>
 
 		enum { DEFAULT_MAC = 0x02 };
 
-		Mac_allocator     _mac_alloc;
-		Genode::Env      &_env;
-		Net::Nic         &_nic;
-		Genode::Xml_node  _config;
-		bool       const &_verbose;
+		Mac_allocator           _mac_alloc;
+		Genode::Env            &_env;
+		Net::Nic               &_nic;
+		Genode::Xml_node const &_config;
+		bool             const &_verbose;
 
 	protected:
 
@@ -255,7 +255,7 @@ class Net::Root : public Genode::Root_component<Net::Session_component>
 		     Net::Nic                &nic,
 		     Genode::Allocator       &md_alloc,
 		     bool              const &verbose,
-		     Genode::Xml_node         config);
+		     Genode::Xml_node  const &config);
 };
 
 #endif /* _COMPONENT_H_ */

@@ -68,15 +68,11 @@ class Rom_filter::Input_rom_registry
 
 				Genode::Attached_rom_dataspace _rom_ds { _env, _name.string() };
 
-				Xml_node _top_level { "<empty/>" };
-
 				void _handle_rom_changed()
 				{
 					_rom_ds.update();
 					if (!_rom_ds.valid())
 						return;
-
-					_top_level = _rom_ds.xml();
 
 					/* trigger re-evaluation of the inputs */
 					_input_rom_changed_fn.input_rom_changed();
@@ -86,18 +82,16 @@ class Rom_filter::Input_rom_registry
 					{ _env.ep(), *this, &Entry::_handle_rom_changed };
 
 				/**
-				 * Return sub node of 'content' according to the constraints
-				 * given by 'path'
-				 *
-				 * \throw Xml_node::Nonexistent_sub_node
+				 * Call 'fn' with sub node of 'content' according to the
+				 * constraints given by 'path'
 				 */
-				static Xml_node _matching_sub_node(Node_type_name type,
+				static void _with_matching_sub_node(Node_type_name type,
 				                                   Xml_node const &path,
-				                                   Xml_node const &content)
+				                                   Xml_node const &content,
+				                                   auto     const &fn,
+				                                   auto     const &missing_fn)
 				{
 					using Attribute_value = Input_value;
-
-					Xml_node sub_node = content.sub_node(type.string());
 
 					Attribute_name const expected_attr =
 						path.attribute_value("attribute", Attribute_name());
@@ -105,26 +99,54 @@ class Rom_filter::Input_rom_registry
 					Attribute_value const expected_value =
 						path.attribute_value("value", Attribute_value());
 
-					for (;; sub_node = sub_node.next(type.string())) {
+					bool found = false;
+					content.for_each_sub_node(type.string(), [&] (Xml_node const &sub_node) {
 
-						/* attribute remains unspecified -> match */
-						if (!expected_attr.valid())
-							return sub_node;
+						auto matches = [&]
+						{
+							/* attribute remains unspecified -> match */
+							if (!expected_attr.valid())
+								return true;
 
-						/* value remains unspecified -> match */
-						if (!expected_value.valid())
-							return sub_node;
+							/* value remains unspecified -> match */
+							if (!expected_value.valid())
+								return true;
 
-						Attribute_value const present_value =
-							sub_node.attribute_value(expected_attr.string(),
-							                         Attribute_value());
+							Attribute_value const present_value =
+								sub_node.attribute_value(expected_attr.string(),
+								                         Attribute_value());
 
-						if (present_value == expected_value)
-							return sub_node;
-					}
+							if (present_value == expected_value)
+								return true;
 
-					throw Xml_node::Nonexistent_sub_node();
+							return false;
+						};
+
+						if (!found && matches()) {
+							fn(sub_node);
+							found = true;
+						}
+					});
+
+					if (!found)
+						missing_fn();
 				}
+
+				static void _with_any_sub_node(Xml_node const &node,
+				                               auto const &fn, auto const &missing_fn)
+				{
+					bool found = false;
+					node.for_each_sub_node([&] (Xml_node const &sub_node) {
+						if (!found) {
+							found = true;
+							fn(sub_node);
+						}
+					});
+
+					if (!found)
+						missing_fn();
+				};
+
 
 				/**
 				 * Query value from XML-structured ROM content
@@ -132,52 +154,59 @@ class Rom_filter::Input_rom_registry
 				 * \param path     XML node that defines the path to the value
 				 * \param content  XML-structured content, to which the path
 				 *                 is applied
+				 *
+				 * \throw Nonexistent_input_value
 				 */
-				Input_value _query_value(Xml_node path, Xml_node content) const
+				Input_value _query_value(Xml_node const &path,
+				                         Xml_node const &content,
+				                         unsigned const max_depth = 10) const
 				{
-					for (;;) {
-
-						/*
-						 * Take value of an attribute
-						 */
-						if (path.has_type("attribute")) {
-
-							Attribute_name const attr_name =
-								path.attribute_value("name", Attribute_name(""));
-
-							if (!content.has_attribute(attr_name.string()))
-								throw Nonexistent_input_value();
-
-							return content.attribute_value(attr_name.string(),
-							                               Input_value(""));
-						}
-
-						/*
-						 * Follow path node
-						 */
-						if (path.has_type("node")) {
-
-							Node_type_name const sub_node_type =
-								path.attribute_value("type", Node_type_name(""));
-
-							try {
-								content = _matching_sub_node(sub_node_type, path, content);
-								path    = path.sub_node();
-							}
-							catch (Xml_node::Nonexistent_sub_node) {
-								throw Nonexistent_input_value(); }
-
-							continue;
-						}
-
+					if (max_depth == 0)
 						throw Nonexistent_input_value();
+
+					/*
+					 * Take value of an attribute
+					 */
+					if (path.has_type("attribute")) {
+
+						Attribute_name const attr_name =
+							path.attribute_value("name", Attribute_name(""));
+
+						if (!content.has_attribute(attr_name.string()))
+							throw Nonexistent_input_value();
+
+						return content.attribute_value(attr_name.string(),
+						                               Input_value(""));
 					}
+
+					/*
+					 * Follow path node
+					 */
+					Input_value result { };
+					if (path.has_type("node")) {
+
+						Node_type_name const sub_node_type =
+							path.attribute_value("type", Node_type_name(""));
+
+						_with_matching_sub_node(sub_node_type, path, content,
+							[&] (Xml_node const &sub_node) {
+								_with_any_sub_node(path,
+									[&] (Xml_node const &sub_path) {
+										result = _query_value(sub_path, sub_node,
+										                      max_depth - 1);
+									},
+									[] { throw Nonexistent_input_value(); });
+							},
+							[] { throw Nonexistent_input_value(); }
+						);
+					}
+					return result;
 				}
 
 				/**
 				 * Return the expected top-level XML node type of a given input
 				 */
-				static Node_type_name _top_level_node_type(Xml_node input_node)
+				static Node_type_name _top_level_node_type(Xml_node const &input_node)
 				{
 					Node_type_name const undefined("");
 
@@ -199,8 +228,6 @@ class Rom_filter::Input_rom_registry
 					_input_rom_changed_fn(input_rom_changed_fn)
 				{
 					_rom_ds.sigh(_rom_changed_handler);
-					try { _top_level = _rom_ds.xml(); }
-					catch (...) {}
 				}
 
 				Input_rom_name name() const { return _name; }
@@ -213,24 +240,17 @@ class Rom_filter::Input_rom_registry
 				 *
 				 * \throw Nonexistent_input_value
 				 */
-				Input_value query_value(Xml_node input_node) const
+				Input_value query_value(Xml_node const &input_node) const
 				{
-					try {
-						/*
-						 * The creation of the XML node may fail with an
-						 * exception if the ROM module contains non-XML data.
-						 */
-						Xml_node content_node(_top_level);
+					Xml_node const &content_node = _rom_ds.xml();
 
-						/*
-						 * Check type of top-level node, query value of the
-						 * type name matches.
-						 */
-						Node_type_name expected = _top_level_node_type(input_node);
-						if (content_node.has_type(expected.string()))
-							return _query_value(input_node.sub_node(), content_node);
-
-					} catch (...) { }
+					/*
+					 * Check type of top-level node, query value of the
+					 * type name matches.
+					 */
+					Node_type_name expected = _top_level_node_type(input_node);
+					if (content_node.has_type(expected.string()))
+						return _query_value(input_node.sub_node(), content_node);
 
 					if (input_node.has_attribute("default"))
 						return input_node.attribute_value("default", Input_value(""));
@@ -238,14 +258,7 @@ class Rom_filter::Input_rom_registry
 					throw Nonexistent_input_value();
 				}
 
-				Xml_node node() const
-				{
-					try {
-						return Xml_node(_top_level);
-					} catch (...) { }
-
-					throw Nonexistent_input_node();
-				}
+				void with_node(auto const &fn) const { fn(_rom_ds.xml()); }
 		};
 
 		Genode::Allocator &_alloc;
@@ -281,7 +294,7 @@ class Rom_filter::Input_rom_registry
 		/**
 		 * Return ROM name of specified XML node
 		 */
-		static inline Input_rom_name _input_rom_name(Xml_node input)
+		static inline Input_rom_name _input_rom_name(Xml_node const &input)
 		{
 			if (input.has_attribute("rom"))
 				return input.attribute_value("rom", Input_rom_name(""));
@@ -309,12 +322,12 @@ class Rom_filter::Input_rom_registry
 			return result;
 		}
 
-		static bool _config_uses_input_rom(Xml_node config,
+		static bool _config_uses_input_rom(Xml_node const &config,
 		                                   Input_rom_name const &name)
 		{
 			bool result = false;
 
-			config.for_each_sub_node("input", [&] (Xml_node input) {
+			config.for_each_sub_node("input", [&] (Xml_node const &input) {
 
 				if (_input_rom_name(input) == name)
 					result = true;
@@ -337,7 +350,7 @@ class Rom_filter::Input_rom_registry
 		/**
 		 * \throw Nonexistent_input_value
 		 */
-		Input_value _query_value_in_roms(Xml_node input_node) const
+		Input_value _query_value_in_roms(Xml_node const &input_node) const
 		{
 			Entry const *entry =
 				_lookup_entry_by_name(_input_rom_name(input_node));
@@ -364,7 +377,7 @@ class Rom_filter::Input_rom_registry
 			_alloc(alloc), _env(env), _input_rom_changed_fn(input_rom_changed_fn)
 		{ }
 
-		void update_config(Xml_node config)
+		void update_config(Xml_node const &config)
 		{
 			/*
 			 * Remove ROMs that are no longer present in the configuration.
@@ -382,7 +395,7 @@ class Rom_filter::Input_rom_registry
 			/*
 			 * Add new appearing ROMs.
 			 */
-			auto add_new_entry = [&] (Xml_node input) {
+			auto add_new_entry = [&] (Xml_node const &input) {
 
 				Input_rom_name name = _input_rom_name(input);
 
@@ -402,12 +415,12 @@ class Rom_filter::Input_rom_registry
 		 *
 		 * \throw Nonexistent_input_value
 		 */
-		Input_value query_value(Xml_node config, Input_name const &input_name) const
+		Input_value query_value(Xml_node const &config, Input_name const &input_name) const
 		{
 			Input_value input_value;
 			bool input_value_defined = false;
 
-			auto handle_input_node = [&] (Xml_node input_node) {
+			auto handle_input_node = [&] (Xml_node const &input_node) {
 
 				if (input_node.attribute_value("name", Input_name("")) != input_name)
 					return;
@@ -439,12 +452,14 @@ class Rom_filter::Input_rom_registry
 			if (!e)
 				throw Nonexistent_input_node();
 
-			if (skip_toplevel)
-				e->node().with_raw_content([&] (char const *start, Genode::size_t length) {
-					xml.append(start, length); });
-			else
-				e->node().with_raw_node([&] (char const *start, Genode::size_t length) {
-					xml.append(start, length); });
+			e->with_node([&] (Xml_node const &node) {
+				if (skip_toplevel)
+					node.with_raw_content([&] (char const *start, Genode::size_t length) {
+						xml.append(start, length); });
+				else
+					node.with_raw_node([&] (char const *start, Genode::size_t length) {
+						xml.append(start, length); });
+			});
 		}
 };
 

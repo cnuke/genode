@@ -174,7 +174,7 @@ struct Rom_filter::Main : Input_rom_registry::Input_rom_changed_fn,
 
 	size_t _xml_output_len = 0;
 
-	void _evaluate_node(Xml_node node, Xml_generator &xml);
+	void _evaluate_node(Xml_node const &node, Xml_generator &xml);
 	void _evaluate();
 
 	Root _root = { _env, *this, _sliced_heap };
@@ -249,9 +249,9 @@ struct Rom_filter::Main : Input_rom_registry::Input_rom_changed_fn,
 };
 
 
-void Rom_filter::Main::_evaluate_node(Xml_node node, Xml_generator &xml)
+void Rom_filter::Main::_evaluate_node(Xml_node const &node, Xml_generator &xml)
 {
-	auto process_output_sub_node = [&] (Xml_node node) {
+	auto process_output_sub_node = [&] (Xml_node const &node) {
 
 		if (node.has_type("if")) {
 
@@ -260,9 +260,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node node, Xml_generator &xml)
 			 */
 			bool condition_satisfied = false;
 
-			if (node.has_sub_node("has_value")) {
-
-				Xml_node const has_value_node = node.sub_node("has_value");
+			node.with_optional_sub_node("has_type", [&] (Xml_node const &has_value_node) {
 
 				Input_name const input_name =
 					has_value_node.attribute_value("input", Input_name());
@@ -281,7 +279,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node node, Xml_generator &xml)
 					if (_verbose)
 						Genode::warning("could not obtain input value for input ", input_name);
 				}
-			}
+			});
 
 			if (condition_satisfied) {
 				if (node.has_sub_node("then"))
@@ -323,7 +321,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node node, Xml_generator &xml)
 
 		if (node.has_type("node")) {
 			xml.node(node.attribute_value("type", Genode::String<128>()).string(), [&]() {
-					_evaluate_node(node, xml);
+				_evaluate_node(node, xml);
 			});
 		} else
 
@@ -371,8 +369,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node node, Xml_generator &xml)
 
 void Rom_filter::Main::_evaluate()
 {
-	try {
-		Xml_node output = _config.xml().sub_node("output");
+	_config.xml().with_optional_sub_node("output", [&] (Xml_node const &output) {
 
 		if (!output.has_attribute("node")) {
 			Genode::error("missing 'node' attribute in '<output>' node");
@@ -397,8 +394,7 @@ void Rom_filter::Main::_evaluate()
 				_xml_ds.construct(_env.ram(), _env.rm(), _xml_ds->size() + UPGRADE);
 			},
 			NUM_ATTEMPTS);
-
-	} catch (Xml_node::Nonexistent_sub_node) { }
+	});
 
 	_root.notify_clients();
 }
