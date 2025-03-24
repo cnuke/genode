@@ -188,7 +188,7 @@ append config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="4M" size="32K"/>
+				<sequential length="1G" size="4K" batch="128"/>
 			</tests>
 		</config>
 		<route>
@@ -202,7 +202,7 @@ append config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="4M" size="32K"/>
+				<sequential length="1G" size="4K" batch="128"/>
 			</tests>
 		</config>
 		<route>
@@ -216,7 +216,7 @@ append config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="4M" size="32K"/>
+				<sequential length="1G" size="4K" batch="128"/>
 			</tests>
 		</config>
 		<route>
@@ -230,7 +230,7 @@ append config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="4M" size="32K"/>
+				<sequential length="1G" size="4K" batch="128"/>
 			</tests>
 		</config>
 		<route>
