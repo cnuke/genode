@@ -550,6 +550,14 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 			return result;
 		}
 
+		Unlink_result unlink(char const *path) override
+		{
+			if (_single_file(path))
+				return UNLINK_OK;
+
+			return UNLINK_ERR_NO_ENTRY;
+		}
+
 		/********************************
 		 ** File I/O service interface **
 		 ********************************/
