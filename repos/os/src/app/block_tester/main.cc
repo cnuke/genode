@@ -299,6 +299,22 @@ struct Test::Test_base : private Genode::Fifo<Test_base>::Element
 
 		virtual ~Test_base() { };
 
+		struct Info_printer
+		{
+			Block::Session::Info const &_info;
+
+			Info_printer(Block::Session::Info const &info)
+			: _info { info } { }
+
+			void print(Genode::Output &out) const
+			{
+				Genode::print(out, "block_size=",  _info.block_size, " "
+				                   "block_count=", _info.block_count, " "
+				                   "align_log2=",  _info.align_log2, " "
+				                   "writeable=",   _info.writeable);
+			}
+		};
+
 		void start(bool stop_on_error)
 		{
 			_stop_on_error = stop_on_error;
@@ -306,6 +322,8 @@ struct Test::Test_base : private Genode::Fifo<Test_base>::Element
 			_block.construct(_env, &_block_alloc, _io_buffer);
 			_block->sigh(_block_io_sigh);
 			_info = _block->info();
+
+			Genode::log("block-session: ", Info_printer {_info });
 
 			_init();
 
