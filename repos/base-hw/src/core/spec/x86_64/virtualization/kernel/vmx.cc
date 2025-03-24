@@ -363,12 +363,12 @@ void Vmcs::initialize(Kernel::Cpu &cpu, Genode::addr_t page_table_phys)
 	write(E_HOST_IA32_SYSENTER_CS, 0x8);
 	write(E_HOST_IA32_SYSENTER_EIP, reinterpret_cast<Genode::uint64_t>(&kernel_entry_push_trap));
 
-        /*
-         * Set the RSP to a stack offset such that kernel_entry_push_trap pushes
-         * the `TRAP_VMEXIT` value to the right place for consumption by the
-         * subsequent jump to _kernel_entry.
-         */
-        write(E_HOST_RSP, cpu.stack_start() - Hw::Mm::KERNEL_STACK_ERRCODE_OFFSET);
+	/*
+	 * Set the RSP to a stack offset such that kernel_entry_push_trap pushes
+	 * the `TRAP_VMEXIT` value to the right place for consumption by the
+	 * subsequent jump to _kernel_entry.
+	 */
+	write(E_HOST_RSP, cpu.stack_start() - Hw::Mm::KERNEL_STACK_ERRCODE_OFFSET);
 	write(E_HOST_RIP, reinterpret_cast<Genode::uint64_t>(&kernel_entry_push_trap));
 }
 

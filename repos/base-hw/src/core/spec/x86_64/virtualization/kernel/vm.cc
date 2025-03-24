@@ -78,11 +78,11 @@ void Vm::proceed()
 		_vcpu_context.tsc_aux_host = _cpu().id();
 		_vcpu_context.init_state = Board::Vcpu_context::Init_state::STARTED;
 
-                /*
-                 * Sync the initial state from the VMM that was skipped due to
-                 * the vCPU being uninitialized.
-                 */
-                _sync_from_vmm();
+		/*
+		 * Sync the initial state from the VMM that was skipped due to
+		 * the vCPU being uninitialized.
+		 */
+		_sync_from_vmm();
 	}
 
 	Cpu::Ia32_tsc_aux::write(
@@ -171,8 +171,7 @@ void Vm::_sync_to_vmm()
 	 * If the vCPU isn't initialized, sync instructions such as vmread may fail.
 	 * Just sync the startup exit and skip the rest of the synchronization.
 	 */
-	if (_vcpu_context.init_state != Board::Vcpu_context::Init_state::STARTED)
-	{
+	if (_vcpu_context.init_state != Board::Vcpu_context::Init_state::STARTED) {
 		_state.exit_reason = (unsigned) Board::EXIT_STARTUP;
 		return;
 	}
