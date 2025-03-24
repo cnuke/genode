@@ -30,12 +30,13 @@ struct Test::Sequential : Scenario
 	block_number_t _start;
 	size_t   const _size;
 	size_t   const _length;
-	block_number_t _end = 0;
+	Block_count    _block_count { 0 };
 
 	Block::Operation::Type const _op_type;
 
 	Operation_size _op_size          { };   /* assigned by init() */
-	size_t         _length_in_blocks { };
+	Block_count    _length_in_blocks { 0 };
+	Block_count    _total_length_in_block { 0 };
 
 	Sequential(Allocator &, Xml_node const &node)
 	:
@@ -59,9 +60,15 @@ struct Test::Sequential : Scenario
 			return false;
 		}
 
+		if (attr.block_count.blocks == 0) {
+			error("invalid block count");
+			return false;
+		}
+
+		_block_count = attr.block_count;
+
 		_op_size          = { _size / attr.block_size };
-		_length_in_blocks = _length / attr.block_size;
-		_end              = _start + _length_in_blocks;
+		_length_in_blocks = Block_count { _length / attr.block_size };
 
 		if (_length == 0 || (_length % attr.block_size) != 0) {
 			error("length attribute (", _length, ") must be a multiple of "
@@ -74,13 +81,16 @@ struct Test::Sequential : Scenario
 
 	Next_job_result next_job(Stats const &) override
 	{
-		if (_start >= _end)
+		if (_total_length_in_block.blocks >= _length_in_blocks.blocks)
 			return No_job();
 
 		Block::Operation const operation { .type         = _op_type,
 		                                   .block_number = _start,
 		                                   .count        = _op_size.blocks };
 		_start += _op_size.blocks;
+		_start %= _block_count.blocks;
+
+		_total_length_in_block.blocks += _op_size.blocks;
 
 		return operation;
 	}
