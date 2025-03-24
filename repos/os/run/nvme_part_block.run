@@ -43,6 +43,20 @@ proc writeable { } {
 	}
 }
 
+
+#
+#  Query part_block binary
+#
+proc part_block_binary { } {
+
+	if {[info exists ::env(GENODE_LEGACY_PART_BLOCK)]} {
+		puts "Use legacy_part_block"
+		return legacy_part_block
+	}
+	return part_block
+}
+
+
 #
 # Build
 #
@@ -54,6 +68,7 @@ set build_components {
 	driver/platform
 	driver/nvme
 	server/part_block
+	server/part_block_legacy
 	app/block_tester
 }
 
@@ -169,6 +184,7 @@ append config {
 	</start>
 
 	<start name="part_block">
+		<binary name="} [part_block_binary] {"/>
 		<resource name="RAM" quantum="10M"/>
 		<provides><service name="Block"/></provides>
 		<config>
