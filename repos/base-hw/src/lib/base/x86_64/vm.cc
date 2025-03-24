@@ -119,5 +119,8 @@ Vm_connection::Vcpu::Vcpu(Vm_connection &vm, Allocator &alloc,
 :
 	_native_vcpu(*new (alloc) Hw_vcpu(vm._env, vm, handler))
 {
-	static_cast<Hw_vcpu &>(_native_vcpu).run();
+	/*
+	 * Send the initial startup signal to the vCPU handler.
+	 */
+	Signal_transmitter(handler.signal_cap()).submit();
 }

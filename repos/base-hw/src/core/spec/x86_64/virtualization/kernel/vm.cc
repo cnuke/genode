@@ -55,11 +55,19 @@ Vm::~Vm()
 
 void Vm::run()
 {
-	if (_vcpu_context.init_state == Board::Vcpu_context::Init_state::CREATED) {
-		_vcpu_context.exit_reason = Board::EXIT_STARTUP;
-		_vcpu_context.init_state  = Board::Vcpu_context::Init_state::INITIALIZING;
-		_context.submit(1);
+	if (_cpu().id() != Cpu::executing_id()) {
+		error("vCPU run called from remote core.");
 		return;
+	}
+
+	/*
+	 * On first start, initialize the vCPU
+	 */
+	if (_vcpu_context.init_state == Board::Vcpu_context::Init_state::CREATED) {
+		_vcpu_context.initialize(_cpu(),
+		    reinterpret_cast<addr_t>(_id.table));
+		_vcpu_context.tsc_aux_host = _cpu().id();
+		_vcpu_context.init_state  = Board::Vcpu_context::Init_state::STARTED;
 	}
 
 	_sync_from_vmm();
@@ -70,21 +78,6 @@ void Vm::run()
 
 void Vm::proceed()
 {
-	using namespace Board;
-
-	if (_vcpu_context.init_state == Board::Vcpu_context::Init_state::INITIALIZING) {
-		_vcpu_context.initialize(_cpu(),
-		    reinterpret_cast<addr_t>(_id.table));
-		_vcpu_context.tsc_aux_host = _cpu().id();
-		_vcpu_context.init_state = Board::Vcpu_context::Init_state::STARTED;
-
-		/*
-		 * Sync the initial state from the VMM that was skipped due to
-		 * the vCPU being uninitialized.
-		 */
-		_sync_from_vmm();
-	}
-
 	Cpu::Ia32_tsc_aux::write(
 	    (Cpu::Ia32_tsc_aux::access_t)_vcpu_context.tsc_aux_guest);
 
@@ -188,13 +181,6 @@ void Vm::_sync_to_vmm()
 
 void Vm::_sync_from_vmm()
 {
-	/*
-	 * Syncing the state to an unitialized vCPU may fail.
-	 * The inial state from the VMM will be synced after vCPU initialization.
-	 */
-	if (_vcpu_context.init_state != Board::Vcpu_context::Init_state::STARTED)
-		return;
-
 	_vcpu_context.read_vcpu_state(_state);
 }
 

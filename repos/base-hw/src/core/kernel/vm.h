@@ -16,6 +16,7 @@
 #define _CORE__KERNEL__VM_H_
 
 /* core includes */
+#include <kernel/cpu.h>
 #include <kernel/cpu_context.h>
 #include <kernel/pd.h>
 #include <kernel/signal.h>
@@ -136,6 +137,10 @@ class Kernel::Vm : private Kernel::Object, public Cpu_context
 
 		void pause()
 		{
+			if (_cpu().id() != Cpu::executing_id()) {
+				Genode::error("vCPU pause called from remote core.");
+				return;
+			}
 			_pause_vcpu();
 			_sync_to_vmm();
 		}

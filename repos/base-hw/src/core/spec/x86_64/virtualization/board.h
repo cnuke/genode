@@ -55,7 +55,6 @@ struct Board::Vcpu_context
 {
 	enum class Init_state {
 		CREATED,
-		INITIALIZING,
 		STARTED
 	};
 
