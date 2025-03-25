@@ -374,6 +374,8 @@ class Block::Main : Rpc_object<Typed_root<Session>>,
 				.writeable   = writeable,
 			};
 
+			log("legacy session: offset=", _partition_table.partition_lba(num), " num_blocks=", info.block_count, " writeable=", info.writeable);
+
 			_sessions[num] = new (_heap) Session_component(_env, num, tx_buf_size,
 			                                               info, *this);
 			return _sessions[num]->cap();

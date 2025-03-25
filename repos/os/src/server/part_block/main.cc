@@ -187,6 +187,8 @@ class Block::Main : public Sync_read::Handler
 			Arg_string::set_arg(argbuf, sizeof(argbuf), "num_blocks",  range.num_blocks);
 			Arg_string::set_arg(argbuf, sizeof(argbuf), "writeable",   range.writeable);
 
+			log("session: offset=", range.offset, " num_blocks=", range.num_blocks, " writeable=", range.writeable);
+
 			return _env.session<Block::Session>(id, argbuf, affinity);
 		}
 
