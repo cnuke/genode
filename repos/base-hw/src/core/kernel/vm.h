@@ -62,8 +62,6 @@ class Kernel::Vm : private Kernel::Object, public Cpu_context
 		Scheduler_state             _scheduled = INACTIVE;
 		Board::Vcpu_context         _vcpu_context;
 
-		void _sync_to_vmm();
-		void _sync_from_vmm();
 		void _pause_vcpu()
 		{
 			if (_scheduled != INACTIVE)
@@ -135,16 +133,7 @@ class Kernel::Vm : private Kernel::Object, public Cpu_context
 
 		void run();
 
-		void pause()
-		{
-			if (_cpu().id() != Cpu::executing_id()) {
-				Genode::error("vCPU pause called from remote core.");
-				return;
-			}
-			_pause_vcpu();
-			_sync_to_vmm();
-		}
-
+		void pause();
 
 		/*****************
 		 ** Cpu_context **

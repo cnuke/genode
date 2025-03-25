@@ -70,9 +70,37 @@ void Vm::run()
 		_vcpu_context.init_state  = Board::Vcpu_context::Init_state::STARTED;
 	}
 
-	_sync_from_vmm();
+	_vcpu_context.read_vcpu_state(_state);
+
 	if (_scheduled != ACTIVE) Cpu_context::_activate();
 	_scheduled = ACTIVE;
+}
+
+
+void Vm::pause()
+{
+	if (_cpu().id() != Cpu::executing_id()) {
+		Genode::error("vCPU pause called from remote core.");
+		return;
+	}
+
+	/*
+	 * The vCPU isn't initialized yet when the VMM first queries the state.
+	 * Just return so that the VMM gets presented with the default startup
+	 * exit code set at construction.
+	 */
+	if (_vcpu_context.init_state != Board::Vcpu_context::Init_state::STARTED)
+		return;
+
+	_pause_vcpu();
+
+	_vcpu_context.write_vcpu_state(_state);
+
+	/*
+	 * Set exit code so that if _run() was not called after an exit, the
+	 * next exit due to a signal will be interpreted as PAUSE request.
+	 */
+	_vcpu_context.exit_reason = Board::EXIT_PAUSED;
 }
 
 
@@ -155,33 +183,6 @@ void Vm::exception(Genode::Cpu_state &state)
 		_pause_vcpu();
 		_context.submit(1);
 	}
-}
-
-
-void Vm::_sync_to_vmm()
-{
-	/*
-	 * If the vCPU isn't initialized, sync instructions such as vmread may fail.
-	 * Just sync the startup exit and skip the rest of the synchronization.
-	 */
-	if (_vcpu_context.init_state != Board::Vcpu_context::Init_state::STARTED) {
-		_state.exit_reason = (unsigned) Board::EXIT_STARTUP;
-		return;
-	}
-
-	_vcpu_context.write_vcpu_state(_state);
-
-	/*
-	 * Set exit code so that if _run() was not called after an exit, the
-	 * next exit due to a signal will be interpreted as PAUSE request.
-	 */
-	_vcpu_context.exit_reason = Board::EXIT_PAUSED;
-}
-
-
-void Vm::_sync_from_vmm()
-{
-	_vcpu_context.read_vcpu_state(_state);
 }
 
 
