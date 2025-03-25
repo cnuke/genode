@@ -120,14 +120,16 @@ class Vfs_block::File
 
 			_file_block_count = stat.size / info.block_size;
 
+			uint64_t const num_blocks =
+				block_range.num_blocks ? block_range.num_blocks : ~0ull;
 			Block::block_number_t const block_count =
-				min(_file_block_count, max(block_range.num_blocks, ~0ull));
+				min(_file_block_count, num_blocks);
 
 			_block_info = Block::Session::Info {
 				.block_size  = info.block_size,
 				.block_count = block_count,
 				.align_log2  = log2(info.block_size),
-				.writeable   = info.writeable,
+				.writeable   = block_range.writeable,
 			};
 		}
 
@@ -409,7 +411,7 @@ struct Main : Rpc_object<Typed_root<Block::Session>>,
 		bool const writeable_policy =
 			policy.attribute_value("writeable", false);
 		bool const writeable_arg    =
-			Arg_string::find_arg(args.string(), "writeable").bool_value(false);
+			Arg_string::find_arg(args.string(), "writeable").bool_value(true);
 
 		Vfs_block::File_info const file_info =
 			Vfs_block::file_info_from_policy(policy);
