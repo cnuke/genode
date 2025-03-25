@@ -1,0 +1,16 @@
+assert_spec x86
+
+set use_vfs_ram 1
+set use_part_block 0
+
+
+proc block_partition     { } { return 0 }
+proc block_provider_name { } { return dummy }
+proc block_provider      { } { return "" }
+
+source ${genode_dir}/repos/ports/run/fio.inc
+
+append qemu_args " -nographic "
+append qemu_args " -m 2048 "
+
+run_genode_until {.*child "sequence" exited with exit value 0.*\n} 1200
