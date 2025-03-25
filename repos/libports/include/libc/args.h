@@ -33,7 +33,7 @@ static void populate_args_and_env(Libc::Env &env, int &argc, char **&argv, char 
 				attr.with_raw_value(fn); });
 	};
 
-	env.config([&] (Xml_node const &node) {
+	env.with_config([&] (Xml_node const &node) {
 
 		int envc = 0;
 
