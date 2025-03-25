@@ -565,7 +565,7 @@ struct Sync
 			timespec const ts = current_real_time.current_real_time();
 
 			mtime.ms_since_1970 = ts.tv_sec >= 0
-			                    ? ts.tv_sec*1000 + ts.tv_nsec/1000000
+			                    ? ts.tv_sec*1000ull + ts.tv_nsec/1000000ull
 			                    : 0;
 		}
 	}
