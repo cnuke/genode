@@ -126,7 +126,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					p = _tx_source->get_acked_packet();
 
 					if (!p.succeeded()) {
-						Genode::error("Could not read block(s)");
+						Genode::error("Could not ", write ? "write" : "read", " block(s)");
 						_tx_source->release_packet(p);
 						return 0;
 					}
