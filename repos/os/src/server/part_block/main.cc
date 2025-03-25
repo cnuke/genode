@@ -188,6 +188,7 @@ class Block::Main : public Sync_read::Handler
 			Arg_string::set_arg(argbuf, sizeof(argbuf), "writeable",   range.writeable);
 
 			try {
+				log("session: offset=", range.offset, " num_blocks=", range.num_blocks, " writeable=", range.writeable);
 				return _env.session<Block::Session>(id, argbuf, affinity);
 			} catch (...) { return Parent::SERVICE_DENIED; }
 		}
