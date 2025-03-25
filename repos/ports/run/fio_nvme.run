@@ -1,0 +1,48 @@
+assert_spec x86
+
+set use_vfs_ram 0
+set use_part_block 1
+
+proc block_partition { } {
+	if {[have_include power_on/qemu]} {
+		return 1
+	} else {
+		return 8
+	}
+}
+
+proc block_provider_name { } { return nvme }
+
+proc block_provider { } {
+	return "
+	<start name=\"nvme\" caps=\"120\">
+		<resource name=\"RAM\" quantum=\"24M\"/>
+		<provides> <service name=\"Block\"/> </provides>
+		<config max_hmb_size=\"16M\" verbose_regs=\"yes\" verbose_identify=\"yes\">
+			<default-policy writeable=\"yes\"/>
+		</config>
+		<route>
+			<service name=\"Platform\"><child name=\"platform\"/> </service>
+			<service name=\"Timer\">   <child name=\"timer\"/>    </service>
+			<service name=\"CPU\">     <parent/>                  </service>
+			<service name=\"ROM\">     <parent/>                  </service>
+			<service name=\"PD\">      <parent/>                  </service>
+			<service name=\"LOG\">     <parent/>                  </service>
+		</route>
+	</start>\n"
+}
+
+append build_components {
+	driver/nvme
+}
+
+source ${genode_dir}/repos/ports/run/fio.inc
+
+append qemu_args " -nographic "
+append qemu_args " -m 2048 "
+append qemu_args " -device pcie-root-port,id=root_port1 "
+append qemu_args " -drive id=nvme0,file=bin/nvme.raw,format=raw,if=none "
+append qemu_args " -device nvme,drive=nvme0,serial=fnord,id=nvme0n1,bus=root_port1 "
+append qemu_args " -boot d "
+
+run_genode_until {.*child "sequence" exited with exit value 0.*\n} 1200
