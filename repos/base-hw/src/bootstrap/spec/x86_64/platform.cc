@@ -50,7 +50,6 @@ enum { AP_BOOT_CODE_PAGE = 0x1000 };
 extern "C" void * _start;
 extern "C" void * _ap;
 
-
 static Hw::Acpi_rsdp search_rsdp(addr_t area, addr_t area_size)
 {
 	if (area && area_size && area < area + area_size) {
@@ -297,8 +296,6 @@ Bootstrap::Platform::Board::Board()
 	}
 
 	/* remember max supported CPUs and use ACPI to get the actual number */
-	unsigned const max_cpus =
-		Hw::Mm::CPU_LOCAL_MEMORY_AREA_SIZE / Hw::Mm::CPU_LOCAL_MEMORY_SLOT_SIZE;
 	cpus = 0;
 
 	/* scan ACPI tables to find out number of CPUs in this machine */
@@ -332,8 +329,14 @@ Bootstrap::Platform::Board::Board()
 						Hw::Apic_madt::Lapic lapic(e);
 
 						/* check if APIC is enabled in hardware */
-						if (lapic.valid())
-							cpus ++;
+						if (lapic.valid()) {
+							if (lapic.id() > MAX_CPUS)
+								error("CPU id ", lapic.id(), " out of supported range");
+							else {
+								cpus_online[lapic.id()] = true;
+								cpus ++;
+							}
+						}
 					}
 				});
 			};
@@ -347,11 +350,11 @@ Bootstrap::Platform::Board::Board()
 		}
 	}
 
-	if (!cpus || cpus > max_cpus) {
-		Genode::warning("CPU count is unsupported ", cpus, "/", max_cpus,
+	if (!cpus || cpus > MAX_CPUS) {
+		Genode::warning("CPU count is unsupported ", cpus, "/", MAX_CPUS,
 		                acpi_rsdp.valid() ? " - invalid or missing RSDT/XSDT"
 		                                  : " - invalid RSDP");
-		cpus = !cpus ? 1 : max_cpus;
+		cpus = !cpus ? 1 : MAX_CPUS;
 	}
 
 	/*
@@ -475,7 +478,7 @@ unsigned Bootstrap::Platform::_prepare_cpu_memory_area()
 {
 	using namespace Genode;
 
-	for (size_t id = 0; id < board.cpus; id++)
-		_prepare_cpu_memory_area(id);
+	for (size_t id = 0; id < Board::MAX_CPUS; id++)
+		if (board.cpus_online[id]) _prepare_cpu_memory_area(id);
 	return board.cpus;
 }

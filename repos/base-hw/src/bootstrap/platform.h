@@ -16,6 +16,7 @@
 
 #include <base/allocator_avl.h>
 #include <base/internal/elf.h>
+#include <hw/memory_consts.h>
 #include <hw/boot_info.h>
 #include <util/reconstructible.h>
 
@@ -48,6 +49,13 @@ class Bootstrap::Platform
 			Memory_region_array late_ram_regions  { };
 			Mmio_space          core_mmio;
 			unsigned            cpus { };
+
+			static constexpr unsigned MAX_CPUS =
+				Hw::Mm::CPU_LOCAL_MEMORY_AREA_SIZE /
+				Hw::Mm::CPU_LOCAL_MEMORY_SLOT_SIZE;
+
+			bool cpus_online[MAX_CPUS] = { false };
+
 			::Board::Boot_info  info { };
 
 			Board();
