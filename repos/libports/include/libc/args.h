@@ -84,7 +84,7 @@ static void populate_args_and_env(Libc::Env &env, int &argc, char **&argv, char 
 			/* insert an environment variable */
 			if (node.has_type("env")) try {
 
-				auto check_attr = [] (Xml_node node, auto key) {
+				auto check_attr = [] (Xml_node const &node, auto key) {
 					if (!node.has_attribute(key))
 						Genode::warning("<env> node lacks '", key, "' attribute"); };
 
