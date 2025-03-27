@@ -111,8 +111,8 @@ namespace Libc {
 	/**
 	 * Socket fs
 	 */
-	void init_socket_fs(Monitor &, File_descriptor_allocator &);
-	void init_socket_operations(File_descriptor_allocator &);
+	void init_socket_fs(Monitor &, File_descriptor_allocator &, Config const &);
+	void init_socket_operations(File_descriptor_allocator &, Config const &);
 
 	/**
 	 * Pthread/semaphore support
