@@ -205,9 +205,7 @@ struct Rom_filter::Main : Input_rom_registry::Input_rom_changed_fn,
 		/*
 		 * Obtain inputs
 		 */
-		try {
-			_input_rom_registry.update_config(_config.xml());
-		} catch (Xml_node::Nonexistent_sub_node) { }
+		_input_rom_registry.update_config(_config.xml());
 
 		/*
 		 * Generate output
@@ -260,7 +258,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node const &node, Xml_generator &xml)
 			 */
 			bool condition_satisfied = false;
 
-			node.with_optional_sub_node("has_type", [&] (Xml_node const &has_value_node) {
+			node.with_optional_sub_node("has_value", [&] (Xml_node const &has_value_node) {
 
 				Input_name const input_name =
 					has_value_node.attribute_value("input", Input_name());
@@ -268,25 +266,22 @@ void Rom_filter::Main::_evaluate_node(Xml_node const &node, Xml_generator &xml)
 				Input_value const expected_input_value =
 					has_value_node.attribute_value("value", Input_value());
 
-				try {
-					Input_value const input_value =
-						_input_rom_registry.query_value(_config.xml(), input_name);
-
-					if (input_value == expected_input_value)
-						condition_satisfied = true;
-				}
-				catch (Input_rom_registry::Nonexistent_input_value) {
-					if (_verbose)
-						Genode::warning("could not obtain input value for input ", input_name);
-				}
+				_input_rom_registry.query_value(_config.xml(), input_name).with_result(
+					[&] (Input_value const &value) {
+						if (value == expected_input_value)
+							condition_satisfied = true; },
+					[&] (Input_rom_registry::Missing) {
+						if (_verbose)
+							Genode::warning("could not obtain input value for input ", input_name);
+					});
 			});
 
 			if (condition_satisfied) {
-				if (node.has_sub_node("then"))
-					_evaluate_node(node.sub_node("then"), xml);
+				node.with_optional_sub_node("then", [&] (Xml_node const &then_node) {
+					_evaluate_node(then_node, xml); });
 			} else {
-				if (node.has_sub_node("else"))
-					_evaluate_node(node.sub_node("else"), xml);
+				node.with_optional_sub_node("else", [&] (Xml_node const &else_node) {
+					_evaluate_node(else_node, xml); });
 			}
 		} else
 
@@ -299,17 +294,16 @@ void Rom_filter::Main::_evaluate_node(Xml_node const &node, Xml_generator &xml)
 
 				Input_name const input_name =
 					node.attribute_value("input", Input_name());
-				try {
-					Input_value const input_value =
-						_input_rom_registry.query_value(_config.xml(), input_name);
 
-					xml.attribute(node.attribute_value("name", String()).string(),
-					              input_value);
-				}
-				catch (Input_rom_registry::Nonexistent_input_value) {
-					if (_verbose)
-						Genode::warning("could not obtain input value for input ", input_name);
-				}
+				_input_rom_registry.query_value(_config.xml(), input_name).with_result(
+					[&] (Input_value const value) {
+						xml.attribute(node.attribute_value("name", String()).string(),
+						              value); },
+					[&] (Input_rom_registry::Missing) {
+						if (_verbose)
+							Genode::warning("could not obtain input value for input ", input_name);
+					}
+				);
 			}
 
 			/* assign fixed attribute value */
@@ -357,9 +351,7 @@ void Rom_filter::Main::_evaluate_node(Xml_node const &node, Xml_generator &xml)
 			bool const skip_toplevel =
 				node.attribute_value("skip_toplevel", false);
 
-			try {
-				_input_rom_registry.gen_xml(input_name, xml, skip_toplevel); }
-			catch (...) { }
+			_input_rom_registry.gen_xml(input_name, xml, skip_toplevel);
 		}
 	};
 
