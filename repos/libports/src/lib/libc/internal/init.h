@@ -27,6 +27,7 @@
 
 /* libc-internal includes */
 #include <internal/types.h>
+#include <internal/config.h>
 
 namespace Libc {
 
@@ -155,6 +156,11 @@ namespace Libc {
 	 * Kqueue support
 	 */
 	void init_kqueue(Genode::Allocator &, Monitor &, File_descriptor_allocator &);
+
+	/**
+	 * Random-number support
+	 */
+	void init_random(Config const &);
 }
 
 #endif /* _LIBC__INTERNAL__INIT_H_ */

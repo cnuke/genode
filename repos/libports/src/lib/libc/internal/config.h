@@ -19,6 +19,7 @@
 #include <base/component.h>
 
 /* libc includes */
+#include <unistd.h>
 #include <internal/types.h>
 
 namespace Libc { class Config; }

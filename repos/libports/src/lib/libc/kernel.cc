@@ -522,6 +522,7 @@ Libc::Kernel::Kernel(Genode::Env &env, Genode::Allocator &heap)
 
 	init_signal(_signal);
 	init_kqueue(_heap, *this, _fd_alloc);
+	init_random(_config);
 
 	_init_file_descriptors();
 
