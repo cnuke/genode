@@ -72,7 +72,7 @@ struct Sculpt::Ahci_driver : private Noncopyable
 
 	void with_ports(auto const &fn) const
 	{
-		static Xml_node const none { "<none/" };
+		static Xml_node const none { "<none/>" };
 		_ports.with_xml([&] (Xml_node const &ports) {
 			fn(_ahci.constructed() ? ports : none); });
 	}

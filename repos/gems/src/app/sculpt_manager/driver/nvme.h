@@ -71,7 +71,7 @@ struct Sculpt::Nvme_driver : private Noncopyable
 
 	void with_namespaces(auto const &fn) const
 	{
-		static Xml_node const none { "<none/" };
+		static Xml_node const none { "<none/>" };
 		_namespaces.with_xml([&] (Xml_node const &namespaces) {
 			fn(_nvme.constructed() ? namespaces : none); });
 	}

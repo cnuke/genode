@@ -186,7 +186,7 @@ struct Sculpt::Usb_driver : private Noncopyable
 
 	void with_devices(auto const &fn) const
 	{
-		static Xml_node const none { "<none/" };
+		static Xml_node const none { "<none/>" };
 		_devices.with_xml([&] (Xml_node const &devices) {
 			fn(_hcd.constructed() ? devices : none); });
 	}
