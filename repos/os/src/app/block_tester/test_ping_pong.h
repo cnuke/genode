@@ -23,7 +23,8 @@ namespace Test { struct Ping_pong; }
  * Ping_pong operation test
  *
  * This test reads or writes the given number of blocks from the
- * specified start block sequentially in sized requests.
+ * specified start block sequentially in an alternating fashion
+ * from the beginning and the end of the session.
  */
 struct Test::Ping_pong : Scenario
 {

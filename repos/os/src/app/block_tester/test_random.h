@@ -74,9 +74,9 @@ namespace Util {
 /*
  * Random test
  *
- * This test reads or writes the given number of bytes in a
- * deterministic order that depends and the seed value of a
- * PRNG in particular sized requests.
+ * This test reads or writes the given number of bytes in
+ * sized requests in a deterministic order that depends on
+ * the seed value of a PRNG.
  */
 struct Test::Random : Scenario
 {
