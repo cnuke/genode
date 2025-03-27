@@ -110,8 +110,10 @@ struct Test::Result
 		           "bytes:",     Number_of_bytes(bytes),        " "
 		           "size:",      Number_of_bytes(request_size), " "
 		           "bsize:",     Number_of_bytes(block_size),   " "
-		           "duration:",  duration,     " "
-		           "triggered:", triggered,    " "
+		           "mibs:",      mibs(),    " "
+		           "iops:",      iops(),    " "
+		           "duration:",  duration,  " "
+		           "triggered:", triggered, " "
 		           "result:",    success ? "ok" : "failed");
 	}
 };
@@ -427,10 +429,8 @@ struct Test::Main
 						xml.attribute("bsize",    tr.result.block_size);
 						xml.attribute("duration", tr.result.duration);
 
-						if (_config.calculate) {
-							xml.attribute("mibs", (unsigned)(tr.result.mibs() * (1<<20u)));
-							xml.attribute("iops", (unsigned)(tr.result.iops() + 0.5f));
-						}
+						xml.attribute("mibs", (unsigned)(tr.result.mibs() * (1<<20u)));
+						xml.attribute("iops", (unsigned)(tr.result.iops() + 0.5f));
 
 						xml.attribute("result", tr.result.success ? 0 : 1);
 					});
