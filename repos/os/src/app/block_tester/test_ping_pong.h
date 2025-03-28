@@ -33,7 +33,7 @@ struct Test::Ping_pong : Scenario
 	block_number_t _end = 0;
 	block_number_t _start;
 	size_t   const _size;
-	size_t   const _length;
+	uint64_t const _length;
 
 	Block::Operation::Type const _op_type;
 
@@ -42,7 +42,7 @@ struct Test::Ping_pong : Scenario
 		Scenario(node),
 		_start  (node.attribute_value("start",  0u)),
 		_size   (node.attribute_value("size",   Number_of_bytes())),
-		_length (node.attribute_value("length", Number_of_bytes())),
+		_length (node.attribute_value("length", Length_in_bytes())),
 		_op_type(node.attribute_value("write", false)
 		       ? Block::Operation::Type::WRITE : Block::Operation::Type::READ)
 	{ }
@@ -67,7 +67,7 @@ struct Test::Ping_pong : Scenario
 			return false;
 		}
 
-		size_t const length_in_blocks = _length / _block_size;
+		uint64_t const length_in_blocks = _length / _block_size;
 
 		_end = _start + length_in_blocks;
 		return true;

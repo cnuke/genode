@@ -93,7 +93,7 @@ struct Test::Random : Scenario
 	                                           : Block::Operation::Type::READ;
 
 	uint64_t _block_count = 0;     /* assigned by init() */
-	uint64_t _size_in_blocks = 0;
+	size_t   _size_in_blocks = 0;
 
 	block_number_t _next_block()
 	{
@@ -113,7 +113,7 @@ struct Test::Random : Scenario
 		Scenario(node),
 		_random(node.attribute_value("seed",   42UL)),
 		_size  (node.attribute_value("size",   Number_of_bytes())),
-		_length(node.attribute_value("length", Number_of_bytes())),
+		_length(node.attribute_value("length", Length_in_bytes())),
 		_r     (node.attribute_value("read",   false)),
 		_w     (node.attribute_value("write",  false))
 	{ }
@@ -164,8 +164,8 @@ struct Test::Random : Scenario
 	void print(Output &out) const override
 	{
 		Genode::print(out, name(), " "
-		                   "size:",   Number_of_bytes(_size),   " "
-		                   "length:", Number_of_bytes(_length), " ");
+		                   "size:",   Length_in_bytes(_size),   " "
+		                   "length:", Length_in_bytes(_length), " ");
 	}
 };
 

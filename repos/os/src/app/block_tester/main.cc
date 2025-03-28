@@ -105,11 +105,11 @@ struct Test::Result
 	{
 		using Genode::print;
 
-		print(out, "rx:",        Number_of_bytes(rx),           " "
-		           "tx:",        Number_of_bytes(tx),           " "
-		           "bytes:",     Number_of_bytes(bytes),        " "
-		           "size:",      Number_of_bytes(request_size), " "
-		           "bsize:",     Number_of_bytes(block_size),   " "
+		print(out, "rx:",        Length_in_bytes(rx),           " "
+		           "tx:",        Length_in_bytes(tx),           " "
+		           "bytes:",     Length_in_bytes(bytes),        " "
+		           "size:",      Length_in_bytes(request_size), " "
+		           "bsize:",     Length_in_bytes(block_size),   " "
 		           "mibs:",      mibs(),    " "
 		           "iops:",      iops(),    " "
 		           "duration:",  duration,  " "

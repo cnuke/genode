@@ -29,12 +29,12 @@ struct Test::Sequential : Scenario
 {
 	block_number_t _start;
 	size_t   const _size;
-	size_t   const _length;
+	uint64_t const _length;
 	block_number_t _end = 0;
 
 	Block::Operation::Type const _op_type;
 
-	uint64_t _size_in_blocks = 0;    /* assigned by init() */
+	size_t   _size_in_blocks = 0;    /* assigned by init() */
 	uint64_t _length_in_blocks = 0;
 
 	Sequential(Allocator &, Xml_node const &node)
@@ -42,7 +42,7 @@ struct Test::Sequential : Scenario
 		Scenario(node),
 		_start  (node.attribute_value("start",  0u)),
 		_size   (node.attribute_value("size",   Number_of_bytes())),
-		_length (node.attribute_value("length", Number_of_bytes())),
+		_length (node.attribute_value("length", Length_in_bytes())),
 		_op_type(node.attribute_value("write", false) ? Block::Operation::Type::WRITE
 		                                              : Block::Operation::Type::READ)
 	{ }
@@ -93,8 +93,8 @@ struct Test::Sequential : Scenario
 	{
 		Genode::print(out, name(), " ", Block::Operation::type_name(_op_type), " "
 		                   "start:",  _start, " "
-		                   "size:",   Number_of_bytes(_size),   " "
-		                   "length:", Number_of_bytes(_length), " "
+		                   "size:",   Length_in_bytes(_size),   " "
+		                   "length:", Length_in_bytes(_length), " "
 		                   "copy:",   attr.copy, " "
 		                   "batch:",  attr.batch);
 	}
