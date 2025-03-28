@@ -56,8 +56,8 @@ struct Test::Ping_pong : Scenario
 			return false;
 		}
 
-		size_t const total_bytes = (size_t)attr.block_count * _block_size;
-		if (_length > total_bytes - (_start * _block_size)) {
+		Total const total { attr.block_count.blocks * _block_size };
+		if (_length > total.bytes - (_start * _block_size)) {
 			error("length too large invalid");
 			return false;
 		}
@@ -75,7 +75,7 @@ struct Test::Ping_pong : Scenario
 
 	Next_job_result next_job(Stats const &stats) override
 	{
-		if (stats.bytes >= _length)
+		if (stats.total.bytes >= _length)
 			return No_job();
 
 		block_number_t const lba = _ping ? _start : _end - _start;

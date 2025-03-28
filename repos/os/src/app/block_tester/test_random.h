@@ -80,7 +80,6 @@ namespace Util {
  */
 struct Test::Random : Scenario
 {
-
 	Util::Xoroshiro _random;
 
 	size_t   const _size;
@@ -92,18 +91,18 @@ struct Test::Random : Scenario
 	Block::Operation::Type const _op_type = _w ? Block::Operation::Type::WRITE
 	                                           : Block::Operation::Type::READ;
 
-	uint64_t _block_count = 0;     /* assigned by init() */
-	uint64_t _size_in_blocks = 0;
+	Block_count    _block_count { };     /* assigned by init() */
+	Operation_size _op_size     { };
 
 	block_number_t _next_block()
 	{
 		uint64_t r = 0;
-		block_number_t max = _block_count;
-		if (max >= _size_in_blocks + 1)
-			max -= _size_in_blocks + 1;
+		block_number_t max = _block_count.blocks;
+		if (max >= _op_size.blocks + 1)
+			max -= _op_size.blocks + 1;
 		do {
 			r = _random.get() % max;
-		} while (r + _size_in_blocks > _block_count);
+		} while (r + _op_size.blocks > _block_count.blocks);
 
 		return r;
 	}
@@ -135,14 +134,14 @@ struct Test::Random : Scenario
 			return false;
 		}
 
-		_block_count    = attr.block_count;
-		_size_in_blocks = _size / attr.block_size;
+		_block_count = { attr.block_count };
+		_op_size     = { _size / attr.block_size };
 		return true;
 	}
 
 	Next_job_result next_job(Stats const &stats) override
 	{
-		if (stats.bytes >= _length)
+		if (stats.total.bytes >= _length)
 			return No_job();
 
 		block_number_t const lba = _next_block();
@@ -154,7 +153,7 @@ struct Test::Random : Scenario
 
 		return Block::Operation { .type         = op_type,
 		                          .block_number = lba,
-		                          .count        = _size_in_blocks };
+		                          .count        = _op_size.blocks };
 	}
 
 	size_t request_size() const override { return _size; }
@@ -165,7 +164,7 @@ struct Test::Random : Scenario
 	{
 		Genode::print(out, name(), " "
 		                   "size:",   Number_of_bytes(_size),   " "
-		                   "length:", Number_of_bytes(_length), " ");
+		                   "length:", Total(_length), " ");
 	}
 };
 

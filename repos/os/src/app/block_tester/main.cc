@@ -81,23 +81,23 @@ class Test::Scratch_buffer
 
 struct Test::Result
 {
-	bool     success      { false };
-	uint64_t duration     { 0 };
-	uint64_t bytes        { 0 };
-	uint64_t rx           { 0 };
-	uint64_t tx           { 0 };
-	uint64_t request_size { 0 };
-	uint64_t block_size   { 0 };
-	size_t   triggered    { 0 };
+	bool     success;
+	uint64_t duration;
+	Total    total;
+	Total    rx;
+	Total    tx;
+	size_t   request_size;
+	size_t   block_size;
+	size_t   triggered;
 
 	double mibs() const
 	{
-		return ((double)bytes / ((double)duration/1000)) / (1024 * 1024);
+		return ((double)total.bytes / ((double)duration/1000)) / (1024 * 1024);
 	}
 
 	double iops() const
 	{
-		return (double)((rx + tx) / (request_size / block_size))
+		return (double)((rx.bytes + tx.bytes) / (request_size / block_size))
 		     / ((double)duration / 1000);
 	}
 
@@ -105,9 +105,9 @@ struct Test::Result
 	{
 		using Genode::print;
 
-		print(out, "rx:",        Number_of_bytes(rx),           " "
-		           "tx:",        Number_of_bytes(tx),           " "
-		           "bytes:",     Number_of_bytes(bytes),        " "
+		print(out, "rx:",        rx,    " "
+		           "tx:",        tx,    " "
+		           "bytes:",     total, " "
 		           "size:",      Number_of_bytes(request_size), " "
 		           "bsize:",     Number_of_bytes(block_size),   " "
 		           "mibs:",      mibs(),    " "
@@ -178,8 +178,8 @@ struct Test::Block_connection : Block::Connection<Test_job>
 	 */
 	void produce_write_content(Test_job &job, Block::seek_off_t offset, char *dst, size_t length)
 	{
-		stats.tx    += length / block_size;
-		stats.bytes += length;
+		stats.tx.bytes    += length / block_size;
+		stats.total.bytes += length;
 
 		if (_attr.verbose)
 			log("job ", job.id, ": writing ", length, " bytes at ", offset);
@@ -194,8 +194,8 @@ struct Test::Block_connection : Block::Connection<Test_job>
 	void consume_read_result(Test_job &job, Block::seek_off_t offset,
 	                         char const *src, size_t length)
 	{
-		stats.rx    += length / block_size;
-		stats.bytes += length;
+		stats.rx.bytes    += length / block_size;
+		stats.total.bytes += length;
 
 		if (_attr.verbose)
 			log("job ", job.id, ": got ", length, " bytes at ", offset);
@@ -381,7 +381,7 @@ struct Test::Test
 			return {
 				.success      = _success,
 				.duration     = _end_time - _start_time,
-				.bytes        = _block.stats.bytes,
+				.total        = _block.stats.total,
 				.rx           = _block.stats.rx,
 				.tx           = _block.stats.tx,
 				.request_size = _scenario.request_size(),
@@ -422,9 +422,9 @@ struct Test::Main
 				_results.for_each([&] (Test_result &tr) {
 					xml.node("result", [&] () {
 						xml.attribute("test",     tr.name);
-						xml.attribute("rx",       tr.result.rx);
-						xml.attribute("tx",       tr.result.tx);
-						xml.attribute("bytes",    tr.result.bytes);
+						xml.attribute("rx",       tr.result.rx.bytes);
+						xml.attribute("tx",       tr.result.tx.bytes);
+						xml.attribute("bytes",    tr.result.total.bytes);
 						xml.attribute("size",     tr.result.request_size);
 						xml.attribute("bsize",    tr.result.block_size);
 						xml.attribute("duration", tr.result.duration);

@@ -34,8 +34,8 @@ struct Test::Sequential : Scenario
 
 	Block::Operation::Type const _op_type;
 
-	uint64_t _size_in_blocks = 0;    /* assigned by init() */
-	uint64_t _length_in_blocks = 0;
+	Operation_size _op_size          { };   /* assigned by init() */
+	size_t         _length_in_blocks { };
 
 	Sequential(Allocator &, Xml_node const &node)
 	:
@@ -59,7 +59,7 @@ struct Test::Sequential : Scenario
 			return false;
 		}
 
-		_size_in_blocks   = _size   / attr.block_size;
+		_op_size          = { _size / attr.block_size };
 		_length_in_blocks = _length / attr.block_size;
 		_end              = _start + _length_in_blocks;
 
@@ -79,8 +79,8 @@ struct Test::Sequential : Scenario
 
 		Block::Operation const operation { .type         = _op_type,
 		                                   .block_number = _start,
-		                                   .count        = _size_in_blocks };
-		_start += _size_in_blocks;
+		                                   .count        = _op_size.blocks };
+		_start += _op_size.blocks;
 
 		return operation;
 	}

@@ -22,17 +22,28 @@ namespace Test {
 
 	using namespace Genode;
 
-	struct Scenario;
+	using block_number_t = Block::block_number_t;
+
+	struct Block_count { Block::block_number_t blocks; };
+
+	struct Operation_size { Block::block_count_t blocks; };
+
+	struct Total
+	{
+		uint64_t bytes;
+
+		void print(Output &out) const { Number_of_bytes::print(out, bytes); }
+	};
 
 	struct Stats
 	{
-		uint64_t rx, tx;
-		size_t   bytes;
+		Total rx, tx;
+		Total total;
 		unsigned completed;
 		unsigned job_cnt;
 	};
 
-	using block_number_t = Block::block_number_t;
+	struct Scenario;
 }
 
 
@@ -66,9 +77,9 @@ struct Test::Scenario : Interface, private Fifo<Scenario>::Element
 
 	struct Init_attr
 	{
-		size_t         block_size;        /* size of one block in bytes */
-		block_number_t block_count;       /* number of blocks */
-		size_t         scratch_buffer_size;
+		size_t      block_size;        /* size of one block in bytes */
+		Block_count block_count;
+		size_t      scratch_buffer_size;
 	};
 
 	[[nodiscard]] virtual bool init(Init_attr const &) = 0;
