@@ -355,11 +355,13 @@ class Device : public List_model<Device>::Element
 			{
 				bool found = false;
 				node.for_each_sub_node("config", [&] (Xml_node const &config) {
-					if (!found && node.attribute_value("active", false)) {
+					if (!found && config.attribute_value("active", false)) {
 						fn(config);
 						found = true;
 					}
 				});
+				if (!found)
+					fn(node);
 			};
 
 			with_active_config(node, [&] (Xml_node const &active_config) {
