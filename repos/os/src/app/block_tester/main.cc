@@ -92,11 +92,17 @@ struct Test::Result
 
 	double mibs() const
 	{
+		if (!duration)
+			return 0;
+
 		return ((double)total.bytes / ((double)duration/1000)) / (1024 * 1024);
 	}
 
 	double iops() const
 	{
+		if (!duration || !request_size)
+			return 0;
+
 		return (double)((rx.bytes + tx.bytes) / (request_size / block_size))
 		     / ((double)duration / 1000);
 	}
