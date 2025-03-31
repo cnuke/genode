@@ -50,6 +50,13 @@ enum { AP_BOOT_CODE_PAGE = 0x1000 };
 extern "C" void * _start;
 extern "C" void * _ap;
 
+static constexpr unsigned MAX_CPUS =
+	Hw::Mm::CPU_LOCAL_MEMORY_AREA_SIZE /
+	Hw::Mm::CPU_LOCAL_MEMORY_SLOT_SIZE;
+
+static bool cpus_online[MAX_CPUS] = { false };
+
+
 static Hw::Acpi_rsdp search_rsdp(addr_t area, addr_t area_size)
 {
 	if (area && area_size && area < area + area_size) {
@@ -478,7 +485,7 @@ unsigned Bootstrap::Platform::_prepare_cpu_memory_area()
 {
 	using namespace Genode;
 
-	for (size_t id = 0; id < Board::MAX_CPUS; id++)
-		if (board.cpus_online[id]) _prepare_cpu_memory_area(id);
+	for (size_t id = 0; id < MAX_CPUS; id++)
+		if (cpus_online[id]) _prepare_cpu_memory_area(id);
 	return board.cpus;
 }
