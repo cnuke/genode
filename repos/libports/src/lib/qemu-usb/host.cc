@@ -353,16 +353,20 @@ class Device : public List_model<Device>::Element
 
 		void update(Allocator &alloc, Xml_node const &node)
 		{
-			auto with_active_config = [&] (auto const &fn)
+			auto with_active_config = [] (Xml_node const &node, auto const &fn)
 			{
 				bool found = false;
-				node.for_each_sub_node("config", [&] (Xml_node const &node) {
-					if (!found && node.attribute_value("active", false))
-						fn(node);
+				node.for_each_sub_node("config", [&] (Xml_node const &config) {
+					if (!found && config.attribute_value("active", false)) {
+						fn(config);
+						found = true;
+					}
 				});
+				if (!found)
+					fn(node);
 			};
 
-			with_active_config([&] (Xml_node const &active_config) {
+			with_active_config(node, [&] (Xml_node const &active_config) {
 				_ifaces.update_from_xml(active_config,
 
 					/* create */
