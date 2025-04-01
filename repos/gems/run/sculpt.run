@@ -856,7 +856,7 @@ file copy [initial_config_file VERSION] [run_dir]/genode/VERSION
 # Generate build info as boot module
 #
 
-proc build_date { } { return [clock format [clock seconds] -format %Y-%m-%d] }
+proc build_date { } { return [clock format [clock seconds] -format %Y-%m-%d-%s] }
 
 proc genode_version { } {
 
