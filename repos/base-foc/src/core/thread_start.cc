@@ -63,11 +63,11 @@ namespace {
 				addr_t const kcap = (addr_t) platform_thread.pager_object_badge();
 				l4_msgtag_t res = l4_thread_stats_time(kcap, &ec_time);
 				if (l4_error(res))
-					Genode::error("cpu time for ", thread.name(),
+					Genode::error("cpu time for ", thread.name,
 					              " is not available ", l4_error(res));
 			}
 
-			return { Session_label("core"), thread.name(),
+			return { Session_label("core"), thread.name,
 			         Genode::Trace::Execution_time(ec_time, sc_time, 10000,
 			                                       platform_thread.prio()),
 			         thread.affinity() };
@@ -111,7 +111,7 @@ Thread::Start_result Thread::start()
 		l4_utcb_tcr_u(foc_utcb)->user[UTCB_TCR_BADGE] = (unsigned long) pt.gate().local.data();
 		l4_utcb_tcr_u(foc_utcb)->user[UTCB_TCR_THREAD_OBJ] = (addr_t)this;
 
-		pt.start((void *)_thread_start, stack_top());
+		pt.start((void *)_thread_start, (void *)_stack->top());
 
 		try {
 			new (platform().core_mem_alloc())

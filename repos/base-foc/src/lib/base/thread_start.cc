@@ -68,7 +68,7 @@ void Thread::_init_native_thread(Stack &stack, size_t weight, Type type)
 	if (type == NORMAL) {
 
 		/* create thread at core */
-		_thread_cap = _cpu_session->create_thread(pd_session_cap(), name(),
+		_thread_cap = _cpu_session->create_thread(pd_session_cap(), name,
 		                                          _affinity, Weight(weight));
 		return;
 	}
