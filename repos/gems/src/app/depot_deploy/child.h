@@ -554,9 +554,6 @@ void Depot_deploy::Child::gen_start_node(Xml_generator          &xml,
 				_gen_copy_of_sub_node(xml, runtime, "config");
 				config_defined = true; }
 
-		if (!config_defined)
-			xml.node("config", [&] { });
-
 		/*
 		 * Declare services provided by the subsystem.
 		 */
