@@ -20,13 +20,13 @@
 using namespace Kernel;
 
 
-void Timer::Irq::occurred() { _cpu.scheduler().timeout(); }
+void Timer::Irq::occurred() { _timer._process_timeouts(); }
 
 
 Timer::Irq::Irq(unsigned id, Cpu &cpu)
 :
 	Kernel::Irq { id, cpu.irq_pool(), cpu.pic() },
-	_cpu        { cpu }
+	_timer { cpu.timer() }
 { }
 
 
@@ -79,7 +79,7 @@ time_t Timer::schedule_timeout()
 }
 
 
-void Timer::process_timeouts()
+void Timer::_process_timeouts()
 {
 	/*
 	 * Walk through timeouts until the first whose end time is in the future.
@@ -100,7 +100,7 @@ void Timer::process_timeouts()
 }
 
 
-Timer::Timer(Cpu & cpu)
+Timer::Timer(Cpu &cpu)
 :
 	_device(cpu.id()), _irq(interrupt_id(), cpu),
 	_last_timeout_duration(_max_value())
