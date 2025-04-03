@@ -113,9 +113,13 @@ Thread::Start_result Thread::start()
 
 			/* register initial IP and SP at core */
 			Cpu_thread_client cpu_thread(cap);
-			cpu_thread.start((addr_t)_thread_start, _stack->top());
 
-			return Start_result::OK;
+			return _stack.convert<Start_result>(
+				[&] (Stack *stack) {
+					cpu_thread.start((addr_t)_thread_start, stack->top());
+					return Start_result::OK;
+				},
+				[&] (Stack_error) { return Start_result::DENIED; });
 		},
 		[&] (Cpu_session::Create_thread_error) { return Start_result::DENIED; }
 	);
