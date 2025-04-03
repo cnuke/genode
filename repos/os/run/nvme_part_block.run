@@ -167,7 +167,7 @@ append config {
 		</config>
 	</start>
 
-	<start name="nvme" caps="120">
+	<start name="nvme" caps="200">
 		<resource name="RAM" quantum="24M"/>
 		<provides> <service name="Block"/> </provides>
 		<config max_hmb_size="16M" verbose_regs="yes" verbose_identify="yes">
