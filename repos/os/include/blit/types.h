@@ -74,7 +74,7 @@ namespace Blit {
 		                              .y = ((r.y2() + 8) & ~0x7) - 1 });
 	}
 
-	static bool divisable_by_8x8(Area a) { return ((a.w | a.h) & 0x7) == 0; }
+	static inline bool divisable_by_8x8(Area a) { return ((a.w | a.h) & 0x7) == 0; }
 
 	template <typename B2F>
 	static inline void _b2f(uint32_t       *dst, unsigned dst_w,
