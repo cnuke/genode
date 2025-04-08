@@ -6,7 +6,11 @@ assert_spec linux
 #
 # Build
 #
-build { core lib/ld init timer server/lx_block app/gpt_write }
+build {
+	core lib/ld init timer
+	lib/vfs lib/vfs_import server/vfs_block
+	app/gpt_write
+}
 
 create_boot_directory
 
@@ -34,10 +38,16 @@ install_config {
 		<resource name="RAM" quantum="1M"/>
 		<provides><service name="Timer"/></provides>
 	</start>
-	<start name="lx_block" ld="no">
-		<resource name="RAM" quantum="2M"/>
+	<start name="vfs_block" caps="250">
+		<resource name="RAM" quantum="512M"/>
 		<provides> <service name="Block"/> </provides>
-		<config file="gpt.img" block_size="512" writeable="yes"/>
+		<config>
+			<vfs>
+				<ram/>
+				<import> <rom name="gpt.img"/> </import>
+			</vfs>
+			<default-policy file="/gpt.img" block_size="512" writeable="yes"/>
+		</config>
 	</start>
 	<start name="gpt_write">
 		<resource name="RAM" quantum="2M"/>
@@ -58,7 +68,7 @@ install_config {
 #
 # Create test file
 #
-catch { exec dd if=/dev/zero of=bin/gpt.img bs=1M count=256 }
+catch { exec dd if=/dev/zero of=bin/gpt.img bs=1M count=200 }
 
 build_boot_image [list {*}[build_artifacts] gpt.img]
 
