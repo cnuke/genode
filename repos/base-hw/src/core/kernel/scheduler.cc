@@ -186,10 +186,8 @@ void Scheduler::update()
 		if (!_schedule_slack())
 			_set_current(_idle, _slack_quota);
 
-	_timer.set_timeout(&_timeout,
+	_timer.set_timeout(_timeout,
 	                   Genode::min(_current_quantum, _super_period_left));
-	_timer.schedule_timeout();
-
 }
 
 
