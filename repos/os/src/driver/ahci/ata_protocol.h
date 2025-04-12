@@ -128,6 +128,8 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 		struct Request : Block::Request
 		{
+			unsigned long id;
+
 			bool valid() const { return operation.valid(); }
 			void invalidate() { operation.type = Block::Operation::Type::INVALID; }
 
@@ -149,7 +151,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 		using Model_string  = String<Identity::Model_number>;
 
 		Constructible<Identity>      _identity { };
-		bool                         _writeable { false };
+		bool                         _writeable { true };
 
 	public:
 
@@ -158,7 +160,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 	private:
 
-		bool _overlap_check(Block::Request const &request)
+		bool _overlap_check(unsigned long id, Block::Request const &request)
 		{
 			block_number_t block_number = request.operation.block_number;
 			block_number_t end = block_number + request.operation.count - 1;
@@ -176,14 +178,15 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				    (pending_start >= block_number && pending_start <= end) ||
 				    (pending_end   >= block_number && pending_end   <= end)) {
 
-					warning("overlap: ",
+					warning("overlap by: ", req.id, " "
 					        "pending ", pending_start,
 					        " + ", req.operation.count,
-									" (", req.operation.type == Block::Operation::Type::WRITE ?
-									"write" : "read", "), ",
+					        " (", req.operation.type == Block::Operation::Type::WRITE ?
+					        "write" : "read", "), ",
+					        "from: ", id, " "
 					        "request: ", block_number, " + ", request.operation.count,
-									" (", request.operation.type == Block::Operation::Type::WRITE ?
-									"write" : "read", ")");
+					        " (", request.operation.type == Block::Operation::Type::WRITE ?
+					        "write" : "read", ")");
 					return true;
 				}
 
@@ -283,7 +286,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 		void writeable(bool rw) override { _writeable = rw; }
 
-		Response submit(Port &port, Block::Request const &request,
+		Response submit(Port &port, unsigned long id, Block::Request const &request,
 		                Port_mmio &mmio) override
 		{
 			Block::Operation const op = request.operation;
@@ -298,10 +301,10 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				return Response::REJECTED;
 
 			if (Block::Operation::has_payload(op.type)) {
-				if (port.sanity_check(request) == false || port.dma_base == 0)
+				if (port.sanity_check(id, request) == false || port.dma_base(id) == 0)
 					return Response::REJECTED;
 
-				if (_overlap_check(request))
+				if (_overlap_check(id, request))
 					return Response::RETRY;
 			}
 
@@ -311,13 +314,14 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				return Response::RETRY;
 
 			*r = request;
+			r->id = id;
 
 			auto const slot  = unsigned(_slots.index(*r));
 			_slot_states    |= 1u << slot;
 
 			/* setup fis */
 			Command_table table(port.command_table_range(slot),
-			                    port.dma_base + request.offset, /* physical address */
+			                    port.dma_base(id) + request.offset, /* physical address */
 			                    op.count * _block_size());
 
 			/* setup ATA command */
@@ -344,7 +348,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 			return Response::ACCEPTED;
 		}
 
-		Block::Request completed(Port_mmio &) override
+		Block::Request completed(unsigned long id, Port_mmio &) override
 		{
 			Block::Request r { };
 
@@ -353,6 +357,9 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				size_t index = _slots.index(request);
 				/* request still pending */
 				if (_slot_states & (1u << index))
+					return false;
+
+				if (request.id != id)
 					return false;
 
 				r = request;
