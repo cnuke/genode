@@ -128,6 +128,8 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 		struct Request : Block::Request
 		{
+			unsigned long id;
+
 			bool valid() const { return operation.valid(); }
 			void invalidate() { operation.type = Block::Operation::Type::INVALID; }
 
@@ -149,7 +151,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 		using Model_string  = String<Identity::Model_number>;
 
 		Constructible<Identity>      _identity { };
-		bool                         _writeable { false };
+		bool                         _writeable { true };
 
 	public:
 
@@ -283,7 +285,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 		void writeable(bool rw) override { _writeable = rw; }
 
-		Response submit(Port &port, Block::Request const &request,
+		Response submit(Port &port, unsigned long id, Block::Request const &request,
 		                Port_mmio &mmio) override
 		{
 			Block::Operation const op = request.operation;
@@ -298,7 +300,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				return Response::REJECTED;
 
 			if (Block::Operation::has_payload(op.type)) {
-				if (port.sanity_check(request) == false || port.dma_base == 0)
+				if (port.sanity_check(id, request) == false || port.dma_base(id) == 0)
 					return Response::REJECTED;
 
 				if (_overlap_check(request))
@@ -311,13 +313,14 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				return Response::RETRY;
 
 			*r = request;
+			r->id = id;
 
 			auto const slot  = unsigned(_slots.index(*r));
 			_slot_states    |= 1u << slot;
 
 			/* setup fis */
 			Command_table table(port.command_table_range(slot),
-			                    port.dma_base + request.offset, /* physical address */
+			                    port.dma_base(id) + request.offset, /* physical address */
 			                    op.count * _block_size());
 
 			/* setup ATA command */
@@ -344,7 +347,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 			return Response::ACCEPTED;
 		}
 
-		Block::Request completed(Port_mmio &) override
+		Block::Request completed(unsigned long id, Port_mmio &) override
 		{
 			Block::Request r { };
 
@@ -353,6 +356,9 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				size_t index = _slots.index(request);
 				/* request still pending */
 				if (_slot_states & (1u << index))
+					return false;
+
+				if (request.id != id)
 					return false;
 
 				r = request;
