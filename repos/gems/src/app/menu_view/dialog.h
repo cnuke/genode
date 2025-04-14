@@ -302,16 +302,15 @@ void Menu_view::Dialog::_handle_input()
 		ev.handle_absolute_motion([&] (int x, int y) {
 			hover_at(x, y); });
 
-		if (ev.hover_leave())
-			unhover();
-
 		ev.handle_touch([&] (Input::Touch_id id, float x, float y) {
 			if (id.value == 0)
 				hover_at((int)x, (int)y); });
 
-		ev.handle_touch_release([&] (Input::Touch_id id) {
-			if (id.value == 0)
-				unhover(); });
+		/*
+		 * Reset hover model when losing the focus
+		 */
+		if (ev.hover_leave())
+			unhover();
 	});
 
 	bool const hover_changed = orig_hovered          != _hovered
