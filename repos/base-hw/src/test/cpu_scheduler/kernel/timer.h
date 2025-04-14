@@ -39,10 +39,10 @@ struct Kernel::Timer
 
 	time_t schedule_timeout() { return 0; } /* dummy unneeded */
 
-	void set_timeout(Timeout * const timeout, time_t const duration)
+	void set_timeout(Timeout &timeout, time_t const duration)
 	{
 		_next_timeout = _time + duration;
-		_timeout      = timeout;
+		_timeout      = &timeout;
 	}
 
 	void add_time(time_t const duration)
