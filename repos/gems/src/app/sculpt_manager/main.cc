@@ -801,8 +801,9 @@ struct Sculpt::Main : Input_event_handler,
 
 	void _handle_touch_report(Xml_node const &touch)
 	{
-		_popup_touched = Popup_touched::MAYBE;
-		if (_seq_number_attr_matches(touch, _emitted_touch_seq_number))
+		if (!_seq_number_attr_matches(touch, _emitted_touch_seq_number))
+			_popup_touched = Popup_touched::MAYBE;
+		else if (_popup_touched == Popup_touched::MAYBE)
 			_popup_touched = _matches_popup_dialog(touch) ? Popup_touched::YES
 			                                              : Popup_touched::NO;
 		_try_handle_popup_close();
@@ -810,8 +811,9 @@ struct Sculpt::Main : Input_event_handler,
 
 	void _handle_click_report(Xml_node const &click)
 	{
-		_popup_clicked = Popup_clicked::MAYBE;
-		if (_seq_number_attr_matches(click, _emitted_click_seq_number))
+		if (!_seq_number_attr_matches(click, _emitted_click_seq_number))
+			_popup_clicked = Popup_clicked::MAYBE;
+		else if (_popup_clicked == Popup_clicked::MAYBE)
 			_popup_clicked = _matches_popup_dialog(click) ? Popup_clicked::YES
 			                                              : Popup_clicked::NO;
 		_try_handle_popup_close();
@@ -1199,6 +1201,8 @@ struct Sculpt::Main : Input_event_handler,
 			return;
 
 		_popup_opened_seq_number = _global_input_seq_number;
+		_popup_clicked = Popup_clicked::MAYBE;
+		_popup_touched = Popup_touched::MAYBE;
 
 		_popup_dialog.refresh();
 		_popup.anchor = anchor;
