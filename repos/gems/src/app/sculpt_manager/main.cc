@@ -1028,8 +1028,10 @@ struct Sculpt::Main : Input_event_handler,
 			_popup_clicked = Popup_clicked::MAYBE;
 		}
 		if (ev.touch()) {
+			if (_emitted_touch_seq_number.value != _global_input_seq_number.value)
+				_popup_touched = Popup_touched::MAYBE;
+
 			_emitted_touch_seq_number = _global_input_seq_number;
-			_popup_touched = Popup_touched::MAYBE;
 		}
 
 		bool need_generate_dialog = false;
