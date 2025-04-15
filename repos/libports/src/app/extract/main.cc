@@ -128,7 +128,7 @@ struct Extract::Extracted_archive : Noncopyable
 	                       Strip    const strip,
 	                       Raw_name const &raw_name)
 	{
-		archive_read_support_format_all(src.ptr);
+		archive_read_support_format_tar(src.ptr);
 		archive_read_support_format_raw(src.ptr);
 		archive_read_support_filter_all(src.ptr);
 
@@ -147,8 +147,11 @@ struct Extract::Extracted_archive : Noncopyable
 				if (ret == ARCHIVE_EOF)
 					break;
 
-				if (ret != ARCHIVE_OK)
+				if (ret != ARCHIVE_OK) {
+					error("could not read next header: ",
+					      archive_error_string(src.ptr));
 					return Extract_error::READ_FAILED;
+				}
 			}
 
 			bool const raw = archive_format(src.ptr) == ARCHIVE_FORMAT_RAW;
@@ -210,16 +213,25 @@ struct Extract::Extracted_archive : Noncopyable
 					if (ret == ARCHIVE_EOF)
 						break;
 
-					if (ret != ARCHIVE_OK)
+					if (ret != ARCHIVE_OK) {
+						error("could not read data block: ",
+					 	     archive_error_string(src.ptr));
 						return Extract_error::READ_FAILED;
+					}
 				}
 
-				if (archive_write_data_block(dst.ptr, buf, size, offset) != ARCHIVE_OK)
+				if (archive_write_data_block(dst.ptr, buf, size, offset) != ARCHIVE_OK) {
+					error("could not write data block: ",
+				 	     archive_error_string(src.ptr));
 					return Extract_error::WRITE_FAILED;
+				}
 			}
 
-			if (archive_write_finish_entry(dst.ptr) != ARCHIVE_OK)
+			if (archive_write_finish_entry(dst.ptr) != ARCHIVE_OK) {
+				error("could not finish entry: ",
+			 	     archive_error_string(src.ptr));
 				return Extract_error::WRITE_FAILED;
+			}
 		}
 
 		return Ok();
