@@ -252,7 +252,7 @@ struct Framebuffer::Driver
 		using Attr = Capture::Connection::Screen::Attr;
 
 		Attr attr = { .px       = r_ps,
-		              .mm       = Blit::transformed(conn.size_mm, conn.rotate);
+		              .mm       = Blit::transformed(conn.size_mm, conn.rotate),
 		              .viewport = { .at = po, .area = r_vs },
 		              .rotate   = conn.rotate,
 		              .flip     = conn.flip };
