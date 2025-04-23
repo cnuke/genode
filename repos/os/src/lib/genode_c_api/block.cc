@@ -32,7 +32,7 @@ class genode_block_session : public Rpc_object<Block::Session>
 		enum { MAX_REQUESTS = 32 };
 
 		struct Request {
-			enum State { FREE, IN_FLY, DONE };
+			enum State { FREE, IN_FLIGHT, DONE };
 
 			State                state    { FREE };
 			genode_block_request dev_req  { GENODE_BLOCK_UNAVAIL,
@@ -171,7 +171,7 @@ genode_block_request * genode_block_session::request()
 
 		_first_request(Request::FREE, [&] (Request & r) {
 
-			r.state    = Request::IN_FLY;
+			r.state    = Request::IN_FLIGHT;
 			r.peer_req = request;
 
 			Block::Operation const op = request.operation;
@@ -207,7 +207,7 @@ genode_block_request * genode_block_session::request()
 
 void genode_block_session::ack(genode_block_request * req, bool success)
 {
-	_for_each_request(Request::IN_FLY, [&] (Request & r) {
+	_for_each_request(Request::IN_FLIGHT, [&] (Request & r) {
 		if (&r.dev_req == req)
 			r.state = Request::DONE;
 	});
