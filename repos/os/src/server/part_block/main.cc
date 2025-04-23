@@ -189,7 +189,9 @@ class Block::Main : public Sync_read::Handler
 
 			log("session: offset=", range.offset, " num_blocks=", range.num_blocks, " writeable=", range.writeable);
 
-			return _env.session<Block::Session>(id, argbuf, affinity);
+			try {
+				return _env.session<Block::Session>(id, argbuf, affinity);
+			} catch (...) { return Parent::SERVICE_DENIED; }
 		}
 
 		static void _with_session_request(Xml_node const &request,
@@ -281,6 +283,7 @@ void Block::Main::_handle_session_request(Xml_node const &request)
 
 			auto error_fn = [&] (Parent::Session_response response) {
 				_sessions[partition.value].destruct();
+				error("could not forward session for partition ", partition.value);
 				_env.parent().session_response(server_id, response);
 			};
 
