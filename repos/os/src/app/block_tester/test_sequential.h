@@ -27,7 +27,8 @@ namespace Test { struct Sequential; }
  */
 struct Test::Sequential : Scenario
 {
-	block_number_t _start;
+	block_number_t const _start;
+	block_number_t       _pos { 0 };
 	size_t   const _size;
 	size_t   const _length;
 	Block_count    _block_count { 0 };
@@ -85,10 +86,10 @@ struct Test::Sequential : Scenario
 			return No_job();
 
 		Block::Operation const operation { .type         = _op_type,
-		                                   .block_number = _start,
+		                                   .block_number = _start + _pos,
 		                                   .count        = _op_size.blocks };
-		_start += _op_size.blocks;
-		_start %= _block_count.blocks;
+		_pos += _op_size.blocks;
+		_pos %= _block_count.blocks;
 
 		_total_length_in_block.blocks += _op_size.blocks;
 
