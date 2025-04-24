@@ -123,19 +123,33 @@ void blk_unregister_queue(struct gendisk * disk)
 }
 
 
+struct genode_block_session_context
+{
+	struct gendisk              *disk;
+	struct genode_block_request *req;
+};
+
+
+static void inline block_handle_end_io(struct genode_block_session_context *ctx,
+                                       struct genode_block_session *session)
+{
+	struct genode_block_request * const req = ctx->req;
+
+	genode_block_ack_request(session, req, true);
+	// TODO only called when genode_block_ack_request did something
+	lx_user_handle_io();
+}
+
 
 static void bio_end_io(struct bio *bio)
 {
 	struct genode_block_request * const req =
 		(struct genode_block_request*) bio->bi_private;
-	struct genode_block_session * const session =
-		genode_block_session_by_name(bio->bi_bdev->bd_disk->disk_name);
 
-	if (session) {
-		genode_block_ack_request(session, req, true);
-		lx_user_handle_io();
-	} else
-		printk("Error: could not find session or gendisk for bio %p\n", bio);
+	struct genode_block_session_context ctx = { .req = req };
+
+	genode_block_session_for_each_by_name(bio->bi_bdev->bd_disk->disk_name,
+	                                      &ctx, block_handle_end_io);
 
 	bio_put(bio);
 }
@@ -173,8 +187,8 @@ static inline void block_request(struct block_device         * const bdev,
 
 
 static inline void
-block_handle_session(struct genode_block_session * const session,
-                     struct gendisk              * const disk)
+block_handle_session(struct genode_block_session_context * const ctx,
+                     struct genode_block_session * const session)
 {
 	if (!session)
 		return;
@@ -182,7 +196,7 @@ block_handle_session(struct genode_block_session * const session,
 	for (;;) {
 		struct genode_block_request * const req =
 			genode_block_request_by_session(session);
-		struct block_device * const bdev = disk->part0;
+		struct block_device * const bdev = ctx->disk->part0;
 
 		if (!req)
 			return;
@@ -215,8 +229,12 @@ static int block_poll_sessions(void * data)
 			if (!disk)
 				continue;
 
-			block_handle_session(genode_block_session_by_name(disk->disk_name),
-			                     disk);
+			{
+				struct genode_block_session_context ctx = { .disk = disk };
+
+				genode_block_session_for_each_by_name(disk->disk_name, &ctx,
+				                                      block_handle_session);
+			}
 		}
 
 		lx_emul_task_schedule(true);
