@@ -26,9 +26,9 @@ Second, a new directory browser allows the user to interactively assign
 arbitrary directories as file systems to components, vastly easing the
 fine-grained sandboxing of subsystems.
 
-As a highly anticipated feature, an updated version of the Falkon web browser
-has become readily available. This version is based on the Chromium engine
-version 112 and Qt 6.6.2.
+For staying on the heels of the modern web, an updated version of the Falkon
+web browser has become readily available. This version is based on the
+Chromium engine version 112 and Qt 6.6.2.
 
 In tandem with the Sculpt OS release, the Goa SDK has been updated, targeting
 the new version by default while introducing sandboxed builds. Thanks to this
