@@ -238,7 +238,5 @@ struct utmpx *getutxent(void)
 DUMMY(void, , setutxent, (void));
 DUMMY(void, , endutxent, (void));
 
-
-
 } /* extern "C" */
 
