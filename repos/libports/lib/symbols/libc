@@ -882,6 +882,7 @@ user_from_uid T
 usleep W
 utime W
 utimes W
+utmpxname T
 vasprintf T
 vdprintf T
 verr T
