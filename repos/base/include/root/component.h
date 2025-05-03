@@ -46,12 +46,13 @@ class Genode::Single_client
 
 		Single_client() : _used(0) { }
 
-		void aquire(const char *)
+		[[nodiscard]] bool aquire(const char *)
 		{
 			if (_used)
-				throw Service_denied();
+				return false;
 
 			_used = true;
+			return true;
 		}
 
 		void release() { _used = false; }
@@ -63,7 +64,7 @@ class Genode::Single_client
  */
 struct Genode::Multiple_clients
 {
-	void aquire(const char *) { }
+	[[nodiscard]] bool aquire(const char *) { return true; }
 	void release() { }
 };
 
@@ -123,7 +124,8 @@ class Genode::Root_component : public Rpc_object<Typed_root<SESSION_TYPE> >,
 		 */
 		Create_result _create(Session_state::Args const &args, Affinity affinity)
 		{
-			POLICY::aquire(args.string());
+			if (!POLICY::aquire(args.string()))
+				return Create_error::DENIED;
 
 			/*
 			 * Guard to ensure that 'release' is called whenever the scope
@@ -187,7 +189,7 @@ class Genode::Root_component : public Rpc_object<Typed_root<SESSION_TYPE> >,
 		 * affinity, it suffices to override the overload without the
 		 * affinity argument.
 		 *
-		 * \throw Out_of_ram 
+		 * \throw Out_of_ram
 		 * \throw Out_of_caps
 		 * \throw Service_denied
 		 * \throw Insufficient_cap_quota
