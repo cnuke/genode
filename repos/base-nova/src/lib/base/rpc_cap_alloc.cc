@@ -62,8 +62,6 @@ Rpc_entrypoint::_alloc_rpc_cap(Pd_session &pd, Native_capability ep, addr_t entr
 				result = cap;
 			},
 			[&] (Alloc_error e) {
-				Ram_quota ram_upgrade { };
-				Cap_quota cap_upgrade { };
 				switch (e) {
 				case Alloc_error::OUT_OF_RAM:  ram_upgrade = { 2*1024*sizeof(long) }; break;
 				case Alloc_error::OUT_OF_CAPS: cap_upgrade = { 4 };                   break;
