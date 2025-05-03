@@ -441,12 +441,14 @@ class Genode::Child : protected Rpc_object<Parent>,
 				 */
 				bool _first_request = true;
 
-				void initiate_request(Session_state &session) override
+				Initiate_result initiate_request(Session_state &session) override
 				{
 					session.ready_callback = this;
 					session.async_client_notify = true;
 
-					_service.initiate_request(session);
+					Initiate_result const result = _service.initiate_request(session);
+					if (result.failed())
+						return result;
 
 					/*
 					 * If the env session is provided by an async service,
@@ -482,6 +484,8 @@ class Genode::Child : protected Rpc_object<Parent>,
 					 */
 					if (session.phase == Session_state::CLOSE_REQUESTED)
 						_service.wakeup();
+
+					return Ok();
 				}
 
 				/**
