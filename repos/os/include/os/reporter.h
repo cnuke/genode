@@ -189,14 +189,15 @@ class Genode::Expanding_reporter
 
 		void generate(auto const &fn)
 		{
-			retry<Xml_generator::Buffer_exceeded>(
+			for (;;) {
+				Reporter::Xml_generator
+					xml(*_reporter, [&] () { fn(xml); });
 
-				[&] () {
-					Reporter::Xml_generator
-						xml(*_reporter, [&] () { fn(xml); }); },
+				if (!xml.exceeded())
+					return;
 
-				[&] () { _increase_report_buffer(); }
-			);
+				_increase_report_buffer();
+			}
 		}
 
 		void generate(Xml_node node)
