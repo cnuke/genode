@@ -437,11 +437,9 @@ class Genode::Xml_generator
 			struct Node_output : Genode::Output
 			{
 				Node &node;
-				bool  exceeded;
+				bool  exceeded = false;
 
-				/******************************
-				 ** Genode::Output interface **
-				 ******************************/
+				Node_output(Node &node) : node(node) { }
 
 				void out_char(char c) override {
 					exceeded |= node.append_sanitized(c).exceeded; }
@@ -449,7 +447,7 @@ class Genode::Xml_generator
 				void out_string(char const *str, size_t n) override {
 					exceeded |= node.append_sanitized(str, n).exceeded; }
 
-			} output { .node = *_curr_node, .exceeded = false };
+			} output { *_curr_node };
 
 			Output::out_args(output, args...);
 
