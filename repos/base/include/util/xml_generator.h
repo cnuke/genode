@@ -344,7 +344,7 @@ class Genode::Xml_generator
 		void node(char const *name, auto const &fn = [] { } )
 		{
 			if (!_exceeded)
-				_exceeded = Node(*this, name, fn).exceeded();
+				_exceeded |= Node(*this, name, fn).exceeded();
 		}
 
 		void node(char const *name) { node(name, [] { }); }
