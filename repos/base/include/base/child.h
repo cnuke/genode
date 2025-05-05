@@ -605,12 +605,14 @@ class Genode::Child : protected Rpc_object<Parent>,
 
 			void with_session(auto const &fn, auto const &denied_fn)
 			{
-				_connection->with_session(fn, denied_fn);
+				if (!_connection.constructed()) denied_fn();
+				else _connection->with_session(fn, denied_fn);
 			}
 
 			void with_session(auto const &fn, auto const &denied_fn) const
 			{
-				_connection->with_session(fn, denied_fn);
+				if (!_connection.constructed()) denied_fn();
+				else _connection->with_session(fn, denied_fn);
 			}
 
 			Capability<SESSION> cap() const
