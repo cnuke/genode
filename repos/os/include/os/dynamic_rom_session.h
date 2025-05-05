@@ -67,8 +67,6 @@ class Genode::Dynamic_rom_session : public Rpc_object<Rom_session>
 
 				/**
 				 * Generate ROM content
-				 *
-				 * \throw Xml_generator::Buffer_exceeded
 				 */
 				virtual void produce_xml(Xml_generator &) = 0;
 		};
