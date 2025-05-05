@@ -271,6 +271,8 @@ class Genode::Xml_generator
 					                   || _commit_content(dst).exceeded };
 				}
 
+				void _on_exception(Xml_generator &);
+
 			public:
 
 				Result insert_attribute(char const *name, char const *value)

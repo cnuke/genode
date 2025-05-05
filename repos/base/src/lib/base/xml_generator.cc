@@ -17,6 +17,16 @@
 using namespace Genode;
 
 
+void Xml_generator::Node::_on_exception(Xml_generator &xml)
+{
+	/* reset and drop changes by not committing it */
+	xml._curr_node = _parent_node;
+	xml._curr_indent--;
+	if (_parent_node)
+		_parent_node->_undo_content_buffer(true, _parent_was_indented, _parent_had_content);
+}
+
+
 Xml_generator::Node::Node(Xml_generator &xml, char const *name, bool,
                           Callable<void>::Ft const &fn)
 :
@@ -40,34 +50,21 @@ Xml_generator::Node::Node(Xml_generator &xml, char const *name, bool,
 	xml._curr_indent++;
 
 	/*
-	 * Handle potential exception in 'fn' by rolling back intermediate changes
+	 * Handle exception thrown by fn()
 	 */
 	struct Guard
 	{
-		Node          &node;
 		Xml_generator &xml;
-
+		Node          &_this;
 		bool ok = false;
-
-		~Guard()
-		{
-			if (ok)
-				return;
-
-			xml._curr_node = node._parent_node;
-			xml._curr_indent--;
-			if (!node._parent_node)
-				return;
-
-			node._parent_node->_undo_content_buffer(true, node._parent_was_indented,
-			                                              node._parent_had_content);
-		}
-	} guard { .node = *this, .xml = xml };
+		~Guard() { if (!ok) _this._on_exception(xml); }
+	} guard { xml, *this };
 
 	/*
 	 * Process attributes and sub nodes
 	 */
 	fn();
+
 	guard.ok = true;
 
 	xml._curr_node = _parent_node;
