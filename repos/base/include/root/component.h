@@ -46,13 +46,15 @@ class Genode::Single_client
 
 		Single_client() : _used(0) { }
 
-		[[nodiscard]] bool aquire(const char *)
+		using Result = Attempt<Ok, Service::Create_error>;
+
+		Result aquire(const char *)
 		{
 			if (_used)
-				return false;
+				return Service::Create_error::DENIED;
 
 			_used = true;
-			return true;
+			return Ok();
 		}
 
 		void release() { _used = false; }
@@ -64,7 +66,9 @@ class Genode::Single_client
  */
 struct Genode::Multiple_clients
 {
-	[[nodiscard]] bool aquire(const char *) { return true; }
+	using Result = Attempt<Ok, Service::Create_error>;
+
+	Result aquire(const char *) { return Ok(); }
 	void release() { }
 };
 
@@ -124,8 +128,13 @@ class Genode::Root_component : public Rpc_object<Typed_root<SESSION_TYPE> >,
 		 */
 		Create_result _create(Session_state::Args const &args, Affinity affinity)
 		{
-			if (!POLICY::aquire(args.string()))
-				return Create_error::DENIED;
+			{
+				typename POLICY::Result const result = POLICY::aquire(args.string());
+				if (result.failed())
+					return result.template convert<Create_error>(
+						[] (auto &) /* never */ { return Create_error { }; },
+						[] (Create_error e)     { return e; });
+			}
 
 			/*
 			 * Guard to ensure that 'release' is called whenever the scope
