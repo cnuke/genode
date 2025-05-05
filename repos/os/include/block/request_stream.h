@@ -19,7 +19,21 @@
 #include <packet_stream_tx/rpc_object.h>
 #include <block/request.h>
 
-namespace Block { struct Request_stream; }
+namespace Block {
+
+	struct Request_stream;
+
+	Session::Info sanitize_info(Block::Session::Info const &info,
+	                            Block::Range         const &range)
+	{
+		return {
+			.block_size  = info.block_size,
+			.block_count = min(range.num_blocks ? range.num_blocks : ~0ull,
+			                   info.block_count),
+			.align_log2  = info.align_log2,
+			.writeable   = range.writeable };
+	}
+}
 
 
 class Block::Request_stream : Genode::Noncopyable
