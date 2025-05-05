@@ -34,7 +34,7 @@ namespace Block {
 };
 
 
-class Block::Main : public Sync_read::Handler
+class Block::Main
 {
 	private:
 
@@ -52,13 +52,42 @@ class Block::Main : public Sync_read::Handler
 
 		Constructible<Expanding_reporter> _reporter { };
 
-		Allocator_avl    _block_alloc { &_heap };
-		Block_connection _block       { _env, &_block_alloc, 64u << 10 };
-		Session::Info    _info        { _block.info() };
+		struct Sync_read_handler : Sync_read::Handler
+		{
+			Env &_env;
 
-		Mbr                 _mbr  { *this, _heap, _info };
-		Gpt                 _gpt  { *this, _heap, _info };
-		Ahdi                _ahdi { *this, _heap, _info };
+			Allocator_avl    _block_alloc;
+			Block_connection _block;
+
+			Io_signal_handler<Sync_read_handler> _io_sigh;
+
+			/*
+			 * The initial signal handler can be empty as it's only used
+			 * to deblock wait_and_dispatch_one_io_signal().
+			 */
+			void _dummy_handle() { }
+
+			Sync_read_handler(Env &env, Heap &heap)
+			:
+				_env         { env },
+				_block_alloc { &heap },
+				_block       { env, &_block_alloc, 64u << 10 },
+				_io_sigh     { env.ep(), *this, &Sync_read_handler::_dummy_handle }
+			{
+				_block.sigh(_io_sigh);
+			}
+
+			Session::Info info() const { return _block.info(); }
+
+			Block_connection & connection() override { return _block; }
+
+			void block_for_io() override {
+				_env.ep().wait_and_dispatch_one_io_signal(); }
+		};
+
+		Constructible<Mbr>  _mbr  { };
+		Constructible<Gpt>  _gpt  { };
+		Constructible<Ahdi> _ahdi { };
 		Constructible<Disk> _disk { };
 
 		Partition_table & _partition_table { _table() };
@@ -237,15 +266,6 @@ class Block::Main : public Sync_read::Handler
 			/* handle requests that have queued before or during construction */
 			_handle_session_requests();
 		}
-
-		/************************
-		 ** Sync_read::Handler **
-		 ************************/
-
-		Block_connection & connection() override { return _block; }
-
-		void block_for_io() override {
-			_env.ep().wait_and_dispatch_one_io_signal(); }
 };
 
 
@@ -359,14 +379,7 @@ Block::Partition_table & Block::Main::_table()
 		throw;
 	}
 
-	/*
-	 * The initial signal handler can be empty as it's only used to deblock
-	 * wait_and_dispatch_one_io_signal() in Sync_read.
-	 */
-
-	struct Io_dummy { void fn() { }; } io_dummy;
-	Io_signal_handler<Io_dummy> handler(_env.ep(), io_dummy, &Io_dummy::fn);
-	_block.sigh(handler);
+	Sync_read_handler handler(_env, _heap);
 
 	/*
 	 * Try to parse MBR as well as GPT first if not instructued
@@ -376,7 +389,8 @@ Block::Partition_table & Block::Main::_table()
 	if (!ignore_mbr) {
 		using Parse_result = Mbr::Parse_result;
 
-		switch (_mbr.parse()) {
+		_mbr.construct(_heap, handler.info());
+		switch (_mbr->parse(handler)) {
 		case Parse_result::MBR:
 			valid_mbr = true;
 			break;
@@ -388,10 +402,13 @@ Block::Partition_table & Block::Main::_table()
 		}
 	}
 
-	if (!ignore_gpt)
-		valid_gpt = _gpt.parse();
+	if (!ignore_gpt) {
+		_gpt.construct(_heap, handler.info());
+		valid_gpt = _gpt->parse(handler);
+	}
 
-	valid_ahdi = _ahdi.parse();
+	_ahdi.construct(_heap, handler.info());
+	valid_ahdi = _ahdi->parse(handler);
 
 	/*
 	 * Both tables are valid (although we would have expected a PMBR in
@@ -412,12 +429,12 @@ Block::Partition_table & Block::Main::_table()
 	}
 
 	auto pick_final_table = [&] () -> Partition_table & {
-		if (valid_gpt)  return _gpt;
-		if (valid_mbr)  return _mbr;
-		if (valid_ahdi) return _ahdi;
+		if (valid_gpt)  return *_gpt;
+		if (valid_mbr)  return *_mbr;
+		if (valid_ahdi) return *_ahdi;
 
 		/* fall back to entire disk in partition 0 */
-		_disk.construct(*this, _heap, _info);
+		_disk.construct(handler, _heap, handler.info());
 
 		return *_disk;
 	};
