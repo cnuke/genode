@@ -25,11 +25,6 @@ class Genode::Xml_generator
 {
 	private:
 
-		/**
-		 * Buffer descriptor where the XML output goes to
-		 *
-		 * All 'append' methods may throw a 'Buffer_exceeded' exception.
-		 */
 		class Out_buffer
 		{
 			private:
