@@ -270,7 +270,7 @@ class Audio_out::Root : public Audio_out::Root_component
 
 	protected:
 
-		Session_component *_create_session(const char *args)
+		Create_result _create_session(const char *args)
 		{
 			char channel_name[16];
 			Channel_number channel_number = INVALID;
@@ -279,7 +279,7 @@ class Audio_out::Root : public Audio_out::Root_component
 			                                             "left");
 			Out::channel_number(channel_name, &channel_number);
 
-			return new (md_alloc())
+			return *new (md_alloc())
 				Session_component(_env, channel_number, _cap);
 		}
 
