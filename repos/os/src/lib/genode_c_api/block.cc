@@ -13,6 +13,7 @@
 
 #include <base/env.h>
 #include <block/request_stream.h>
+#include <block/session_map.h>
 #include <root/component.h>
 #include <os/buffered_xml.h>
 #include <os/reporter.h>
@@ -25,41 +26,6 @@ using namespace Genode;
 
 namespace {
 	using namespace Genode;
-
-	template <uint16_t ENTRIES>
-	struct Bitmap
-	{
-		Genode::Bit_array<ENTRIES> _bitmap { };
-
-		uint16_t capacity() const { return ENTRIES; }
-
-		uint16_t _bitmap_find_free() const
-		{
-			for (uint16_t i = 0; i < ENTRIES; i++) {
-				if (_bitmap.get(i, 1)) { continue; }
-				return i;
-			}
-			return ENTRIES;
-		}
-
-		void reserve(uint16_t const id) {
-			_bitmap.set(id, 1); }
-
-		bool used(uint16_t const cid) const {
-			return _bitmap.get(cid, 1); }
-
-		uint16_t alloc()
-		{
-			uint16_t const id = _bitmap_find_free();
-			_bitmap.set(id, 1);
-			return id;
-		}
-
-		void free(uint16_t id)
-		{
-			_bitmap.clear(id, 1);
-		}
-	};
 
 	using Session_space = Id_space<genode_block_session>;
 
@@ -168,30 +134,8 @@ class Block_root : public Root_component<genode_block_session>
 
 		Session_space _session_space { };
 
-		static const uint16_t MAX_SESSIONS = 64u;
-		using Session_map = Bitmap<MAX_SESSIONS>;
+		using Session_map = Block::Session_map<>;
 		Session_map _session_map { };
-
-		uint16_t _first_id = 0;
-		uint16_t _id_array[MAX_SESSIONS] { };
-
-		// XXX manage sessions per device
-		void _for_each_session(auto const &fn)
-		{
-			uint16_t max_ids = 0;
-			for (uint16_t i = 0; i < _session_map.capacity(); i++)
-				if (_session_map.used(i)) {
-					_id_array[max_ids] = i;
-					++max_ids;
-				}
-
-			for (uint16_t i = 0; i < max_ids; i++) {
-				uint16_t const id = _id_array[(_first_id + i) % max_ids];
-
-				fn(Session_space::Id { .value = id });
-			}
-			_first_id++;
-		}
 
 		Env                         & _env;
 		Signal_context_capability     _sigh_cap;
@@ -362,11 +306,14 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 
 	genode_block_session * ret = nullptr;
 
-	uint16_t const new_session_id = _session_map.alloc();
-	if (new_session_id == _session_map.capacity()) {
-		_session_map.free(new_session_id);
-		throw Service_denied();
-	}
+	Session_map::Index new_session_id { 0u };
+
+	_session_map.alloc().with_result(
+		[&] (Session_map::Alloc_ok ok) {
+			new_session_id = ok.index; },
+		[&] (Session_map::Alloc_error) {
+			throw Service_denied(); }
+	);
 
 	_for_each_device_info([&] (Device_info & di) {
 		if (di.name != device)
@@ -383,7 +330,7 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 			.writeable  = di.info.writeable && writeable_arg
 		};
 
-		ret = new (md_alloc()) genode_block_session(_session_space, new_session_id,
+		ret = new (md_alloc()) genode_block_session(_session_space, new_session_id.value,
 		                                            _env, block_range, di, _sigh_cap,
 		                                            tx_buf_size);
 	});
@@ -401,10 +348,13 @@ void Block_root::_destroy_session(genode_block_session &session)
 {
 	genode_shared_dataspace * ds = session->_ds;
 	Session_space::Id const session_id = session->session_id();
-	_session_map.free(uint16_t(session_id.value));
 
 	Genode::destroy(md_alloc(), session);
 	_free_peer_buffer(ds);
+
+	Session_map::Index const index =
+		Session_map::Index::from_id(session_id.value);
+	_session_map.free(index);
 }
 
 
@@ -450,14 +400,15 @@ void Block_root::discontinue_device(const char * name)
 		if (!_devices[idx].constructed() || _devices[idx]->name != name)
 			continue;
 
-		_for_each_session([&] (Session_space::Id session_id) {
+		_session_map.for_each_index([&] (Session_map::Index index) {
+			Session_space::Id const session_id { .value = index.value };
 			_session_space.apply<genode_block_session>(session_id,
 				[&] (genode_block_session & session) {
 					if (session.device_name() == name)
 						session.mark_device_gone();
 				},
 				[&] { });
-		});
+			});
 
 		_devices[idx].destruct();
 		_report();
@@ -474,14 +425,16 @@ genode_block_session * Block_root::session(const char * name)
 
 void ::Root::for_each_session(const char * name, auto const & session_fn)
 {
-	_for_each_session([&] (Session_space::Id session_id) {
+	// XXX use name to select ids
+	_session_map.for_each_index([&] (Session_map::Index index) {
+		Session_space::Id const session_id { .value = index.value };
 		_session_space.apply<genode_block_session>(session_id,
 			[&] (genode_block_session & session) {
 				if (session.device_name() == name)
 					session_fn(&session);
 			},
 			[&] { error("session ", session_id.value, " not found"); });
-	});
+		});
 }
 
 
