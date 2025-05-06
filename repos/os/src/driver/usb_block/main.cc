@@ -765,6 +765,8 @@ class Usb::Block_driver
 				_block_cmd.destruct();
 			}
 		}
+
+		bool request_pending() const { return _block_cmd.constructed(); }
 };
 
 
@@ -798,6 +800,8 @@ struct Usb::Block_session_component : Rpc_object<Block::Session>
 	}
 
 	~Block_session_component() { _env.ep().dissolve(*this); }
+
+	bool pending { false };
 
 	Info info() const override { return _request_stream.info(); }
 
@@ -880,6 +884,9 @@ struct Usb::Main : Rpc_object<Typed_root<Block::Session>>
 
 				/* ack and release possibly pending packet */
 				auto session_ack_fn = [&] (Block_session_component &block_session) {
+					if (!block_session.pending)
+						return;
+
 					auto request_stream_ack_fn = [&] (Request_stream &request_stream) {
 						auto ack_fn = [&] (Request_stream::Ack &ack) {
 							auto completed_fn = [&] (Block::Request &request) {
@@ -887,10 +894,13 @@ struct Usb::Main : Rpc_object<Typed_root<Block::Session>>
 								request.operation.block_number -= block_session.offset();
 								ack.submit(request);
 								progress = true;
+
+								block_session.pending = false;
 							};
 							driver.with_completed(block_session.session_id(), completed_fn);
 						};
 						request_stream.try_acknowledge(ack_fn);
+						request_stream.wakeup_client_if_needed();
 					};
 					block_session.with_request_stream(request_stream_ack_fn);
 				};
@@ -908,20 +918,23 @@ struct Usb::Main : Rpc_object<Typed_root<Block::Session>>
 									                         block_session.session_id());
 								};
 								request_stream.with_payload(payload_submit_fn);
-								if (response != Response::RETRY)
+								if (response != Response::RETRY) {
 									progress = true;
+									block_session.pending = true;
+								}
 
 								return response;
 							};
 							request_stream.with_requests(request_submit_fn);
-							request_stream.wakeup_client_if_needed();
 						};
 						block_session.with_request_stream(request_stream_submit_fn);
 					};
 					_sessions.apply<Block_session_component>(session_id,
 					                                         block_session_submit_fn);
 				};
-				_for_each_session(session_submit_fn);
+
+				if (!driver.request_pending())
+					_for_each_session(session_submit_fn);
 
 				if (!progress)
 					break;
