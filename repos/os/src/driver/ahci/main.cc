@@ -17,6 +17,7 @@
 #include <base/heap.h>
 #include <base/log.h>
 #include <block/request_stream.h>
+#include <block/session_map.h>
 #include <os/reporter.h>
 #include <os/session_policy.h>
 #include <timer_session/connection.h>
@@ -27,45 +28,6 @@
 #include <ahci.h>
 #include <ata_protocol.h>
 #include <atapi_protocol.h>
-
-namespace {
-	using namespace Genode;
-
-	template <uint16_t ENTRIES>
-	struct Bitmap
-	{
-		Genode::Bit_array<ENTRIES> _bitmap { };
-
-		uint16_t capacity() const { return ENTRIES; }
-
-		uint16_t _bitmap_find_free() const
-		{
-			for (uint16_t i = 0; i < ENTRIES; i++) {
-				if (_bitmap.get(i, 1)) { continue; }
-				return i;
-			}
-			return ENTRIES;
-		}
-
-		void reserve(uint16_t const id) {
-			_bitmap.set(id, 1); }
-
-		bool used(uint16_t const cid) const {
-			return _bitmap.get(cid, 1); }
-
-		uint16_t alloc()
-		{
-			uint16_t const id = _bitmap_find_free();
-			_bitmap.set(id, 1);
-			return id;
-		}
-
-		void free(uint16_t id)
-		{
-			_bitmap.clear(id, 1);
-		}
-	};
-} /* anonymous namespace */
 
 
 namespace Ahci {
@@ -395,29 +357,8 @@ struct Ahci::Port_dispatcher
 	using Session_space = Id_space<Block_session_component>;
 	Session_space _sessions { };
 
-	static const uint16_t MAX_SESSIONS = 64u;
-	using Session_map = Bitmap<MAX_SESSIONS>;
+	using Session_map = Block::Session_map<>;
 	Session_map _session_map { };
-
-	uint16_t _first_id = 0;
-	uint16_t _id_array[MAX_SESSIONS] { };
-
-	void _for_each_session(auto const &fn)
-	{
-		uint16_t max_ids = 0;
-		for (uint16_t i = 0; i < _session_map.capacity(); i++)
-			if (_session_map.used(i)) {
-				_id_array[max_ids] = i;
-				++max_ids;
-			}
-
-		for (uint16_t i = 0; i < max_ids; i++) {
-			uint16_t const id = _id_array[(_first_id + i) % max_ids];
-
-			fn(Session_space::Id { .value = id });
-		}
-		_first_id++;
-	}
 
 	Signal_handler<Port_dispatcher> _request_handler {
 		_env.ep(), *this, &Port_dispatcher::_handle};
@@ -443,7 +384,9 @@ struct Ahci::Port_dispatcher
 	{
 		_sessions.apply<Block_session_component>(session_id,
 			[&] (Block_session_component &session) {
-				_session_map.free(uint16_t(session_id.value));
+				Session_map::Index const index =
+					Session_map::Index::from_id(session_id.value);
+				_session_map.free(index);
 				destroy(_sliced_heap, &session);
 			});
 	}
@@ -461,15 +404,18 @@ struct Ahci::Port_dispatcher
 	Session_capability new_session(Block::Range const &block_range,
 	                               size_t              tx_buf_size)
 	{
-		uint16_t const new_session_id = _session_map.alloc();
-		if (new_session_id == _session_map.capacity()) {
-			_session_map.free(new_session_id);
-			throw Service_denied();
-		}
+		Session_map::Index new_session_id { 0u };
+
+		_session_map.alloc().with_result(
+			[&] (Session_map::Alloc_ok ok) {
+				new_session_id = ok.index; },
+			[&] (Session_map::Alloc_error) {
+				throw Service_denied(); }
+		);
 
 		try {
 			Block_session_component *session =
-				new (_sliced_heap) Block_session_component(_sessions, new_session_id,
+				new (_sliced_heap) Block_session_component(_sessions, new_session_id.value,
 				                                           _env, _port, _request_handler,
 				                                           block_range, tx_buf_size);
 			return session->cap();
@@ -501,6 +447,7 @@ struct Ahci::Port_dispatcher
 						                                completed_fn);
 					};
 					request_stream.try_acknowledge(ack_fn);
+					request_stream.wakeup_client_if_needed();
 				};
 				block_session.with_request_stream(request_stream_ack_fn);
 			};
@@ -510,7 +457,8 @@ struct Ahci::Port_dispatcher
 			if (_port.stop_processing)
 				break;
 
-			auto session_submit_fn = [&] (Session_space::Id session_id) {
+			auto index_fn = [&] (Session_map::Index index) {
+				Session_space::Id const session_id { .value = index.value };
 				auto block_session_submit_fn = [&] (Block_session_component &block_session) {
 					auto request_stream_submit_fn = [&] (Request_stream &request_stream) {
 						auto request_submit_fn = [&] (Request request) {
@@ -536,14 +484,13 @@ struct Ahci::Port_dispatcher
 							return response;
 						};
 						request_stream.with_requests(request_submit_fn);
-						request_stream.wakeup_client_if_needed();
 					};
 					block_session.with_request_stream(request_stream_submit_fn);
 				};
 				_sessions.apply<Block_session_component>(session_id,
 				                                         block_session_submit_fn);
 			};
-			_for_each_session(session_submit_fn);
+			_session_map.for_each_index(index_fn);
 
 			if (!progress)
 				break;
