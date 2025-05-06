@@ -362,7 +362,7 @@ struct Monitor::Main : Sandbox::State_handler,
 		Reporter::Xml_generator xml(*_reporter, [&] () {
 			_sandbox.generate_state_report(xml); });
 
-		if (xml.exceeded())
+		if (xml.exceeded()) {
 
 			error("state report exceeds maximum size");
 
