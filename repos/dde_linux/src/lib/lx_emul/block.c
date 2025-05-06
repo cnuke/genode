@@ -135,9 +135,8 @@ static void inline block_handle_end_io(struct genode_block_session_context *ctx,
 {
 	struct genode_block_request * const req = ctx->req;
 
-	genode_block_ack_request(session, req, true);
-	// TODO only called when genode_block_ack_request did something
-	lx_user_handle_io();
+	if (genode_block_ack_request(session, req, true))
+		lx_user_handle_io();
 }
 
 

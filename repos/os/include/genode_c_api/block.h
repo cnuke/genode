@@ -77,8 +77,6 @@ struct genode_block_request {
 	void *                addr;
 };
 
-struct genode_block_session * genode_block_session_by_name(const char * name);
-
 struct genode_block_session_context;
 typedef void (*genode_block_session_one_session_t)
 	(struct genode_block_session_context *, struct genode_block_session *);
@@ -90,9 +88,9 @@ void genode_block_session_for_each_by_name(const char * name,
 struct genode_block_request *
 genode_block_request_by_session(struct genode_block_session * const session);
 
-void genode_block_ack_request(struct genode_block_session * const session,
-                              struct genode_block_request * const request,
-                              int success);
+int genode_block_ack_request(struct genode_block_session * const session,
+                             struct genode_block_request * const request,
+                             int success);
 
 void genode_block_notify_peers(void);
 

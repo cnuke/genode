@@ -13,6 +13,7 @@
 
 #include <base/env.h>
 #include <block/request_stream.h>
+#include <block/session_map.h>
 #include <root/component.h>
 #include <os/buffered_xml.h>
 #include <os/reporter.h>
@@ -26,48 +27,17 @@ using namespace Genode;
 namespace {
 	using namespace Genode;
 
-	template <uint16_t ENTRIES>
-	struct Bitmap
-	{
-		Genode::Bit_array<ENTRIES> _bitmap { };
-
-		uint16_t capacity() const { return ENTRIES; }
-
-		uint16_t _bitmap_find_free() const
-		{
-			for (uint16_t i = 0; i < ENTRIES; i++) {
-				if (_bitmap.get(i, 1)) { continue; }
-				return i;
-			}
-			return ENTRIES;
-		}
-
-		void reserve(uint16_t const id) {
-			_bitmap.set(id, 1); }
-
-		bool used(uint16_t const cid) const {
-			return _bitmap.get(cid, 1); }
-
-		uint16_t alloc()
-		{
-			uint16_t const id = _bitmap_find_free();
-			_bitmap.set(id, 1);
-			return id;
-		}
-
-		void free(uint16_t id)
-		{
-			_bitmap.clear(id, 1);
-		}
-	};
-
 	using Session_space = Id_space<genode_block_session>;
+	using Session_map   = Block::Session_map<>;
 
 	struct Device_info {
 		using Name = String<64>;
 
 		Name                 const name;
 		Block::Session::Info const info;
+
+		Session_space _session_space { };
+		Session_map   _session_map   { };
 
 		Device_info(const char * name, Block::Session::Info info)
 		: name(name), info(info) { }
@@ -146,7 +116,7 @@ class genode_block_session : public Rpc_object<Block::Session>
 		Capability<Tx> tx_cap() override { return _rs.tx_cap(); }
 
 		genode_block_request * request();
-		void ack(genode_block_request * req, bool success);
+		bool ack(genode_block_request * req, bool success);
 
 		void notify_peers() { _rs.wakeup_client_if_needed(); }
 
@@ -165,33 +135,6 @@ class Block_root : public Root_component<genode_block_session>
 	private:
 
 		enum { MAX_BLOCK_DEVICES = 32 };
-
-		Session_space _session_space { };
-
-		static const uint16_t MAX_SESSIONS = 64u;
-		using Session_map = Bitmap<MAX_SESSIONS>;
-		Session_map _session_map { };
-
-		uint16_t _first_id = 0;
-		uint16_t _id_array[MAX_SESSIONS] { };
-
-		// XXX manage sessions per device
-		void _for_each_session(auto const &fn)
-		{
-			uint16_t max_ids = 0;
-			for (uint16_t i = 0; i < _session_map.capacity(); i++)
-				if (_session_map.used(i)) {
-					_id_array[max_ids] = i;
-					++max_ids;
-				}
-
-			for (uint16_t i = 0; i < max_ids; i++) {
-				uint16_t const id = _id_array[(_first_id + i) % max_ids];
-
-				fn(Session_space::Id { .value = id });
-			}
-			_first_id++;
-		}
 
 		Env                         & _env;
 		Signal_context_capability     _sigh_cap;
@@ -213,7 +156,8 @@ class Block_root : public Root_component<genode_block_session>
 		{
 			for (unsigned idx = 0; idx < MAX_BLOCK_DEVICES; idx++)
 				if (_devices[idx].constructed())
-					fn(*_devices[idx]);
+					if (fn(*_devices[idx]))
+						break;
 		}
 
 		void _report();
@@ -298,11 +242,12 @@ genode_block_request * genode_block_session::request()
 }
 
 
-void genode_block_session::ack(genode_block_request * req, bool success)
+bool genode_block_session::ack(genode_block_request * req, bool success)
 {
 	if (req->id != _elem.id().value)
-		return;
+		return false;
 
+	bool result = false;
 	_for_each_request(Request::IN_FLIGHT, [&] (Request & r) {
 		if (&r.dev_req == req)
 			r.state = Request::DONE;
@@ -314,8 +259,11 @@ void genode_block_session::ack(genode_block_request * req, bool success)
 			r.state = Request::FREE;
 			r.peer_req.success = success;
 			ack.submit(r.peer_req);
+			result = true;
 		});
 	});
+
+	return result;
 }
 
 
@@ -362,15 +310,15 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 
 	genode_block_session * ret = nullptr;
 
-	uint16_t const new_session_id = _session_map.alloc();
-	if (new_session_id == _session_map.capacity()) {
-		_session_map.free(new_session_id);
-		throw Service_denied();
-	}
-
 	_for_each_device_info([&] (Device_info & di) {
 		if (di.name != device)
-			return;
+			return false;
+
+		Session_map::Index new_session_id { 0u };
+
+		di._session_map.alloc().with_result(
+			[&] (Session_map::Alloc_ok ok) { new_session_id = ok.index; },
+			[&] (Session_map::Alloc_error) { throw Service_denied(); });
 
 		bool const writeable_arg =
 			Arg_string::find_arg(args, "writeable").bool_value(true);
@@ -383,13 +331,17 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 			.writeable  = di.info.writeable && writeable_arg
 		};
 
-		ret = new (md_alloc()) genode_block_session(_session_space, new_session_id,
-		                                            _env, block_range, di, _sigh_cap,
-		                                            tx_buf_size);
+		try {
+			ret = new (md_alloc()) genode_block_session(di._session_space, new_session_id.value,
+			                                            _env, block_range, di, _sigh_cap,
+			                                            tx_buf_size);
+		} catch (...) {
+			di._session_map.free(new_session_id); }
+
+		return true;
 	});
 
 	if (!ret) {
-		_session_map.free(new_session_id);
 		throw Service_denied();
 	}
 
@@ -399,12 +351,24 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 
 void Block_root::_destroy_session(genode_block_session &session)
 {
-	genode_shared_dataspace * ds = session->_ds;
-	Session_space::Id const session_id = session->session_id();
-	_session_map.free(uint16_t(session_id.value));
+	genode_shared_dataspace * ds = session._ds;
+	Session_space::Id const session_id = session.session_id();
 
-	Genode::destroy(md_alloc(), session);
+	Device_info::Name const device_name = session.device_name();
+
+	Genode::destroy(md_alloc(), &session);
 	_free_peer_buffer(ds);
+
+	_for_each_device_info([&] (Device_info &di) {
+		if (di.name != device_name)
+			return false;
+
+		Session_map::Index const index =
+			Session_map::Index::from_id(session_id.value);
+		di._session_map.free(index);
+
+		return true;
+	});
 }
 
 
@@ -420,6 +384,8 @@ void Block_root::_report()
 				xml.attribute("block_size",  di.info.block_size);
 				xml.attribute("block_count", di.info.block_count);
 			});
+			/* report all */
+			return false;
 		});
 	});
 }
@@ -450,47 +416,56 @@ void Block_root::discontinue_device(const char * name)
 		if (!_devices[idx].constructed() || _devices[idx]->name != name)
 			continue;
 
-		_for_each_session([&] (Session_space::Id session_id) {
-			_session_space.apply<genode_block_session>(session_id,
+		Device_info &di = *_devices[idx];
+
+		di._session_map.for_each_index([&] (Session_map::Index index) {
+			Session_space::Id const session_id { .value = index.value };
+			di._session_space.apply<genode_block_session>(session_id,
 				[&] (genode_block_session & session) {
-					if (session.device_name() == name)
-						session.mark_device_gone();
-				},
+					session.mark_device_gone(); },
 				[&] { });
-		});
+			});
 
 		_devices[idx].destruct();
 		_report();
-		return;
 	}
 }
 
 
-genode_block_session * Block_root::session(const char * name)
+genode_block_session * Block_root::session(const char *)
 {
 	return nullptr;
 }
 
 
-void ::Root::for_each_session(const char * name, auto const & session_fn)
+void Block_root::for_each_session(const char * name, auto const & session_fn)
 {
-	_for_each_session([&] (Session_space::Id session_id) {
-		_session_space.apply<genode_block_session>(session_id,
-			[&] (genode_block_session & session) {
-				if (session.device_name() == name)
-					session_fn(&session);
-			},
-			[&] { error("session ", session_id.value, " not found"); });
+	_for_each_device_info([&] (Device_info &di) {
+		if (di.name != name)
+			return false;
+
+		di._session_map.for_each_index([&] (Session_map::Index index) {
+			Session_space::Id const session_id { .value = index.value };
+			di._session_space.apply<genode_block_session>(session_id,
+				[&] (genode_block_session & session) {
+						session_fn(&session); },
+				[&] { error("session ", session_id.value, " not found"); });
+			});
+		return true;
 	});
 }
 
 
 void Block_root::notify_peers()
 {
-	_session_space.for_each<genode_block_session>(
-		[&] (genode_block_session & session) {
-			session.notify_peers();
-		});
+	_for_each_device_info([&] (Device_info &di) {
+		di._session_space.for_each<genode_block_session>(
+			[&] (genode_block_session & session) {
+				session.notify_peers(); });
+
+		/* notify all peers */
+		return false;
+	});
 }
 
 
@@ -546,13 +521,6 @@ extern "C" void genode_block_discontinue_device(const char * name)
 }
 
 
-extern "C" struct genode_block_session *
-genode_block_session_by_name(const char * name)
-{
-	return _block_root ? _block_root->session(name) : nullptr;
-}
-
-
 extern "C" void
 genode_block_session_for_each_by_name(const char * name,
                                       genode_block_session_context *ctx,
@@ -574,12 +542,12 @@ genode_block_request_by_session(struct genode_block_session * session)
 }
 
 
-extern "C" void genode_block_ack_request(struct genode_block_session * session,
-                                         struct genode_block_request * req,
-                                         int success)
+extern "C" int genode_block_ack_request(struct genode_block_session * session,
+                                        struct genode_block_request * req,
+                                        int success)
 {
-	if (session)
-		session->ack(req, success ? true : false);
+	return session ? session->ack(req, success ? true : false)
+	               : 0;
 }
 
 
