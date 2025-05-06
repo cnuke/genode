@@ -23,6 +23,7 @@
 #include <base/registry.h>
 #include <base/tslab.h>
 #include <block/request_stream.h>
+#include <block/session_map.h>
 #include <dataspace/client.h>
 #include <os/attached_mmio.h>
 #include <os/reporter.h>
@@ -58,9 +59,6 @@ namespace {
 			return ENTRIES;
 		}
 
-		void reserve(uint16_t const id) {
-			_bitmap.set(id, 1); }
-
 		bool used(uint16_t const cid) const {
 			return _bitmap.get(cid, 1); }
 
@@ -76,8 +74,6 @@ namespace {
 			_bitmap.clear(id, 1);
 		}
 	};
-
-
 } /* anonymous namespace */
 
 
@@ -2516,7 +2512,7 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 	using Session_space = Id_space<Block_session_component>;
 	Session_space _sessions { };
 
-	using Session_map = Bitmap<MAX_IO_QUEUES>;
+	using Session_map = Block::Session_map<>;
 	Session_map _session_map { };
 
 	struct Session_command;
@@ -2758,13 +2754,21 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 
 					_driver.with_io_queue(queue_id, [&] (Io_queue &io_queue) {
 
-						uint16_t const new_session_id = _session_map.alloc();
+						Session_map::Index new_session_id { 0u };
+
+						_session_map.alloc().with_result(
+							[&] (Session_map::Alloc_ok ok) {
+								new_session_id = ok.index; },
+							[&] (Session_map::Alloc_error) {
+								_driver.free_io_queue(ctrlr, queue_id);
+								throw Service_denied(); });
+
 						try {
 							session = new (_sliced_heap)
 								Block_session_component(_sessions, _env,
 								                        queue_id, io_queue.dma_cap(),
 								                        _request_handler, _driver.info(),
-								                        block_range, new_session_id);
+								                        block_range, new_session_id.value);
 						} catch (...) {
 							_session_map.free(new_session_id);
 							_driver.free_io_queue(ctrlr, queue_id);
@@ -2796,15 +2800,21 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 				session_id = session.session_id();
 			});
 
-		if (found)
-			_sessions.apply<Block_session_component>(session_id,
-				[&] (Block_session_component &session) {
-					Io_queue_space::Id const queue_id = session.queue_id();
-					destroy(_sliced_heap, &session);
-					_session_map.free(uint16_t(session_id.value));
-					_driver.with_controller([&] (auto & ctrlr) {
-						_driver.free_io_queue(ctrlr, queue_id); });
-				});
+		if (!found)
+			return;
+
+		_sessions.apply<Block_session_component>(session_id,
+			[&] (Block_session_component &session) {
+				Io_queue_space::Id const queue_id = session.queue_id();
+				destroy(_sliced_heap, &session);
+
+				Session_map::Index const index =
+					Session_map::Index::from_id(session_id.value);
+				_session_map.free(index);
+
+				_driver.with_controller([&] (auto & ctrlr) {
+					_driver.free_io_queue(ctrlr, queue_id); });
+			});
 	}
 
 	Main(Genode::Env &env) : _env(env)
@@ -2813,7 +2823,14 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 		 * Mark first id (0) as used so that it is never allocated
 		 * automatically and use it to denote an unset session id.
 		 */
-		_session_map.reserve(0);
+		bool reserved = true;
+		_session_map.alloc().with_error(
+			[&] (Session_map::Alloc_error) { reserved = false; });
+		if (!reserved) {
+			error("could not reserve index for admin queue");
+			_env.parent().exit(-1);
+			return;
+		}
 
 		if (_force_sq)
 			_driver.with_controller([&] (Nvme::Controller &ctrlr) {
