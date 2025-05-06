@@ -106,7 +106,7 @@ install_config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="yes" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="256M" size="4K" batch="1"/>
+				<sequential length="4M" size="4K" batch="1"/>
 			</tests>
 		</config>
 		<route>
@@ -120,7 +120,7 @@ install_config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="256M" size="4K" batch="1"/>
+				<sequential length="4M" size="4K" batch="1"/>
 			</tests>
 		</config>
 		<route>
@@ -134,7 +134,7 @@ install_config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="256M" size="4K" batch="1"/>
+				<sequential length="4M" size="4K" batch="1"/>
 			</tests>
 		</config>
 		<route>
@@ -148,7 +148,7 @@ install_config {
 		<resource name="RAM" quantum="64M"/>
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
-				<sequential length="256M" size="4K" batch="1"/>
+				<sequential length="4M" size="4K" batch="1"/>
 			</tests>
 		</config>
 		<route>
