@@ -275,6 +275,72 @@ u16 pci_find_ext_capability(struct pci_dev *dev, int cap)
 }
 
 
+struct pci_saved_state *pci_store_saved_state(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+	return NULL;
+}
+
+
+int pci_load_saved_state(struct pci_dev *dev, struct pci_saved_state *state)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+int pci_save_state(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+void pci_restore_state(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+int pci_reset_function(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+int pci_set_power_state(struct pci_dev *dev, pci_power_t state)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+void pci_free_irq_vectors(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+int pci_assign_resource(struct pci_dev *dev, int i)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+void pci_release_region(struct pci_dev *, int)
+{
+	lx_emul_trace(__func__);
+}
+
+
+int pci_request_region(struct pci_dev *, int, const char *)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
 #include <linux/thermal.h>
 
 struct thermal_cooling_device *thermal_cooling_device_register(const char *s,
@@ -782,4 +848,30 @@ int ___ratelimit(struct ratelimit_state * rs,const char * func)
 {
 	lx_emul_trace(__func__);
 	return 0;
+}
+
+
+#include <linux/vmalloc.h>
+
+void * __vmalloc(unsigned long size,gfp_t gfp_mask)
+{
+	lx_emul_trace(__func__);
+	return NULL;
+}
+
+
+void iov_iter_kvec(struct iov_iter *i, unsigned int direction,
+            const struct kvec *kvec, unsigned long nr_segs,
+            size_t count)
+{
+	WARN_ON(direction & ~(READ | WRITE));
+	*i = (struct iov_iter){
+		.iter_type = ITER_KVEC,
+			.copy_mc = false,
+			.data_source = direction,
+			.kvec = kvec,
+			.nr_segs = nr_segs,
+			.iov_offset = 0,
+			.count = count
+	};
 }

@@ -134,6 +134,14 @@ void __lockfunc _raw_read_unlock(rwlock_t * lock)
 #endif
 
 
+#ifndef CONFIG_INLINE_READ_LOCK_IRQ
+void __lockfunc _raw_read_lock_irq(rwlock_t * lock)
+{
+	arch_read_lock(&(lock)->raw_lock);
+}
+#endif
+
+
 #ifndef CONFIG_INLINE_READ_LOCK_IRQSAVE
 unsigned long __lockfunc _raw_read_lock_irqsave(rwlock_t * lock)
 {
