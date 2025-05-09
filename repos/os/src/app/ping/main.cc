@@ -170,10 +170,6 @@ void Main::handle_eth(Ethernet_frame &eth,
                       Size_guard     &size_guard)
 {
 	try {
-		/* print receipt message */
-		if (_verbose) {
-			log("rcv ", eth); }
-
 		if (!ip_config().valid) {
 			_dhcp_client->handle_eth(eth, size_guard); }
 
@@ -181,10 +177,15 @@ void Main::handle_eth(Ethernet_frame &eth,
 		if (eth.dst() != _nic.mac() &&
 			eth.dst() != Ethernet_frame::broadcast())
 		{
-			if (_verbose) {
-				log("bad ETH destination"); }
+			// if (_verbose) {
+			// 	log("bad ETH destination"); }
 			return;
 		}
+
+		/* print receipt message */
+		if (_verbose) {
+			log("rcv ", eth); }
+
 		/* select ETH sub-protocol */
 		switch (eth.type()) {
 		case Ethernet_frame::Type::ARP:  _handle_arp(eth, size_guard); break;
