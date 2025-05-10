@@ -1,7 +1,7 @@
 /*
  * \brief  Array defining order of Linux Kernel initcalls
  * \author Automatically generated file - do no edit
- * \date   2024-07-31
+ * \date   2025-05-11
  */
 
 #pragma once
@@ -57,6 +57,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_mm_sysfs_init2",
 	"__initcall_init_per_zone_wmark_min2",
 	"__initcall_mpi_init2",
+	"__initcall_mhi_init2",
 	"__initcall_acpi_gpio_setup_params2",
 	"__initcall_pcibus_class_init2",
 	"__initcall_pci_driver_init2",
@@ -71,6 +72,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_i2c_init2",
 	"__initcall_thermal_init2",
 	"__initcall_init_menu2",
+	"__initcall_qrtr_proto_init2",
 	"__initcall_amd_postcore_init2",
 	"__initcall_kobject_uevent_init2",
 	"__initcall_bts_init3",
@@ -107,6 +109,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_crypto_gcm_module_init4",
 	"__initcall_crypto_ccm_module_init4",
 	"__initcall_aes_init4",
+	"__initcall_michael_mic_init4",
 	"__initcall_ghash_mod_init4",
 	"__initcall_pci_slot_init4",
 	"__initcall_fbmem_init4",
@@ -257,6 +260,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_rtl8169_pci_driver_init6",
 	"__initcall_ath9k_init6",
 	"__initcall_ath9k_cmn_init6",
+	"__initcall_ath11k_pci_init6",
 	"__initcall_iwl_drv_init6",
 	"__initcall_iwl_init6",
 	"__initcall_iwl_mvm_init6",
@@ -312,6 +316,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_snd_sof_pci_intel_lnl_driver_init6",
 	"__initcall_sock_diag_init6",
 	"__initcall_packet_init6",
+	"__initcall_qcom_mhi_qrtr_driver_init6",
 	"__initcall_kernel_do_mounts_initrd_sysctls_init7",
 	"__initcall_sld_mitigate_sysctl_init7",
 	"__initcall_microcode_init7",

@@ -24,6 +24,7 @@ CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/ath/
 CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/ath/ath9k
 CC_C_OPT += -I$(LX_SRC_DIR)/drivers/net/wireless/ath/ath11k
 CC_C_OPT += -I$(LX_SRC_DIR)/drivers/bus/mhi
+CC_C_OPT += -I$(LX_SRC_DIR)/drivers/bus/mhi/host
 CC_C_OPT += -I$(LX_SRC_DIR)/include/linux
 
 KBUILD_MODNAME_drivers/net/wireless/realtek/rtlwifi/rtl8188ce/sw := rtl8188ce
