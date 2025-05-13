@@ -361,7 +361,7 @@ struct Timer::Root : public Root_component<Session_component>
 
 		void _destroy_session(Session_component &s) override
 		{
-			Genode::destroy(md_alloc(), s);
+			Genode::destroy(md_alloc(), &s);
 		}
 
 	public:
