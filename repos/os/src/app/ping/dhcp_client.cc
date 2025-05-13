@@ -91,7 +91,7 @@ void Dhcp_client::_set_state(State state, Microseconds timeout)
 Microseconds Dhcp_client::_rerequest_timeout(unsigned lease_time_div_log2)
 {
 	/* FIXME limit the time because of shortcomings in timeout framework */
-	enum { MAX_TIMEOUT_SEC = 3600 };
+	enum { MAX_TIMEOUT_SEC = 60u * 15u };
 	uint64_t timeout_sec = _lease_time_sec >> lease_time_div_log2;
 
 	if (timeout_sec > MAX_TIMEOUT_SEC) {
@@ -105,9 +105,15 @@ Microseconds Dhcp_client::_rerequest_timeout(unsigned lease_time_div_log2)
 void Dhcp_client::_handle_timeout(Duration)
 {
 	switch (_state) {
-	case State::BOUND:  _rerequest(State::RENEW);     break;
-	case State::RENEW:  _rerequest(State::REBIND);    break;
-	case State::REBIND: _handler.discard_ip_config(); [[fallthrough]];
+	case State::BOUND:
+		error(__func__, ":", __LINE__, ": BOUND");
+		_rerequest(State::RENEW);     break;
+	case State::RENEW:
+		error(__func__, ":", __LINE__, ": RENEW");
+		_rerequest(State::REBIND);    break;
+	case State::REBIND:
+		error(__func__, ":", __LINE__, ": REBIND");
+		_handler.discard_ip_config(); [[fallthrough]];
 	default:            _discover();
 	}
 }
