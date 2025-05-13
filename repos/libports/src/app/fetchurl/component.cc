@@ -68,6 +68,7 @@ class Fetchurl::Fetch : List<Fetch>::Element
 		Path const path;
 		Url  const proxy;
 		long       retry;
+		bool const head;
 
 		double dltotal = 0;
 		double dlnow = 0;
@@ -77,10 +78,10 @@ class Fetchurl::Fetch : List<Fetch>::Element
 		int fd = -1;
 
 		Fetch(Main &main, Url const &url, Path const &path,
-		      Url const &proxy, long retry)
+		      Url const &proxy, long retry, bool head)
 		:
 			main(main), url(url), path(path),
-			proxy(proxy), retry(retry+1)
+			proxy(proxy), retry(retry+1), head(head)
 		{ }
 };
 
@@ -190,7 +191,9 @@ struct Fetchurl::Main
 			Url  const proxy = node.attribute_value("proxy", Url());
 			long const retry = node.attribute_value("retry", 0L);
 
-			auto *f = new (_heap) Fetch(*this, url, path, proxy, retry);
+			bool const head  = node.attribute_value("head", false);
+
+			auto *f = new (_heap) Fetch(*this, url, path, proxy, retry, head);
 			_fetches.insert(f);
 		};
 
@@ -301,6 +304,9 @@ struct Fetchurl::Main
 		}
 
 		curl_easy_setopt(_curl, CURLOPT_USERAGENT, "fetchurl/" LIBCURL_VERSION);
+
+		if (_fetch.head)
+			curl_easy_setopt(_curl, CURLOPT_NOBODY, 1L);
 
 		CURLcode res = curl_easy_perform(_curl);
 		close(_fetch.fd);
