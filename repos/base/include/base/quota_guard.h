@@ -190,7 +190,7 @@ class Genode::Quota_guard
 		enum class Error { LIMIT_EXCEEDED };
 
 		using Reservation = Genode::Allocation<Quota_guard>;
-		using Result      = Reservation::Attempt;
+		using Result      = typename Reservation::Attempt;
 
 		Result reserve(UNIT amount)
 		{
