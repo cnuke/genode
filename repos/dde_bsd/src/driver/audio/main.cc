@@ -457,7 +457,7 @@ class Audio_in::Root : public Audio_in::Root_component
 
 	protected:
 
-		Session_component *_create_session(char const *args)
+		Create_result _create_session(char const *args)
 		{
 			char channel_name[16];
 			Channel_number channel_number = INVALID;
@@ -465,7 +465,7 @@ class Audio_in::Root : public Audio_in::Root_component
 			                                             sizeof(channel_name),
 			                                             "left");
 			In::channel_number(channel_name, &channel_number);
-			return new (md_alloc()) Session_component(_env, channel_number, _cap);
+			return *new (md_alloc()) Session_component(_env, channel_number, _cap);
 		}
 
 	public:
