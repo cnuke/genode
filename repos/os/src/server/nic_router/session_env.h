@@ -41,9 +41,9 @@ class Genode::Session_env : public Ram_allocator,
 			size_t ram_consumpt { _env.pd().used_ram().value };
 			size_t cap_consumpt { _env.pd().used_caps().value };
 
-			_ram_guard.reserve(Ram_quota{ram_consumpt}).with_result(
+			_ram_guard.reserve(Ram_quota{max_ram_consumpt}).with_result(
 				[&] (Ram_quota_guard::Reservation &reserved_ram) {
-					_cap_guard.reserve(Cap_quota{cap_consumpt}).with_result(
+					_cap_guard.reserve(Cap_quota{max_cap_consumpt}).with_result(
 						[&] (Cap_quota_guard::Reservation &reserved_caps) {
 							reserved_ram.deallocate  = false;
 							reserved_caps.deallocate = false;
