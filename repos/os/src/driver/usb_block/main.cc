@@ -922,11 +922,14 @@ struct Usb::Main : Rpc_object<Typed_root<Block::Session>>
 
 		Session_map::Index new_session_id { 0u };
 
-		_session_map.alloc().with_result(
+		if (!_session_map.alloc().convert<bool>(
 			[&] (Session_map::Alloc_ok ok) {
-				new_session_id = ok.index; },
+				new_session_id = ok.index;
+				return true;
+			},
 			[&] (Session_map::Alloc_error) {
-				throw Service_denied(); });
+				return false }))
+			return Service::Create_error::DENIED;
 
 		try {
 			Block_session_component *session =
