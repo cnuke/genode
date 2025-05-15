@@ -1,7 +1,6 @@
 gcc14.patch
 
 diff --git a/configure b/configure
-index 3399a33..9736738 100755
 --- a/configure
 +++ b/configure
 @@ -14417,6 +14417,7 @@ else
@@ -13,7 +12,6 @@ index 3399a33..9736738 100755
  main ()
  {
 diff --git a/lib/termcap/tparam.c b/lib/termcap/tparam.c
-index c4bff08..942f1a4 100644
 --- a/lib/termcap/tparam.c
 +++ b/lib/termcap/tparam.c
 @@ -34,6 +34,10 @@ extern char *realloc ();
@@ -28,10 +26,24 @@ index c4bff08..942f1a4 100644
  #  define bcopy(s, d, n)	memcpy ((d), (s), (n))
  #endif
 diff --git a/parse.y b/parse.y
-index f415d2e..2bae9c4 100644
 --- a/parse.y
 +++ b/parse.y
 @@ -5738,7 +5738,11 @@ decode_prompt_string (string)
+ 	      goto add_string;
+ 
+ 	    case 'j':
++#if defined (JOB_CONTROL)
+ 	      temp = itos (count_all_jobs ());
++#else
++	      temp = savestring("1");
++#endif
+ 	      goto add_string;
+ 
+ 	    case 'l':
+diff --git a/y.tab.c b/y.tab.c
+--- a/y.tab.c
++++ b/y.tab.c
+@@ -8029,7 +8029,11 @@ decode_prompt_string (string)
  	      goto add_string;
  
  	    case 'j':
