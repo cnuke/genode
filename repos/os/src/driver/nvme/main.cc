@@ -2756,12 +2756,15 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 
 						Session_map::Index new_session_id { 0u };
 
-						_session_map.alloc().with_result(
+						if (!_session_map.alloc().convert<bool>(
 							[&] (Session_map::Alloc_ok ok) {
-								new_session_id = ok.index; },
+								new_session_id = ok.index;
+								return true;
+							},
 							[&] (Session_map::Alloc_error) {
 								_driver.free_io_queue(ctrlr, queue_id);
-								throw Service_denied(); });
+								return false; }))
+							return;
 
 						try {
 							session = new (_sliced_heap)
