@@ -242,11 +242,12 @@ genode_block_request * genode_block_session::request()
 }
 
 
-void genode_block_session::ack(genode_block_request * req, bool success)
+bool genode_block_session::ack(genode_block_request * req, bool success)
 {
 	if (req->id != _elem.id().value)
-		return;
+		return false;
 
+	bool result = false;
 	_for_each_request(Request::IN_FLIGHT, [&] (Request & r) {
 		if (&r.dev_req == req)
 			r.state = Request::DONE;
@@ -258,8 +259,11 @@ void genode_block_session::ack(genode_block_request * req, bool success)
 			r.state = Request::FREE;
 			r.peer_req.success = success;
 			ack.submit(r.peer_req);
+			result = true;
 		});
 	});
+
+	return result;
 }
 
 
@@ -527,12 +531,12 @@ genode_block_request_by_session(struct genode_block_session * session)
 }
 
 
-extern "C" void genode_block_ack_request(struct genode_block_session * session,
-                                         struct genode_block_request * req,
-                                         int success)
+extern "C" int genode_block_ack_request(struct genode_block_session * session,
+                                        struct genode_block_request * req,
+                                        int success)
 {
-	if (session)
-		session->ack(req, success ? true : false);
+	return session ? session->ack(req, success ? true : false);
+	               : 0;
 }
 
 
