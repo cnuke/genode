@@ -123,7 +123,7 @@ append config {
 		</route>
 	</start>
 
-	<start name="platform" caps="100" ram="2M" managing_system="yes">
+	<start name="platform" caps="1600" ram="4M" managing_system="yes">
 		<provides>
 			<service name="Platform"/>
 		</provides>
