@@ -166,11 +166,14 @@ struct Fetchurl::Main
 	{
 		using namespace Genode;
 
-		enum { DEFAULT_DELAY_MS = 100UL };
-
 		config_node.with_optional_sub_node("report",
 			[&] (Xml_node const &report_node) {
+
+				_reporter.construct(_env, "progress", "progress");
+
 				if (report_node.attribute_value("progress", false)) {
+					enum { DEFAULT_DELAY_MS = 100UL };
+
 					Milliseconds delay_ms { 0 };
 					delay_ms.value = report_node.attribute_value(
 						"delay_ms", (unsigned)DEFAULT_DELAY_MS);
@@ -179,7 +182,6 @@ struct Fetchurl::Main
 
 					_report_delay = Duration(delay_ms);
 					_schedule_report();
-					_reporter.construct(_env, "progress", "progress");
 				}
 			});
 

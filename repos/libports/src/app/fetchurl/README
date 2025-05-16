@@ -65,12 +65,14 @@ An example TOR proxying configuration:
 ! <fetch url="http://genode.org/about/LICENSE" path="LICENSE"
 !        proxy="sock5://10.0.0.1:9050" />
 
-The presence of a 'report' node in the configuration with an
-affirmative 'progress' attribute will enable a progress report.
-The 'delay_ms' attribute will set the minimum interval between
-reports and defauts to 100 miliseconds. The report format consists
-of a '<fetch>' node for each resource that features the following
-attributes:
+The presence of a 'report' node in the configuration will enable
+the generation of an report containing pending an finished downloads.
+When the 'progress' attribute is set the report will be updated
+periodically. The 'delay_ms' attribute will set the minimum interval
+between updates and defauts to 100 miliseconds.
+
+The report format consists of a '<fetch>' node for each resource that
+features the following attributes:
 
 * :url: specified URL of the resource
 
