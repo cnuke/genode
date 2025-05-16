@@ -437,16 +437,19 @@ struct Ahci::Main : Rpc_object<Typed_root<Block::Session>>, Dispatch
 			return Service::Create_error::INSUFFICIENT_RAM;
 		}
 
-		Port &port = driver->port(label, policy);
+		try {
+			Port &port = driver->port(label, policy);
 
-		if (block_session[port.index].constructed()) {
-			error("Device with number=", port.index, " is already in use");
-			return Service::Create_error::DENIED;
-		}
+			if (block_session[port.index].constructed()) {
+				error("Device with number=", port.index, " is already in use");
+				return Service::Create_error::DENIED;
+			}
 
-		port.writeable(policy.attribute_value("writeable", false));
-		block_session[port.index].construct(env, port, tx_buf_size);
-		return { block_session[port.index]->cap() };
+			port.writeable(policy.attribute_value("writeable", false));
+			block_session[port.index].construct(env, port, tx_buf_size);
+			return { block_session[port.index]->cap() };
+
+		} catch (...) { return Service::Create_error::DENIED; }
 	}
 
 	void upgrade(Session_capability, Root::Upgrade_args const&) override { }
