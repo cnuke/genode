@@ -491,11 +491,11 @@ void Driver::Device_model::update(Xml_node const & node,
 			if (irq.type != Irq_session::TYPE_LEGACY)
 				return;
 
-			if (detected_irqs.get(irq.number, 1).ok()) {
-				if (!shared_irqs.get(irq.number, 1).ok())
-					(void)shared_irqs.set(irq.number, 1);
+			if (detected_irqs.get(irq.number, 1)) {
+				if (!shared_irqs.get(irq.number, 1))
+					shared_irqs.set(irq.number, 1);
 			} else
-				(void)detected_irqs.set(irq.number, 1);
+				detected_irqs.set(irq.number, 1);
 		});
 	});
 
@@ -508,7 +508,7 @@ void Driver::Device_model::update(Xml_node const & node,
 			if (irq.type != Irq_session::TYPE_LEGACY)
 				return;
 
-			if (shared_irqs.get(irq.number, 1).ok())
+			if (shared_irqs.get(irq.number, 1))
 				irq.shared = true;
 		});
 	});
@@ -517,7 +517,7 @@ void Driver::Device_model::update(Xml_node const & node,
 	 * Create shared interrupt objects
 	 */
 	for (unsigned i = 0; i < MAX_IRQ; i++) {
-		if (!shared_irqs.get(i, 1).ok())
+		if (!shared_irqs.get(i, 1))
 			continue;
 		bool found = false;
 		_shared_irqs.for_each([&] (Shared_interrupt & sirq) {
