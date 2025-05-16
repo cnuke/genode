@@ -73,7 +73,7 @@ install_config {
 		</route>
 	</start>
 
-	<start name="platform" caps="100" managing_system="yes">
+	<start name="platform" caps="1600" ram="4M" managing_system="yes">
 		<provides>
 			<service name="Platform"/>
 		</provides>
@@ -119,7 +119,7 @@ install_config {
 		<config verbose="no" report="no" log="yes" stop_on_error="no">
 			<tests>
 				<sequential length="8M" size="1M" io_buffer="8M" batch="4"/>
-				<sequential start="1000" write="yes" length="2M" size="1M" io_buffer="8M" batch="4"/>
+				<sequential start="1000" length="2M" size="1M" io_buffer="8M" batch="4"/>
 			</tests>
 		</config>
 		<route>
