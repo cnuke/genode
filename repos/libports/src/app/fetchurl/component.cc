@@ -75,6 +75,9 @@ class Fetchurl::Fetch : List<Fetch>::Element
 
 		bool timeout = false;
 
+		bool finished = false;
+		bool successful = false;
+
 		int fd = -1;
 
 		Fetch(Main &main, Url const &url, Path const &path,
@@ -147,6 +150,11 @@ struct Fetchurl::Main
 					if (f->timeout) {
 						xml.attribute("timeout", true);
 					}
+
+					xml.attribute("finished", f->finished);
+					if (f->finished)
+						xml.attribute("result", f->successful ? "success"
+						                                      : "failed");
 				});
 			}
 		});
@@ -339,11 +347,15 @@ struct Fetchurl::Main
 				CURLcode res = _process_fetch(curl, *f);
 				if (res == CURLE_OK) {
 					f->retry = 0;
+					f->finished = true;
+					f->successful = true;
 				} else {
 					if (--f->retry > 0)
 						retry_some = true;
-					else
+					else {
+						f->finished = true;
 						exit_res = res;
+					}
 				}
 			}
 			if (!retry_some) break;
