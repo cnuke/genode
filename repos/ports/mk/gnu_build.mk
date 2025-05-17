@@ -161,6 +161,7 @@ Makefile reconfigure: env.sh static_libs_symlinks.tag $(SHARED_LIBS)
 
 env.sh:
 	$(VERBOSE)rm -f $@
+	$(VERBOSE)echo "export CC_FOR_BUILD='gcc-13'" >> $@
 	$(VERBOSE)echo "export CC='$(CC)'" >> $@
 	$(VERBOSE)echo "export CXX='$(CXX)'" >> $@
 	$(VERBOSE)echo "export LD='$(LD)'" >> $@
