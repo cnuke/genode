@@ -44,7 +44,7 @@ struct Genode::Trace::Control_area : Noncopyable
 		}
 
 		return _mapped.with_result(
-			[&] (Local_rm::Attachment const &a) { fn(*(Control *)a.ptr); },
+			[&] (Local_rm::Attachment const &a) { fn(((Control *)a.ptr)[i]); },
 			[&] (Local_rm::Error)               { missing_fn(); });
 	}
 
