@@ -87,7 +87,7 @@ static void allocate_and_define_rcv_sel()
 static seL4_MessageInfo_t new_seL4_message(Msgbuf_base const &msg)
 {
 	/*
-	 * currently only 1 CAP can be send and received,
+	 * currently only 1 CAP can be sent and received,
 	 * since alloc_rcv_sel only allocates 1 slot and not MAX_CAPS_PER_MSG
 	 */
 	ASSERT(msg.used_caps() <= 1);
