@@ -4,6 +4,14 @@
  * \date   2025-05-15
  */
 
+/*
+ * Copyright (C) 2025 Genode Labs GmbH
+ *
+ * This file is part of the Genode OS framework, which is distributed
+ * under the terms of the GNU Affero General Public License version 3.
+ */
+
+
 #ifndef _LOG_H_
 #define _LOG_H_
 
@@ -24,7 +32,7 @@ namespace Black_hole {
 
 class Black_hole::Log_session : public Session_object<Genode::Log_session>
 {
-public:
+	public:
 
 		Log_session(Env             &env,
 		            Resources const &resources,
@@ -40,11 +48,11 @@ public:
 
 class Black_hole::Log_root : public Root_component<Log_session>
 {
-private:
+	private:
 
 		Env &_env;
 
-protected:
+	protected:
 
 		Log_session *_create_session(const char *args)
 		override
@@ -56,7 +64,7 @@ protected:
 				       session_diag_from_args(args) };
 		}
 
-public:
+	public:
 
 	Log_root(Env       &env, Allocator &alloc)
             :
