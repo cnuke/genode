@@ -1,0 +1,1740 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 25.05
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+Tool-chain update
+#################
+
+; @cproc
+; Highlight a few benefits of GCC 14 compared to GCC 12?
+
+commit fc5e4aa1f04190f2e542442425250ead522fdf49
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sun May 4 18:44:23 2025 +0200
+
+    nova: adjust to GCC 14.2 update
+    
+    Issue #5540
+    Fixes #5541
+
+commit 6b759c3c7a94212c5cdfee1216f834410cf92e55
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Apr 27 08:18:23 2025 +0200
+
+    depot_autopilot: fix compile errors with GCC 14
+    
+    Fixes #5542
+
+commit ef6f379f665aa66457e23daf5216fdbe6442dcba
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri May 2 16:48:29 2025 +0200
+
+    gems: fix compile error with GCC 14 in sandboxed_runtime.h
+    
+    Fixes #5543
+
+commit 2f93343d3accad34f40cd40e5fa833fbd8bd3eb3
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri May 2 16:48:33 2025 +0200
+
+    sculpt_manager: fix compile error with GCC 14
+    
+    Fixes #5544
+
+commit 5a83987a44d5185f4991b0d231ce406535875240
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 6 18:11:20 2025 +0200
+
+    bash: fix compile errors with GCC 14
+    
+    Fixes #5546
+
+commit 5228aa14e759ba8b26ac23e251ef2045a8d4d7d0
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 6 20:05:32 2025 +0200
+
+    coreutils: fix compile error with GCC 14
+    
+    Fixes #5547
+
+commit 17ec097d4a96b45e6f966163c7500f13785cd531
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Apr 20 19:43:04 2025 +0200
+
+    update tool chain version to 25.05
+    
+    Issue #5540
+
+commit 3104d97d02405ca7e0640425027697ebbfa93597
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu Mar 27 09:15:30 2025 +0100
+
+    binutils: update to version 2.44
+    
+    Issue #5540
+
+commit 5a54eceb05896b9a40e59d59af1f5be3831fb4c1
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Apr 30 07:27:28 2025 +0200
+
+    gcc: update to version 14.2.0
+    
+    Issue #5540
+
+commit c753fbfad4c2a23404d02f8be068ceb1ec32f56a
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed Apr 30 07:27:58 2025 +0200
+
+    stdcxx: update to version 14.2.0
+    
+    Issue #5540
+
+commit 54146dc35d3015d8b3899664ddefda234d9969a1
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Apr 20 18:04:48 2025 +0200
+
+    gcov: update to version 14.2.0
+    
+    Issue #5540
+
+commit fed9103af285aaab2ef1f3eb69131465ca617fa2
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Apr 27 12:34:30 2025 +0200
+
+    sanitizer: update to version 14.2.0
+    
+    Issue #5540
+
+commit 7cbea17d21041f74c633565539f0d2c8f1e614bc
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed May 7 16:22:46 2025 +0200
+
+    foc: enable GCC 14 support
+    
+    Issue #5564
+
+commit 18933a2cd0ce230546cc5df04fb6b24ee185de82
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 7 21:08:17 2025 +0200
+
+    sel4: fix GCC-14 build error
+    
+    Renaming the local variable fixes the following error:
+    
+      declaration of ‘Genode::Quota_guard<Genode::Ram_quota>::Reservation ram’
+      shadows a parameter
+    
+    Issue #5540
+
+commit fabaa6acf43f480903cb62938220d550887c354e
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Sun Apr 27 21:19:12 2025 +0200
+
+    vfs_tresor: fix compile error with GCC 14
+    
+    Fixes #5552
+
+commit 87bd4d19a0c81318fda59d90bf713f4d2505e049
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed May 7 08:37:43 2025 +0200
+
+    vim: fix compile error with GCC 14
+    
+    Fixes #5548
+
+commit b2eceaa20ee796e18bb463924808cd41459c565e
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed May 7 09:53:33 2025 +0200
+
+    virtualbox6: fix compile errors with GCC 14
+    
+    Fixes #5553
+
+commit 4e4ed0ad7dadb68b3f271f95195e23a1d8b231b9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 8 11:32:53 2025 +0200
+
+    base-hw: fix compile error for GCC 14
+    
+    Issue #5565
+
+commit c4748534b7e682090703c935e49d3302d8270bcf
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed May 7 17:45:33 2025 +0200
+
+    base-linux: fix compile errors with GCC 14 and older glibc
+    
+    Fixes #5567
+
+commit 636d68d22b6312ffa3cae3f7b7e9b1e3f0dc2c9f
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Tue May 6 09:30:30 2025 +0200
+
+    gdb: fix compile error with GCC 14
+    
+    Fixes #5557
+
+commit 1ace00a3c38d0e06068a0c9cf31e1704d2002cc3
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Thu May 8 12:06:41 2025 +0200
+
+    less: fix compile error with GCC 14
+    
+    Fixes #5558
+
+commit b74844ed5d387da9fb29035a5146e86728954ff8
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Thu May 15 12:42:20 2025 +0200
+
+    ada-runtime: update to GNAT v14
+    
+    Issue #5540
+
+commit 45947a80cb1d933464e9a31bea9431f052e4f2cc
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Fri May 16 10:54:39 2025 +0200
+
+    qt6: fix compile errors with GCC 14
+    
+    Fixes #5579
+
+commit 679ce7502556248e1b9b6ae3cfb0a5682d2fcbe7
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed May 14 15:55:42 2025 +0200
+
+    glib: adapt to gcc 14.2 toolchain
+
+commit 536f6cc2ceb8cdb630c7d1285aa37f7affb81962
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed May 14 16:00:57 2025 +0200
+
+    iso9660: adjust to gcc 14.2 toolchain
+
+commit ee9b756057d39c07f162c2187de902ed4b016eee
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed May 14 18:05:43 2025 +0200
+
+    libvnc: fix compile errors with GCC 14
+
+commit 7373f8606f72a5236e94d9b329a79b9fd27ad198
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed May 14 18:11:01 2025 +0200
+
+    lib/python3: fix compile error with GCC 14
+
+commit 3379acf30b33587d49f6dc4c6e2b4906b0ec3133
+Author: Christian Prochaska <christian.prochaska@genode-labs.com>
+Date:   Wed May 14 15:22:06 2025 +0200
+
+    libav: fix compile errors with GCC 14
+    
+    Fixes #405
+
+commit 0e6e606f0096f651fcf3754f94042adfdaffbeb0
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed May 14 21:17:28 2025 +0200
+
+    jdk: fix compile errors with GCC 14
+    
+    issue genodelabs/genode#5540
+
+commit 4ad90f9a18c55dcdf604a96b52a8601b2d3c89d3
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 15 13:26:47 2025 +0200
+
+    sdl_image: supress incomp. pointer error GCC 14
+    
+    Ref genodelabs/genode#5540
+
+commit c24b2d99273695287dc943b8d667c962ca521b31
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 15 13:38:11 2025 +0200
+
+    getdns: : supress implicit decl. error GCC 14
+    
+    Ref genodelabs/genode#5540
+
+
+API hardening
+#############
+
+; @nfeske
+
+New utilities
+=============
+
+commit 2dfaeab7c22f5026817135f72e2b74411e80d114
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Apr 4 12:45:12 2025 +0200
+
+    util/attempt.h: add 'Unique_attempt' utility
+    
+    The new variant combines the attempt with unique-pointer semantics
+    and is thereby usable for returning non-copyable objects such as
+    RAM 'Allocation'.
+    
+    Issue #5502
+
+commit e9558a36f9e304dbb48d0a4edd309b8fd0672c88
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Apr 4 22:20:14 2025 +0200
+
+    util/allocation.h: base type for allocation objs
+    
+    The 'Allocation' type represents the result of an allocator, which
+    guards the lifetime of the allocation. The 'Allocation::Attempt' type is
+    a suitable result type for allocators that need to reflect either an
+    successful allocation or an error condition.
+    
+    Issue #5502
+
+commit 7e0d2084fbb7db165b2d8fdd5c04d92cacdb1c3f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Apr 5 11:02:58 2025 +0200
+
+    base: add base/error.h for common error types
+
+commit 2e76f4fc58d0b71be835d23f518bcfeec704f281
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Apr 5 13:27:05 2025 +0200
+
+    base: move common exception types to exception.h
+    
+    The univerally used exception types Out_of_ram, Out_of_caps, and Denied
+    used to be defined at quota_guard.h and ram_allocator.h whereas the
+    types are broadly used. This patch gathers those type definitions at
+    the central place exception.h instead, to gradually untangle the reliance
+    on exceptions, i.e., in quota_goard.h, and to make the output of error
+    messages printing exception types ('abort') more concise.
+    
+    Issue #5245
+
+commit fee2f354dc9c75fc933e1572e778bb4f905ebd9b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Apr 5 14:02:13 2025 +0200
+
+    util/attempt.h: introduce 'Ok' type
+    
+    This type alleviates the need to re-introduce custom '*_ok' types
+    whenever a result can be an error but no value.
+
+commit 73d6171850991e4b853b4b0cb874d344aacd8e7a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Apr 6 01:28:33 2025 +0200
+
+    util/attempt.h: make 'Attempt' printable
+
+commit b4a746bc89edc73a33184a77a743d7af0d1bb056
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Apr 6 11:43:02 2025 +0200
+
+    base/error.h: add raise() interface
+    
+    The new 'raise' function can be used instead of 'throw' to keep the
+    framework headers void of C++ throw statements, which would otherwise
+    prevent the compilation of the headers with -fno-exceptions.
+    
+    In the presence of the C++ runtime, the 'raise' implementation reflects
+    the supplied error value(s) as C++ exceptions of the appropriate type.
+    In the (future) optional absence of the C++ runtime, 'raise' remains
+    unresolved, which then gives us the assurance that the binary contains
+    no code path leading to 'raise', all error conditions must have been
+    covered in other ways than 'raise'.
+    
+    For this reason, 'Genode::raise' is not provided by the base library
+    but the cxx library (C++ runtime). Once we allow components to opt out
+    of the cxx library, 'raise' will automatically become unresolved for
+    those strict components.
+    
+    Issue #5245
+
+commit 84eb264786914d9b9d62df6a6884fa828e408b54
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Apr 6 17:25:15 2025 +0200
+
+    util/attempt.h: mark 'Attempt' types as nodiscard
+    
+    This catches bugs early on. E.g., when leaving an 'Allocation'
+    unused, it gets immediately deallocated, which is most probably not
+    intended. For regular 'Attempt' objects, this change encourages
+    the proper propagation of errors, or at least the logging of unexpected
+    conditions.
+    
+    Fixes #5513
+
+commit b96dc8f7454dea5e377276d12d0bc4cb7a494ebc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 2 12:49:13 2025 +0200
+
+    util/reconstructible.h: support reference types
+    
+    This patch adds a specialization of 'Reconstructible' for reference
+    types, thereby indirectly enabling the returning of references as
+    'Unique_attempt' objects.
+    
+    Fixes #5539
+
+commit 4b8620145cc7fd3291b2efd622873bee2a9f76ab
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue May 13 18:26:50 2025 +0200
+
+    base: use common Session_error in session factory
+    
+    This patch unifies Parent::Session_error, Root::Create_error, and
+    Local_service::Create_error by using the centrally defined Session_error.
+    This type is now also used by Session_state::Factory, which thereby
+    becomes void of exceptions.
+    
+    The patch also streamlines the Session_response enum type to become
+    consistent with the naming of the Session_error conditions.
+    
+    Issue #5245
+
+commit c280be5c38c2e0cb0d77be61709b56ec579d6c3f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 18 11:53:40 2025 +0200
+
+    base: use common Session_error in session factory
+    
+    Issue genodelabs/genode#5245
+
+
+Removed reliance of the base framework from C++ exceptions
+==========================================================
+
+commit aa9ff3894cfad5b8f844284d5062c0b193703688
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 28 22:57:34 2025 +0100
+
+    base: scoped access of Native_thread
+    
+    With planned removal of Thread:: exceptions, we need to consider that a
+    'Thread' object may exist without a valid 'Stack' and therefore without
+    a valid 'Native_thread', which is hosted as part of the 'Stack'.
+    
+    This patch reworks the code that accesses the 'Native_thread' to use the
+    new 'Thread::with_native_thread' interface. Within the local scope,
+    the native thread is referred to as 'nt'.
+    
+    The _init_platform_thread and _deinit_platform_thread() have been
+    replaced by _init_native_thread and _deinit_native_thread, which take
+    a 'Stack &' as argument.
+    
+    As a safety caution, 'Native_thread' objects can no longer be copied.
+    
+    Issue #5245
+
+commit 7e420a68a6d22aa9dd35c0ba57404f627aa44484
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 2 17:09:12 2025 +0200
+
+    Remove C++ exceptions from 'Thread' API
+    
+    After constructed, a 'Thread' object may remain in a dysfunctional state
+    should the stack allocation have failed. This condition is no longer
+    reflected as a C++ exception but as result value of 'Thread::info()'.
+    
+    Keep 'Thread::name' as public constant because the stack is not always
+    available for storing the name.
+    
+    The 'stack_top' accessor has been removed because this information is
+    already provided by 'Thread::info()'.
+    
+    Issue #5245
+
+commit a5079dd1df61ad4402bb66d36ad9978cd2481bc0
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 2 17:09:49 2025 +0200
+
+    base: remove exceptions from Local_service
+    
+    Issue #5251
+
+commit 3cd33ec60ac13c157ea56c414c23e3126c7ec445
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 2 19:22:55 2025 +0200
+
+    base: remove exceptions from root RPC interface
+    
+    Issue #5251
+
+commit 880a48081c36df8122093d69c76aca5377f869b9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 11:52:25 2025 +0200
+
+    core: remove 'Service_denied' from ROM service
+    
+    Core's ROM service does not longer reflect a missing ROM module at
+    session-creation time but delivers an invalid dataspace capability.
+    
+    This patch also removes the duplication of linux/dataspace_component.cc.
+    
+    Issue #5251
+
+commit 16b024a87add2f89def6e08dd8e2f6d0f21f226e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 12:22:12 2025 +0200
+
+    core: remove 'Service_denied' from io_mem_session
+    
+    Issue #5251
+
+commit 884cbfe22d22a54ef683a21fd3d925d7ea9a4120
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 12:35:37 2025 +0200
+
+    core: remove 'Service_denied' from CPU service
+    
+    Ignore invalid affinity arguments.
+    The ram-quota check in Cpu_root has become obsolete since the commit
+    "core: remove exception from Trace::Control alloc".
+    
+    Issue #5251
+
+commit ee6dc51f9c758b26ff76ea9a2ee8e1466d27ea4b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 17:08:49 2025 +0200
+
+    base: remove exceptions from base/child.h
+    
+    This patch replaces 'Child_policy::resolve_session_request' with
+    an 'with_route' method that takes two functors as arguments. It also
+    removes the 'Service_denied' exception from local_connection.h, which,
+    in turn requires changing 'Child::pd' to 'Child::with_pd' to account for
+    the error case where a 'Child' object has been created but failed to
+    obtain its PD session.
+    
+    Issue #5251
+
+commit 3f2fb5452e2cdfbea842711ac166739b6d959d6d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 22:16:11 2025 +0200
+
+    base/component.h: rm 'Service_denied' from aquire
+    
+    Issue #5251
+
+commit 0e920e3398e855075e658d1c6d8de21eab50bc9e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat May 3 21:34:39 2025 +0200
+
+    base: remove exceptions from base/env.h
+    
+    The Env::session method no longer throws 'Service_denied'. Instead, the
+    parent's denial is now considered as fatal, yielding an error message
+    and stopping the component. This is the common case where sessions are
+    established via 'Connection' objects. The failure to obtain a connection
+    because of the parent's decision is not recoverable.
+    
+    The Env::try_session method now uses a result type instead of exceptions
+    to reflect all error conditions, including Session_error::DENIED. This
+    is useful for intermediary component like init, which initiate session
+    requests on behalf of their children and shall never reach a
+    non-recoverable state.
+    
+    The change of Env has ripple effects through service.h and the child
+    framework. The former reflection of 'Out_of_ram' and 'Out_of_caps' by
+    Service::initiate_request has been replaced by a result type. The patch
+    adds diagnostic messages at all places where such errors are further
+    propagated.
+    
+    Issue #5251
+
+commit 9c27a1284d909ed34ab6b0f2d2256e8a6e3b8809
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 4 00:16:16 2025 +0200
+
+    base: rm Xml_generator::Buffer_exceeded exception
+    
+    Issue #5245
+
+commit e1d4e6192032c067de9c352b606d9f0c178171ac
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 4 14:47:11 2025 +0200
+
+    base: remove try/catch/throw from base/registry.cc
+    
+    Issue #5245
+
+commit 2ce866310ef2782c595e8959d8d247d519a285c6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 4 15:30:34 2025 +0200
+
+    base: remove diagnostic throws from base lib
+    
+    Replace try/catch/throw by guard objects.
+    In panic situations, print an error and sleep forever.
+    Infinitely block invalid IPC calls.
+    Weasel out of cap ref count overflows by clamping count to max.
+    Accept ID-space ambiguities but be verbose about it.
+    Skip Duration::add when detecting an integer overflow.
+    
+    Issue #5245
+
+commit b1999657eea206c7c21eb386eea3d9595ce28258
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 4 16:21:10 2025 +0200
+
+    base/weak_ptr.h: remove In_destruction exception
+    
+    Issue #5245
+
+commit 413cfc3a68c58337a8bfa58e062a12265add2b01
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun May 4 16:47:46 2025 +0200
+
+    base: remove Allocator_avl::Assign_metadata_failed
+    
+    Replace exception by a plain bool return value.
+    Use [[nodiscard]] to enforce the handling of errors.
+    
+    Issue #5245
+
+commit b66a1a2a6d71f491571d4c275b706d55ce1dffc9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon May 5 18:40:04 2025 +0200
+
+    Unify handling of buffer-exceeded error conditions
+    
+    - Introduce common Buffer_error type.
+    - Enforce the handling of buffer-exceeded errors.
+    - Unify interface of Reporter and Expanding_reporter,
+      using Byte_range_ptr instead of basic types.
+    - Simplify the Xml_generator API by providing the plain
+      class function Xml_generator::generate.
+    - Use Expanding_reporter where appropriate.
+    
+    Fixes #5561
+
+commit ac317ad3f330643470d6a0dd308de38b2a9d29a9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue May 6 21:40:42 2025 +0200
+
+    root/component.h: support errors as return values
+    
+    The '_create_session' method returns now a 'Create_result' instead
+    of a pointer. This result can either be a reference to the new
+    session object or an 'Create_error' code.
+    
+    The '_upgrade_session' and '_destroy_session' method now take a
+    reference instead of a pointer as argument.
+    
+    Fixes #5562
+
+commit ab2ca8bb63b44b17c6e9604b94d67b0a50d47f5e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 7 22:34:07 2025 +0200
+
+    base/quota_guard.h: remove exceptions
+    
+    This patch replaces the use of exceptions and the 'Reservation' guard
+    object by the 'Allocation' pattern.
+    
+    Issue #5245
+
+commit 2bf8d5f5626cd2032dd4298d1d1636217021e610
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 14 16:28:33 2025 +0200
+
+    core: remove 'new' from RM service
+    
+    Besides replacing 'new' by Constrained_obj_allocator, the patch reuses
+    Alloc_error for Rm_session::Create_result.
+    
+    Issue #5245
+
+commit ee11e1c5bf7757f0ecb24974580990133ea80416
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 14 17:13:42 2025 +0200
+
+    core: remove 'new' from TRACE service
+    
+    Besides replacing 'new' by 'Memory::Constrained_obj_allocator',
+    this patch consolidates the error types of the RPC functions that
+    can produce allocation failures.
+    
+    The patch also removes the use of 'Attached_ram_dataspace' and
+    'Attached_dataspace' because these utilities throw.
+    
+    Allocation errors of the trace-control area are now explicitly reflected
+    by 'Constructed' state values to Cpu_root.
+    
+    Issue #5245
+
+commit f71b53ceb33a36cdac63c918e2c6b75c643eccdf
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 14 17:59:30 2025 +0200
+
+    core: remove 'new' from RAM-dataspace factory
+    
+    Also drop the distinction between Alloc_ram_error and Alloc_error.
+    
+    Issue #5245
+
+commit 0444346f50d778c9d5ab63eb373695a3cd542162
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 14 18:38:51 2025 +0200
+
+    core: remove 'new' from CPU service
+    
+    Issue #5245
+
+commit e6d1e08559cc57bef3f7ce6d0a34eb8bc71c74d2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 15 16:42:13 2025 +0200
+
+    base-linux: remove exceptions
+    
+    Issue #5245
+
+commit 069ce632ef0f2ecd3d6ecd3edbc7104f8893adc7
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 15 18:19:38 2025 +0200
+
+    base/include: compatibility to -fno-exceptions
+    
+    This commit introduces 'raise(Unexpected_error)' for situations
+    that were formerly reflected directly as exceptions. Those conditions
+    still result in an exception but with added diagnostics.
+    
+    The few parts of the API that strictly rely on C++ exceptions
+    (Xml_node, GENODE_RPC_THROW) are now guarded via __EXCEPTIONS.
+    
+    Issue #5245
+
+commit 003acfa98d0693455ec8f9b952a9c2c0d462bf05
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 15 20:18:46 2025 +0200
+
+    util/bit_allocator.h: remove C++ exceptions
+    
+    This change affects the users of util/bit_array.h as well, e.g.,
+    os/packet_allocator.h, libc, and part_block.
+    
+    Issue #5245
+
+commit d778e10a8a1490fc2e0581e20e8366fc33d04995
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu May 15 22:07:11 2025 +0200
+
+    base/quota_transfer.h: remove exceptions
+    
+    This patch ultimately cleans base/child.cc from C++ exceptions.
+    
+    Issue #5245
+
+
+Allocators
+==========
+
+commit af3e8725ca6d73a4dd3ac88c04d0d4d25bac027e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 28 14:31:32 2025 +0100
+
+    Rename 'Constrained_ram_*' to 'Accounted_ram_*'
+    
+    Fixes #5495
+
+commit ff83de2bbc0906fec02388dfc7f1be55a827bbd2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 31 18:31:53 2025 +0200
+
+    base: decouple 'Pd_session' from 'Ram_allocator'
+    
+    With this patch, the 'Pd_session' interface no longer implements the
+    'Ram_allocator' interface, which allows us to change the
+    'Genode::Ram_allocator' semantics (as a subsequent step) without
+    affecting core's PD service.
+    
+    The patch also replaces the client-local implementation of
+    'Pd_session_client::dataspace_size' by the proper RPC call 'ram_size' to
+    core, which mitigates the potential risk of de-referencing a dataspace
+    cap of an untrusted origin. E.g., in scenarios where the monitor
+    component requests the size of a dataspace allocated by the debugging
+    target.
+    
+    Since 'ram_size' is an RPC call, it cannot be const. Hence, the
+    'Ram_alloctor::dataspace_size' has become non-const.
+    
+    The new 'Pd_ram_allocator' implements the 'Ram_allocator' interface by
+    using a PD session.
+    
+    Issue #5502
+
+commit 689fc1eb9387845acf5481fe8b5bf9b33a9ebc1c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 2 11:11:01 2025 +0200
+
+    Introduce new 'Ram' API types
+    
+    The new types in base/ram.h model different allocation scenarios and
+    error cases by mere C++ types without using exceptions. They are meant
+    to replace the former 'Ram_allocator' interface. As of now, the
+    'Unmapped_allocator' closely captures the former 'Ram_allocator'
+    semantics. The 'Constrained_allocator' is currently an alias for
+    'Unmapped_allocator' but is designated for eventually allocating
+    mapped RAM.
+    
+    In contrast to the 'Ram_allocator' interface, which talked about
+    dataspace capabilites but left the lifetime management of the
+    allocated RAM to the caller, the new API represents an allocation
+    as a guard type 'Allocation', which deallocates on destruction by
+    default.
+    
+    Allocation errors are captured by a 'Result' type that follows
+    the 'Attempt' pattern.
+    
+    As a transitionary feature, the patch largely maintains API
+    compatibility with the original 'Ram_allocator' by providing
+    the original (exception-based) 'Ram_allocator::alloc' and
+    'Ram_allocator::free' methods as a wrapper around the new
+    'Ram::Constrained_allocator'. So components can be gradually
+    updated to the new 'Ram::' interface.
+    
+    Issue #5502
+
+commit 30e200f4ae54a2216418bd43512e8024c4bf82e5
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sun Apr 6 11:58:32 2025 +0200
+
+    base/ram.h: rename Unmapped... to Constrained...
+    
+    The 'Allocation' template clears the way for precisely differentiating
+    allocators via (a variety of) C++ types. It turns out that this approach
+    alleviate the need to consider the differentiation between
+    mapped/unmapped in ram.h.
+    
+    With the new approach, a mapped allocator can be built as a template
+    taking a ram allocator (constrained/unconstrained) and a local
+    region-map (core local_rm, env local_rm) as ingredients.
+    
+    Since the differentiation between constrained/unconstrained has its
+    natural place at ram.h, name the current RAM allocator
+    'Ram::Constrained_allocator', in anticipation of a future
+    'Ram::Unconstrained_allocator' with weakened error conditions.
+    
+    Issue #5502
+
+commit e380d0da95e4512123bd70b4e7bbc1b3cc503d70
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Apr 5 22:26:25 2025 +0200
+
+    base: use 'Allocation' interface for mem alloc
+    
+    This patch converts the memory-allocator interfaces ('Allocator',
+    'Range_allocator') and their implementations ('Heap', 'Sliced heap',
+    'Slab', 'Allocator_avl', 'Synced_allocator') to the new 'Allocation'
+    utility. The new interface resides at base/memory.h whereas the
+    traditional allocators implement the new interface.
+    
+    Down the road, the traditional allocators can successively be decoupled
+    from the traditional 'Allocator' and 'Range_allocator' interfaces.
+    
+    Issue #5502
+    Issue #5245
+
+commit 1ef80e86e29292538bdc5a2401b9f3cb7d42562a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Apr 7 00:13:47 2025 +0200
+
+    base: introduce Local_rm for local Region_map
+    
+    The new 'Local_rm' type offers a narrow interface for the interaction
+    with the component-local address space, managing the lifetime of
+    attachments by using the 'Allocation' API.
+    
+    Fixes #5516
+
+commit f05dd4677abcbc2c9371a8dd945ee280647629d1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 7 00:44:20 2025 +0200
+
+    base/memory.h: Memory::Constrained_obj_allocator
+    
+    The 'Constrained_obj_allocator' template can be used to turn a byte
+    allocator into an allocator of a specific object type.
+    
+    Fixes #5563
+
+commit f3bab3d02d675a676c1e0d3a142eea8b29224c68
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 7 00:44:43 2025 +0200
+
+    root/component.h: add '_alloc_obj' helper method
+    
+    This method eliminates the need for using 'new' for the creation of
+    session objects, eliminating the throwing of Out_of_ram, Out_of_caps,
+    and Denied exceptions.
+    
+    Issue #5563
+
+Prevent 'Xml_node' copying
+==========================
+
+commit 7aefaff646a8fe0a8b854657facd6e35aa254899
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 21 16:57:15 2025 +0100
+
+    os/buffered_xml.h: don't copy Xml_node
+    
+    The public 'xml' const member replaces 'with_xml_node()' and the 'xml()'
+    accessor.
+    
+    Issue #5411
+
+commit 97ea0d15ec6990b4514ef345ebabec911dec207f
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 21 18:10:24 2025 +0100
+
+    sandbox: don't copy Xml_node
+    
+    Issue #5411
+
+commit f3e4e04de7633a1ec4a86f7b951daa19c55711da
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 24 11:46:26 2025 +0100
+
+    base: don't copy Xml_node
+    
+    Issue #5411
+
+commit 636eb7b53fed9b1e0c6f69c1ab932643a5d33bcf
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Mar 24 11:46:50 2025 +0100
+
+    os: don't copy Xml_node
+    
+    As this patch changes 'Vfs::File_system_factory::create', the
+    VFS plugins must be adapted, now taking 'Xml_node const &' as
+    argument.
+    
+    Issue #5411
+
+commit 368509ff9bce3959740dcbbd20ed3a276bde35cc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 25 19:08:00 2025 +0100
+
+    libc: don't copy Xml_node
+    
+    This patch reworks the libc's internal config handling by replacing
+    scattered Xml_node accesses by the new 'Config' type that is parsed
+    at once. The config ROM has been moved from 'Env_implementation' to
+    the libc kernel.
+    
+    Issue #5411
+
+commit eb572914b1fd466353d94ff7d6cbcd0872b2c072
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 26 16:47:35 2025 +0100
+
+    libports: don't copy Xml_node
+    
+    Issue #5411
+
+commit 6edbfbf7c33099d364214d137102787c1892a12b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 26 17:15:11 2025 +0100
+
+    gems: don't copy Xml_node
+    
+    Issue #5411
+
+commit 5a9016b01091debcf4f562a074e42a73305bd7a4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Mar 27 14:21:16 2025 +0100
+
+    ports,dde_linux/bsd/ipxe,pc: don't copy Xml_node
+    
+    Issue #5411
+
+commit 3cd5a69b65c86eab4bf262258a88cde62065cc7d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Jan 6 16:05:58 2025 +0100
+
+    base: make Xml_node publicly noncopyable
+    
+    This patch limits the Xml_node's copy constructor for internal use only.
+    
+    Fixes #5411
+
+
+Security-enhanced Goa SDK
+#########################
+
+; @jschlatow
+
+Sandboxed build systems and config-file processing
+==================================================
+
+commit 3c128e16c4ab17c4050d7b9de56901f35d76821b
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 4 13:24:52 2024 +0200
+
+    load goarc files with safe slave interpreter
+    
+    TCL's safe interpreter hides file operations, source, and exec commands.
+    Loading goarc files with a safe slave interpreter is a basic security
+    measure. This change also moves all config variables into a separate
+    namespace. Our interpreter additionally hides the set command in order to
+    make sure that goarc files are only able to set predefined variables in
+    the config namespace.
+    
+    genodelabs/goa#99
+
+commit b62114e8c38c2586b43644edc66137fb7a24792c
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 6 17:17:27 2024 +0200
+
+    config: restrict path variables
+    
+    Restrict path variables to working directory and project directory. The
+    set of allowed paths can be extended by adding `lappend allowed_paths ...`
+    commands to _~/goarc_ or _/goarc_.
+    
+    genodelabs/goa#99
+
+commit 712ed9d0a6c65b4bbab812b34e395818497a42e6
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 10 13:28:09 2024 +0200
+
+    input validation of used_apis and archives files
+    
+    genodelabs/goa#99
+
+commit 6b6cabc8cff94b113b9fafb0c60afeb32f62eac8
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 10 13:38:53 2024 +0200
+
+    prevent copying symlinks from pkg/ and raw/
+    
+    genodelabs/goa#99
+
+commit 48371e4bb59aee441be7e6e42d11eecdc20ce00a
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 11 14:21:44 2024 +0200
+
+    restrict tool paths
+    
+    Restrict tool paths to PATH, Goa-internal tools and the default Genode
+    tool-chain path. The set of allowed tool paths can be extended by adding
+    `lappend allowed_tools ...` commands to _~/goarc_ or _/goarc_.
+    
+    This commit prevents malicious configuration of cross_dev_prefix.
+    
+    genodelabs/goa#99
+
+commit a11a53248354fae643953a83b52f62635a737d23
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 27 08:50:17 2025 +0100
+
+    validate file operations
+    
+    In order to prevent that the presence of malicious symlinks can be used
+    to escape the allowed_paths, we replace the file command with an alias.
+    This allows validation of paths during `file normalize` and `file link`
+    operations, which both resolve symlinks.
+    
+    genodelabs/goa#99
+
+commit 87c3426ae7b592d049300b539bcda4edce37daff
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 12 10:59:48 2024 +0200
+
+    run/sculpt: confirm command execution
+    
+    In order to prevent untrusted goarc files to execute malicious commands
+    via target_opt(sculpt-cmd), users must confirm the command execution
+    interactively.
+    
+    genodelabs/goa#99
+
+commit a827d7196f9bb45da72ae735cf1b2c2ce441e3c9
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 17 14:35:24 2024 +0200
+
+    add sandboxing tool based on bwrap
+    
+    genodelabs/goa#99
+
+commit d6d6ea3bfc283b6324c4b4878c58483a22e0e54d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 18 11:25:08 2024 +0200
+
+    config: restrict default allowed_tools to /usr
+    
+    genodelabs/goa#99
+
+commit c78cb6c871bb150500fa7fe9dbd91f5b558a3f40
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 18 11:30:16 2024 +0200
+
+    util: use gaol for goa_git
+    
+    genodelabs/goa#99
+
+commit 9c7a0c8f6a4959fd0362e7be38736a9c9e01d9fc
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 19 11:28:33 2024 +0200
+
+    use gaol for depot and ports tool
+    
+    genodelabs/goa#99
+
+commit 20f88b24ba3c1ff1960e9594c3c91f7cce03e4a7
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 19 14:18:05 2024 +0200
+
+    util: use gaol for tool chain
+    
+    This is in preparation of moving the tool chain into a squashfs image.
+    
+    genodelabs/goa#99
+
+commit e332dee04f2a59ad9cfc1a6da1f8941185063dda
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 19 15:16:11 2024 +0200
+
+    build: use gaol for abi tools
+    
+    genodelabs/goa#99
+
+commit 0daace30d073cddf9d3125fa00bff001b970f325
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 23 07:34:26 2024 +0200
+
+    build/make: use gaol
+    
+    genodelabs/goa#99
+
+commit 44d40b9dccc67ff8aa4c879c48c083e502d37bcf
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 23 07:38:27 2024 +0200
+
+    build/cmake: use gaol
+    
+    genodelabs/goa#99
+
+commit 7957320ec7c452357a6c74b8fde6434dbc860b55
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 23 09:09:23 2024 +0200
+
+    build/autoconf: use gaol
+    
+    genodelabs/goa#99
+
+commit a83b05ef02f09f6764351646fae87c03f1452376
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 23 14:43:37 2024 +0200
+
+    build/qmake: use gaol
+    
+    genodelabs/goa#99
+
+commit e8645287060e62fe98da12fb326954bcf15373a7
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 23 14:52:29 2024 +0200
+
+    build/meson: use gaol
+    
+    genodelabs/goa#99
+
+commit bfbe00f6b98c12553f7dab14802b80f8ffad994a
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 24 16:36:43 2024 +0200
+
+    build/cargo: use gaol
+    
+    genodelabs/goa#99
+
+commit ffcb23a1aeb55e81cdfba8f7a8db47524cfe41c6
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 24 17:20:37 2024 +0200
+
+    backtrace: use gaol
+    
+    genodelabs/goa#99
+
+commit e84311d2de93ab21ede52ccecaa74e0faad4baf7
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Feb 27 10:49:26 2025 +0100
+
+    add disable_sandbox option to skip bwrap
+    
+    This option can only be set in privileged goarc files (located at
+    ~/goarc or /goarc. If set, the bubblewrap-based sandboxing will not be
+    used. This is useful for debugging and for running Goa in environments
+    where 'bwrap' is not available (like Sculpt OS).
+    
+    genodelabs/goa#99
+
+
+Assistance for common error situations
+======================================
+
+commit 1fea1a7c633715c718c34707dc889ffd6c3dc47e
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 25 16:40:59 2024 +0200
+
+    add tool for toolchain download
+    
+    genodelabs/goa#99
+
+commit 6b95619a31abd1e183e5831f549c834179bbdf71
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 25 17:15:19 2024 +0200
+
+    add install-toolchain command
+    
+    The command downloads and installs the current Genode toolchain (if unavailable)
+    and converts it into a squashfs. The squashfs is mounted via squashfuse
+    and bind mounted into the bubblewrapped build environment.
+    
+    genodelabs/goa#99
+
+
+commit 2db01c850211fec627b8544b8f78744b1045c691
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Mar 10 17:29:40 2025 +0100
+
+    detect missing shared-object linker flags
+    
+    When the `$ldlibs_so` is not passed along correctly, e.g. in autoconf
+    projects, the shared object likely contains other program headers than
+    defined by _genode_rel.ld_. We thus check the program headers to detect
+    whether the linker flags were passed correctly.
+    
+    Fixes #122
+
+
+New functionality
+=================
+
+commit e221c85b512dd84f3e67fb0623acf415e3cb8441
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Feb 28 07:39:32 2025 +0100
+
+    autoconf: shared lib flag support
+    
+    For autoconf, there is no general way to set particular flags for
+    building shared libraries. With this commit, we propagate the flags to
+    './configure' and 'make' in form of the environment variable LDLIBS_SO.
+    In most cases, the configure-script requires patching to make use of
+    this variable, though. A good entry point for patching is to look for the
+    'archive_cmds' variable that is passed to libtool.
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+TCP/IP stacks revisited
+=======================
+
+; @ssumpf
+
+commit 503f9fae7a61e88e14209bfdf8861177a99615f8
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jan 8 13:45:58 2025 +0100
+
+    libports: move vfs_lwip to vfs_legacy_lwip
+    
+    * src/lib/lwip -> legacy_lwip
+    * src/lib/vfs/lwip -> legacy_lwip
+    * recipes/src/vfs_lwip -> vfs_legacy_lwip
+    * recipes/api/lwip -> legacy_lwip
+    
+    issue #5471
+
+commit a57ebc55fad59971988adc7f83ad52cc886d283d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jan 8 14:39:49 2025 +0100
+
+    os: move genode_c_api/socket.h from lxip to os
+    
+    Move lxip local socket C-API to os/include/genode_c_api
+    
+    issue #5471
+
+commit 0e48ea08cf1cf38b60df36a666b4670d869ce150
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Jan 14 11:09:57 2025 +0100
+
+    os: move genode_c_api/nic_client from lxip to os
+    
+    The Nic-client C-API is based on the Uplink C-API.
+    
+    issue #5471
+
+commit 488fcfd1a32f458fc27b0029fc15a7dc229e931d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Feb 6 09:32:50 2025 +0100
+
+    genode_c_api/socket: add wakeup_remote + sock_info
+    
+    * add genode_socket_wakeup_remote and genode_socket_register_wakeup
+      which are used to support Vfs::Remote_io on the IP stack side
+    
+    * add genode_socket_info in order to retrieve the address configuration
+      from the IP stack
+    
+    issue #5471
+
+commit 67c7313f5edb4e2eb4f97ad294b347db1187142a
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Jan 19 19:16:06 2025 +0100
+
+    genode_c_api/nic_client: add link_state support
+    
+    Support for the link state signal was missing.
+    
+    issue #5471
+
+commit 6cefd1e16c51d7872719266f8e56a20d8748c700
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Jan 19 19:17:31 2025 +0100
+
+    vfs_lxip: implement Vfs::Remote_io
+    
+    This is required for NIC-session batching and triggers only when VFS
+    user goes idle.
+    
+    issue #5471
+
+commit 14ae2cc846e0726dcc93fecfb848a3b4c06b5551
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Feb 24 19:36:22 2025 +0100
+
+    vfs_lxip: use socket_info for address retrieval
+    
+    Replace Linux specfic address information (ip, netmask, etc) with
+    C-API's socket_info
+    
+    issue #5471
+
+commit 6a0c9f50ea7a2d69256d10b080d3f677e31a431f
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Jan 19 19:17:17 2025 +0100
+
+    lxip: support wakeup remote and socket_info
+    
+    * instead of sending packet-stream signals for each possible rx/tx packet
+      via genode_nic_client_notify_peers, call the wakeup_remote callback
+      which implements the Vfs::Remote_io interface in vfs/ip.
+      genode_nic_client_notify_peers will only be called in case the vfs goes idle.
+    
+      measured speed up: TX x9.1, RX x1.6
+    
+    * retrieve genode_socket_info from Linux ipconfig.c
+    
+    issue #5471
+
+commit f0a75b75fbb6f6bbdfb4a5ec9a4a68f9275f1050
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Feb 27 09:59:09 2025 +0100
+
+    lxip: support link_state handling
+    
+    * (re-)configure address when link state goes up
+    * propagate link state to Linux code
+    
+    issue #5471
+
+commit 836caa299d64f32e04c3fd106a463dac063d939e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jan 8 12:21:23 2025 +0100
+
+    lxip_raw: split test to support more IP stacks
+    
+    issue #5471
+
+commit e46bc6159daeb1faa5dd8d943526b67333d9db1e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Feb 24 15:37:59 2025 +0100
+
+    test/ip_raw: add support for lwip
+    
+    Add lwIP requiremnts to the ip_raw test.
+    
+    issue #5471
+
+commit 9881ba136457c93331ada3bca2b75d5afbb2627d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Jan 8 14:02:50 2025 +0100
+
+    libports: lwip with socket C-API
+    
+    Implement socket C-API and move lwip specific parts present in vfs_lwip
+    to the library.
+    
+    issue #5471
+
+commit ed7720796346b8dfc58dbf6e47bb4484aac79500
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Feb 10 10:22:43 2025 +0100
+
+    os: move vfs/lxip to vfs/ip from dde_linux
+    
+    Because the sources are now used by lwip/lxip, make them accessible in a
+    public place.
+    
+    issue #5471
+
+commit fce286fbdd25d4458de58f7c21a0fe091ee22b8b
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Feb 6 10:41:31 2025 +0100
+
+    dde_linux: remove test/vfs_lxip
+    
+    The test is outdated and not working anymore.
+    
+    issue #5471
+
+commit 8375a3fc2f70fdc866ebd0f1972a61836ebccaf5
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Feb 19 08:15:15 2025 +0100
+
+    netperf: add support for UDP tests
+    
+    Add UDP forwarding rules to nic_router
+    
+    issue #5471
+
+commit e985e1c7b1dce8c29b8bf74c656380da52fab03b
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Mar 5 16:20:00 2025 +0100
+
+    nic_bridge.run: use lxip and lwip
+    
+    * use both IP-stacks with and without labels
+    * adjust matching rules
+    
+    issue #5471
+
+commit f88a61a6a09961b77e6ad995a974be919fff033f
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Mar 7 13:28:06 2025 +0100
+
+    wg_fetchurl.run: remove lwip labels from nic_router
+    
+    lwIP does not provide default Nic::Connection labels anymore.
+    
+    issue #5471
+
+
+Support for touch gestures
+==========================
+
+; @jschlatow
+
+commit 9fdffcaa81e20497aabd4105b7089c6e31c6523e
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Mar 19 18:15:03 2025 +0100
+
+    event_filter: add touch-gesture filter
+    
+    Add configurable swipe and hold gestures.
+    
+    genodelabs/genode#5491
+
+commit dde79e7468dc15e9a91020aa1bf72007bceaa455
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu May 15 11:12:52 2025 +0200
+
+    event_filter: make multitouch tracking more robust
+    
+    When the multitouch driver occasionally looses track of a finger, it
+    may occur that touch id 0 is released before the other ids. This messes
+    with the gesture detection. This commit adds a Multitouch struct that reliably
+    tracks the presence of fingers for all gestures and thereby moves this state
+    out of the individual gestures.
+    
+    Fixes #5578
+
+commit e85c87deee7e8310e8620c8f181e35c80d5a6223
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu May 15 11:16:55 2025 +0200
+
+    event_filter: log number of present fingers
+    
+    This extends the motion-logging of the log filter to also print the
+    number of present distinct touch IDs (i.e. fingers).
+    
+    Issue #5578
+
+
+Increased resolution of file-modification times
+===============================================
+
+; @nfeske
+
+commit 05d69a0bb3f2bc40fa224e6cc81ce5f24c0a0759
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Mar 20 16:02:58 2025 +0100
+
+    os: increase mtime resolution to milliseconds
+    
+    This patch changes the 'Timestamp' type of the VFS and file-system
+    session to an unsigned 64-bit value holding the number of milliseconds
+    since the UNIX epoch (beginning of 1970).
+    
+    The special case of an invalid timestamp has been removed as it was
+    never consistently handled anyway.
+    
+    In contrast to the POSIX timespec, which represents tv_sec and tv_nsec
+    both as signed values, this patch uses an unsigned value because the
+    interpretation of negative tv_sec and tv_nsec values is muddy.
+    Hypothetical modification times older that 1970 are capped at 1970.
+    
+    Fixes #3511
+
+
+Libraries and applications
+##########################
+
+Pseudo-random-number generator as VFS plugin
+============================================
+
+; @cnuke
+
+commit 8b5b5cda7675801bbc44d607a6165fcc16e58593
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Dec 10 17:28:33 2024 +0100
+
+    vfs/xoroshiro: add PRNG plugin using Xoroshiro128+
+    
+    This plugin provides a PRNG based on the Xoroshiro128+ algorithm
+    that reseeds itself after a specific amount of state was consumed.
+    
+    For more detailed information please take a look at its README in
+    'repos/os/src/lib/vfs/xoroshiro/README'.
+    
+    Fixes #5407
+
+
+Removal of deprecated components
+================================
+
+; @chelmuth, @cnuke
+
+commit 74a2aeb28a8e281f69cc7d871b8a3da6bdc04e89
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Tue Apr 1 16:37:59 2025 +0200
+
+    Remove virtualbox5
+    
+    Fixes #5492
+
+commit 2f60a55327fdcb7624f99762339dc64311522f94
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Apr 8 17:15:48 2025 +0200
+
+    Remove lx_block component
+    
+    The 'lx_block' component uses the aged Block::Driver framework
+    internally and most if not all use-cases where it could be employed
+    can be addressed by using the 'vfs_block' component instead.
+    
+    This commit also removes some run-scripts that make use of 'lx_block'
+    whose components are already excercised otherwise.
+    
+    Issue #5522.
+
+commit d4f285bdfcd387757e012dc89963c3d07cd0afed
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Apr 10 15:45:26 2025 +0200
+
+    Remove Block::Driver interface
+    
+    This commit removes the aged Block::Driver interface that has already
+    been superseded by the Block::Request_stream API for some time now.
+    It is solely used by components whose existence is made redundant,
+    like 'lx_block', or old drivers, like the SD-Card driver for PL180
+    and old i.MX53/6 systems or the RPi 1, that have not seen active use
+    other than in the nightly CI runs.
+    
+    Fixes #5522.
+
+
+Device drivers
+##############
+
+Intel and VESA display-driver enhancements
+==========================================
+
+; @alex-ab
+
+commit 73213872f8646c2c4b15d5b8e41f4f5560f60b14
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Mon Mar 31 10:10:01 2025 +0200
+
+    intel_fb: amend connectors report with display name
+    
+    The EDID reported by connected displays contains data to identify
+    displays based on product strings and PNP IDs. Amended the connectors
+    report <connector> node by an optional display_name attribute containing
+    the EDID information if available.
+    
+    Fixes #5499
+
+commit 7b90e9766e7467fc61a53ae76e88d669b0ca08c2
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Apr 3 14:00:28 2025 +0200
+
+    intel/display: add support for rotation and flip
+    
+    of connectors.
+    
+    Fixes #5508
+    Issue #5518
+
+commit 8e549f66b01966ce59fb8f78a9f2f00d69320836
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Apr 9 16:54:24 2025 +0200
+
+    vesa_fb: support mode reporting and configuration
+    
+    in the same format as the intel/display driver. With this commit vesa_fb
+    can be configured and used by the sculpt_manager similar to the intel/display
+    in Sculpt OS.
+    
+    Issue #5501
+
+
+Intel GPU driver
+================
+
+; @ssumpf
+
+commit e5cbf602e04970e3df3127d7f4b87b3bdc5918a6
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Mar 14 21:53:35 2025 +0100
+
+    gpu/intel: RC6 support
+    
+    * add RC6 support for GPU GEN9 (Skylake+) and GEN12 (Tiger Lake+), RC6 is
+      entered by software after CHECK_INACTIVEus of inactivity. When a new
+      Vgpu is scheduled we trigger a resume from RC6.
+    
+    * increase VGPU-watchdog timeout to 300ms
+    
+    issue #5504
+
+
+Platforms
+#########
+
+Improved support for the seL4 kernel
+====================================
+
+; @alex-ab
+
+commit cd2682bd480e3b1bc45cb5de8cd3af5bfaba3875
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Sat Apr 26 21:15:56 2025 +0200
+
+    sel4: implement rpc_cap_factory::free
+    
+    Fixes #5533
+
+commit 9b53b5423d5ffa2a2440bd14a9c67da068370b05
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri May 2 19:56:28 2025 +0200
+
+    sel4: release cap indices in components
+    
+    Issue #5581
+
+commit 946632800bccd16a4fa21b615886d13823d8f5d5
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed May 7 14:29:51 2025 +0200
+
+    sel4: handle Denied in page_table_registry
+    
+    otherwise core faults with uncatched exception
+    
+    Additionaly, make fatal errors in core platform visible.
+    
+    Issue #5581
+
+commit 1fdd5702056db92cfd4d0b51599d121781d2623c
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Fri May 2 12:46:41 2025 +0200
+
+    sel4: avoid assertion in ipc.cc
+    
+    During run/bomb, an attempt to delegate an already revoked capability may
+    lead to:
+    
+    Assertion failed: delegated
+    genode/repos/base-sel4/src/lib/base/ipc.cc:252
+    
+    also in core and the system hangs up.
+    
+    Instead, continue and return an invalid capability. The higher level session
+    code can, will and have to deal with invalid capabilities already.
+    
+    Issue #5581
+
+commit 816f344d3af0ba2b0168f59843698574a4792361
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu May 15 11:43:27 2025 +0200
+
+    tool/run/disk: use --apparent-size with du
+    
+    otherwise the estimated size may be too small because of sparse files and
+    the creation of the image fails because of insufficient space in the image
+    file.
+    
+    Seen with seL4 images
+    
+    Issue #5581
+
+commit 85ce0169615f91eb68be67604144f56418051772
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed May 7 14:27:13 2025 +0200
+
+    sel4: extend vm_space in core
+    
+    from 16M physical memory at most per PD to 128M per PD (up to 1GB is possible).
+    
+    Show the limitation also during bootup of core.
+    
+    Issue #5581
+
+commit d8db3cdd2b98627df88b7d25df8362814fdab823
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu May 15 11:49:10 2025 +0200
+
+    sel4: extend pd id allocator in core
+    
+    to support max supported count of PDs and free PD ids on Platform_pd
+    destruction.
+    
+    Issue #5581
+
+
+Build system and tools
+######################
+
+GRUB boot loader updated to version 2.12+
+=========================================
+
+; @alex-ab
+
+commit d9481d6121c3bfb7c27e6d86f88088ef64c0b9fd
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Apr 1 17:35:42 2025 +0200
+
+    grub2: update to upstream GRUB 2.12+
+    
+    Fixes #5503
+
