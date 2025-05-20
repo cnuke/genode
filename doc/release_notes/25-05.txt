@@ -1503,27 +1503,32 @@ Libraries and applications
 Pseudo-random-number generator as VFS plugin
 ============================================
 
-; @cnuke
+We added a VFS plugin that exposes a PRNG based on the Xoroshiro128+
+algorithm. It reseeds itself after a specific amount of state was
+consumed.
 
-commit 8b5b5cda7675801bbc44d607a6165fcc16e58593
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Dec 10 17:28:33 2024 +0100
+The plugin supports the following configuration options:
 
-    vfs/xoroshiro: add PRNG plugin using Xoroshiro128+
-    
-    This plugin provides a PRNG based on the Xoroshiro128+ algorithm
-    that reseeds itself after a specific amount of state was consumed.
-    
-    For more detailed information please take a look at its README in
-    'repos/os/src/lib/vfs/xoroshiro/README'.
-    
-    Fixes #5407
+* :name: sets the file-name under which the plugins exposes itself
+         to the VFS, the default is 'xoroshiro'.
+
+* :seed_path: specifies the file in the VFS that is read to reseed
+              the PRNG.
+
+The following exemplary config snippets illustrates its usage:
+
+!<vfs>
+!  <dir name="dev">
+!    <jitterentropy name="entropy"/>
+!    <xoroshiro     name="random" seed_path="/dev/entropy"/>
+!  </dir>
+!</vfs>
 
 
 Removal of deprecated components
 ================================
 
-; @chelmuth, @cnuke
+; @chelmuth
 
 commit 74a2aeb28a8e281f69cc7d871b8a3da6bdc04e89
 Author: Christian Helmuth <christian.helmuth@genode-labs.com>
@@ -1533,35 +1538,19 @@ Date:   Tue Apr 1 16:37:59 2025 +0200
     
     Fixes #5492
 
-commit 2f60a55327fdcb7624f99762339dc64311522f94
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Tue Apr 8 17:15:48 2025 +0200
 
-    Remove lx_block component
-    
-    The 'lx_block' component uses the aged Block::Driver framework
-    internally and most if not all use-cases where it could be employed
-    can be addressed by using the 'vfs_block' component instead.
-    
-    This commit also removes some run-scripts that make use of 'lx_block'
-    whose components are already excercised otherwise.
-    
-    Issue #5522.
+With this release we finally removed the dated Block::Driver interface
+that provided a basis for Block server components in the past. It has
+been superseded by the Block::Request_stream API for some time now and
+was solely in use by old drivers or components that are made redundant
+by now.
 
-commit d4f285bdfcd387757e012dc89963c3d07cd0afed
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Apr 10 15:45:26 2025 +0200
-
-    Remove Block::Driver interface
-    
-    This commit removes the aged Block::Driver interface that has already
-    been superseded by the Block::Request_stream API for some time now.
-    It is solely used by components whose existence is made redundant,
-    like 'lx_block', or old drivers, like the SD-Card driver for PL180
-    and old i.MX53/6 systems or the RPi 1, that have not seen active use
-    other than in the nightly CI runs.
-    
-    Fixes #5522.
+As the drivers, including the SD card driver for i.MX53/6, PL180,
+and the RaspberryPi 1, were no longer put to good use other than in the
+nightly CI runs for the past years, we opted to remove them all together.
+The 'lx_block' component on the other hand that is specific to base-linux
+can be replaced with 'vfs_block' in all use-cases, which allows for more
+flexibility, and was therefore also removed.
 
 
 Device drivers
