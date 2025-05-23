@@ -24,12 +24,88 @@
 #include <vfs/single_file_system.h>
 
 
-namespace Vfs { class Block_file_system; }
+namespace Vfs {
+	class Block_file_system;
+}
 
 
 struct Vfs::Block_file_system
 {
 	using Name = String<64>;
+	using block_count_t  = Block::block_count_t;
+	using block_number_t = Block::block_number_t;
+	using off_t = Block::off_t;
+
+	static block_count_t round_to_block_size(size_t const block_size,
+	                                         size_t const bytes)
+	{
+		if (bytes < block_size)
+			return 1;
+
+		return Genode::align_addr(bytes, (int)Genode::log2(block_size)) / block_size;
+	}
+
+	struct Block_job : Block::Connection<Block_job>::Job
+	{
+		Byte_range_ptr const range;
+		file_size      const seek_offset;
+
+		size_t bytes_handled { 0 };
+
+		bool done    { false };
+		bool success { false };
+
+		Block_job(Block::Connection<Block_job> &conn,
+		           char *           const  start,
+		           size_t           const  num_bytes,
+		           file_size        const  seek_offset,
+		           Block::Operation const &op)
+		:
+			Block::Connection<Block_job>::Job {conn, op },
+			range       { start, num_bytes },
+			seek_offset { seek_offset }
+		{ }
+
+		size_t bytes_remaining() const {
+			return range.num_bytes - bytes_handled; }
+	};
+
+	struct Block_connection : Block::Connection<Block_job>
+	{
+		Block_connection(auto &&... args) : Block::Connection<Block_job>(args...) { }
+
+		/*****************************************************
+		 ** Block::Connection::Update_jobs_policy interface **
+		 *****************************************************/
+
+		void produce_write_content(Block_job & job, off_t offset,
+		                           char *dst, size_t length)
+		{
+			size_t sz = min(length, job.bytes_remaining());
+			if (!sz)
+				return;
+
+			memcpy(dst, (char const *)job.range.start + offset, sz);
+			job.bytes_handled += sz;
+		}
+
+		void consume_read_result(Block_job & job, off_t offset,
+		                         char const *src, size_t length)
+		{
+			size_t sz = Genode::min(length, job.bytes_remaining());
+			if (!sz)
+				return;
+
+			memcpy((char *)job.range.start + offset, src, sz);
+			job.bytes_handled += sz;
+		}
+
+		void completed(Block_job &job, bool success)
+		{
+			job.success = success;
+			job.done    = true;
+		}
+	};
 
 	struct Local_factory;
 	struct Data_file_system;
@@ -49,34 +125,11 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 
 		Vfs::Env &_env;
 
-		char     *_block_buffer;
-		unsigned  _block_buffer_count;
-
-		Block::Connection<>        &_block;
-		Block::Session::Info const &_info;
-		Block::Session::Tx::Source *_tx_source;
-
-		bool const _writeable;
+		Block_connection &_block;
 
 		class Block_vfs_handle : public Single_vfs_handle
 		{
 			private:
-
-				Genode::Entrypoint                &_ep;
-				Genode::Allocator                 &_alloc;
-				char                              *_block_buffer;
-				unsigned                          &_block_buffer_count;
-				Block::Connection<>               &_block;
-				size_t                       const _block_size;
-				Block::sector_t              const _block_count;
-				Block::Session::Tx::Source        *_tx_source;
-				bool                         const _writeable;
-
-				void _block_for_ack()
-				{
-					while (!_tx_source->ack_avail())
-						_ep.wait_and_dispatch_one_io_signal();
-				}
 
 				/*
 				 * Noncopyable
@@ -84,297 +137,150 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 				Block_vfs_handle(Block_vfs_handle const &);
 				Block_vfs_handle &operator = (Block_vfs_handle const &);
 
-				size_t _block_io(file_size nr, void *buf, file_size sz,
-				                 bool write, bool bulk = false)
-				{
-					Block::Packet_descriptor::Opcode op;
-					op = write ? Block::Packet_descriptor::WRITE : Block::Packet_descriptor::READ;
+				Block_connection           &_block;
+				Block::Session::Info const  _info;
+				size_t               const  _request_size_limit;
 
-					size_t packet_count = bulk ? (size_t)(sz / _block_size) : 1;
-
-					Block::Packet_descriptor packet;
-
-					/* sanity check */
-					if (packet_count > _block_buffer_count) {
-						packet_count = _block_buffer_count;
-					}
-
-					while (true) {
-						try {
-							packet = _block.alloc_packet(packet_count * _block_size);
-							break;
-						} catch (Block::Session::Tx::Source::Packet_alloc_failed) {
-
-							while (!_tx_source->ready_to_submit())
-								_ep.wait_and_dispatch_one_io_signal();
-
-							if (packet_count > 1) {
-								packet_count /= 2;
-							}
-						}
-					}
-
-					Block::Packet_descriptor p(packet, op, nr, packet_count);
-
-					if (write)
-						Genode::memcpy(_tx_source->packet_content(p), buf, packet_count * _block_size);
-
-					_tx_source->submit_packet(p);
-
-					_block_for_ack();
-
-					p = _tx_source->get_acked_packet();
-
-					if (!p.succeeded()) {
-						Genode::error("Could not ", write ? "write" : "read", " block(s)");
-						_tx_source->release_packet(p);
-						return 0;
-					}
-
-					if (!write)
-						Genode::memcpy(buf, _tx_source->packet_content(p), packet_count * _block_size);
-
-					_tx_source->release_packet(p);
-					return packet_count * _block_size;
-				}
+				Genode::Constructible<Block_job> _job { };
 
 			public:
 
-				Block_vfs_handle(Directory_service                 &ds,
-				                 File_io_service                   &fs,
-				                 Genode::Entrypoint                &ep,
-				                 Genode::Allocator                 &alloc,
-				                 char                              *block_buffer,
-				                 unsigned                          &block_buffer_count,
-				                 Block::Connection<>               &block,
-				                 size_t                             block_size,
-				                 Block::sector_t                    block_count,
-				                 Block::Session::Tx::Source        *tx_source,
-				                 bool                               writeable)
+				Block_vfs_handle(Directory_service          &ds,
+				                 File_io_service            &fs,
+				                 Allocator                  &alloc,
+				                 Block_connection           &block,
+				                 Block::Session::Info const &info,
+				                 size_t               const  request_size_limit)
 				:
-					Single_vfs_handle(ds, fs, alloc, 0),
-					_ep(ep),
-					_alloc(alloc),
-					_block_buffer(block_buffer),
-					_block_buffer_count(block_buffer_count),
-					_block(block),
-					_block_size(block_size),
-					_block_count(block_count),
-					_tx_source(tx_source),
-					_writeable(writeable)
+					Single_vfs_handle   { ds, fs, alloc, 0 },
+					_block              { block },
+					_info               { info },
+					_request_size_limit { request_size_limit }
 				{ }
+
+				bool queue_read(size_t)
+				{
+					return true;
+				}
 
 				Read_result read(Byte_range_ptr const &dst, size_t &out_count) override
 				{
-					file_size seek_offset = seek();
+					if (_job.constructed() && !_job->done)
+						return READ_QUEUED;
 
-					size_t count = dst.num_bytes;
-					size_t read = 0;
-
-					while (count > 0) {
-						file_size displ   = 0;
-						file_size blk_nr  = seek_offset / _block_size;
-
-						size_t length = 0;
-
-						displ = seek_offset % _block_size;
-
-						if ((displ + count) > _block_size)
-							length = size_t(_block_size - displ);
-						else
-							length = count;
-
-						/*
-						 * We take a shortcut and read the blocks all at once if the
-						 * offset is aligned on a block boundary and the count is a
-						 * multiple of the block size, e.g. 4K reads will be read at
-						 * once.
-						 *
-						 * XXX this is quite hackish because we have to omit partial
-						 * blocks at the end.
-						 */
-						if (displ == 0 && !(count < _block_size)) {
-							file_size bytes_left = count - (count % _block_size);
-
-							size_t const nbytes = _block_io(blk_nr, dst.start + read, bytes_left, false, true);
-							if (nbytes == 0) {
-								Genode::error("error while reading block:", blk_nr, " from block device");
-								return READ_ERR_INVALID;
-							}
-
-							read  += nbytes;
-							count -= nbytes;
-							seek_offset += nbytes;
-
-							continue;
-						}
-
-						size_t const nbytes = _block_io(blk_nr, _block_buffer, _block_size, false);
-						if (nbytes != _block_size) {
-							Genode::error("error while reading block:", blk_nr, " from block device");
-							return READ_ERR_INVALID;
-						}
-
-						Genode::memcpy(dst.start + read, _block_buffer + displ, length);
-
-						read  += length;
-						count -= length;
-						seek_offset += length;
+					if (_job.constructed() && _job->done) {
+						out_count = _job->bytes_handled;
+						_job.destruct();
+						return READ_OK;
 					}
 
-					out_count = read;
+					file_size      const seek_offset  = seek();
+					block_number_t const block_number = seek_offset / _info.block_size;
+					if (block_number >= _info.block_count) {
+						Genode::error(__func__, ": block: ", block_number, " out of reach");
+						return READ_ERR_INVALID;
+					}
 
-					return READ_OK;
+					if (seek_offset % _info.block_size != 0) {
+						Genode::error(__func__, ": seek offset: ", Genode::Hex(seek_offset), " "
+						                "not aligned to block size: ", Genode::Hex(_info.block_size));
+						return READ_ERR_INVALID;
+					}
 
+					size_t const size_limit = min(_request_size_limit, dst.num_bytes);
+
+					Block::Operation const op {
+						.type         = Block::Operation::Type::READ,
+						.block_number = block_number,
+						.count        = round_to_block_size(_info.block_size, size_limit)
+					};
+
+					_job.construct(_block, dst.start, size_limit, seek_offset, op);
+					_block.update_jobs(_block);
+
+					return READ_QUEUED;
 				}
 
 				Write_result write(Const_byte_range_ptr const &src, size_t &out_count) override
 				{
-					if (!_writeable) {
+					if (!_info.writeable) {
 						Genode::error("block device is not writeable");
 						return WRITE_ERR_INVALID;
 					}
 
-					file_size seek_offset = seek();
+					if (_job.constructed() && !_job->done)
+						return WRITE_ERR_WOULD_BLOCK;
 
-					size_t written = 0;
-					size_t count = src.num_bytes;
-
-					while (count > 0) {
-						file_size displ  = 0;
-						file_size blk_nr = seek_offset / _block_size;
-
-						size_t length = 0;
-
-						displ = seek_offset % _block_size;
-
-						if ((displ + count) > _block_size)
-							length = size_t(_block_size - displ);
-						else
-							length = count;
-
-						/*
-						 * We take a shortcut and write as much as possible without
-						 * using the block buffer if the offset is aligned on a block
-						 * boundary and the count is a multiple of the block size,
-						 * e.g. 4K writes will be written at once.
-						 *
-						 * XXX this is quite hackish because we have to omit partial
-						 * blocks at the end.
-						 */
-						if (displ == 0 && !(count < _block_size)) {
-							file_size bytes_left = count - (count % _block_size);
-
-							size_t const nbytes = _block_io(blk_nr, (void*)(src.start + written),
-							                                bytes_left, true, true);
-							if (nbytes == 0) {
-								Genode::error("error while write block:", blk_nr, " to block device");
-								return WRITE_ERR_INVALID;
-							}
-
-							written     += nbytes;
-							count       -= nbytes;
-							seek_offset += nbytes;
-
-							continue;
-						}
-
-						/*
-						 * The offset is not aligned on a block boundary. Therefore
-						 * we need to read the block to the block buffer first and
-						 * put the buffer content at the right offset before we can
-						 * write the whole block back. In addition if length is less
-						 * than block size, we also have to read the block first.
-						 */
-						if (displ > 0 || length < _block_size)
-							_block_io(blk_nr, _block_buffer, _block_size, false);
-
-						Genode::memcpy(_block_buffer + displ, src.start + written, length);
-
-						size_t const nbytes = _block_io(blk_nr, _block_buffer, _block_size, true);
-						if (nbytes != _block_size) {
-							Genode::error("error while writing block:", blk_nr, " to block_device");
-							return WRITE_ERR_INVALID;
-						}
-
-						written     += length;
-						count       -= length;
-						seek_offset += length;
+					if (_job.constructed() && _job->done) {
+						out_count = _job->bytes_handled;
+						_job.destruct();
+						return WRITE_OK;
 					}
 
-					out_count = written;
+					file_size      const seek_offset  = seek();
+					block_number_t const block_number = seek_offset / _info.block_size;
+					if (block_number >= _info.block_count) {
+						Genode::error(__func__, ": block: ", block_number, " out of reach");
+						return WRITE_ERR_INVALID;
+					}
 
-					return WRITE_OK;
+					if (seek_offset % _info.block_size != 0) {
+						Genode::error(__func__, ": seek offset: ", Genode::Hex(seek_offset), " "
+						                "not aligned to block size: ", Genode::Hex(_info.block_size));
+						return WRITE_ERR_INVALID;
+					}
 
+					size_t const size_limit = min(_request_size_limit, src.num_bytes);
+
+					Block::Operation const op {
+						.type         = Block::Operation::Type::WRITE,
+						.block_number = block_number,
+						.count        = round_to_block_size(_info.block_size, size_limit)
+					};
+
+					_job.construct(_block, const_cast<char*>(src.start), size_limit, seek_offset, op);
+					_block.update_jobs(_block);
+
+					// XXX force libc to call use again and hopefully nobody uses O_NONBLOCK
+					return WRITE_ERR_WOULD_BLOCK;
 				}
 
 				Sync_result sync() override
 				{
-					/*
-					 * Just in case bail if we cannot submit the packet.
-					 * (Since the plugin operates in a synchronous fashion
-					 * that should not happen.)
-					 */
-					if (!_tx_source->ready_to_submit()) {
-						Genode::error("vfs_block: could not sync blocks");
-						return SYNC_ERR_INVALID;
-					}
-
-					Block::Packet_descriptor p =
-						Block::Session::sync_all_packet_descriptor(
-							_block.info(), Block::Session::Tag { 0 });
-
-					_tx_source->submit_packet(p);
-
-					_block_for_ack();
-
-					p = _tx_source->get_acked_packet();
-					_tx_source->release_packet(p);
-
-					if (!p.succeeded()) {
-						/* only warn once if sync is not supported */
-						static bool print_sync_failed = true;
-						if (print_sync_failed) {
-							Genode::warning("vfs_block: syncing blocks failed");
-							print_sync_failed = false;
-						}
-						return SYNC_ERR_INVALID;
-					}
-
 					return SYNC_OK;
 				}
 
-				bool read_ready()  const override { return true; }
-				bool write_ready() const override { return true; }
+				bool read_ready()  const override
+				{
+					return _job.constructed();
+				}
+
+				bool write_ready() const override
+				{
+					return _job.constructed();
+				}
 		};
+
+		Block::Session::Info const _info;
+		size_t               const _io_buffer_size;
 
 	public:
 
-		Data_file_system(Vfs::Env                   &env,
-		                 Block::Connection<>        &block,
-		                 Block::Session::Info const &info,
-		                 Name                 const &name,
-		                 size_t                      io_buffer_size)
+		Data_file_system(Vfs::Env                &env,
+		                 Block_connection        &block,
+		                 Name              const &name,
+		                 size_t                   io_buffer_size)
 		:
 			Single_file_system { Node_type::CONTINUOUS_FILE, name.string(),
-			                     info.writeable ? Node_rwx::rw() : Node_rwx::ro(),
+			                     block.info().writeable ? Node_rwx::rw() : Node_rwx::ro(),
 			                     Genode::Xml_node("<data/>") },
-			_env(env),
-			_block_buffer(0),
-			_block_buffer_count(unsigned(io_buffer_size / info.block_size)),
-			_block(block),
-			_info(info),
-			_tx_source(_block.tx()),
-			_writeable(_info.writeable)
-		{
-			_block_buffer = new (_env.alloc())
-				char[_block_buffer_count * _info.block_size];
-		}
+			_env            { env },
+			_block          { block },
+			_info           { _block.info() },
+			_io_buffer_size { io_buffer_size }
+		{ }
 
-		~Data_file_system()
-		{
-			destroy(_env.alloc(), _block_buffer);
-		}
+		~Data_file_system() { }
 
 		static char const *name()   { return "data"; }
 		char const *type() override { return "data"; }
@@ -391,16 +297,9 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 				return OPEN_ERR_UNACCESSIBLE;
 
 			try {
-				*out_handle = new (alloc) Block_vfs_handle(*this, *this,
-				                                           _env.env().ep(),
-				                                           alloc,
-				                                           _block_buffer,
-				                                           _block_buffer_count,
-				                                           _block,
-				                                           _info.block_size,
-				                                           _info.block_count,
-				                                           _tx_source,
-				                                           _info.writeable);
+				*out_handle = new (alloc) Block_vfs_handle(*this, *this, alloc,
+				                                           _block, _info,
+				                                           _io_buffer_size / 2);
 				return OPEN_OK;
 			}
 			catch (Genode::Out_of_ram)  { return OPEN_ERR_OUT_OF_RAM; }
@@ -414,17 +313,27 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 			return result;
 		}
 
-		Unlink_result unlink(char const *path) override
-		{
-			if (_single_file(path))
-				return UNLINK_OK;
-
-			return UNLINK_ERR_NO_ENTRY;
-		}
+		Unlink_result unlink(char const *path) override {
+			return _single_file(path) ? UNLINK_OK : UNLINK_ERR_NO_ENTRY; }
 
 		/********************************
 		 ** File I/O service interface **
 		 ********************************/
+
+		virtual bool queue_read(Vfs_handle *vfs_handle, size_t size) override
+		{
+			Block_vfs_handle *handle =
+				static_cast<Block_vfs_handle*>(vfs_handle);
+			return handle->queue_read(size);
+		}
+
+		Read_result complete_read(Vfs_handle *vfs_handle, Byte_range_ptr const &dst,
+		                          size_t &out_count) override
+		{
+			Block_vfs_handle *handle =
+				static_cast<Block_vfs_handle*>(vfs_handle);
+			return handle->read(dst, out_count);
+		}
 
 		Ftruncate_result ftruncate(Vfs_handle *, file_size) override
 		{
@@ -444,14 +353,18 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 
 	Genode::Allocator_avl _tx_block_alloc { &_env.alloc() };
 
-	Block::Connection<> _block;
+	Block_connection _block;
 
 	Block::Session::Info const _info { _block.info() };
 
 	Genode::Io_signal_handler<Local_factory> _block_signal_handler {
 		_env.env().ep(), *this, &Local_factory::_handle_block_signal };
 
-	void _handle_block_signal() { _env.user().wakeup_vfs_user(); }
+	void _handle_block_signal()
+	{
+		_block.update_jobs(_block);
+		_env.user().wakeup_vfs_user();
+	}
 
 	Data_file_system _data_fs;
 	
@@ -475,18 +388,14 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 	Readonly_value_file_system<Genode::uint64_t> _block_count_fs { "block_count", 0 };
 	Readonly_value_file_system<size_t>           _block_size_fs  { "block_size",  0 };
 
-	static Name name(Xml_node const &config)
-	{
-		return config.attribute_value("name", Name("block"));
-	}
+	static Name name(Xml_node const &config) {
+		return config.attribute_value("name", Name("block")); }
 
 	/* payload + packstream metadata */
 	static constexpr size_t DEFAULT_IO_BUFFER_SIZE = (4u << 20);
 
-	static size_t io_buffer(Xml_node const &config)
-	{
-		return config.attribute_value("io_buffer", DEFAULT_IO_BUFFER_SIZE);
-	}
+	static size_t io_buffer(Xml_node const &config) {
+		return config.attribute_value("io_buffer", DEFAULT_IO_BUFFER_SIZE); }
 
 	Local_factory(Vfs::Env &env, Xml_node const &config)
 	:
@@ -495,7 +404,7 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 		_env     { env },
 		_block   { _env.env(), &_tx_block_alloc, io_buffer(config) + (64u << 10),
 		           _label.string() },
-		_data_fs { _env, _block, _info, name(config), io_buffer(config) }
+		_data_fs { _env, _block, name(config), io_buffer(config) }
 	{
 		_block.sigh(_block_signal_handler);
 		_info_fs       .value(Info { _info });
@@ -505,22 +414,10 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 
 	Vfs::File_system *create(Vfs::Env&, Xml_node const &node) override
 	{
-		if (node.has_type("data")) {
-			return &_data_fs;
-		}
-
-		if (node.has_type("info")) {
-			return &_info_fs;
-		}
-
-		if (node.has_type("block_count")) {
-			return &_block_count_fs;
-		}
-
-		if (node.has_type("block_size")) {
-			return &_block_size_fs;
-		}
-
+		if (node.has_type("data"))        return &_data_fs;
+		if (node.has_type("info"))        return &_info_fs;
+		if (node.has_type("block_count")) return &_block_count_fs;
+		if (node.has_type("block_size"))  return &_block_size_fs;
 		return nullptr;
 	}
 };
