@@ -96,6 +96,7 @@ append build_components {
 	driver/platform
 	server/part_block
 	server/part_block_legacy
+	lib/vfs
 	app/sequence
 	app/top
 }
@@ -104,7 +105,7 @@ build $build_components
 
 create_boot_directory
 
-import_from_depot cnuke/pkg/fio/3.39-25.04
+import_from_depot cnuke/pkg/fio/3.39-25.04-2025-05-23
 
 
 #

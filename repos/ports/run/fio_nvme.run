@@ -3,7 +3,13 @@ assert_spec x86
 set use_vfs_ram 0
 set use_part_block 1
 
-proc block_partition { } { return 8 }
+proc block_partition { } {
+	if {[have_include power_on/qemu]} {
+		return 1
+	} else {
+		return 8
+	}
+}
 
 proc block_provider_name { } { return nvme }
 
