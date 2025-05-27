@@ -176,7 +176,12 @@ struct Linker::Elf_file : File
 	:
 		env(env), rom_cap(_rom_dataspace(name)), loaded(load)
 	{
-		load_phdr();
+		try {
+			load_phdr();
+		} catch (...) {
+			error("PHDR for ", name, " could not be loaded");
+			throw;
+		}
 
 		/*
 		 * Initialize the linker area at the link address of the binary,
