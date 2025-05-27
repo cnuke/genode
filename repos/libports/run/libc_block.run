@@ -1,76 +1,158 @@
-assert {[have_include power_on/qemu] || [have_spec linux]}
+#
+# Generate dd start node
+#
+proc dd_config { blocksize input output count } {
 
-create_boot_directory
+	set    config "<start name=\"/bin/dd\" caps=\"500\" ram=\"16M\">\n"
+	append config "  <config>\n"
+	append config "    <arg value=\"dd\"/>\n"
+	append config "    <arg value=\"if=$input\"/>\n"
+	append config "    <arg value=\"of=$output\"/>\n"
+	append config "    <arg value=\"bs=$blocksize\"/>\n"
+	if {$count != 0} {
+	append config "    <arg value=\"count=$count\"/>\n"
+	}
+	append config "    <vfs>\n"
+	append config "      <dir name=\"dev\">\n"
+	append config "        <null/> <zero/> <log/>\n"
+	append config "        <jitterentropy name=\"random\"/>\n"
+	append config "        <xoroshiro name=\"random\" seed_path=\"/dev/entropy\"/>\n"
+	append config "        <block/>\n"
+	append config "      </dir>\n"
+	append config "    </vfs>\n"
+	append config "    <libc stdin=\"/dev/null\" stdout=\"/dev/log\" stderr=\"/dev/log\"\n"
+	append config "          rtc=\"/dev/null\"/>\n"
+	append config "  </config>\n"
+	append config "</start>\n"
+
+	return $config
+}
 
 build {
-	core init timer lib/ld lib/libc lib/posix lib/vfs_import
+	lib/vfs
+	lib/libc
 	server/vfs_block
 	test/libc_block
 }
 
+create_boot_directory
+
+import_from_depot \
+	[depot_user]/src/[base_src] \
+	[depot_user]/src/coreutils \
+	[depot_user]/src/init \
+	[depot_user]/src/fs_rom \
+	[depot_user]/src/libc \
+	[depot_user]/src/vfs \
+	[depot_user]/src/vfs_block \
+	[depot_user]/src/vfs_import \
+	[depot_user]/src/vfs_jitterentropy \
+	[depot_user]/src/vfs_xoroshiro \
+	[depot_user]/src/sequence \
+	[depot_user]/src/posix
+
 install_config {
-<config verbose="yes">
-	<parent-provides>
-		<service name="ROM"/>
-		<service name="IRQ"/>
-		<service name="IO_MEM"/>
-		<service name="IO_PORT"/>
-		<service name="PD"/>
-		<service name="RM"/>
-		<service name="CPU"/>
-		<service name="LOG"/>
-	</parent-provides>
-	<default-route>
-		<any-service> <parent/> <any-child/> </any-service>
-	</default-route>
-	<default caps="200" ram="1M"/>
-	<start name="timer">
-		<provides> <service name="Timer"/> </provides>
-	</start>
-	<start name="test-libc_block" ram="2M">
-		<config>
-			<libc stdout="/dev/log"/>
-			<vfs>
-				<dir name="dev">
-					<log/>
-					<block name="blkdev"/>
-				</dir>
-			</vfs>
+	<config verbose="yes">
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="LOG"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="PD"/>
+			<service name="IRQ"/>
+			<service name="IO_MEM"/>
+			<service name="IO_PORT"/>
+		</parent-provides>
+
+		<default-route>
+			<any-service> <parent/> </any-service>
+		</default-route>
+		<default caps="100" ram="1M"/>
+
+		<affinity-space width="2" height="1"/>
+
+		<start name="timer">
+			<provides><service name="Timer"/></provides>
+		</start>
+
+		<start name="vfs" ram="4M">
+			<provides><service name="File_system"/></provides>
+			<config>
+				<vfs>
+					<ram/>
+					<tar name="coreutils.tar" />
+				</vfs>
+				<default-policy root="/" writeable="yes"/>
+			</config>
+		</start>
+
+		<start name="vfs_rom" ram="10M">
+			<binary name="fs_rom"/>
+			<provides> <service name="ROM"/> </provides>
+			<config/>
+			<route>
+				<service name="File_system"> <child name="vfs"/> </service>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+
+		<start name="vfs_block" ram="1300M" caps="1000">
+			<provides><service name="Block"/></provides>
+			<config>
+				<vfs>
+					<ram/>
+					<import>
+						<zero name="test.hda" size="1G"/>
+					</import>
+				</vfs>
+				<default-policy file="/test.hda" block_size="512"
+				                writeable="yes"/>
+			</config>
+			<route>
+				<any-service> <parent/> </any-service>
+			</route>
+		</start>
+
+	<start name="sequence" caps="600">
+		<resource name="RAM" quantum="32M"/>
+		<affinity xpos="1" ypos="0" width="1" height="1"/>
+		<config keep_going="yes">
+} [dd_config  512 /dev/block /dev/null 0] {
+} [dd_config 4096 /dev/block /dev/null 0] {
+} [dd_config   1M /dev/block /dev/null 0] {
+} [dd_config   8M /dev/block /dev/null 0] {
+} [dd_config  512 /dev/zero  /dev/block 0] {
+} [dd_config 4096 /dev/zero  /dev/block 0] {
+} [dd_config   1M /dev/zero  /dev/block 0] {
+} [dd_config   8M /dev/zero  /dev/block 0] {
+			<start name="test-libc_block" ram="8M">
+				<config>
+					<libc stdout="/dev/log"/>
+					<vfs>
+						<dir name="dev">
+							<log/>
+							<block name="blkdev"/>
+						</dir>
+					</vfs>
+				</config>
+			</start>
 		</config>
+		<route>
+			<service name="File_system"> <child name="vfs"/> </service>
+			<service name="ROM" label_last="/bin/dd"> <child name="vfs_rom"/> </service>
+			<service name="ROM" label_suffix=".lib.so"> <parent/> </service>
+			<service name="Block"> <child name="vfs_block"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
 	</start>
-	<start name="vfs_block" ram="68M">
-		<provides><service name="Block"/></provides>
-		<config>
-			<vfs>
-				<ram/>
-				<import>
-					<zero name="test.hda" size="64M"/>
-				</import>
-			</vfs>
-			<default-policy file="/test.hda" block_size="512"
-			                writeable="yes"/>
-		</config>
-	</start>
-</config>
+
+	</config>
 }
 
-#
-# Boot modules
-#
-
-set disk_image "bin/test.hda"
-set cmd "dd if=/dev/zero of=$disk_image bs=1024 count=65536"
-puts "creating disk image: $cmd"
-catch { exec sh -c $cmd }
-
-build_boot_image [list {*}[build_artifacts] test.hda]
+build_boot_image [build_artifacts]
 
 append qemu_args " -nographic "
+append qemu_args " -smp 2 "
+append qemu_args " -m 2048 "
 
-run_genode_until {.*child "test-libc_block" exited with exit value 0.*} 60
-
-exec rm -f $disk_image
-
-puts "\nTest succeeded\n"
-
-# vi: set ft=tcl :
+run_genode_until "child .* exited with exit value 0.*\n" 120
