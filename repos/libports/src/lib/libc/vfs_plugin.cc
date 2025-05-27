@@ -835,7 +835,7 @@ ssize_t Libc::Vfs_plugin::write(File_descriptor *fd, const void *buf,
 				/* increment byte count reported to caller */
 				_out_count += partial_out_count;
 
-				bool const write_complete = (partial_out_count == _count);
+				bool const write_complete = (partial_out_count >= _count);
 				if (write_complete)
 					return Fn::COMPLETE;
 
