@@ -37,18 +37,21 @@ if {[have_spec nova]} {
 # serial is not ever usable on hardware after resume, avoid hang by now
 if {![have_include "power_on/qemu"]} {
 	# switch off serial device usage by kernel and core
-	proc boot_output { } { return "" }
+#	proc boot_output { } { return "" }
 }
 
 
 # non Intel machines have no GPU support, e.g. Qemu and AMD
 set board_non_intel [expr [have_include "power_on/qemu"]]
 
-set use_gpu_client 1
-set use_gpe "no"
-set use_ahci 0
-set use_nvme 0
-set use_wifi 1
+set use_gpu_client 0
+set use_gpe        "no"
+set use_ahci       0
+set use_nvme       1
+set use_nvme_fs    1
+set use_wifi       0
+set use_vbox       1
+set use_qt_clients 0
 
 proc priority_timer    { } { return {priority="0"} }
 proc priority_base     { } { return {priority="-1"} }
@@ -58,6 +61,215 @@ proc priority_wm       { } { return {priority="-2"} }
 proc priority_log      { } { return {priority="-2"} }
 proc priority_drivers  { } { return {priority="-2"} }
 proc priority_scenario { } { return {priority="-3"} }
+
+
+proc vbox_client { } {
+
+	global use_vbox
+	global use_nvme_fs
+
+	set return_vbox ""
+
+	if {!$use_vbox || !$use_nvme_fs} {
+		return $return_vbox
+	}
+
+	append return_vbox {
+
+	<start name="pc_rtc" caps="100" } [priority_drivers] { >
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Rtc"/> </provides>
+		<route> <any-service> <parent/> </any-service> </route>
+	</start>
+
+	<start name="black_hole" caps="100" } [priority_scenario] {>
+		<resource name="RAM" quantum="8M"/>
+		<provides>
+			<service name="File_system"/>
+			<service name="Audio_in"/>
+			<service name="Audio_out"/>
+			<service name="Capture"/>
+<!--
+			<service name="Event"/>
+-->
+			<service name="Nic"/>
+			<service name="Uplink"/>
+			<service name="ROM"/>
+			<service name="Report"/>
+<!--
+			<service name="Gpu"/>
+-->
+			<service name="Usb"/>
+			<service name="Play"/>
+			<service name="Record"/>
+		</provides>
+		<config>
+			<audio_in/>
+			<audio_out/>
+			<capture/>
+<!--
+			<event/>
+-->
+			<nic/>
+			<uplink/>
+			<rom/>
+<!--
+			<gpu/>
+-->
+			<usb/>
+			<play/>
+			<record/>
+		</config>
+		<route>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="vbox.fs" caps="100" } [priority_scenario] {>
+		<resource name="RAM" quantum="1M"/>
+		<binary name="chroot"/>
+		<provides>
+			<service name="File_system"/>
+		</provides>
+		<config> <default-policy path="/vm/ubuntu_20.04" writeable="yes"/> </config>
+		<route>
+			<service name="File_system"> <child name="nvme-fs"/> </service>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="vbox6" caps="1800" } [priority_scenario] { >
+		<resource name="RAM" quantum="8492M"/>
+		<binary name="virtualbox6"/>
+<!--		<affinity xpos="2" ypos="0" width="1" height="2"/> -->
+		<route>
+			<service name="ROM" label="config">
+				<child name="dynamic_rom" label="vbox6_config"/>
+			 </service>
+			<service name="File_system" label="shared">
+				<child name="vbox.fs"/>
+			</service>
+			<service name="File_system">
+				<child name="vbox.fs" />
+			</service>
+
+			<service name="ROM" label="VBoxSharedClipboard.so">
+			  <parent label="virtualbox6-sharedclipboard.lib.so"/> </service>
+			<service name="ROM" label="VBoxSharedFolders.so">
+			  <parent label="virtualbox6-sharedfolders.lib.so"/> </service>
+
+			<service name="ROM" label_last="virtualbox6">
+				<parent/>
+			</service>
+			<service name="ROM" label_last="libc.lib.so">
+				<parent/>
+			</service>
+
+			<service name="Gui">
+				<child name="wm"/>
+			</service>
+			<service name="Nic">
+				<child name="black_hole"/>
+			</service>
+<!--
+			<service name="ROM" label="capslock">
+				<parent label="capslock"/>
+			</service>
+-->
+			<service name="ROM" label="platform_info">
+				<parent label="platform_info"/>
+			</service>
+			<service name="Report" label_last="shape">
+				<child name="wm"/>
+			</service>
+			<service name="Report" label="clipboard">
+				<child name="wm"/>
+			</service>
+			<service name="ROM" label="clipboard">
+				<child name="black_hole"/>
+			</service>
+			<service name="VM">
+				<parent/>
+			</service>
+			<service name="RM">
+				<parent/>
+			</service>
+			<service name="Rtc">
+				<child name="pc_rtc"/>
+			</service>
+			<service name="Record">
+				<child name="black_hole"/>
+			</service>
+			<service name="Play">
+				<child name="black_hole"/>
+			</service>
+			<service name="Usb">
+				<child name="black_hole"/>
+			</service>
+			<service name="Gpu">
+				<child name="gpu"/>
+			</service>
+			<service name="ROM" label="mesa_gpu.lib.so">
+				<parent label="mesa_gpu-iris.lib.so"/>
+			</service>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>}
+
+	return $return_vbox
+}
+
+
+proc qt_clients { } {
+
+	global use_qt_clients
+
+	set return_qt ""
+
+	if {!$use_qt_clients} {
+		return $return_qt
+	}
+
+	append return_qt {
+	<start name="ram_fs" caps="200" } [priority_scenario] {>
+		<resource name="RAM" quantum="10M"/>
+		<binary name="vfs"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<vfs> <ram/> </vfs>
+			<!-- constrain sessions according to their labels -->
+			<policy label_prefix="textedit" root="/" writeable="yes" />
+		</config>
+	</start>
+	<start name="textedit" caps="350" } [priority_scenario] {>
+		<resource name="RAM" quantum="128M"/>
+		<config>
+			<libc stdout="/dev/log" stderr="/dev/log" pipe="/pipe" rtc="/dev/rtc"/>
+			<vfs>
+				<dir name="dev">
+					<log/>
+					<inline name="rtc">2018-01-01 00:01</inline>
+				</dir>
+				<dir name="pipe"> <pipe/> </dir>
+				<dir name="fs">	<fs/> </dir>
+				<tar name="qt5_dejavusans.tar"/>
+				<tar name="qt5_libqgenode.tar"/>
+			</vfs>
+		</config>
+		<route>
+			<service name="File_system"> <child name="ram_fs"/> </service>
+			<service name="Gui"> <child name="wm"/> </service>
+			<service name="Report" label="shape"> <child name="wm"/> </service>
+			<service name="ROM" label="mesa_gpu.lib.so">
+				<parent label="mesa_gpu-softpipe.lib.so" />
+			</service>
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+	}
+
+	return $return_qt
+}
 
 
 proc display_config { } {
@@ -83,13 +295,53 @@ proc display_config { } {
 	}
 
 	return {
+		<start name="intel_config_rom" caps="100">
+			<binary name="dynamic_rom"/>
+			<resource name="RAM" quantum="4M"/>
+			<provides><service name="ROM"/></provides>
+			<config verbose="yes">
+				<rom name="intel_config">
+					<inline description="discrete">
+						<config ld_verbose="yes" width="1024" height="768" system="yes">
+							<report connectors="yes"/>
+
+							<connector name="eDP-1" mode="1"/>
+							<connector name="HDMI-A-2"/>
+<!--
+ width="1920" height="1080"/>
+-->
+
+							<merge name="mirror">
+							</merge>
+						</config>
+					</inline>
+					<sleep milliseconds="15000"/>
+					<inline description="mirror">
+						<config ld_verbose="yes" width="1024" height="768" system="yes">
+							<report connectors="yes"/>
+
+							<merge name="mirror">
+								<connector name="eDP-1" mode="1"/>
+								<connector name="HDMI-A-2"/>
+<!--
+ width="1920" height="1080"/>
+-->
+							</merge>
+						</config>
+					</inline>
+					<sleep milliseconds="15000"/>
+				</rom>
+			</config>
+			<route> <any-service> <parent/> </any-service> </route>
+		</start>
+
 		<start name="intel_fb" caps="1000">
 			<binary name="pc_intel_fb"/>
-			<resource name="RAM" quantum="60M"/>
-			<config ld_verbose="yes" width="1024" height="768" system="yes">
-				<report connectors="yes"/>
-			</config>
+			<resource name="RAM" quantum="256M"/>
 			<route>
+				<service name="ROM" label="config">
+					<child name="intel_config_rom" label="intel_config"/>
+				 </service>
 				<service name="ROM" label="system">
 					<parent label="system"/> </service>
 				<any-service> <parent/> </any-service>
@@ -148,8 +400,14 @@ proc gui_config { } {
 		<provides>
 			<service name="Gui"/> <service name="Capture"/> <service name="Event"/>
 		</provides>
-		<config>
-			<capture/> <event/>
+<!--
+		<config panorama="yes">
+			<capture>
+				<policy label="drivers_init -> intel_fb -> eDP-1"/>
+				<policy label="drivers_init -> intel_fb -> HDMI-A-2" xpos="1920" ypos="0"/>
+				<default-policy/>
+			</capture>
+			<event/>
 			<report focus="yes" hover="yes" />
 			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
 			<domain name="panel"   layer="2" content="client" label="no" focus="none" />
@@ -159,7 +417,13 @@ proc gui_config { } {
 
 			<default-policy domain=""/>
 		</config>
+-->
 		<route>
+				<service name="ROM" label="config">
+					<child name="dynamic_rom" label="nitpicker_config"/>
+				 </service>
+<!--
+-->
 			<service name="Timer">  <child name="timer"/></service>
 			<service name="Report"> <child name="gui_reports"/></service>
 			<any-service><parent/><any-child/></any-service>
@@ -189,8 +453,16 @@ proc gui_config { } {
 		</config>
 	</start>
 
+	<start name="verbose_reports" caps="100" } [priority_gui] {>
+		<binary name="report_rom"/>
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes">
+		</config>
+	</start>
+
 	<start name="wm" caps="1000" } [priority_wm] {>
-		<resource name="RAM" quantum="32M"/>
+		<resource name="RAM" quantum="96M"/>
 		<binary name="init"/>
 		<provides>
 			<service name="Gui"/> <service name="Report"/> <service name="ROM"/>
@@ -198,7 +470,9 @@ proc gui_config { } {
 		<route>
 			<service name="ROM"    label="config"> <parent label="wm.config"/> </service>
 			<service name="Report" label_last="shape">  <child name="pointer"/> </service>
-			<service name="Gui"> <child name="nitpicker"/> </service>
+			<service name="Report" label_last="clipboard"> <child name="drivers_reports"/> </service>
+			<service name="Gui">  <child name="nitpicker"/> </service>
+			<service name="Report"> <child name="verbose_reports"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
@@ -366,6 +640,69 @@ proc ahci_config { } {
 }
 
 
+proc nvme_fs { } {
+
+	global use_nvme_fs
+
+	set return_nvme_fs ""
+
+	if {!$use_nvme_fs} {
+		return $return_nvme_fs
+	}
+
+	append return_nvme_fs {
+
+	<start name="nvme-1.part" caps="100" } [priority_drivers] {>
+		<resource name="RAM" quantum="8M" />
+		<binary name="part_block"/>
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<report partitions="no"/>
+			<policy label="1" partition="1" writeable="yes"/>
+			<policy label="2" partition="2" writeable="yes"/>
+			<policy label="3" partition="3" writeable="yes"/>
+			<policy label="4" partition="4" writeable="yes"/>
+			<policy label="5" partition="5" writeable="yes"/>
+			<policy label="6" partition="6" writeable="yes"/>
+			<policy label="7" partition="7" writeable="yes"/>
+			<policy label="8" partition="8" writeable="yes"/>
+			<policy label="9" partition="9" writeable="yes"/>
+		</config>
+
+		<route>
+			<service name="Block">
+				<child name="nvme"/>
+			</service>
+
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="nvme-fs" caps="400" } [priority_drivers] {>
+		<resource name="RAM" quantum="80M" />
+		<binary name="vfs"/>
+		<provides> <service name="File_system"/> </provides>
+
+		<config>
+			<vfs>
+				<rump fs="ext2fs" ram="48M" writeable="yes"/>
+			</vfs>
+			<default-policy root="/" writeable="yes"/>
+		</config>
+
+		<route>
+			<service name="Block">
+				<child name="nvme-1.part" label="5"/>
+			</service>
+
+			<any-service> <parent /> <any-child/> </any-service>
+		</route>
+	</start>}
+
+	return $return_nvme_fs
+}
+
+
 proc nvme_config { } {
 
 	global use_nvme
@@ -382,6 +719,7 @@ proc nvme_config { } {
 			<provides> <service name="Block"/> </provides>
 			<config max_hmb_size="16M" verbose_regs="yes" verbose_identify="yes" system="yes">
 				<policy label="test-nvme -> " writeable="no"/>
+				<policy label="nvme-1.part -> " writeable="yes"/>
 			</config>
 			<route>
 				<service name="Platform">
@@ -399,6 +737,12 @@ proc nvme_config { } {
 				<any-service> <parent /> <any-child/> </any-service>
 			</route>
 		</start>
+	}
+
+	global use_nvme_fs
+
+	if {$use_nvme_fs} {
+		return $return_nvme
 	}
 
 	append return_nvme {
@@ -431,7 +775,7 @@ proc gpu_config { } {
 	append return_gpu {
 		<start name="gpu" caps="2000" } [priority_drivers] {>
 			<binary name="intel_gpu"/>
-			<resource name="RAM" quantum="40M"/>
+			<resource name="RAM" quantum="256M"/>
 			<provides>
 				<service name="Gpu"/>
 				<service name="Platform"/>
@@ -587,6 +931,7 @@ build {
 	app/acpica
 	app/pci_decode
 	app/block_tester
+	virtualbox6
 }
 
 create_boot_directory
@@ -602,7 +947,12 @@ import_from_depot [depot_user]/src/init \
                   [depot_user]/src/report_rom \
                   [depot_user]/src/dynamic_rom \
                   [depot_user]/src/nano3d \
-                  [depot_user]/src/log_core
+                  [depot_user]/src/log_core \
+
+if {$use_qt_clients} {
+	import_from_depot [depot_user]/pkg/qt5_textedit \
+	                  [depot_user]/src/vfs
+}
 
 if {$use_gpu_client} {
 	import_from_depot [depot_user]/pkg/glmark2
@@ -613,13 +963,22 @@ if {$use_wifi} {
 	                  [depot_user]/raw/pc_wifi_firmware
 }
 
+if {$use_vbox} {
+	import_from_depot [depot_user]/src/black_hole \
+	                  [depot_user]/src/part_block \
+	                  [depot_user]/pkg/ext2_fs \
+	                  [depot_user]/src/chroot \
+	                  [depot_user]/pkg/vbox6
+}
+
 set config ""
 append config {
-	<config verbose="no" prio_levels="4">
+	<config verbose="yes" prio_levels="4">
 		<parent-provides>
 			<service name="ROM"/>
 			<service name="CPU"/>
 			<service name="RM"/>
+			<service name="VM"/>
 			<service name="PD"/>
 			<service name="LOG"/>
 			<service name="IRQ"/>
@@ -709,12 +1068,15 @@ append config {
 	} [  gui_config] {
 	} [  log_output] {
 	} [  gpu_client] {
+	} [  qt_clients] {
+	} [ vbox_client] {
 	} [ ahci_config] {
 	} [ nvme_config] {
+	} [     nvme_fs] {
 
 		<start name="drivers_init" caps="10000" } [priority_drivers] {>
 			<binary name="init"/>
-			<resource name="RAM" quantum="128M"/>
+			<resource name="RAM" quantum="368M"/>
 			<route>
 				<service name="Report">
 					<child name="drivers_reports"/>
@@ -742,6 +1104,9 @@ append config {
 				</service>
 				<service name="ROM" label="system">
 					<child name="dynamic_rom"/>
+				</service>
+				<service name="Capture">
+					<child name="nitpicker"/>
 				</service>
 				<any-service> <parent/> <any-child/> </any-service>
 			</route>
@@ -790,7 +1155,7 @@ append config {
 			</route>
 		</start>
 
-		<start name="dynamic_rom" caps="100" } [priority_config] {>
+		<start name="dynamic_rom" caps="220" } [priority_config] {>
 			<resource name="RAM" quantum="4M"/>
 			<provides><service name="ROM"/></provides>
 			<config verbose="yes">
@@ -799,8 +1164,9 @@ append config {
 					<inline description="system normal">
 						<system state=""/>
 					</inline>
-					<sleep milliseconds="10000"/>
+					<sleep milliseconds="100000"/>
 
+<!--
 					<inline description="disable display connectors">
 						<system state="blanking"/>
 					</inline>
@@ -810,7 +1176,7 @@ append config {
 						<system state="driver_stop"/>
 					</inline>
 					<sleep milliseconds="4000"/>
-
+-->
 					<!--
 					     TODO: for a real OS scenario, e.g. Sculpt OS - you
 					     have now to wait until all devices are unused and
@@ -818,18 +1184,18 @@ append config {
 					     report of the platform driver until it is in the
 					     right state !!!!!!!
 					-->
-
+<!--
 					<inline description="prepare suspending">
 						<system state="s3_prepare"/>
 					</inline>
 					<sleep milliseconds="10000"/>
-
+-->
 					<!--
 					     TODO: for a real OS scenario, e.g. Sculpt OS -
 					     waits until s3_prepare is done, e.g. evaluate the
 					     ACPICA sleep_state report!
 					-->
-
+<!--
 					<inline description="suspend system">
 						<system state="suspend"/>
 					</inline>
@@ -839,7 +1205,126 @@ append config {
 						<system state="s3_resume"/>
 					</inline>
 					<sleep milliseconds="10000"/>
+-->
+				</rom>
+				<rom name="nitpicker_config">
+					<inline description="discrete">
+		<config panorama="yes">
+			<capture>
+				<policy label="drivers_init -> intel_fb -> eDP-1"/>
+				<policy label="drivers_init -> intel_fb -> HDMI-A-2" xpos="1920" ypos="0"/>
+				<default-policy/>
+			</capture>
+			<event/>
+			<report focus="yes" hover="yes" />
+			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
+			<domain name="panel"   layer="2" content="client" label="no" focus="none" />
+			<domain name=""        layer="3" content="client" label="no" focus="click" hover="always"/>
 
+			<policy label_prefix="pointer"    domain="pointer"/>
+
+			<default-policy domain=""/>
+		</config>
+					</inline>
+					<sleep milliseconds="15000"/>
+					<inline description="mirror">
+		<config panorama="yes">
+			<capture>
+<!--
+				<policy label="drivers_init -> intel_fb -> eDP-1"/>
+				<policy label="drivers_init -> intel_fb -> HDMI-A-2"/>
+-->
+				<default-policy/>
+			</capture>
+			<event/>
+			<report focus="yes" hover="yes" />
+			<domain name="pointer" layer="1" content="client" label="no" origin="pointer" />
+			<domain name="panel"   layer="2" content="client" label="no" focus="none" />
+			<domain name=""        layer="3" content="client" label="no" focus="click" hover="always"/>
+
+			<policy label_prefix="pointer"    domain="pointer"/>
+
+			<default-policy domain=""/>
+		</config>
+					</inline>
+					<sleep milliseconds="15000"/>
+				</rom>
+				<rom name="vbox6_config">
+					<inline description="eDP-1, HDMI-A-2">
+
+		<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="" ld_verbose="yes">
+			<vfs>
+				<dir name="dev">
+					<log/> <rtc/> <null/> <gpu/> <zero/>
+<!--
+					<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
+-->
+				</dir>
+				<dir name="pipe"> <pipe/> </dir>
+				<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>
+				<rom name="VBoxSharedClipboard.so"/>
+				<rom name="VBoxSharedFolders.so"/>
+				<fs writeable="yes"/>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe">
+				<pthread placement="single-cpu"/>
+			</libc>
+			<monitor label="eDP-1"/>
+			<monitor label="HDMI-A-2"/>
+			<arg value="virtualbox"/>
+			<env key="VBOX_USER_HOME" value="/"/>
+			<env key="VBOX_LOG_DEST"          value="file=/dev/log"/>
+			<env key="VBOX_LOG"               value="+dbgf+gim"/>
+<!--
+			<env key="VBOX_LOG"               value="+dbgf+gim+dev_vmsvga.e.l"/>
+-->
+			<env key="VBOX_LOG_FLAGS"         value="thread"/>
+			<env key="VBOX_RELEASE_LOG_DEST"  value="file=/dev/log"/>
+			<env key="VBOX_RELEASE_LOG"       value=""/>
+			<env key="VBOX_RELEASE_LOG_FLAGS" value="thread"/>
+		</config>
+
+					</inline>
+					<sleep milliseconds="15000"/>
+
+					<inline description="eDP-1">
+
+		<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="" ld_verbose="yes">
+			<vfs>
+				<dir name="dev">
+					<log/> <rtc/> <null/> <gpu/> <zero/>
+<!--
+					<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
+-->
+				</dir>
+				<dir name="pipe"> <pipe/> </dir>
+				<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>
+				<rom name="VBoxSharedClipboard.so"/>
+				<rom name="VBoxSharedFolders.so"/>
+				<fs writeable="yes"/>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe">
+				<pthread placement="single-cpu"/>
+			</libc>
+<!--
+			<monitor label="eDP-1"/>
+			<monitor label="HDMI-A-2"/>
+-->
+			<arg value="virtualbox"/>
+			<env key="VBOX_USER_HOME" value="/"/>
+			<env key="VBOX_LOG_DEST"          value="file=/dev/log"/>
+			<env key="VBOX_LOG"               value="+dbgf+gim"/>
+<!--
+			<env key="VBOX_LOG"               value="+dbgf+gim+dev_vmsvga.e.l"/>
+-->
+			<env key="VBOX_LOG_FLAGS"         value="thread"/>
+			<env key="VBOX_RELEASE_LOG_DEST"  value="file=/dev/log"/>
+			<env key="VBOX_RELEASE_LOG"       value=""/>
+			<env key="VBOX_RELEASE_LOG_FLAGS" value="thread"/>
+		</config>
+
+					</inline>
+					<sleep milliseconds="15000"/>
 				</rom>
 			</config>
 		</start>
