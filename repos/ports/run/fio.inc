@@ -204,6 +204,7 @@ append config {
 		<config>
 			<report devices="yes"/>
 			<policy label="nvme -> "> <pci class="NVME"/> </policy>
+			<policy label="ahci -> "> <pci class="AHCI"/> </policy>
 		</config>
 	</start>}
 
@@ -227,7 +228,7 @@ append_if $use_part_block config {
 append config {
 	<start name="sequence" caps="1000">
 		<resource name="RAM" quantum="1200M"/>
-		<affinity xpos="1" ypos="0" width="2" height="1"/>
+		<affinity xpos="2" ypos="0" width="1" height="1"/>
 		<config>
 } [fio_config iops-read        randread  sync 32    4k 4 30 [fio_filename] $fiofile_size [use_singlecpu]] {
 } [fio_config iops-write       randwrite sync 32    4k 4 30 [fio_filename] $fiofile_size [use_singlecpu]] {

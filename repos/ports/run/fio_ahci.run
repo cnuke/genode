@@ -11,15 +11,15 @@ proc block_partition { } {
 	}
 }
 
-proc block_provider_name { } { return nvme }
+proc block_provider_name { } { return ahci }
 
 proc block_provider { } {
 	return "
-	<start name=\"nvme\" caps=\"120\">
+	<start name=\"ahci\" caps=\"120\">
 		<resource name=\"RAM\" quantum=\"24M\"/>
 		<provides> <service name=\"Block\"/> </provides>
-		<config max_hmb_size=\"16M\" verbose_regs=\"yes\" verbose_identify=\"yes\">
-			<default-policy writeable=\"yes\"/>
+		<config>
+			<default-policy device=\"1\" writeable=\"yes\"/>
 		</config>
 		<route>
 			<service name=\"Platform\"><child name=\"platform\"/> </service>
@@ -33,19 +33,19 @@ proc block_provider { } {
 }
 
 append build_components {
-	driver/nvme
+	driver/ahci
 }
 
 source ${genode_dir}/repos/ports/run/fio.inc
 
-# prevent #UD in fio
-append qemu_args " -cpu Skylake-Client-v4 "
-
 append qemu_args " -nographic "
 append qemu_args " -m 2048 "
-append qemu_args " -device pcie-root-port,id=root_port1 "
-append qemu_args " -drive id=nvme0,file=bin/nvme.raw,format=raw,if=none "
-append qemu_args " -device nvme,drive=nvme0,serial=fnord,id=nvme0n1,bus=root_port1 "
+append qemu_args " -device ahci,id=ahci "
+append qemu_args " -drive id=disk,file=bin/nvme.raw,format=raw,if=none "
+append qemu_args " -device ide-hd,drive=disk,bus=ahci.0 "
+append qemu_args " -drive id=cd,file=[run_dir]/../fio_ahci.iso,if=none,media=cdrom "
+append qemu_args " -device ide-cd,drive=cd,bus=ahci.1 "
 append qemu_args " -boot d "
+
 
 run_genode_until {.*child "sequence" exited with exit value 0.*\n} 600
