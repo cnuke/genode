@@ -1,0 +1,91 @@
+#
+# Build
+#
+append build_components {
+	core init timer lib/ld
+	server/vfs_block
+	lib/libc lib/libm lib/posix
+	lib/vfs
+	lib/vfs_import
+	lib/vfs_pipe
+	app/mke2fs
+}
+
+build $build_components
+
+create_boot_directory
+
+
+#
+# Generate config
+#
+append config {
+<config verbose="no">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100" ram="1M"/>
+
+	<start name="timer">
+		<provides><service name="Timer"/></provides>
+	</start>
+
+	<start name="vfs_block" caps="2000" ram="3200M">
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<vfs>
+				<ram/>
+				<import>
+					<zero name="block_file" size="16M"/>
+				</import>
+			</vfs>
+			<default-policy file="/block_file" block_size="4096" writeable="yes"/>
+		</config>
+	</start>
+
+	<start name="mke2fs" caps="500" ram="32M">
+		<config>
+			<vfs>
+				<dir name="dev">
+					<log/> <null/> <inline name="rtc">2025-06-02 00:00</inline>
+					<block io_buffer="4M"/>
+				</dir>
+				<dir name="pipe"> <pipe/> </dir>
+			</vfs>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"
+			      rng="/dev/random" pipe="/pipe"/>
+			<arg value="mkfs.ext2"/>
+			<arg value="-T"/>
+			<arg value="default"/>
+			<arg value="-F"/>
+			<arg value="/dev/block"/>
+		</config>
+		<route>
+			<service name="Block"> <child name="vfs_block"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+</config>}
+
+install_config $config
+
+build_boot_image [build_artifacts]
+
+append qemu_args " -nographic "
+append qemu_args " -m 4096 "
+
+run_genode_until {.*child "mke2fs" exited with exit value 0.*\n} 30
