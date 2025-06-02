@@ -70,8 +70,8 @@ class Fetchurl::Fetch : List<Fetch>::Element
 		long       retry;
 		bool const head;
 
-		double dltotal = 0;
-		double dlnow = 0;
+		uint64_t dltotal = 0;
+		uint64_t dlnow = 0;
 
 		bool timeout = false;
 
@@ -393,7 +393,7 @@ static int progress_callback(void *userdata,
 	 * the max timeout value, we will abort the download attempt.
 	 */
 
-	if ((double)dlnow == fetch.dlnow) {
+	if ((uint64_t)dlnow == fetch.dlnow) {
 		ud.curr_timeout.value += diff.value;
 	}
 	else {
@@ -401,8 +401,8 @@ static int progress_callback(void *userdata,
 	}
 	bool const timeout = ud.curr_timeout.value >= ud.max_timeout.value;
 
-	fetch.dltotal = (double)dltotal;
-	fetch.dlnow   = (double)dlnow;
+	fetch.dltotal = dltotal;
+	fetch.dlnow   = dlnow;
 	fetch.timeout = timeout;
 	fetch.main._schedule_report();
 
