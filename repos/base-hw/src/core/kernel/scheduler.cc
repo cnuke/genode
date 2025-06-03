@@ -100,9 +100,11 @@ bool Scheduler::_earlier(Context const &first, Context const &second) const
 
 bool Scheduler::_ready(Group const &group) const
 {
+	/* ready if there is any context in 'group' */
 	if (group._contexts.first())
 		return true;
 
+	/* also ready if the current context is the only context in 'group' */
 	bool ready = false;
 	_with_group(current(), [&] (Group const &cg) {
 		if (&cg == &group) ready = true; });
@@ -116,7 +118,7 @@ void Scheduler::_update_time()
 	time_t const duration = time - _last_time;
 	_last_time = time;
 
-	current()._execution_time += duration;
+	current().helping_destination()._execution_time += duration;
 
 	if (!current().valid())
 		return;
@@ -158,11 +160,9 @@ void Scheduler::_check_ready_contexts()
 			if (group._min_vtime > c._vtime)
 				c._vtime = group._min_vtime;
 
-			if (_earlier(c, current()))
+			if (_earlier(c, current()) ||
+			    _ticks_distant_to_current(c) < _timer.ticks_left(_timeout))
 				_state = OUT_OF_DATE;
-			else
-				_with_next([&] (Context &next, time_t) {
-					if (_earlier(c, next)) _state = OUT_OF_DATE; });
 
 			group.insert_orderly(c);
 		});
@@ -171,21 +171,42 @@ void Scheduler::_check_ready_contexts()
 }
 
 
+time_t Scheduler::_ticks_distant_to_current(Context const &context) const
+{
+	time_t time = _max_timeout;
+
+	_with_group(current(), [&] (Group const &cur) {
+		_with_group(context, [&] (Group const &oth) {
+			if (&cur == &oth)
+				time = (context._vtime - current()._vtime) + _min_timeout;
+			else
+				time = ((oth._vtime+cur._warp)
+				        - (cur._vtime+oth._warp)) * cur._weight + _min_timeout;
+		});
+	});
+
+	return time;
+}
+
+
 void Scheduler::update()
 {
 	using namespace Genode;
 
+	/* move contexts from _ready_contexts into groups */
 	_check_ready_contexts();
 
 	if (_up_to_date())
 		return;
 
+	/* determine the group with minimum virtual time */
 	Context *earliest = &_idle;
 	_for_each_group([&] (Group &group) {
 		group.with_first([&] (Context &context) {
 			if (_earlier(context, *earliest)) earliest = &context; });
 	});
 
+	/* switch if earliest group has context earlier than current */
 	if (_earlier(*earliest, current())) {
 		_with_group(current(), [&] (Group &group) {
 			group.insert_orderly(current()); });
@@ -195,8 +216,14 @@ void Scheduler::update()
 	}
 
 	/* find max run-time till next context should be scheduled */
-	_with_next([&] (Context &, time_t ticks) {
-		_timer.set_timeout(_timeout, ticks); });
+	time_t ticks_next = _max_timeout;
+	_for_each_group([&] (Group const &group) {
+		group.with_first([&] (Context &context) {
+			time_t t = _ticks_distant_to_current(context);
+			if (t < ticks_next) ticks_next = t;
+		});
+	});
+	_timer.set_timeout(_timeout, ticks_next);
 
 	_state = UP_TO_DATE;
 }
@@ -243,6 +270,14 @@ void Scheduler::unready(Context &c)
 
 void Scheduler::yield()
 {
+	/*
+	 * When yielding, we want the current context's vtime
+	 * reflect the situation as if the context consumed as much of its
+	 * time slice so that another context will be scheduled next. As any context's
+	 * vtime is never more than _min_timeout behind nor ahead of any other context
+	 * (in the same group), adding _min_timeout will basically move another context
+	 * to the first position in the group.
+	 */
 	current()._vtime += _min_timeout;
 	_update_time();
 	_state = OUT_OF_DATE;

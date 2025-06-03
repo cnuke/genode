@@ -57,6 +57,9 @@ struct Kernel::Timer
 	time_t ticks_to_us(time_t ticks) const { return ticks; }
 
 	time_t timeout_max_us() const { return ~0ULL; }
+
+	time_t ticks_left(Timeout const &) const {
+		return (_next_timeout > _time) ? _next_timeout - _time : 0; }
 };
 
 #endif

@@ -148,7 +148,7 @@ class Core::Platform_thread : Noncopyable
 		unsigned _scale_priority(unsigned virt_prio)
 		{
 			static constexpr unsigned p =
-				Kernel::Scheduler::Group_id::BACKGROUND;
+				Kernel::Scheduler::Group_id::BACKGROUND+1;
 			return Cpu_session::scale_priority(p, virt_prio, false);
 		}
 
