@@ -87,30 +87,73 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 		{
 			using Name = Include_accessor::Name;
 
-			Registry<Rom>::Element    _reg_elem;
-			Name             const    _name;
-			Attached_rom_dataspace    _dataspace;
+			Registry<Rom>::Element _reg_elem;
+
+			Env &_env;
+
+			Name const _name;
+
+			Parent::Client _parent_client { };
+
+			Id_space<Parent::Client>::Element const
+				_client_id { _parent_client, _env.id_space() };
+
+			using Args = String<Parent::Session_args::MAX_SIZE>;
+
+			Env::Session_result const _session =
+				_env.try_session(Rom_session::service_name(),
+				                 _client_id.id(),
+				                 Args { "label=\"", _name, "\", "
+				                        "ram_quota=", Rom_session::RAM_QUOTA, ", ",
+				                        "cap_quota=", Rom_session::CAP_QUOTA }.string(),
+				                 Affinity());
+
+			void _with_client(auto const &fn)
+			{
+				_session.with_result(
+					[&] (Session_capability cap) {
+						Rom_session_client client { static_cap_cast<Rom_session>(cap) };
+						fn(client);
+					},
+					[&] (Session_error) { error("ROM \"", _name, "\" unavailable"); });
+			}
+
+			Env::Local_rm::Result _attached = Env::Local_rm::Error::INVALID_DATASPACE;
+
 			Signal_context_capability _reconfig_sigh;
 
 			void _handle_rom_update()
 			{
-				_dataspace.update();
+				_with_client([&] (Rom_session_client &rom) {
+					if (!_attached.ok() || rom.update() == false)
+						_attached = _env.rm().attach(rom.dataspace(), { });
 
-				/* trigger reconfiguration */
-				Signal_transmitter(_reconfig_sigh).submit();
+					_attached.with_error([&] (Env::Local_rm::Error) {
+						warning("ROM \"", _name, "\" could not be attached"); });
+
+					/* trigger reconfiguration */
+					Signal_transmitter(_reconfig_sigh).submit();
+				});
 			}
 
-			Signal_handler<Rom> _rom_update_handler;
+			Signal_handler<Rom> _rom_update_handler {
+					_env.ep(), *this, &Rom::_handle_rom_update };
 
 			Rom(Registry<Rom> &registry, Env &env, Name const &name,
 			    Signal_context_capability reconfig_sigh)
 			:
-				_reg_elem(registry, *this), _name(name),
-				_dataspace(env, name.string()), _reconfig_sigh(reconfig_sigh),
-				_rom_update_handler(env.ep(), *this, &Rom::_handle_rom_update)
+				_reg_elem(registry, *this), _env(env), _name(name),
+				_reconfig_sigh(reconfig_sigh)
 			{
-				/* respond to ROM updates */
-				_dataspace.sigh(_rom_update_handler);
+				_with_client([&] (Rom_session_client &rom) {
+					rom.sigh(_rom_update_handler); });
+			}
+
+			~Rom()
+			{
+				_session.with_result(
+					[&] (Session_capability) { _env.close(_client_id.id()); },
+					[&] (Session_error) { });
 			}
 
 			bool has_name(Name const &name) const { return _name == name; }
@@ -118,15 +161,26 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 			void with_xml(Include_accessor::Type const &type,
 			              auto const &fn, auto const &missing_fn) const
 			{
-				Xml_node const &node = _dataspace.xml();
-				if (node.type() == type) {
-					fn(node);
-					return;
-				}
+				_attached.with_result(
+					[&] (Env::Local_rm::Attachment const &a) {
+						Const_byte_range_ptr bytes { (char const *)a.ptr, a.num_bytes };
+						try {
+							Xml_node node(bytes);
+							if (node.type() == type) {
+								fn(node);
+								return;
+							}
 
-				warning("unexpected <", node.type(), "> node " "in included "
-				        "ROM \"", _name, "\", expected, <", type, "> node");
-				missing_fn();
+							warning("unexpected <", node.type(), "> node " "in included "
+							        "ROM \"", _name, "\", expected, <", type, "> node");
+							missing_fn();
+
+						} catch (...) {
+							warning("ROM \"", _name, "\" has invalid syntax");
+							missing_fn();
+						}
+					},
+					[&] (Env::Local_rm::Error) { });
 			}
 		};
 
