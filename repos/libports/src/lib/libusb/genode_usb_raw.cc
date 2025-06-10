@@ -529,12 +529,16 @@ static int genode_submit_transfer(struct usbi_transfer * itransfer)
 				(struct libusb_control_setup*)transfer->buffer;
 
 			void * addr = transfer->buffer + LIBUSB_CONTROL_SETUP_SIZE;
+
+			/* replace infinite timeout by max timeout of 5s */
+			unsigned const timeout = transfer->timeout ?: 5'000;
+
 			new (device()._alloc)
 				Usb_device::Urb(addr, setup->wLength, itransfer,
 				                device()._device, setup->bRequest,
 				                setup->bmRequestType, setup->wValue,
 				                setup->wIndex, setup->wLength,
-				                transfer->timeout);
+				                timeout);
 			device().handle_events();
 			return LIBUSB_SUCCESS;
 		}
