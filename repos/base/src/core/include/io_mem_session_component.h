@@ -96,16 +96,19 @@ class Core::Io_mem_session_component : public Rpc_object<Io_mem_session>
 			}
 		};
 
-		Phys_range _phys_attr(Range_allocator &ram_alloc, const char *args)
+		Cache _cacheable_attr(char const * args) const
 		{
-			_cacheable = UNCACHED;
-
 			Arg a = Arg_string::find_arg(args, "wc");
 			if (a.valid() && a.bool_value(0))
-				_cacheable = WRITE_COMBINED;
+				return Cache::WRITE_COMBINED;
+			else
+				return Cache::UNCACHED;
+		}
 
-			auto request  = Phys_range(Arg_string::find_arg(args, "base").ulong_value(0),
-			                           Arg_string::find_arg(args, "size").ulong_value(0));
+		Phys_range _phys_range(Range_allocator &ram_alloc, const char *args) const
+		{
+			auto request = Phys_range(Arg_string::find_arg(args, "base").ulong_value(0),
+			                          Arg_string::find_arg(args, "size").ulong_value(0));
 			auto const req_size = request.req_size;
 			auto const req_base = request.req_base;
 			auto const size     = request.size();
@@ -160,7 +163,8 @@ class Core::Io_mem_session_component : public Rpc_object<Io_mem_session>
 		};
 
 		Range_allocator            &_io_mem_alloc;
-		Cache                       _cacheable { UNCACHED };
+		Cache             const     _cacheable;
+		Phys_range        const     _phys_attr;
 		Dataspace_attr    const     _ds_attr;
 		Guard             const     _release_guard { *this };
 		Io_dataspace_component      _ds            { _ds_attr };

@@ -29,12 +29,14 @@ Io_mem_session_component::Io_mem_session_component(Range_allocator &io_mem_alloc
                                                    const char      *args)
 :
 	_io_mem_alloc(io_mem_alloc),
-	_ds_attr(_acquire(_phys_attr(ram_alloc, args))),
-	_io_mem_result(_io_mem_alloc.alloc_addr(Arg_string::find_arg(args, "size").ulong_value(0),
-	                                        Arg_string::find_arg(args, "base").ulong_value(0))),
+	_cacheable(_cacheable_attr(args)),
+	_phys_attr(_phys_range(ram_alloc, args)),
+	_ds_attr(_acquire(_phys_attr)),
+	_io_mem_result(_io_mem_alloc.alloc_addr(_phys_attr.req_size,
+	                                        _phys_attr.req_base)),
 	_ds_ep(ds_ep)
 {
-	if (!_ds_attr.size || _io_mem_result.failed() || !_ds.valid()) {
+	if (!_phys_attr.req_size || !_ds_attr.size || _io_mem_result.failed() || !_ds.valid()) {
 		error("unable to access MMIO mapping: ", args);
 		return;
 	}
