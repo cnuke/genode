@@ -176,14 +176,15 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 				    (pending_start >= block_number && pending_start <= end) ||
 				    (pending_end   >= block_number && pending_end   <= end)) {
 
-					warning("overlap: ",
-					        "pending ", pending_start,
-					        " + ", req.operation.count,
-									" (", req.operation.type == Block::Operation::Type::WRITE ?
-									"write" : "read", "), ",
-					        "request: ", block_number, " + ", request.operation.count,
-									" (", request.operation.type == Block::Operation::Type::WRITE ?
-									"write" : "read", ")");
+					if (verbose)
+						warning("overlap: ",
+						        "pending ", pending_start,
+						        " + ", req.operation.count,
+						        " (", req.operation.type == Block::Operation::Type::WRITE ?
+						        "write" : "read", "), ",
+						        "request: ", block_number, " + ", request.operation.count,
+						        " (", request.operation.type == Block::Operation::Type::WRITE ?
+						        "write" : "read", ")");
 					return true;
 				}
 
