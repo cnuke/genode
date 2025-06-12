@@ -98,15 +98,57 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 			Id_space<Parent::Client>::Element const
 				_client_id { _parent_client, _env.id_space() };
 
-			using Args = String<Parent::Session_args::MAX_SIZE>;
+			using Session_result = Env::Session_result;
 
-			Env::Session_result const _session =
-				_env.try_session(Rom_session::service_name(),
-				                 _client_id.id(),
-				                 Args { "label=\"", _name, "\", "
-				                        "ram_quota=", Rom_session::RAM_QUOTA, ", ",
-				                        "cap_quota=", Rom_session::CAP_QUOTA }.string(),
-				                 Affinity());
+			template <typename SESSION>
+			static constexpr Session::Resources _session_resources()
+			{
+				return { .ram_quota = { SESSION::RAM_QUOTA },
+				         .cap_quota = { SESSION::CAP_QUOTA } };
+			}
+
+			Session_result _try_session_with_upgrade(char const *         const  service,
+			                                         Parent::Client::Id   const  id,
+			                                         Session::Resources          resources,
+			                                         Session_label        const &label,
+			                                         Parent::Session_args const &args,
+			                                         Affinity             const &affinity)
+			{
+				char argbuf[Parent::Session_args::MAX_SIZE];
+				copy_cstring(argbuf, args.string(), sizeof(argbuf));
+
+				Arg_string::set_arg_string(argbuf, sizeof(argbuf), "label",
+				                           label.string());
+				for (;;) {
+
+					Arg_string::set_arg(argbuf, sizeof(argbuf), "ram_quota",
+					                    String<32>(resources.ram_quota).string());
+
+					Arg_string::set_arg(argbuf, sizeof(argbuf), "cap_quota",
+					                    String<32>(resources.cap_quota).string());
+
+					Session_result const result =
+						_env.try_session(service, id, Parent::Session_args(argbuf), affinity);
+
+					if (result == Session_error::INSUFFICIENT_RAM) {
+						resources.ram_quota.value += 4096;
+						continue;
+					}
+
+					if (result == Session_error::INSUFFICIENT_CAPS) {
+						resources.cap_quota.value += 4;
+						continue;
+					}
+
+					return result;
+				}
+			}
+
+			Session_result const _session =
+				_try_session_with_upgrade(Rom_session::service_name(),
+				                          _client_id.id(),
+				                          _session_resources<Rom_session>(),
+				                          _name, { }, { });
 
 			void _with_client(auto const &fn)
 			{
@@ -122,7 +164,7 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 
 			Signal_context_capability _reconfig_sigh;
 
-			void _handle_rom_update()
+			void _try_attach()
 			{
 				_with_client([&] (Rom_session_client &rom) {
 					if (!_attached.ok() || rom.update() == false)
@@ -130,10 +172,15 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 
 					_attached.with_error([&] (Env::Local_rm::Error) {
 						warning("ROM \"", _name, "\" could not be attached"); });
-
-					/* trigger reconfiguration */
-					Signal_transmitter(_reconfig_sigh).submit();
 				});
+			}
+
+			void _handle_rom_update()
+			{
+				_try_attach();
+
+				/* trigger reconfiguration */
+				Signal_transmitter(_reconfig_sigh).submit();
 			}
 
 			Signal_handler<Rom> _rom_update_handler {
@@ -145,6 +192,7 @@ struct Event_filter::Main : Source::Factory, Source::Trigger
 				_reg_elem(registry, *this), _env(env), _name(name),
 				_reconfig_sigh(reconfig_sigh)
 			{
+				_try_attach();
 				_with_client([&] (Rom_session_client &rom) {
 					rom.sigh(_rom_update_handler); });
 			}
