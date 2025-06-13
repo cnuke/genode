@@ -43,7 +43,7 @@
 	<start name="vm_pc_virt_linux" pkg="vbox6-fio">
 		<affinity xpos="1" ypos="0" width="2" height="2"/>
 		<route>
-			<service name="File_system" label="rw">       <child name="rw_fs"/> </service>
+			<service name="File_system" label="rw"> <child name="rw_fs" resource="/"/> </service>
 			<service name="Block" label="block">          <child name="storage_nvme" label="8"/> </service>
 			<service name="Report" label_last="shape">    <child name="wm"/> </service>
 			<service name="Report" label="clipboard">     <child name="wm"/> </service>
