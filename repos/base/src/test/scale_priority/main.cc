@@ -50,11 +50,11 @@ struct Main
 	Attached_rom_dataspace  config { env, "config" };
 
 	const unsigned prio_levels_log2   { _prio_levels_from_xml(config.xml(), env) };
-	const unsigned prio_max           { (1U << prio_levels_log2) - 1U };
+	const long     prio_max           { (1 << prio_levels_log2) - 1 };
 
-	const unsigned platform_prio_size { (unsigned)Cpu_session::PRIORITY_LIMIT >> prio_levels_log2 };
-	const unsigned highest_prio_end   { platform_prio_size-1U };
-	const unsigned lowest_prio_start  { prio_max * platform_prio_size };
+	const long     platform_prio_size { Cpu_session::PRIORITY_LIMIT >> prio_levels_log2 };
+	const long     highest_prio_end   { platform_prio_size-1 };
+	const long     lowest_prio_start  { prio_max * platform_prio_size };
 
 	Cpu_connection cpu_high  { env, "highest",        highest_prio_end };
 	Cpu_connection cpu_high2 { env, "second highest", highest_prio_end+1 };
@@ -117,7 +117,7 @@ Main::Main(Env & env)
 			high2_prio = info.execution_time().priority;
 	});
 
-	auto check_priority = [&](const unsigned expected, const unsigned current,
+	auto check_priority = [&](const long expected, const long current,
 	                          Thread const &thread) {
 		if (expected != current) {
 			error("Unexpected priority of Thread ", thread.name,
