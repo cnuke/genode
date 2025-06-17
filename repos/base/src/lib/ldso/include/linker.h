@@ -68,23 +68,20 @@ namespace Linker {
 	/**
 	 * Find symbol via index
 	 *
-	 * \param sym_index     Symbol index within object
-	 * \param dep           Dependency of object
-	 * \param base          Returned address of symbol
-	 * \param undef         True, return undefined symbol; False return defined
-	 *                      symbols only
-	 * \param other         True, search for symbol in other objects; False, search
-	 *                      for symbol in given object as well.
-	 * \param sanity_check  Determine if symbol information is sufficient, if not
-	 *                      return null
+	 * \param sym_index  Symbol index within object
+	 * \param dep        Dependency of object
+	 * \param base       Returned address of symbol
+	 * \param undef      True, return undefined symbol; False return defined
+	 *                   symbols only
+	 * \param other      True, search for symbol in other objects; False, search
+	 *                   for symbol in given object as well.
 	 *
 	 * \throw Not_found  Symbol not found
 	 *
 	 * \return Symbol information
 	 */
 	Elf::Sym const *lookup_symbol(unsigned sym_index, Dependency const &, Elf::Addr *base,
-	                              bool undef = false, bool other = false,
-	                              bool sanity_check = false);
+	                              bool undef = false, bool other = false);
 
 	/**
 	 * Find symbol via name
