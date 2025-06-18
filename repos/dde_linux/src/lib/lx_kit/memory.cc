@@ -118,9 +118,18 @@ void * Lx_kit::Mem_allocator::alloc(size_t const size, size_t const align,
 			 */
 			auto buf_size = max(1ul << log2_align, max(size, min_buffer_size));
 
+			auto log2_align_adjusted = log2_align;
+
 			if (buf_size <= max(size, min_buffer_size)) {
-				/* doubling assures that next log2_align allocation will fit */
-				buf_size = 2 * max(1ul << log2_align, buf_size);
+				if (log2_align >= 24) /* limit to 16M to avoid too large overhead */
+					log2_align_adjusted = 24;
+
+				if (buf_size >= 1ul << 25) { /* starting with 32M don't use doubling */
+					buf_size = 4096ul + max(1ul << log2_align_adjusted, buf_size);
+				} else {
+					/* doubling assures that next log2_align allocation will fit */
+					buf_size = 2 * max(1ul << log2_align_adjusted, buf_size);
+				}
 			}
 
 			Buffer & buffer = alloc_buffer(buf_size);
@@ -128,7 +137,7 @@ void * Lx_kit::Mem_allocator::alloc(size_t const size, size_t const align,
 			_mem.add_range(buffer.virt_addr(), buffer.size() - 1);
 
 			/* re-try allocation */
-			void * const virt_addr = _mem.alloc_aligned(size, log2_align).convert<void *>(
+			void * const virt_addr = _mem.alloc_aligned(size, log2_align_adjusted).convert<void *>(
 
 				[&] (void *ptr) { return cleared_allocation(ptr, size); },
 
@@ -139,6 +148,12 @@ void * Lx_kit::Mem_allocator::alloc(size_t const size, size_t const align,
 
 			if (virt_addr)
 				new_range_cb((void *)buffer.virt_addr(), buffer.size() - 1);
+
+			if (addr_t(virt_addr) & ((1ul << log2_align) - 1)) {
+				warning("memory allocation of ", size, " with alignment ",
+				        log2_align, "(", log2_align_adjusted, ")"
+				        " could not be ensured ", virt_addr);
+			}
 
 			return virt_addr;
 		}
