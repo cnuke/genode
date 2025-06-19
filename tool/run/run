@@ -967,7 +967,7 @@ proc run_power_cycle { } {
 	# to effectively drain energy before switching it on again.
 	#
 	run_power_off
-	sleep 1
+	sleep 3
 	return [run_power_on]
 }
 
