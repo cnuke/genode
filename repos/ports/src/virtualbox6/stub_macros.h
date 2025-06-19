@@ -16,6 +16,7 @@
 
 #include <base/log.h>
 #include <base/sleep.h>
+#include <os/backtrace.h>
 
 #define TRACE(retval) \
 	{ \
@@ -30,6 +31,7 @@
 		Genode::error(__PRETTY_FUNCTION__, " called (", __FILE__, ":", __LINE__, "), " \
 		              "not implemented, eip=", \
 		              __builtin_return_address(0)); \
+		Genode::backtrace(); \
 		/* noreturn function sparing the need for a return value */ \
 		Genode::sleep_forever(); \
 	}
