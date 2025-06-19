@@ -49,12 +49,13 @@ struct Main
 	Env                    &env;
 	Attached_rom_dataspace  config { env, "config" };
 
-	const unsigned prio_levels_log2   { _prio_levels_from_xml(config.xml(), env) };
-	const long     prio_max           { (1 << prio_levels_log2) - 1 };
+	unsigned const prio_levels_log2   { _prio_levels_from_xml(config.xml(), env) };
+	long const     prio_max           { (1 << prio_levels_log2) - 1 };
 
-	const long     platform_prio_size { Cpu_session::PRIORITY_LIMIT >> prio_levels_log2 };
-	const long     highest_prio_end   { platform_prio_size-1 };
-	const long     lowest_prio_start  { prio_max * platform_prio_size };
+	long const     platform_prio_size { Cpu_session::PRIORITY_LIMIT >> prio_levels_log2 };
+	long const     highest_prio_end   { platform_prio_size-1 };
+	long const     lowest_prio_start  { prio_max * platform_prio_size };
+
 
 	Cpu_connection cpu_high  { env, "highest",        highest_prio_end };
 	Cpu_connection cpu_high2 { env, "second highest", highest_prio_end+1 };
@@ -90,9 +91,9 @@ struct Main
 Main::Main(Env & env)
 : env(env)
 {
-	const bool start_at_zero = config.xml().attribute_value("start_at_zero", true);
-	const bool inverse       = config.xml().attribute_value("inverse", true);
-	const unsigned offset    = start_at_zero ? 0 : 1;
+	bool const start_at_zero = config.xml().attribute_value("start_at_zero", true);
+	bool const inverse       = config.xml().attribute_value("inverse", true);
+	unsigned const offset    = start_at_zero ? 0 : 1;
 
 	thread_low.start();
 	thread_low2.start();
@@ -117,7 +118,7 @@ Main::Main(Env & env)
 			high2_prio = info.execution_time().priority;
 	});
 
-	auto check_priority = [&](const long expected, const long current,
+	auto check_priority = [&](long const expected, long const current,
 	                          Thread const &thread) {
 		if (expected != current) {
 			error("Unexpected priority of Thread ", thread.name,
