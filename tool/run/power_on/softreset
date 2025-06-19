@@ -55,7 +55,7 @@ proc run_power_on { } {
 	set connection_id $spawn_id
 
 	send -i $connection_id "$relay_on\n"
-	sleep 1
+	sleep 3
 	send -i $connection_id "$relay_off\n"
 	sleep 1
 	close -i $connection_id
