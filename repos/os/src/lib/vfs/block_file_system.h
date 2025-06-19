@@ -621,6 +621,9 @@ struct Vfs::Block_file_system::Local_factory : File_system_factory
 		           _label.string() },
 		_data_fs { _env, _block, name(config) }
 	{
+		if (config.has_attribute("block_buffer_count"))
+			Genode::warning("'block_buffer_count' attribute is superseded by 'io_buffer'");
+
 		_block.sigh(_block_signal_handler);
 		_info_fs       .value(Info { _block.info() });
 		_block_count_fs.value(_block.info().block_count);
