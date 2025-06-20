@@ -2550,3 +2550,288 @@ int Libc::Vfs_plugin::poll(Pollfd fds[], int nfds)
 
 	return nready;
 }
+
+
+static bool _handle_slot_read(Libc::File_descriptor *fd,
+                              Libc::File_descriptor::Lio_slot &slot)
+{
+	using Lio_slot        = Libc::File_descriptor::Lio_slot;
+	using Slot_vfs_handle = Libc::File_descriptor::Slot_vfs_handle;
+	using Result          = Vfs::File_io_service::Read_result;
+
+	Slot_vfs_handle &handle     = *slot.handle;
+	Vfs::Vfs_handle *vfs_handle = handle.vfs_handle;
+
+	bool progress = false;
+	switch (handle.state) {
+	case Slot_vfs_handle::State::INVALID:
+
+		/* TODO move check to lio_listio */
+		if ((fd->flags & O_ACCMODE) == O_WRONLY) {
+			slot.result = -1;
+			slot.error  = EBADF;
+			slot.state = Lio_slot::State::COMPLETE;
+			break;
+		}
+
+		vfs_handle->seek(slot.iocb->aio_offset);
+
+		if (!vfs_handle->fs().queue_read(vfs_handle, slot.iocb->aio_nbytes))
+			break;
+
+		handle.state = Slot_vfs_handle::State::QUEUED;
+		progress = true;
+		break;
+
+	case Slot_vfs_handle::State::QUEUED:
+	{
+		Genode::Byte_range_ptr const dst {
+			(char *)slot.iocb->aio_buf, slot.iocb->aio_nbytes };
+		::size_t out_count = 0;
+		Result const out_result =
+			vfs_handle->fs().complete_read(vfs_handle, dst, out_count);
+		if (out_result != Result::READ_QUEUED) {
+
+			switch (out_result) {
+			case Result::READ_ERR_WOULD_BLOCK:
+				slot.result = -1;
+				slot.error  = EWOULDBLOCK;
+				break;
+			case Result::READ_ERR_INVALID:
+				slot.result = -1;
+				slot.error  = EINVAL;
+				break;
+			case Result::READ_ERR_IO:
+				slot.result = -1;
+				slot.error  = EIO;
+				break;
+			case Result::READ_OK:
+				slot.result = out_count;
+				slot.error  = 0;
+				break;
+			case Result::READ_QUEUED: /* never reached */ break;
+			}
+			handle.state = Slot_vfs_handle::State::COMPLETE;
+			progress = true;
+		}
+		break;
+	}
+	case Slot_vfs_handle::Slot_vfs_handle::State::COMPLETE:
+		handle.reset();
+		slot.state = Lio_slot::State::COMPLETE;
+		++fd->lio_list_completed;
+		break;
+	}
+
+	return progress;
+}
+
+
+static bool _handle_slot_write(Libc::File_descriptor *fd,
+                               Libc::File_descriptor::Lio_slot &slot)
+{
+	using Lio_slot        = Libc::File_descriptor::Lio_slot;
+	using Slot_vfs_handle = Libc::File_descriptor::Slot_vfs_handle;
+	using Result          = Vfs::File_io_service::Write_result;
+
+	Slot_vfs_handle &handle     = *slot.handle;
+	Vfs::Vfs_handle &vfs_handle = *handle.vfs_handle;
+
+	bool progress = false;
+
+	switch (handle.state) {
+	case Slot_vfs_handle::State::INVALID:
+	{
+		/* TODO move check to lio_listio */
+		if ((fd->flags & O_ACCMODE) == O_RDONLY) {
+			slot.result = -1;
+			slot.error  = EBADF;
+			slot.state = Lio_slot::State::COMPLETE;
+			break;
+		}
+
+		slot.result = 0;
+		slot.error  = 0;
+
+		vfs_handle.seek(slot.iocb->aio_offset);
+
+		handle.count = slot.iocb->aio_nbytes;
+		handle.offset = 0;
+
+		handle.state = Slot_vfs_handle::State::QUEUED;
+		progress = true;
+		break;
+	}
+	case Slot_vfs_handle::State::QUEUED:
+	{
+		Genode::Const_byte_range_ptr const src {
+			(char *)slot.iocb->aio_buf + handle.offset, handle.count };
+		::size_t out_count = 0;
+		Result const out_result =
+			vfs_handle.fs().write(&vfs_handle, src, out_count);
+
+		if (out_result == Result::WRITE_OK) {
+			handle.count  -= out_count;
+			handle.offset += out_count;
+
+			slot.result += out_count;
+
+			vfs_handle.advance_seek(out_count);
+
+			if (!handle.count)
+				handle.state = Slot_vfs_handle::State::COMPLETE;
+
+			progress = true;
+			break;
+		}
+
+		if (out_result != Result::WRITE_ERR_WOULD_BLOCK) {
+			switch (out_result) {
+			case Result::WRITE_ERR_INVALID:
+				slot.result = -1;
+				slot.error  = EINVAL;
+				break;
+			case Result::WRITE_ERR_IO:
+				slot.result = -1;
+				slot.error  = EIO;
+				break;
+			case Result::WRITE_ERR_WOULD_BLOCK: /* never reached */ break;
+			case Result::WRITE_OK:              /* never reached */ break;
+			}
+			handle.state = Slot_vfs_handle::State::COMPLETE;
+			progress = true;
+		}
+		break;
+	}
+	case Slot_vfs_handle::State::COMPLETE:
+		fd->modified = true;
+
+		handle.reset();
+		slot.state = Lio_slot::State::COMPLETE;
+		++fd->lio_list_completed;
+		break;
+	}
+
+	return progress;
+}
+
+static bool _handle_slot_nop(Libc::File_descriptor *fd,
+                             Libc::File_descriptor::Lio_slot &slot)
+{
+	using Lio_slot        = Libc::File_descriptor::Lio_slot;
+	using Slot_vfs_handle = Libc::File_descriptor::Slot_vfs_handle;
+
+	Slot_vfs_handle &handle = *slot.handle;
+
+	handle.reset();
+
+	slot.result = 0;
+	slot.error  = 0 ;
+	slot.state = Lio_slot::State::COMPLETE;
+
+	++fd->lio_list_completed;
+
+	return false;
+}
+
+int Libc::Vfs_plugin::wait_aio(Libc::File_descriptor *fd, int timeout_ms)
+{
+	if (fd->lio_list_completed && fd->lio_list_queued == 0)
+		return 0;
+
+	if (fd->lio_list_queued == 0)
+		return Errno(EINVAL);
+
+	using namespace Libc;
+	using Lio_slot        = File_descriptor::Lio_slot;
+	using Slot_vfs_handle = File_descriptor::Slot_vfs_handle;
+
+	fd->for_each_lio_slot(Lio_slot::State::PENDING, [&] (Lio_slot &slot) {
+
+		fd->any_unused_slot_vfs_handle([&] (Slot_vfs_handle &handle) {
+
+			if (handle.vfs_handle == nullptr) {
+
+				auto open_vfs_handle = [&] (char const *path) -> Vfs::Vfs_handle* {
+					Vfs::Vfs_handle *vfs_handle = nullptr;
+
+					/*
+					 * We could already open the path as otherwise we would
+					 * not be here.
+					 */
+					using Result = Vfs::Directory_service::Open_result;
+					if (_root_fs.open(path, fd->flags, &vfs_handle, _alloc) == Result::OPEN_OK) {
+						return vfs_handle;
+					}
+
+					return nullptr;
+				};
+				monitor().monitor([&] {
+					handle.vfs_handle = open_vfs_handle(fd->fd_path);
+					return Fn::COMPLETE;
+
+				});
+
+				/* should not happen */
+				if (handle.vfs_handle == nullptr) {
+					slot.result = -1;
+					slot.error = EIO;
+					slot.state = Lio_slot::State::COMPLETE;
+					return;
+				}
+			}
+
+			--fd->lio_list_queued;
+
+			switch (slot.iocb->aio_lio_opcode) {
+			case LIO_READ: [[fallthrough]];
+			case LIO_WRITE:
+			case LIO_NOP:
+				handle.slot = &slot;
+				slot.handle = &handle;
+				slot.state  = Lio_slot::State::IN_PROGRESS;
+				break;
+			}
+		});
+	});
+
+	unsigned count_in_progress = 0;
+	fd->for_each_lio_slot(Lio_slot::State::IN_PROGRESS, [&] (Lio_slot &slot) {
+		++count_in_progress; });
+
+	monitor().monitor([&] {
+
+		fd->for_each_lio_slot(Lio_slot::State::IN_PROGRESS, [&] (Lio_slot &slot) {
+
+			/*
+			 * Try one slot as long as some progress is made and move
+			 * on to the next one in case the operation stalled (i.e.
+			 * was queued).
+			 */
+			bool progress = false;
+			do {
+				switch (slot.iocb->aio_lio_opcode) {
+				case LIO_READ:  progress = _handle_slot_read(fd, slot);  break;
+				case LIO_WRITE: progress = _handle_slot_write(fd, slot); break;
+				case LIO_NOP:   progress = _handle_slot_nop(fd, slot);   break;
+				}
+			} while (progress);
+		});
+		return (fd->lio_list_completed >= count_in_progress) ? Fn::COMPLETE
+		                                                     : Fn::INCOMPLETE;
+	});
+
+	return 0;
+}
+
+
+int Libc::Vfs_plugin::enqueue_aiocb(Libc::File_descriptor *fd, const struct aiocb * iocb)
+{
+	using Lio_slot = Libc::File_descriptor::Lio_slot;
+
+	return fd->any_free_lio_slot([&] (Lio_slot &slot) {
+		slot.iocb  = iocb;
+		slot.state = Lio_slot::State::PENDING;
+		++fd->lio_list_queued;
+	}) ? 0 : Errno(EAGAIN);
+}

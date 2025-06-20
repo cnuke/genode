@@ -32,6 +32,10 @@
 
 enum { MAX_NUM_FDS = 1024 };
 
+namespace Vfs {
+	struct Vfs_handle;
+}
+
 namespace Libc {
 
 	/**
@@ -46,7 +50,6 @@ namespace Libc {
 	class File_descriptor_allocator;
 }
 
-
 struct Libc::File_descriptor
 {
 	Genode::Mutex mutex { };
@@ -60,6 +63,91 @@ struct Libc::File_descriptor
 
 	Plugin         *plugin;
 	Plugin_context *context;
+
+	struct Slot_vfs_handle;
+	struct Lio_slot
+	{
+		enum class State { FREE, PENDING, IN_PROGRESS, COMPLETE };
+
+		const struct aiocb *iocb   = nullptr;
+
+		Slot_vfs_handle *handle = nullptr;
+		ssize_t          result = -1;
+		int              error  = 0;
+		State            state  = State::FREE;
+
+		void free()
+		{
+			handle->slot = nullptr;
+			handle       = nullptr;
+			iocb         = nullptr;
+			error        = 0;
+			result       = -1;
+			state        = State::FREE;
+		}
+	};
+
+	static constexpr unsigned MAX_AIOCB_PER_FD = 64;
+	Lio_slot _lio_slots[MAX_AIOCB_PER_FD] { };
+
+	void for_each_lio_slot(Lio_slot::State state, auto const &fn)
+	{
+		for (unsigned i = 0; i < MAX_AIOCB_PER_FD; i++)
+			if (_lio_slots[i].state == state)
+				fn(_lio_slots[i]);
+	}
+
+	bool any_free_lio_slot(auto const &fn)
+	{
+		for (unsigned i = 0; i < MAX_AIOCB_PER_FD; i++)
+			if (_lio_slots[i].state == Lio_slot::State::FREE) {
+				fn(_lio_slots[i]);
+				return true;
+			}
+
+		return false;
+	}
+
+	void apply_lio(struct aiocb const *iocb, auto const &fn)
+	{
+		for (unsigned i = 0; i < MAX_AIOCB_PER_FD; i++)
+			if (iocb == _lio_slots[i].iocb)
+				fn(_lio_slots[i]);
+	}
+
+	unsigned lio_list_completed = 0;
+	unsigned lio_list_queued    = 0;
+
+	struct Slot_vfs_handle
+	{
+		enum class State { INVALID, QUEUED, COMPLETE };
+		Vfs::Vfs_handle *vfs_handle = nullptr;
+		struct Lio_slot *slot       = nullptr;
+		State            state      = State::INVALID;
+
+		::size_t count  = 0;
+		::off_t  offset = 0;
+
+		void reset()
+		{
+			slot   = nullptr;
+			count  = 0;
+			offset = 0;
+			state  = State::INVALID;
+		}
+	};
+	static constexpr unsigned MAX_VFS_HANDLES_PER_FD = MAX_AIOCB_PER_FD;
+	Slot_vfs_handle _slot_vfs_handles[MAX_VFS_HANDLES_PER_FD] { };
+
+	void any_unused_slot_vfs_handle(auto const &fn)
+	{
+		for (unsigned i = 0; i < MAX_VFS_HANDLES_PER_FD; i++)
+			if (_slot_vfs_handles[i].slot == nullptr) {
+				fn(_slot_vfs_handles[i]);
+				break;
+			}
+	}
+
 
 	int  flags    = 0;  /* for 'fcntl' */
 	bool cloexec  = 0;  /* for 'fcntl' */
@@ -134,5 +222,63 @@ class Libc::File_descriptor_allocator
 
 		void generate_info(Genode::Xml_generator &);
 };
+
+
+struct Pretty_slot_printer
+{
+	using Lio_slot        = Libc::File_descriptor::Lio_slot;
+	using Slot_vfs_handle = Libc::File_descriptor::Slot_vfs_handle;
+
+	Lio_slot const &_slot;
+
+	static char const *_slot_state(Lio_slot::State state)
+	{
+		switch (state) {
+		case Lio_slot::State::FREE:        return "FREE";
+		case Lio_slot::State::PENDING:     return "PENDING";
+		case Lio_slot::State::IN_PROGRESS: return "IN_PROGRESS";
+		case Lio_slot::State::COMPLETE:    return "COMPLETE";
+		}
+		/* never reached */
+		return "UNKNOWN";
+	}
+
+	static char const *_handle_state(Slot_vfs_handle::State state)
+	{
+		switch (state) {
+		case Slot_vfs_handle::State::INVALID:  return "INVALID";
+		case Slot_vfs_handle::State::QUEUED:   return "QUEUED";
+		case Slot_vfs_handle::State::COMPLETE: return "COMPLETE";
+		}
+		/* never reached */
+		return "UNKNOWN";
+	}
+
+	static char const *_lio_opcode(int op)
+	{
+		switch (op) {
+		case LIO_NOP:   return "NOP";
+		case LIO_READ:  return "READ";
+		case LIO_WRITE: return "WRITE";
+		}
+		/* never reached */
+		return "UNKNOWN";
+	}
+
+	Pretty_slot_printer(Libc::File_descriptor::Lio_slot const &slot)
+	: _slot { slot } { }
+
+	void print(Genode::Output &out) const
+	{
+		Genode::print(out, _lio_opcode(_slot.iocb->aio_lio_opcode), ": ", " "
+		              "offset: ", _slot.iocb->aio_offset, " nbytes: ", _slot.iocb->aio_nbytes, " "
+		              "slot: ", _slot_state(_slot.state), " "
+		              "handle: ", _handle_state(_slot.handle ? _slot.handle->state
+		                                                     : Slot_vfs_handle::State::INVALID), " "
+		              "error: ", _slot.error, " "
+		              "result: ", _slot.result);
+	}
+};
+
 
 #endif /* _LIBC_PLUGIN__FD_ALLOC_H_ */
