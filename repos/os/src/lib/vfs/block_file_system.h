@@ -145,7 +145,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 
 				struct Size_helper
 				{
-					file_size const _size, _mask, _mask_inv;
+					size_t const _size;
+					file_size const _mask, _mask_inv;
 
 					Size_helper(size_t const block_size)
 					:
@@ -195,7 +196,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					Read_handler(Block::Session::Info const &info)
 					:
 						_helper       { info.block_size },
-						_block_count  { info.block_count }
+						_block_count  { (block_count_t)info.block_count }
 					{ }
 
 					Read_result read(Block_connection            &block,
@@ -218,14 +219,14 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 							_helper.mask(seek_offset);
 
 						/* always round up to cover last block for partial requests */
-						size_t const rounded_length =
+						file_size const rounded_length =
 							_helper.round_up(dst.num_bytes + block_offset);
 
-						block_count_t block_count =
+						block_number_t block_count =
 							_helper.blocks(rounded_length);
 
 						if (block_number + block_count > _block_count)
-							block_count = _block_count - block_number;
+							block_count = (block_number_t)_block_count - block_number;
 
 						if (block_number >= _block_count || block_count == 0) {
 							out_count = 0;
@@ -235,7 +236,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						Block::Operation const op {
 							.type         = Block::Operation::Type::READ,
 							.block_number = block_number,
-							.count        = block_count
+							.count        = (block_count_t)block_count
 						};
 
 						/*
@@ -309,7 +310,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						/*
 						 * Now we deal with completing a unaligned or partial request.
 						 */
-						size_t const partial_length =
+						file_size const partial_length =
 							block_offset ? min(_helper.block_size() - block_offset, src.num_bytes)
 							             : src.num_bytes;
 
@@ -317,7 +318,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						if (!partial_length)
 							return Write_result::WRITE_ERR_IO;
 
-						memcpy(_unaligned_buffer + block_offset, src.start, partial_length);
+						memcpy(_unaligned_buffer + block_offset, src.start, (size_t)partial_length);
 
 						Block::Operation const op {
 							.type         = Block::Operation::Type::WRITE,
@@ -329,7 +330,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						               _helper.block_size(), 0, op);
 
 						/* store partial length for setting the matching out_count later */
-						_job->actual_length = partial_length;
+						_job->actual_length = (size_t)partial_length;
 
 						block.update_jobs(block);
 						return Write_result::WRITE_ERR_WOULD_BLOCK;
@@ -338,7 +339,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					Write_handler(Block::Session::Info const &info)
 					:
 						_helper       { info.block_size },
-						_block_count  { info.block_count }
+						_block_count  { (block_count_t)info.block_count }
 					{ }
 
 					Write_result write(Block_connection            &block,
@@ -354,10 +355,10 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 							_helper.mask(seek_offset);
 
 						/* round down to handle partial requests later on */
-						size_t const rounded_length =
+						file_size const rounded_length =
 							_helper.round_down(src.num_bytes + block_offset);
 
-						block_count_t const block_count =
+						block_number_t const block_count =
 							_helper.blocks(rounded_length);
 
 						block_number_t const block_number =
@@ -395,7 +396,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						Block::Operation const op {
 							.type         = Block::Operation::Type::WRITE,
 							.block_number = block_number,
-							.count        = block_count
+							.count        = (block_count_t)block_count
 						};
 
 						/*
@@ -433,7 +434,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					}
 
 					Sync_handler(Block::Session::Info const &info)
-					: _block_count { info.block_count } { }
+					: _block_count { (block_count_t)info.block_count } { }
 
 					Sync_result sync(Block_connection &block)
 					{
