@@ -35,11 +35,19 @@
 
 	<start name="audio_mixer">
 		<route>
-			<service name="Audio_out"> <child name="sof_audio"/> </service>
+			<service name="Audio_out"> <child name="black_hole"/> </service>
 			<service name="Report"> <parent/> </service>
 		</route>
 	</start>
-	<start name="sof_audio"/>
+
+	<start name="top" pkg="top" ram="64M" caps="500">
+		<config period_ms="10000"/>
+		<route>
+			<service name="Timer"> <parent/> </service>
+			<service name="TRACE"> <parent label="global"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
 
 	<start name="shared_fs"/>
 	<start name="usb_webcam"/>

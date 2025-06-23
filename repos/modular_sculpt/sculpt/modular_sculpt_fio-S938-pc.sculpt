@@ -20,3 +20,5 @@ launcher: default_fs_shell
 launcher: rw_fs
 
 launcher: ahci storage_ahci
+
+build: virtualbox6

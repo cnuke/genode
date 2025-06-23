@@ -1,5 +1,5 @@
 <launcher pkg="vm_block_capture" priority="-2">
-	<affinity xpos="3" ypos="0" width="1" height="2"/>
+	<affinity xpos="3" ypos="0" width="2" height="2"/>
 	<route>
 		<service name="File_system" label_prefix="vm ->">     <child name="vm_ubuntu_fs"/> </service>
 		<service name="File_system" label_prefix="shared ->"> <child name="shared_fs"/> </service>
