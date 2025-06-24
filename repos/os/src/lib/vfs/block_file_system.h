@@ -30,9 +30,18 @@ namespace Vfs { class Block_file_system; }
 struct Vfs::Block_file_system
 {
 	using Name = String<64>;
-	using block_count_t  = Block::block_count_t;
 	using block_number_t = Block::block_number_t;
 	using off_t = Block::off_t;
+
+	struct Block_count { Block::block_number_t blocks; };
+
+	struct Operation_size
+	{
+		Block::block_count_t blocks;
+
+		static Operation_size from_block_count(Block_count const count) {
+			return { (Block::block_count_t)count.blocks }; }
+	};
 
 	struct Block_job : Block::Connection<Block_job>::Job
 	{
@@ -145,7 +154,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 
 				struct Size_helper
 				{
-					file_size const _size, _mask, _mask_inv;
+					size_t    const _size;
+					file_size const _mask, _mask_inv;
 
 					Size_helper(size_t const block_size)
 					:
@@ -166,16 +176,19 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 					file_size round_down(file_size value) const {
 						return value & _mask_inv; }
 
-					block_number_t blocks(file_size value) const {
-						return value / _size; }
+					Block_count blocks(file_size value) const {
+						return Block_count { value / _size }; }
+
+					block_number_t block_number(file_size value) const {
+						return block_number_t { value / _size }; }
 				};
 
 				struct Read_handler
 				{
 					Genode::Constructible<Block_job> _job { };
 
-					Size_helper   const _helper;
-					block_count_t const _block_count;
+					Size_helper const _helper;
+					Block_count const _block_count;
 
 					bool _any_pending_job() const {
 						return _job.constructed() && !_job->done; }
@@ -212,22 +225,22 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 
 						/* round down to cover first block for unaligned requests */
 						block_number_t const block_number =
-							_helper.blocks(_helper.round_down(seek_offset));
+							_helper.block_number(_helper.round_down(seek_offset));
 
 						file_size const block_offset =
 							_helper.mask(seek_offset);
 
 						/* always round up to cover last block for partial requests */
-						size_t const rounded_length =
+						file_size const rounded_length =
 							_helper.round_up(dst.num_bytes + block_offset);
 
-						block_count_t block_count =
+						Block_count block_count =
 							_helper.blocks(rounded_length);
 
-						if (block_number + block_count > _block_count)
-							block_count = _block_count - block_number;
+						if (block_number + block_count.blocks > _block_count.blocks)
+							block_count = Block_count { _block_count.blocks - block_number };
 
-						if (block_number >= _block_count || block_count == 0) {
+						if (block_number >= _block_count.blocks || block_count.blocks == 0) {
 							out_count = 0;
 							return Read_result::READ_OK;
 						}
@@ -235,7 +248,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						Block::Operation const op {
 							.type         = Block::Operation::Type::READ,
 							.block_number = block_number,
-							.count        = block_count
+							.count        = Operation_size::from_block_count(block_count).blocks
 						};
 
 						/*
@@ -255,8 +268,8 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 				{
 					Genode::Constructible<Block_job> _job { };
 
-					Size_helper   const _helper;
-					block_count_t const _block_count;
+					Size_helper const _helper;
+					Block_count const _block_count;
 
 					char _unaligned_buffer[4096] { };
 
@@ -309,7 +322,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						/*
 						 * Now we deal with completing a unaligned or partial request.
 						 */
-						size_t const partial_length =
+						file_size const partial_length =
 							block_offset ? min(_helper.block_size() - block_offset, src.num_bytes)
 							             : src.num_bytes;
 
@@ -317,7 +330,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						if (!partial_length)
 							return Write_result::WRITE_ERR_IO;
 
-						memcpy(_unaligned_buffer + block_offset, src.start, partial_length);
+						memcpy(_unaligned_buffer + block_offset, src.start, (size_t)partial_length);
 
 						Block::Operation const op {
 							.type         = Block::Operation::Type::WRITE,
@@ -329,7 +342,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						               _helper.block_size(), 0, op);
 
 						/* store partial length for setting the matching out_count later */
-						_job->actual_length = partial_length;
+						_job->actual_length = (size_t)partial_length;
 
 						block.update_jobs(block);
 						return Write_result::WRITE_ERR_WOULD_BLOCK;
@@ -354,17 +367,17 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 							_helper.mask(seek_offset);
 
 						/* round down to handle partial requests later on */
-						size_t const rounded_length =
+						file_size const rounded_length =
 							_helper.round_down(src.num_bytes + block_offset);
 
-						block_count_t const block_count =
+						Block_count const block_count =
 							_helper.blocks(rounded_length);
 
 						block_number_t const block_number =
-							_helper.blocks(_helper.round_down(seek_offset));
+							_helper.block_number(_helper.round_down(seek_offset));
 
-						if (block_number               >= _block_count
-						 || block_number + block_count > _block_count)
+						if (block_number >= _block_count.blocks
+						 || block_number + block_count.blocks > _block_count.blocks)
 							return Write_result::WRITE_ERR_INVALID;
 
 						/*
@@ -395,7 +408,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						Block::Operation const op {
 							.type         = Block::Operation::Type::WRITE,
 							.block_number = block_number,
-							.count        = block_count
+							.count        = Operation_size::from_block_count(block_count).blocks
 						};
 
 						/*
@@ -416,7 +429,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 				{
 					Genode::Constructible<Block_job> _job {  };
 
-					block_count_t const _block_count;
+					Block_count const _block_count;
 
 					bool _any_pending_job() const {
 						return _job.constructed() && !_job->done; }
@@ -446,7 +459,7 @@ class Vfs::Block_file_system::Data_file_system : public Single_file_system
 						Block::Operation const op {
 							.type         = Block::Operation::Type::SYNC,
 							.block_number = 0,
-							.count        = _block_count
+							.count        = Operation_size::from_block_count(_block_count).blocks
 						};
 
 						_job.construct(block, nullptr, 0, 0, op);
