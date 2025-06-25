@@ -153,7 +153,7 @@ struct Depot_deploy::Main
 
 				Result result;
 				Genode::uint64_t previous_time_sec { 0 };
-				config.with_optional_sub_node("previous_results", [&] (Xml_node const &node) {
+				config.with_optional_sub_node("previous-results", [&] (Xml_node const &node) {
 					previous_time_sec += node.attribute_value("time_sec", (Genode::uint64_t)0);
 					result.succeeded  += node.attribute_value("succeeded", 0UL);
 					result.failed     += node.attribute_value("failed",    0UL);
