@@ -164,6 +164,12 @@ class Genode::Node : Noncopyable
 			return _with([&] (Xml_node const &xml) { return xml.decoded_content<STRING>(); },
 			             [&]                       { return STRING(); });
 		}
+
+		void print(Output &out) const
+		{
+			_with([&] (Xml_node const &xml) { xml.print(out); },
+			      [&] { });
+		}
 };
 
 
