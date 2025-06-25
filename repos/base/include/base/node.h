@@ -109,6 +109,23 @@ class Genode::Node : Noncopyable
 				[&] { });
 		}
 
+		struct Attribute
+		{
+			using Name = String<64>;
+			Name const name;
+			Const_byte_range_ptr value;
+		};
+
+		void for_each_attribute(auto const &fn) const
+		{
+			_with(
+				[&] (Xml_node const &xml) {
+					xml.for_each_attribute([&] (Xml_attribute const &a) {
+						a.with_raw_value([&] (char const *start, size_t len) {
+							fn(Attribute { a.name(), { start, len } }); }); }); },
+				[&] { });
+		}
+
 		template <typename T>
 		T attribute_value(char const *attr, T const default_value) const
 		{
