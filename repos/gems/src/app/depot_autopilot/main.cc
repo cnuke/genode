@@ -183,7 +183,7 @@ struct Depot_deploy::Main
 				} else {
 
 					log("\n--- Finished after ", time_sec + previous_time_sec, ".", time_ms < 10 ? "00" : time_ms < 100 ? "0" : "", time_ms, " sec ---\n");
-					config.with_optional_sub_node("previous_results", [&] (Xml_node const &node) {
+					config.with_optional_sub_node("previous-results", [&] (Xml_node const &node) {
 						node.with_raw_content([&] (char const *start, size_t length) {
 							if (length)
 								log(Cstring(start, length)); }); });
