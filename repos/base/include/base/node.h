@@ -87,6 +87,18 @@ class Genode::Node : Noncopyable
 				[&] { return missing_fn(); });
 		}
 
+		auto with_sub_node(unsigned n, auto const &fn, auto const &missing_fn) const
+		-> decltype(missing_fn())
+		{
+			return _with(
+				[&] (Xml_node const &xml) {
+					return xml.with_sub_node(n,
+						[&] (Xml_node const &sub_node) { return fn(Node(sub_node)); },
+						[&]                            { return missing_fn(); });
+				},
+				[&] { return missing_fn(); });
+		}
+
 		void with_optional_sub_node(char const *type, auto const &fn) const
 		{
 			_with(
