@@ -57,15 +57,14 @@ addr_t Platform::core_page_table() {
 	return (addr_t)_boot_info().table; }
 
 
-Hw::Page_table_allocator & Platform::core_page_table_allocator()
+Hw::Page_table::Allocator & Platform::core_page_table_allocator()
 {
-	using Array = Hw::Page_table::Array;
+	using Allocator  = Hw::Page_table::Allocator;
+	using Array      = Allocator::Array<Hw::Page_table::CORE_TRANS_TABLE_COUNT>;
+	addr_t virt_addr = Hw::Mm::core_page_tables().base + sizeof(Hw::Page_table);
 
-	Array &a = *reinterpret_cast<Array*>(Hw::Mm::core_page_tables().base
-	                                     + sizeof(Hw::Page_table));
-
-	static Array alloc(a, (addr_t)_boot_info().table_allocator);
-	return alloc.alloc();
+	static Array::Allocator alloc { _boot_info().table_allocator, virt_addr };
+	return alloc;
 }
 
 

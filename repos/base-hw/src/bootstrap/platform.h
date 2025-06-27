@@ -100,11 +100,12 @@ class Bootstrap::Platform
 		struct Pd
 		{
 			using Table = Hw::Page_table;
+			using Table_array = Table::Allocator::Array<Table::CORE_TRANS_TABLE_COUNT>;
 
 			void * const             table_base;
 			void * const             array_base;
 			Table                  & table;
-			Table::Array           & array;
+			Table_array            & array;
 			Boot_info::Mapping_pool  mappings { };
 
 			Pd(Ram_allocator & alloc);
