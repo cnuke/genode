@@ -16,25 +16,34 @@
 
 #include <base/log.h>
 #include <cpu/page_flags.h>
-
-#include <hw/memory_consts.h>
-#include <hw/page_table.h>
+#include <hw/page_table_allocator.h>
+#include <util/string.h>
+#include <util/register.h>
 
 namespace Sv39 {
 
 	using namespace Genode;
-	using namespace Hw;
+
+	enum {
+		SIZE_LOG2_4K   = 12,
+		SIZE_LOG2_2M   = 21,
+		SIZE_LOG2_1G   = 30,
+		SIZE_LOG2_512G = 39,
+	};
+
+	struct None { };
 
 	template <typename ENTRY, unsigned BLOCK_SIZE_LOG2, unsigned SIZE_LOG2>
-	struct Level_x_page_table;
+	class Level_x_translation_table;
 
-	struct Level_3_page_table;
+	using Level_3_translation_table =
+		Level_x_translation_table<None, SIZE_LOG2_4K, SIZE_LOG2_2M>;
 
-	using Level_2_page_table =
-		Level_x_page_table<Level_3_page_table, SIZE_LOG2_2MB, SIZE_LOG2_1GB>;
+	using Level_2_translation_table =
+		Level_x_translation_table<Level_3_translation_table, SIZE_LOG2_2M, SIZE_LOG2_1G>;
 
-	using Level_1_page_table =
-		Level_x_page_table<Level_2_page_table, SIZE_LOG2_1GB, SIZE_LOG2_512GB>;
+	using Level_1_translation_table =
+		Level_x_translation_table<Level_2_translation_table, SIZE_LOG2_1G, SIZE_LOG2_512G>;
 
 	struct Descriptor;
 	struct Table_descriptor;
@@ -93,14 +102,14 @@ struct Sv39::Descriptor : Register<64>
 		return BLOCK;
 	}
 
-	static bool present(access_t const v) {
+	static bool valid(access_t const v) {
 		return V::get(v); }
 };
 
 
 struct Sv39::Table_descriptor : Descriptor
 {
-	static access_t create(addr_t pa)
+	static access_t create(void * const pa)
 	{
 		access_t base = Base::get((access_t)pa);
 		access_t desc = 0;
@@ -140,61 +149,98 @@ struct Sv39::Block_descriptor : Descriptor
 
 
 template <typename ENTRY, unsigned BLOCK_SIZE_LOG2, unsigned SIZE_LOG2>
-struct Sv39::Level_x_page_table
-: Hw::Page_table_tpl<Descriptor, BLOCK_SIZE_LOG2, SIZE_LOG2>
+class Sv39::Level_x_translation_table
 {
-	static constexpr size_t VM_MASK = (1UL<< SIZE_LOG2_512GB) - 1;
+	private:
 
-	using Base = Page_table_tpl<Descriptor, BLOCK_SIZE_LOG2, SIZE_LOG2>;
-	using Result = Base::Result;
+		bool _aligned(addr_t const a, size_t const alignm_log2) {
+			return a == ((a >> alignm_log2) << alignm_log2); }
 
-	void table_changed();
+		void _translation_added(addr_t, size_t);
 
-	static constexpr bool sanity_check(addr_t &addr)
-	{
-		/* sanity check vo bits 38 to 63 must be equal */
-		addr_t sanity = addr >> 38;
-		if (sanity != 0 && sanity != 0x3ffffff)
-			return false;
+	public:
 
-		/* clear bits 39 - 63 */
-		addr &= VM_MASK;
-		return true;
-	}
+		static constexpr size_t MIN_PAGE_SIZE_LOG2 = SIZE_LOG2_4K;
+		static constexpr size_t ALIGNM_LOG2        = SIZE_LOG2_4K;
+		static constexpr size_t MAX_ENTRIES        = 1 << (SIZE_LOG2 - BLOCK_SIZE_LOG2);
+		static constexpr size_t BLOCK_SIZE         = 1 << BLOCK_SIZE_LOG2;
+		static constexpr size_t BLOCK_MASK         = ~(BLOCK_SIZE - 1);
+		static constexpr size_t VM_MASK            = (1UL<< SIZE_LOG2_512G) - 1;
 
-	using desc_t = typename Descriptor::access_t;
+		class Misaligned { };
+		class Invalid_range { };
+		class Double_insertion { };
 
-	/**
-	 * Insert translations into this table
-	 *
-	 * \param vo     offset of the virtual region represented
-	 *               by the translation within the virtual
-	 *               region represented by this table
-	 * \param pa     base of the physical backing store
-	 * \param size   size of the translated region
-	 * \param flags  mapping flags
-	 * \param alloc  level allocator
-	 */
-	Result insert(addr_t vo, addr_t pa, size_t size,
-	              Page_flags const &flags, Page_table_allocator &alloc)
-	{
-		if (!sanity_check(vo))
-			return Page_table_error::INVALID_RANGE;
+		using Allocator = Hw::Page_table_allocator<4096>;
 
-		Result result = Base::_for_range(vo, pa, size,
-			[&] (addr_t vo, addr_t pa, size_t size, desc_t &desc) -> Result
+	protected:
+
+		typename Descriptor::access_t _entries[MAX_ENTRIES];
+
+		/*
+		 * Return how many entries of an alignment fit into region
+		 */
+		static constexpr size_t _count(size_t region, size_t alignment) {
+			return align_addr<size_t>(region, (unsigned)alignment) / (1UL << alignment); }
+
+
+		void _range_op(addr_t vo, addr_t pa, size_t size, auto const &fn)
+		{
+			/* sanity check vo bits 38 to 63 must be equal */
+			addr_t sanity = vo >> 38;
+			if (sanity != 0 && sanity != 0x3ffffff) {
+				Genode::error("invalid virtual address: ", vo);
+				throw Invalid_range();
+			}
+
+			/* clear bits 39 - 63 */
+			vo &= VM_MASK;
+
+			for (size_t i = vo >> BLOCK_SIZE_LOG2; size > 0;
+			     i = vo >> BLOCK_SIZE_LOG2) {
+				addr_t end = (vo + BLOCK_SIZE) & BLOCK_MASK;
+				size_t sz  = min(size, end-vo);
+
+				fn(vo, pa, sz, _entries[i]);
+
+				/* flush cached table entry address */
+				_translation_added((addr_t)&_entries[i], sz);
+
+				/* check whether we wrap */
+				if (end < vo) return;
+
+				size = size - sz;
+				vo  += sz;
+				pa  += sz;
+			}
+		}
+
+		template <typename E>
+		struct Insert_func
+		{
+			Genode::Page_flags const & flags;
+			Allocator            & alloc;
+
+			Insert_func(Genode::Page_flags const & flags, Allocator & alloc)
+			: flags(flags), alloc(alloc) { }
+
+			void operator () (addr_t const          vo,
+			                  addr_t const          pa,
+			                  size_t const          size,
+			                  typename Descriptor::access_t &desc) const
 			{
 				using Td = Table_descriptor;
 
 				/* can we insert a whole block? */
-				if (Base::_aligned_and_fits(vo, pa, size)) {
-					desc_t blk_desc = Block_descriptor::create(flags, pa);
+				if (!((vo & ~BLOCK_MASK) || (pa & ~BLOCK_MASK) || size < BLOCK_SIZE)) {
+					typename Descriptor::access_t blk_desc =
+						Block_descriptor::create(flags, pa);
 
-					if (Descriptor::present(desc) && desc != blk_desc)
-						return Page_table_error::INVALID_RANGE;
+					if (Descriptor::valid(desc) && desc != blk_desc)
+						throw Double_insertion();
 
 					desc = blk_desc;
-					return Ok();
+					return;
 				}
 
 				/* we need to use a next level table */
@@ -203,135 +249,183 @@ struct Sv39::Level_x_page_table
 				case Descriptor::INVALID: /* no entry */
 					{
 						/* create and link next level table */
-						Result r = alloc.create<ENTRY, Td>(desc);
-						if (r.failed())
-							return r;
+						E & table = alloc.construct<E>();
+						desc = Td::create((void*)alloc.phys_addr(table));
 					}
 					[[fallthrough]];
 
 				case Descriptor::TABLE: /* table already available */
 					{
-						addr_t phys = Td::Base::bits(Td::Ppn::get(desc));
-						return alloc.lookup<ENTRY>(phys, [&] (ENTRY &e) {
-							return e.insert(vo-Base::_page_mask_high(vo),
-						 	                    pa, size, flags, alloc); });
+						/* use allocator to retrieve virt address of table */
+						E & table = alloc.virt_addr<E>(Td::Base::bits(Td::Ppn::get(desc)));
+						table.insert_translation(vo - (vo & BLOCK_MASK),
+						                         pa, size, flags, alloc);
+						break;
 					}
 
 				case Descriptor::BLOCK: /* there is already a block */
-					break;
+						throw Double_insertion();
 				};
+			}
+		};
 
-				return Page_table_error::INVALID_RANGE;
-			});
+		template <typename E>
+		struct Remove_func
+		{
+			Allocator & alloc;
 
-		table_changed();
-		return result;
-	}
+			Remove_func(Allocator & alloc) : alloc(alloc) { }
+
+			void operator () (addr_t const    vo,
+			                  addr_t const /* pa */,
+			                  size_t const    size,
+			                  typename Descriptor::access_t &desc) const
+			{
+				using Td = Table_descriptor;
+
+				switch (Descriptor::type(desc)) {
+				case Descriptor::TABLE:
+					{
+						/* use allocator to retrieve virt address of table */
+						E & table = alloc.virt_addr<E>(Td::Base::bits(Td::Ppn::get(desc)));
+						table.remove_translation(vo - (vo & BLOCK_MASK), size, alloc);
+						if (!table.empty()) break;
+						alloc.destruct<E>(table);
+					}
+					[[fallthrough]];
+				case Descriptor::BLOCK: [[fallthrough]];
+				case Descriptor::INVALID:
+					desc = 0;
+				}
+			}
+		};
+
+	public:
+
+		Level_x_translation_table()
+		{
+			if (!_aligned((addr_t)this, ALIGNM_LOG2)) {
+				Genode::warning("misaligned address");
+				throw Misaligned();
+			}
+
+			memset(&_entries, 0, sizeof(_entries));
+		}
+
+		bool empty()
+		{
+			for (unsigned i = 0; i < MAX_ENTRIES; i++)
+				if (Descriptor::valid(_entries[i]))
+					return false;
+			return true;
+		}
+
+		/**
+		 * Insert translations into this table
+		 *
+		 * \param vo     offset of the virtual region represented
+		 *               by the translation within the virtual
+		 *               region represented by this table
+		 * \param pa     base of the physical backing store
+		 * \param size   size of the translated region
+		 * \param flags  mapping flags
+		 * \param alloc  level allocator
+		 */
+		void insert_translation(addr_t vo, addr_t pa, size_t size,
+		                        Genode::Page_flags const & flags,
+		                        Allocator & alloc )
+		{
+			_range_op(vo, pa, size, Insert_func<ENTRY>(flags, alloc));
+		}
+
+		/**
+		 * Remove translations that overlap with a given virtual region
+		 *
+		 * \param vo    region offset within the tables virtual region
+		 * \param size  region size
+		 * \param alloc level allocator
+		 */
+		void remove_translation(addr_t vo, size_t size, Allocator & alloc)
+		{
+			_range_op(vo, 0, size, Remove_func<ENTRY>(alloc));
+		}
+
+		bool lookup_rw_translation(addr_t, addr_t &, Allocator &)
+		{
+			Genode::raw(__func__, " not implemented yet");
+			return false;
+		}
+}  __attribute__((aligned(1 << ALIGNM_LOG2)));
+
+
+namespace Sv39 {
 
 	/**
-	 * Remove translations that overlap with a given virtual region
-	 *
-	 * \param vo    region offset within the tables virtual region
-	 * \param size  region size
-	 * \param alloc level allocator
+	 * Insert/Remove functor specialization for level 3
 	 */
-	void remove(addr_t vo, size_t size, Page_table_allocator &alloc)
+	template <> template <>
+	struct Level_3_translation_table::Insert_func<None>
 	{
-		if (!sanity_check(vo))
-			return;
+		Genode::Page_flags const & flags;
 
-		Base::_for_range(vo, size,
-			[&] (addr_t vo, size_t size, desc_t &desc) {
-			using Td = Table_descriptor;
+		Insert_func(Genode::Page_flags const & flags, Allocator &)
+		: flags(flags) { }
 
-			switch (Descriptor::type(desc)) {
-			case Descriptor::TABLE:
-				/* use allocator to retrieve virt address of table */
-				alloc.lookup<ENTRY>(Td::Base::bits(Td::Ppn::get(desc)),
-					[&] (ENTRY &table) {
-					table.remove(vo-Base::_page_mask_high(vo), size, alloc);
-					if (table.empty()) {
-						alloc.destroy<ENTRY>(table);
-						desc = 0;
-					}
-					return Ok();
-				}).with_error([] (Page_table_error) { /* ignore */ });
-				return;
-			case Descriptor::BLOCK: [[fallthrough]];
-			case Descriptor::INVALID:
-				desc = 0;
+		void operator () (addr_t const          vo,
+		                  addr_t const          pa,
+		                  size_t const          size,
+		                  Descriptor::access_t &desc) const
+		{
+			if ((vo & ~BLOCK_MASK) || (pa & ~BLOCK_MASK) ||
+			    size < BLOCK_SIZE) {
+				Genode::warning("invalid range");
+				throw Invalid_range();
 			}
-		});
 
-		table_changed();
-	}
+			Descriptor::access_t blk_desc =
+				Block_descriptor::create(flags, pa);
 
-	Result lookup(addr_t, addr_t&, Page_table_allocator&)
+			if (Descriptor::valid(desc) && desc != blk_desc)
+				throw Double_insertion();
+
+			desc = blk_desc;
+		}
+	};
+
+	template <> template <>
+	struct Level_3_translation_table::Remove_func<None>
 	{
-		Genode::raw(__func__, " not implemented yet");
-		return Page_table_error::INVALID_RANGE;
-	}
-};
+		Remove_func(Allocator &) { }
+
+		void operator () (addr_t /* vo */,
+		                  addr_t /* pa */,
+		                  size_t /* size */,
+		                  Descriptor::access_t &desc) const {
+			desc = 0; }
+	};
+}
 
 
-struct Sv39::Level_3_page_table
-: Page_table_tpl<Descriptor, SIZE_LOG2_4KB, SIZE_LOG2_2MB>
-{
-	using Base = Page_table_tpl<Descriptor, SIZE_LOG2_4KB, SIZE_LOG2_2MB>;
-	using Result = Base::Result;
-	using desc_t = typename Descriptor::access_t;
+namespace Hw {
 
-	Result insert(addr_t vo, addr_t pa, size_t size,
-	              Page_flags const &flags, Page_table_allocator&)
+	struct Page_table : Sv39::Level_1_translation_table
 	{
-		return Base::_for_range(vo, pa, size,
-			[&] (addr_t vo, addr_t pa, size_t size, desc_t &desc) -> Result
-			{
-				if (!_aligned_and_fits(vo, pa, size))
-					return Page_table_error::INVALID_RANGE;
+		enum {
+			TABLE_LEVEL_X_SIZE_LOG2 = Sv39::SIZE_LOG2_4K,
+			CORE_VM_AREA_SIZE = 512 * 1024 * 1024,
+			CORE_TRANS_TABLE_COUNT =
+				_count(CORE_VM_AREA_SIZE, Sv39::SIZE_LOG2_1G) +
+				_count(CORE_VM_AREA_SIZE, Sv39::SIZE_LOG2_2M),
+		};
 
-				desc_t blk_desc = Block_descriptor::create(flags, pa);
+		Page_table() : Sv39::Level_1_translation_table() {}
 
-				if (Descriptor::present(desc) && desc != blk_desc)
-					return Page_table_error::INVALID_RANGE;
-
-				desc = blk_desc;
-				return Ok();
-			});
-	}
-
-	void remove(addr_t vo, size_t size, Page_table_allocator &)
-	{
-		Base::_for_range(vo, size,
-		                 [&] (addr_t, size_t, desc_t &desc) { desc = 0; });
-	}
-};
-
-
-namespace Hw { struct Page_table; }
-
-
-struct Hw::Page_table : Sv39::Level_1_page_table
-{
-	static constexpr size_t ALIGNM_LOG2 = SIZE_LOG2_4KB;
-
-	using Sv39::Level_1_page_table::Level_1_page_table;
-
-	Page_table(Page_table & kernel_table)
-	:
-		Sv39::Level_1_page_table()
-	{
-		static constexpr size_t KERNEL_START_IDX =
-			(Hw::Mm::KERNEL_START & VM_MASK) >> SIZE_LOG2_1GB;
-
-		for (unsigned i = KERNEL_START_IDX; i < MAX_ENTRIES; i++)
-			_entries[i] = kernel_table._entries[i];
-	}
-
-	using Array = Hw::Page_table_array<sizeof(Sv39::Level_2_page_table),
-	                                   _table_count(_core_vm_size(),
-	                                                SIZE_LOG2_1GB,
-	                                                SIZE_LOG2_2MB)>;
-} __attribute__((aligned(1 << ALIGNM_LOG2)));
+		Page_table(Page_table & kernel_table)
+		: Sv39::Level_1_translation_table() {
+			static unsigned first = (0xffffffc000000000UL & VM_MASK) >> Sv39::SIZE_LOG2_1G;
+			for (unsigned i = first; i < MAX_ENTRIES; i++)
+				_entries[i] = kernel_table._entries[i]; }
+	};
+}
 
 #endif /* _SRC__LIB__HW__SPEC__RISCV__PAGE_TABLE_H_ */

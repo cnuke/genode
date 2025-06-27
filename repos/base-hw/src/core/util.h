@@ -25,6 +25,7 @@ namespace Core {
 	using Hw::trunc_page;
 	using Hw::round_page;
 	using Hw::trunc;
+	using Hw::aligned;
 	using Hw::round;
 
 	/**
