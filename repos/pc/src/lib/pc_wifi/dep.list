@@ -125,8 +125,6 @@ drivers/net/wireless/intel/iwlwifi/iwl-devtrace-msg.h
 drivers/net/wireless/intel/iwlwifi/iwl-devtrace-ucode.h
 drivers/net/wireless/intel/iwlwifi/iwl-devtrace.h
 drivers/net/wireless/intel/iwlwifi/iwl-drv.h
-drivers/net/wireless/intel/iwlwifi/iwl-eeprom-parse.h
-drivers/net/wireless/intel/iwlwifi/iwl-eeprom-read.h
 drivers/net/wireless/intel/iwlwifi/iwl-fh.h
 drivers/net/wireless/intel/iwlwifi/iwl-io.h
 drivers/net/wireless/intel/iwlwifi/iwl-modparams.h
@@ -147,7 +145,6 @@ drivers/net/wireless/intel/iwlwifi/mvm/testmode.h
 drivers/net/wireless/intel/iwlwifi/mvm/time-event.h
 drivers/net/wireless/intel/iwlwifi/mvm/time-sync.h
 drivers/net/wireless/intel/iwlwifi/pcie/internal.h
-drivers/net/wireless/intel/iwlwifi/queue/tx.h
 drivers/net/wireless/realtek/rtlwifi/base.h
 drivers/net/wireless/realtek/rtlwifi/btcoexist/halbt_precomp.h
 drivers/net/wireless/realtek/rtlwifi/btcoexist/halbtc8192e2ant.h
@@ -260,7 +257,6 @@ include/linux/filter.h
 include/linux/fips.h
 include/linux/firmware.h
 include/linux/gcd.h
-include/linux/genetlink.h
 include/linux/gpio.h
 include/linux/hw_random.h
 include/linux/icmpv6.h
