@@ -166,7 +166,6 @@ drivers/gpu/drm/i915/gem/i915_gem_tiling.h
 drivers/gpu/drm/i915/gem/i915_gem_ttm.h
 drivers/gpu/drm/i915/gem/i915_gem_ttm_move.h
 drivers/gpu/drm/i915/gem/i915_gem_ttm_pm.h
-drivers/gpu/drm/i915/gem/i915_gem_userptr.h
 drivers/gpu/drm/i915/gt/gen2_engine_cs.h
 drivers/gpu/drm/i915/gt/gen6_engine_cs.h
 drivers/gpu/drm/i915/gt/gen6_ppgtt.h
@@ -305,7 +304,6 @@ drivers/gpu/drm/i915/i915_driver.h
 drivers/gpu/drm/i915/i915_drm_client.h
 drivers/gpu/drm/i915/i915_drv.h
 drivers/gpu/drm/i915/i915_file_private.h
-drivers/gpu/drm/i915/i915_fixed.h
 drivers/gpu/drm/i915/i915_gem_evict.h
 drivers/gpu/drm/i915/i915_gem_gtt.h
 drivers/gpu/drm/i915/i915_gem.h
