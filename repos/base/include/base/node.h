@@ -99,6 +99,13 @@ class Genode::Node : Noncopyable
 				[&] { return missing_fn(); });
 		}
 
+		unsigned num_sub_nodes() const
+		{
+			unsigned count = 0;
+			for_each_sub_node([&] (auto const &) { count++; });
+			return count;
+		}
+
 		void with_optional_sub_node(char const *type, auto const &fn) const
 		{
 			_with(
