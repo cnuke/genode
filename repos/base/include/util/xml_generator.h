@@ -478,7 +478,7 @@ class Genode::Xml_generator
 		/**
 		 * Append structured 'node'
 		 */
-		void append_node(auto const &node, Max_depth max_depth = { 5 })
+		void append_node(auto const &node, Max_depth max_depth = { 10 })
 		{
 			if (!max_depth.value)
 				return;
