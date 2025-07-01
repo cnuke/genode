@@ -62,6 +62,10 @@ class Genode::Node : Noncopyable
 				try { _xml.construct(bytes); } catch (...) { }
 		}
 
+		template <size_t N>
+		Node(String<N> const &s)
+		: Node(Const_byte_range_ptr(s.string(), max(s.length(), 1ul) - 1ul)) { }
+
 		void for_each_sub_node(char const *type, auto const &fn) const
 		{
 			_with(
