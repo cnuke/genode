@@ -51,7 +51,7 @@ set config {
 			<provides><service name="Timer"/></provides>
 		</start>
 
-		<start name="drivers_reports" caps="100" ram="1M">
+		<start name="drivers_reports" caps="100" ram="2M">
 			<binary name="report_rom"/>
 			<provides>
 				<service name="Report"/>
@@ -126,7 +126,7 @@ set config {
 			</route>
 		</start>
 
-		<start name="event_filter" caps="100" ram="1M">
+		<start name="event_filter" caps="100" ram="2M">
 			<provides> <service name="Event" /> </provides>
 			<config>
 				<output>
@@ -184,7 +184,7 @@ set config {
 			</route>
 		</start>
 
-		<start name="acpi_event" caps="100" ram="1M">
+		<start name="acpi_event" caps="100" ram="2M">
 			<config>
 				<!-- example mapping - adapt to your target notebook !!! -->
 				<!-- as="PRESS_RELEASE" is default if nothing specified -->
