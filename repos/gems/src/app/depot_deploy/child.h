@@ -555,30 +555,32 @@ void Depot_deploy::Child::gen_start_node(Xml_generator          &xml,
 			 * Declare services provided by the subsystem.
 			 */
 			runtime.with_optional_sub_node("provides", [&] (Xml_node const &provides) {
-				provides.for_each_sub_node([&] (Xml_node const &service) {
-					_gen_provides_sub_node(xml, service, "audio_in",    "Audio_in");
-					_gen_provides_sub_node(xml, service, "audio_out",   "Audio_out");
-					_gen_provides_sub_node(xml, service, "block",       "Block");
-					_gen_provides_sub_node(xml, service, "file_system", "File_system");
-					_gen_provides_sub_node(xml, service, "framebuffer", "Framebuffer");
-					_gen_provides_sub_node(xml, service, "input",       "Input");
-					_gen_provides_sub_node(xml, service, "event",       "Event");
-					_gen_provides_sub_node(xml, service, "log",         "LOG");
-					_gen_provides_sub_node(xml, service, "nic",         "Nic");
-					_gen_provides_sub_node(xml, service, "uplink",      "Uplink");
-					_gen_provides_sub_node(xml, service, "gui",         "Gui");
-					_gen_provides_sub_node(xml, service, "gpu",         "Gpu");
-					_gen_provides_sub_node(xml, service, "usb",         "Usb");
-					_gen_provides_sub_node(xml, service, "report",      "Report");
-					_gen_provides_sub_node(xml, service, "rom",         "ROM");
-					_gen_provides_sub_node(xml, service, "terminal",    "Terminal");
-					_gen_provides_sub_node(xml, service, "timer",       "Timer");
-					_gen_provides_sub_node(xml, service, "pd",          "PD");
-					_gen_provides_sub_node(xml, service, "cpu",         "CPU");
-					_gen_provides_sub_node(xml, service, "rtc",         "Rtc");
-					_gen_provides_sub_node(xml, service, "capture",     "Capture");
-					_gen_provides_sub_node(xml, service, "play",        "Play");
-					_gen_provides_sub_node(xml, service, "record",      "Record");
+				xml.node("provides", [&] {
+					provides.for_each_sub_node([&] (Xml_node const &service) {
+						_gen_provides_sub_node(xml, service, "audio_in",    "Audio_in");
+						_gen_provides_sub_node(xml, service, "audio_out",   "Audio_out");
+						_gen_provides_sub_node(xml, service, "block",       "Block");
+						_gen_provides_sub_node(xml, service, "file_system", "File_system");
+						_gen_provides_sub_node(xml, service, "framebuffer", "Framebuffer");
+						_gen_provides_sub_node(xml, service, "input",       "Input");
+						_gen_provides_sub_node(xml, service, "event",       "Event");
+						_gen_provides_sub_node(xml, service, "log",         "LOG");
+						_gen_provides_sub_node(xml, service, "nic",         "Nic");
+						_gen_provides_sub_node(xml, service, "uplink",      "Uplink");
+						_gen_provides_sub_node(xml, service, "gui",         "Gui");
+						_gen_provides_sub_node(xml, service, "gpu",         "Gpu");
+						_gen_provides_sub_node(xml, service, "usb",         "Usb");
+						_gen_provides_sub_node(xml, service, "report",      "Report");
+						_gen_provides_sub_node(xml, service, "rom",         "ROM");
+						_gen_provides_sub_node(xml, service, "terminal",    "Terminal");
+						_gen_provides_sub_node(xml, service, "timer",       "Timer");
+						_gen_provides_sub_node(xml, service, "pd",          "PD");
+						_gen_provides_sub_node(xml, service, "cpu",         "CPU");
+						_gen_provides_sub_node(xml, service, "rtc",         "Rtc");
+						_gen_provides_sub_node(xml, service, "capture",     "Capture");
+						_gen_provides_sub_node(xml, service, "play",        "Play");
+						_gen_provides_sub_node(xml, service, "record",      "Record");
+					});
 				});
 			});
 
