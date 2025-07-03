@@ -90,6 +90,17 @@ class Gui::Connection : private Genode::Connection<Session>
 			});
 		}
 
+		void _with_info_node(auto const &fn)
+		{
+			_with_info_rom([&] (Rom_session_client &rom) {
+				if (!_info_ds.constructed() || rom.update() == false)
+					_info_ds.construct(_env.rm(), rom.dataspace());
+
+				fn(Node(Const_byte_range_ptr(_info_ds->local_addr<char>(),
+				                             _info_ds->size())));
+			});
+		}
+
 	public:
 
 		View_ids view_ids { };
@@ -239,7 +250,14 @@ class Gui::Connection : private Genode::Connection<Session>
 		/**
 		 * Call 'fn' with mode information as 'Xml_node const &' argument
 		 */
-		void with_info(auto const &fn) { _with_info_xml(fn); }
+		void with_info_xml(auto const &fn) { _with_info_xml(fn); }
+
+		/**
+		 * Call 'fn' with mode information as 'Node const &' argument
+		 */
+		void with_info_node(auto const &fn) { _with_info_node(fn); }
+
+		void with_info(auto const &fn) { with_info_xml(fn); }
 
 		Capability<Rom_session> info_rom_cap()
 		{
