@@ -19,6 +19,7 @@
 #include <input_session/client.h>
 #include <rom_session/client.h>
 #include <base/connection.h>
+#include <base/node.h>
 
 namespace Gui {
 	class  Connection;
