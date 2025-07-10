@@ -121,5 +121,5 @@ void Monitor::Monitored_thread::_handle_exception()
 		}
 	}
 
-	_thread_monitor.thread_stopped(_pd, *this);
+	_thread_monitor.thread_stopped(_pd, *this, thread_state);
 }

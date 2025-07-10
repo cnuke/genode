@@ -440,10 +440,18 @@ struct Monitor::Main : Sandbox::State_handler,
 			_gdb_stub->flush(thread);
 	}
 
-	void thread_stopped(Capability<Pd_session> pd, Monitored_thread &thread) override
+	void thread_stopped(Capability<Pd_session> pd, Monitored_thread &thread, Thread_state const &ts) override
 	{
 		if (!_gdb_stub.constructed()) {
-			Genode::error("thread_stopped() called without monitor config");
+			Inferior_pd::with_inferior_pd(_env.ep(), pd,
+			                              [&] (Inferior_pd &inferior) {
+				Genode::error("thread_stopped() called without monitor config"
+				             , " \"", inferior._name, " -> ", thread._name, "\""
+				             , " stop_reply_signal=", int(thread.stop_reply_signal)
+				             , " ip=", (void *)ts.cpu.ip
+				             , " traspno=", (void *)ts.cpu.trapno
+				             );
+			}, [] { });
 			return;
 		}
 		Inferior_pd::with_inferior_pd(_env.ep(), pd,

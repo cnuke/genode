@@ -45,7 +45,8 @@ struct Monitor::Thread_monitor : Interface
 	virtual void flush(Monitored_thread &thread) = 0;
 
 	virtual void thread_stopped(Capability<Pd_session> pd,
-	                            Monitored_thread &thread) = 0;
+	                            Monitored_thread &thread,
+	                            Thread_state const &ts) = 0;
 };
 
 
@@ -101,7 +102,7 @@ struct Monitor::Monitored_thread : Monitored_rpc_object<Cpu_thread>
 		stop_state = Stop_state::STOPPED_REPLY_PENDING;
 		stop_reply_signal = Stop_reply_signal::SEGV;
 
-		_thread_monitor.thread_stopped(_pd, *this);
+		_thread_monitor.thread_stopped(_pd, *this, state());
 	}
 
 	using Monitored_rpc_object::Monitored_rpc_object;
