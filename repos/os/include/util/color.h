@@ -19,7 +19,7 @@
 namespace Genode {
 	struct Color;
 
-	inline size_t ascii_to(const char *, Color &);
+	inline size_t parse(Span const &, Color &);
 }
 
 
@@ -103,16 +103,14 @@ struct Genode::Color
  * \return number of consumed characters, or 0 if the string contains
  *         no valid color
  */
-inline Genode::size_t Genode::ascii_to(const char *s, Color &result)
+inline Genode::size_t Genode::parse(Span const &s, Color &result)
 {
-	size_t const len = strlen(s);
-
-	if (len < 7 || *s != '#') return 0;
+	if (s.num_bytes < 7 || s.start[0] != '#') return 0;
 
 	bool const HEX = true;
 
-	auto is_digit = [&] (unsigned i) { return Genode::is_digit(s[i], HEX); };
-	auto digit    = [&] (unsigned i) { return Genode::digit(s[i], HEX); };
+	auto is_digit = [&] (unsigned i) { return Genode::is_digit(s.start[i], HEX); };
+	auto digit    = [&] (unsigned i) { return Genode::digit(s.start[i], HEX); };
 
 	for (unsigned i = 0; i < 6; i++)
 		if (!is_digit(i + 1)) return 0;
@@ -121,7 +119,7 @@ inline Genode::size_t Genode::ascii_to(const char *s, Color &result)
 	              g = uint8_t(16*digit(3) + digit(4)),
 	              b = uint8_t(16*digit(5) + digit(6));
 
-	bool const has_alpha = (len >= 9) && is_digit(7) && is_digit(8);
+	bool const has_alpha = (s.num_bytes >= 9) && is_digit(7) && is_digit(8);
 
 	uint8_t const a = has_alpha ? uint8_t(16*digit(7) + digit(8)) : 255;
 
