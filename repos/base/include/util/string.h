@@ -23,55 +23,15 @@
 
 namespace Genode {
 
-	class Number_of_bytes;
-	class Byte_range_ptr;
+	struct Num_bytes;
+	struct Byte_range_ptr;
 	class Span;
 	class Cstring;
 	template <Genode::size_t> class String;
 
-	using Const_byte_range_ptr = Span;;
+	using Const_byte_range_ptr = Span;
+	using Number_of_bytes = Num_bytes; /* deprecated */
 }
-
-
-/**
- * Wrapper of 'size_t' for parsing parse byte values
- */
-class Genode::Number_of_bytes
-{
-	size_t _n;
-
-	public:
-
-		/**
-		 * Default constructor
-		 */
-		Number_of_bytes() : _n(0) { }
-
-		/**
-		 * Constructor, to be used implicitly via assignment operator
-		 */
-		Number_of_bytes(size_t n) : _n(n) { }
-
-		/**
-		 * Convert number of bytes to 'size_t' value
-		 */
-		operator size_t() const { return _n; }
-
-		static void print(Output &output, auto const n)
-		{
-			using Genode::print;
-
-			enum { KB = 1024U, MB = KB*1024U, GB = MB*1024U };
-
-			if      (n      == 0) print(output, 0);
-			else if (n % GB == 0) print(output, n/GB, "G");
-			else if (n % MB == 0) print(output, n/MB, "M");
-			else if (n % KB == 0) print(output, n/KB, "K");
-			else                  print(output, n);
-		}
-
-		void print(Output &output) const { print(output, _n); }
-};
 
 
 /**
@@ -480,35 +440,6 @@ namespace Genode {
 
 
 	/**
-	 * Read 'Number_of_bytes' value from span and handle the size suffixes
-	 *
-	 * This function scales the resulting size value according to the suffixes
-	 * for G (2^30), M (2^20), and K (2^10) if present.
-	 *
-	 * \return number of consumed characters
-	 */
-	inline size_t parse(Span const &s, Number_of_bytes &result)
-	{
-		unsigned long res = 0;
-
-		/* convert numeric part */
-		size_t i = parse_unsigned(s, res, 0);
-
-		/* handle suffixes */
-		if (i > 0 && i < s.num_bytes)
-			switch (s.start[i]) {
-			case 'G': res *= 1024*1024*1024; i++; break;
-			case 'M': res *= 1024*1024;      i++; break;
-			case 'K': res *= 1024;           i++; break;
-			default: break;
-			}
-
-		result = res;
-		return i;
-	}
-
-
-	/**
 	 * Read double float value from span
 	 *
 	 * \return number of consumed characters
@@ -552,27 +483,12 @@ namespace Genode {
 
 
 	/**
-	 * API compatibility helper
+	 * Assign parsed information to object 'obj'
 	 *
-	 * \noapi
-	 * \deprecated
+	 * The object type must provide a 'parse(Span &)' method that applies
+	 * the interpreted text 's' to the object.
 	 */
-	inline size_t ascii_to_unsigned(const char *s, auto &out, uint8_t base)
-	{
-		return parse_unsigned(Span { s, ~0UL }, out, base);
-	}
-
-
-	/**
-	 * API compatibility helper
-	 *
-	 * \noapi
-	 * \deprecated
-	 */
-	inline size_t ascii_to(const char *s, auto &out)
-	{
-		return parse(Span { s, ~0UL }, out);
-	}
+	static inline size_t parse(Span const &s, auto &obj) { return obj.parse(s); }
 
 
 	/**
@@ -610,7 +526,87 @@ namespace Genode {
 
 		return i;
 	}
+
+
+	/**
+	 * API compatibility helper
+	 *
+	 * \noapi
+	 * \deprecated
+	 */
+	inline size_t ascii_to_unsigned(const char *s, auto &out, uint8_t base)
+	{
+		return parse_unsigned(Span { s, ~0UL }, out, base);
+	}
+
+
+	/**
+	 * API compatibility helper
+	 *
+	 * \noapi
+	 * \deprecated
+	 */
+	inline size_t ascii_to(const char *s, auto &out)
+	{
+		return parse(Span { s, ~0UL }, out);
+	}
 }
+
+
+/**
+ * Helper for parsing and printing memory-sized amounts of bytes
+ */
+struct Genode::Num_bytes
+{
+	size_t _n;
+
+	operator size_t() const { return _n; }
+
+	static void print(Output &output, auto const n)
+	{
+		using Genode::print;
+
+		enum { KB = 1024U, MB = KB*1024U, GB = MB*1024U };
+
+		if      (n      == 0) print(output, 0);
+		else if (n % GB == 0) print(output, n/GB, "G");
+		else if (n % MB == 0) print(output, n/MB, "M");
+		else if (n % KB == 0) print(output, n/KB, "K");
+		else                  print(output, n);
+	}
+
+	void print(Output &output) const { print(output, _n); }
+
+	/**
+	 * Read 'Num_bytes' value from span and handle the size suffixes
+	 *
+	 * This function scales the resulting size value according to the suffixes
+	 * for G (2^30), M (2^20), and K (2^10) if present.
+	 *
+	 * \return number of consumed characters
+	 */
+	static size_t parse(Span const &s, auto &out)
+	{
+		unsigned long res = 0;
+
+		/* convert numeric part */
+		size_t i = parse_unsigned(s, res, 0);
+
+		/* handle suffixes */
+		if (i > 0 && i < s.num_bytes)
+			switch (s.start[i]) {
+			case 'G': res *= 1024*1024*1024; i++; break;
+			case 'M': res *= 1024*1024;      i++; break;
+			case 'K': res *= 1024;           i++; break;
+			default: break;
+			}
+
+		if (i) out = res;
+		return i;
+	}
+
+	size_t parse(Span const &s) { return parse(s, _n); }
+};
 
 
 /**
