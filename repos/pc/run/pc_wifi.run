@@ -3,7 +3,7 @@
 # pull in the locally build binaries rather than the ones
 # from the depot.
 #
-set debug_driver false
+set debug_driver true
 
 source ${genode_dir}/repos/dde_linux/run/wifi_config.inc
 
