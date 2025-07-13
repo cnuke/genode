@@ -92,6 +92,7 @@ drivers/net/wireless/intel/iwlwifi/cfg/8000.c
 drivers/net/wireless/intel/iwlwifi/cfg/9000.c
 drivers/net/wireless/intel/iwlwifi/cfg/ax210.c
 drivers/net/wireless/intel/iwlwifi/cfg/bz.c
+drivers/net/wireless/intel/iwlwifi/cfg/dr.c
 drivers/net/wireless/intel/iwlwifi/cfg/sc.c
 drivers/net/wireless/intel/iwlwifi/dvm/calib.c
 drivers/net/wireless/intel/iwlwifi/dvm/devices.c
@@ -122,6 +123,7 @@ drivers/net/wireless/intel/iwlwifi/iwl-debug.c
 drivers/net/wireless/intel/iwlwifi/iwl-drv.c
 drivers/net/wireless/intel/iwlwifi/iwl-io.c
 drivers/net/wireless/intel/iwlwifi/iwl-nvm-parse.c
+drivers/net/wireless/intel/iwlwifi/iwl-nvm-utils.c
 drivers/net/wireless/intel/iwlwifi/iwl-phy-db.c
 drivers/net/wireless/intel/iwlwifi/iwl-trans.c
 drivers/net/wireless/intel/iwlwifi/mvm/binding.c

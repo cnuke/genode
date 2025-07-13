@@ -14,6 +14,14 @@
 #include <lx_emul.h>
 
 
+#include <lx_emul/task.h>
+
+void yield(void)
+{
+	lx_emul_task_schedule(0 /* no block */);
+}
+
+
 #include <linux/syscore_ops.h>
 
 void register_syscore_ops(struct syscore_ops * ops)
@@ -572,14 +580,105 @@ void iwl_uefi_get_step_table(struct iwl_trans * trans)
 
 int iwl_uefi_handle_tlv_mem_desc(struct iwl_trans * trans,const u8 * data,u32 tlv_len,struct iwl_pnvm_image * pnvm_data)
 {
-	return -EINVAL;;
+	return -EINVAL;
 }
 
 
 int iwl_uefi_reduce_power_parse(struct iwl_trans * trans,const u8 * data,size_t len,struct iwl_pnvm_image * pnvm_data)
 {
-	return -ENOENT;;
+	return -ENOENT;
 }
+
+#include <fw/regulatory.h>
+
+int iwl_bios_get_dsm(struct iwl_fw_runtime * fwrt,enum iwl_dsm_funcs func,u32 * value) { return -ENOENT; }
+int iwl_bios_get_eckv(struct iwl_fw_runtime *fwrt, u32 * data) { return -ENOENT; }
+int iwl_bios_get_mcc(struct iwl_fw_runtime *fwrt, char * data) { return -ENOENT; }
+int iwl_bios_get_pwr_limit(struct iwl_fw_runtime *fwrt, u64 * data) { return -ENOENT; }
+int iwl_bios_get_tas_table(struct iwl_fw_runtime *fwrt, struct iwl_tas_data * data) { return -ENOENT; }
+int iwl_bios_get_wbem(struct iwl_fw_runtime *fwrt, u32 * data) { return -ENOENT; }
+int iwl_bios_get_ewrd_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+int iwl_bios_get_ppag_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+int iwl_bios_get_wgds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+int iwl_bios_get_wrds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+
+
+extern int iwl_fill_lari_config(struct iwl_fw_runtime * fwrt,struct iwl_lari_config_change_cmd * cmd,size_t * cmd_size);
+int iwl_fill_lari_config(struct iwl_fw_runtime * fwrt,struct iwl_lari_config_change_cmd * cmd,size_t * cmd_size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_fill_ppag_table(struct iwl_fw_runtime * fwrt,union iwl_ppag_table_cmd * cmd,int * cmd_size);
+int iwl_fill_ppag_table(struct iwl_fw_runtime * fwrt,union iwl_ppag_table_cmd * cmd,int * cmd_size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+extern bool iwl_is_ppag_approved(struct iwl_fw_runtime * fwrt);
+bool iwl_is_ppag_approved(struct iwl_fw_runtime * fwrt)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern bool iwl_is_tas_approved(void);
+bool iwl_is_tas_approved(void)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern struct iwl_nvm_data * iwl_parse_eeprom_data(struct iwl_trans * trans,const struct iwl_cfg * cfg,const u8 * eeprom,size_t eeprom_size);
+struct iwl_nvm_data * iwl_parse_eeprom_data(struct iwl_trans * trans,const struct iwl_cfg * cfg,const u8 * eeprom,size_t eeprom_size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_read_eeprom(struct iwl_trans * trans,u8 ** eeprom,size_t * eeprom_size);
+int iwl_read_eeprom(struct iwl_trans * trans,u8 ** eeprom,size_t * eeprom_size)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_sar_fill_profile(struct iwl_fw_runtime * fwrt,__le16 * per_chain,u32 n_tables,u32 n_subbands,int prof_a,int prof_b);
+int iwl_sar_fill_profile(struct iwl_fw_runtime * fwrt,__le16 * per_chain,u32 n_tables,u32 n_subbands,int prof_a,int prof_b)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_sar_geo_fill_table(struct iwl_fw_runtime * fwrt,struct iwl_per_chain_offset * table,u32 n_bands,u32 n_profiles);
+int iwl_sar_geo_fill_table(struct iwl_fw_runtime * fwrt,struct iwl_per_chain_offset * table,u32 n_bands,u32 n_profiles)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern bool iwl_sar_geo_support(struct iwl_fw_runtime * fwrt);
+bool iwl_sar_geo_support(struct iwl_fw_runtime * fwrt)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_uefi_get_puncturing(struct iwl_fw_runtime * fwrt);
+int iwl_uefi_get_puncturing(struct iwl_fw_runtime * fwrt)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int iwl_uefi_get_uats_table(struct iwl_trans * trans,struct iwl_fw_runtime * fwrt);
+int iwl_uefi_get_uats_table(struct iwl_trans * trans,struct iwl_fw_runtime * fwrt)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 
 #include <linux/property.h>
 
@@ -769,7 +868,14 @@ struct mnt_idmap nop_mnt_idmap;
 
 #include <linux/thermal.h>
 
-struct thermal_zone_device * thermal_zone_device_register_with_trips(const char * type,struct thermal_trip * trips,int num_trips,int mask,void * devdata,struct thermal_zone_device_ops * ops,const struct thermal_zone_params * tzp,int passive_delay,int polling_delay)
+struct thermal_zone_device *thermal_zone_device_register_with_trips(
+	const char *type,
+	const struct thermal_trip *trips,
+	int num_trips, void *devdata,
+	const struct thermal_zone_device_ops *ops,
+	const struct thermal_zone_params *tzp,
+	unsigned int passive_delay,
+	unsigned int polling_delay)
 {
 	lx_emul_trace(__func__);
 	return ERR_PTR(-EINVAL);
@@ -782,4 +888,77 @@ int ___ratelimit(struct ratelimit_state * rs,const char * func)
 {
 	lx_emul_trace(__func__);
 	return 0;
+}
+
+#include <linux/async.h>
+
+void __init async_init(void)
+{
+	lx_emul_trace(__func__);
+}
+
+
+/*
+ * The dummies below were moved from the generated dummies
+ * file to provide the proper forward declarations and
+ * thus still feature 'lx_emul_trace_and_stop'.
+ */
+
+#include <crypto/skcipher.h>
+
+int crypto_lskcipher_setkey(struct crypto_lskcipher * tfm,const u8 * key,unsigned int keylen)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int crypto_init_lskcipher_ops_sg(struct crypto_tfm * tfm);
+int crypto_init_lskcipher_ops_sg(struct crypto_tfm * tfm)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int crypto_lskcipher_decrypt_sg(struct skcipher_request * req);
+int crypto_lskcipher_decrypt_sg(struct skcipher_request * req)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern int crypto_lskcipher_encrypt_sg(struct skcipher_request * req);
+int crypto_lskcipher_encrypt_sg(struct skcipher_request * req)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/cfg80211.h>
+
+extern void ieee80211_add_wbrf(struct ieee80211_local * local,struct cfg80211_chan_def * chandef);
+void ieee80211_add_wbrf(struct ieee80211_local * local,struct cfg80211_chan_def * chandef)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern void ieee80211_remove_wbrf(struct ieee80211_local * local,struct cfg80211_chan_def * chandef);
+void ieee80211_remove_wbrf(struct ieee80211_local * local,struct cfg80211_chan_def * chandef)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+#include <uapi/linux/nl80211.h>
+
+extern int ieee80211_parse_bitrates(enum nl80211_chan_width width,const struct ieee80211_supported_band * sband,const u8 * srates,int srates_len,u32 * rates);
+int ieee80211_parse_bitrates(enum nl80211_chan_width width,const struct ieee80211_supported_band * sband,const u8 * srates,int srates_len,u32 * rates)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+extern struct ieee802_11_elems * ieee802_11_parse_elems_full(struct ieee80211_elems_parse_params * params);
+struct ieee802_11_elems * ieee802_11_parse_elems_full(struct ieee80211_elems_parse_params * params)
+{
+	lx_emul_trace_and_stop(__func__);
 }
