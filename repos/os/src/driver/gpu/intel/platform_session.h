@@ -467,7 +467,7 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		static auto constexpr GPU_SERVICE_APERTURE = (32ull << 20);
 		static auto constexpr DISPLAY_MIN_APERTURE = (32ull << 20);
 
-		Number_of_bytes _sanitized_aperture_size()
+		Num_bytes _sanitized_aperture_size()
 		{
 			auto apert_reserved = _aperture_size;
 
@@ -480,17 +480,17 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 			else
 				apert_reserved = _aperture_size - GPU_SERVICE_APERTURE;
 
-			log("Aperture max: ", Number_of_bytes(_aperture_size),
-			    " display: ", Number_of_bytes(apert_reserved));
+			log("Aperture max: ", Num_bytes(_aperture_size),
+			    " display: ", Num_bytes(apert_reserved));
 
 			/* reserved space is used to calculate vGPU available */
 			if (_aperture_size == apert_reserved)
 				warning("GPU service not usable due to insufficient aperture space");
 
-			return apert_reserved;
+			return { apert_reserved };
 		}
 
-		Number_of_bytes _aperture_size_via_device_rom()
+		Num_bytes _aperture_size_via_device_rom()
 		{
 			auto apert_size = DISPLAY_MIN_APERTURE;
 
@@ -511,7 +511,7 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 				});
 			});
 
-			return apert_size;
+			return { apert_size };
 		}
 
 		bool _make_aperture_accessible()
