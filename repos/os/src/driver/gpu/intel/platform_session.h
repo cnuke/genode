@@ -402,8 +402,8 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		Constructible<Platform::Device::Mmio<0> >   _gmadr     { };
 		Constructible<Attached_dataspace>           _gmadr_mem { };
 
-		uint64_t const      _aperture_size;
-		uint64_t const      _aperture_reserved;
+		size_t const _aperture_size;
+		size_t const _aperture_reserved;
 
 		Region_map_client   _rm_gttmm;
 		Region_map_client   _rm_gmadr;
@@ -464,8 +464,8 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		 * available because investigating the later is futil without
 		 * the former.
 		 */
-		static auto constexpr GPU_SERVICE_APERTURE = (32ull << 20);
-		static auto constexpr DISPLAY_MIN_APERTURE = (32ull << 20);
+		static auto constexpr GPU_SERVICE_APERTURE = (32ul << 20);
+		static auto constexpr DISPLAY_MIN_APERTURE = (32ul << 20);
 
 		Num_bytes _sanitized_aperture_size()
 		{
@@ -672,10 +672,10 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		/*
 		 * Reserved aperture for platform service
 		 */
-		uint64_t aperture_reserved() const { return _aperture_reserved; }
-		uint64_t aperture_size()     const { return _aperture_size; }
+		size_t aperture_reserved() const { return _aperture_reserved; }
+		size_t aperture_size()     const { return _aperture_size; }
 
-		uint64_t gtt_reserved() const
+		size_t gtt_reserved() const
 		{
 			/* reserved GTT for platform service, GTT entry is 8 byte */
 			return (aperture_reserved() / Igd::PAGE_SIZE) * 8;
