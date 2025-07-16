@@ -72,7 +72,7 @@ struct Genode::Span : Noncopyable
 
 	bool contains(char const *ptr) const
 	{
-		return (ptr >= start) && (ptr <= start + num_bytes - 1);
+		return (ptr >= start) && size_t(ptr - start) < num_bytes;
 	}
 
 	bool contains(void const *ptr) const
