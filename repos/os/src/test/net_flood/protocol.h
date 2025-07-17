@@ -21,11 +21,11 @@ namespace Genode { enum class Protocol : uint16_t { ICMP, UDP, TCP }; }
 
 namespace Genode
 {
-	inline size_t ascii_to(char const *s, Protocol &result)
+	inline size_t parse(Span const &s, Protocol &result)
 	{
-		if (!strcmp(s, "icmp", 4)) { result = Protocol::ICMP; return 4; }
-		if (!strcmp(s, "udp",  3)) { result = Protocol::UDP;  return 3; }
-		if (!strcmp(s, "tcp",  3)) { result = Protocol::TCP;  return 3; }
+		if (!strcmp(s.start, "icmp", s.num_bytes)) { result = Protocol::ICMP; return 4; }
+		if (!strcmp(s.start, "udp",  s.num_bytes)) { result = Protocol::UDP;  return 3; }
+		if (!strcmp(s.start, "tcp",  s.num_bytes)) { result = Protocol::TCP;  return 3; }
 		return 0;
 	}
 }
