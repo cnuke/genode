@@ -701,7 +701,7 @@ struct Ahci::Protocol : Interface
 {
 	virtual unsigned             init(Port &, Port_mmio &) = 0;
 	virtual Block::Session::Info info() const = 0;
-	virtual Response             submit(Port &, unsigned long, Block::Request const &, Port_mmio &) = 0;
+	virtual Response             submit(Port &, unsigned long, Block::Request &, Port_mmio &) = 0;
 	virtual Block::Request       completed(unsigned long, Port_mmio &) = 0;
 	virtual void                 handle_irq(Port &, Port_mmio &) = 0;
 	virtual void                 writeable(bool rw) = 0;
@@ -1224,7 +1224,7 @@ struct Ahci::Port : private Port_base
 		}, [&](){ error("Port::handle_irq failed"); });
 	}
 
-	Response submit(unsigned long id, Block::Request const &request)
+	Response submit(unsigned long id, Block::Request &request)
 	{
 		Response response { };
 
