@@ -145,7 +145,7 @@ class Atapi::Protocol : public Ahci::Protocol, Noncopyable
 
 		void writeable(bool) override { }
 
-		Response submit(Port &port, unsigned long id, Block::Request const &request,
+		Response submit(Port &port, unsigned long id, Block::Request &request,
 		                Port_mmio &mmio) override
 		{
 			if (request.operation.type != Block::Operation::Type::READ ||

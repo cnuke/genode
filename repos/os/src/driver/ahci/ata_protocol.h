@@ -286,9 +286,23 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 		void writeable(bool rw) override { _writeable = rw; }
 
-		Response submit(Port &port, unsigned long id, Block::Request const &request,
+		Response submit(Port &port, unsigned long id, Block::Request &request,
 		                Port_mmio &mmio) override
 		{
+			switch (request.operation.type) {
+			case Block::Operation::Type::WRITE: [[fallthrough]];
+			case Block::Operation::Type::READ:
+				/* limit request to what we can handle, needed for overlap check */
+				if (request.operation.count * _block_size() > 4u << 20) {
+					request.operation.count = (4u << 20) / _block_size();
+				}
+
+				break;
+			default:
+				/* ignore other types for size check */
+				break;
+			}
+
 			Block::Operation const op = request.operation;
 
 			bool const sync  = (op.type == Block::Operation::Type::SYNC);
