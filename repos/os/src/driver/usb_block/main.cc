@@ -667,7 +667,7 @@ class Usb::Block_driver
 				.writeable   = _writeable };
 		}
 
-		Response submit(Request                 const &block_request,
+		Response submit(Request                        block_request,
 		                Request_stream::Payload const &payload,
 		                Session_space::Id              session_id)
 		{
@@ -684,11 +684,19 @@ class Usb::Block_driver
 			if (_block_cmd.constructed())
 				return Response::RETRY;
 
-			Operation const &op = block_request.operation;
+			Operation &op = block_request.operation;
 
 			/* read only */
 			if (_writeable == false && op.type == Type::WRITE)
 				return Response::REJECTED;
+
+			/*
+			 * Limit the request to 1 MiB as larger request can
+			 * lead to unresponsive devices.
+			 */
+			enum { MAX_REQ_SIZE = (1u << 20), };
+			if (op.count > MAX_REQ_SIZE / _block_size)
+				op.count = MAX_REQ_SIZE / _block_size;
 
 			/* range check */
 			block_number_t const last = op.block_number + op.count;
