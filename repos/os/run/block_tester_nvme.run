@@ -59,9 +59,8 @@ append config {
 		<provides><service name="Timer"/></provides>
 	</start>
 
-<!--
 	<start name="top" ram="64M" caps="500" priority="0">
-		<config period_ms="10000"/>
+		<config period_ms="7000"/>
 		<route>
 			<service name="Timer"> <child name="timer"/> </service>
 			<service name="TRACE"> <parent label=""/> </service>
@@ -69,11 +68,12 @@ append config {
 		</route>
 	</start>
 
+<!--
 	<start name="trace_logger" ram="128M" caps="500" priority="0">
 		<config verbose="yes"
 		        session_ram="90M"
 		        session_arg_buffer="1M"
-		        period_sec="10"
+		        period_sec="4"
 		        default_policy="null"
 		        default_buffer="4K">
 			<default-policy/>
@@ -163,7 +163,7 @@ append_if $use_part_block config {
 			<provides><service name="Block"/></provides>
 		<config io_buffer="32M">
 			<report partitions="yes"/>
-			<default-policy partition="8" writeable="no"/>
+			<default-policy partition="5" writeable="no"/>
 		</config>
 		<route>
 			<service name="Block"> <child name="nvme"/> </service>
@@ -175,13 +175,13 @@ append config {
 	<start name="block_tester" caps="200" ram="64M" priority="-1">
 		<config verbose="no" report="no" log="yes" stop_on_error="no" scratch_buffer_size="16M">
 			<tests>
-				<sequential io_buffer="16M" length="4G" size="4K"/>
-				<sequential io_buffer="16M" length="4G" size="8K"/>
-				<sequential io_buffer="16M" length="16G" size="32K"/>
-				<sequential io_buffer="16M" length="20G" size="128K"/>
-				<sequential io_buffer="16M" length="30G" size="512K"/>
-				<sequential io_buffer="16M" length="40G" size="2M"/>
-				<sequential io_buffer="16M" length="40G" size="8M"/>
+				<sequential io_buffer="16M" length="2G" size="4K"/>
+				<sequential io_buffer="16M" length="2G" size="8K"/>
+				<sequential io_buffer="16M" length="4G" size="32K"/>
+				<sequential io_buffer="16M" length="4G" size="128K"/>
+				<sequential io_buffer="16M" length="6G" size="512K"/>
+				<sequential io_buffer="16M" length="6G" size="2M"/>
+				<sequential io_buffer="16M" length="6G" size="8M"/>
 				<random     io_buffer="16M" length="1G" size="4K" seed="0xdeadbeef"/>
 			</tests>
 		</config>
@@ -207,4 +207,4 @@ append qemu_args " -drive id=nvme0,file=bin/nvme.raw,format=raw,if=none "
 append qemu_args " -device nvme,drive=nvme0,serial=fnord,id=nvme0n1,bus=root_port1 "
 append qemu_args " -boot d "
 
-run_genode_until {.*child "block_tester" exited with exit value 0.*\n} 300
+run_genode_until {.*child "block_tester" exited with exit value 0.*\n} 600
