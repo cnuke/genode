@@ -427,6 +427,8 @@ struct Ahci::Port_dispatcher
 
 	void handle_requests()
 	{
+		// static unsigned show_once = 0;
+
 		for (;;) {
 			bool progress = false;
 
@@ -439,6 +441,10 @@ struct Ahci::Port_dispatcher
 							if (!request.operation.valid())
 								return;
 
+							// if (++show_once) {
+							// 	show_once = true;
+							// 	Genode::log("ack: ", request.operation);
+							// }
 							ack.submit(request);
 							progress = true;
 						};

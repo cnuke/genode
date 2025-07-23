@@ -144,7 +144,8 @@ append config {
 	<start name="ahci" caps="120" ram="24M" priority="-1">
 		<provides> <service name="Block"/> </provides>
 		<config>
-			<default-policy device="2" writeable="no"/>
+			<!-- 1 shuttle, 0 amd, 2 fuji -->
+			<default-policy device="0" writeable="no"/>
 		</config>
 		<route>
 			<service name="Platform"><child name="platform"/> </service>
