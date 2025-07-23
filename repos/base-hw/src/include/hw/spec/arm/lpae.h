@@ -307,7 +307,7 @@ struct Hw::Level_3_translation_table
 
 	Result lookup(addr_t vo, addr_t &pa, Page_table_allocator&)
 	{
-		return Base::_for_range(vo, 0, 1 << SIZE_LOG2_4KB,
+		return Base::_for_range(vo, 0, 1,
 			[&] (addr_t, addr_t, size_t, desc_t &desc) -> Result
 			{
 				using Bd = Block_descriptor;
@@ -432,7 +432,7 @@ struct Hw::Level_x_translation_table
 	 */
 	Result lookup(addr_t const virt, addr_t &phys, Page_table_allocator &alloc)
 	{
-		return Base::_for_range(virt, 0, 1 << SIZE_LOG2_4KB,
+		return Base::_for_range(virt, 0, 1,
 			[&] (addr_t vo, addr_t, size_t, desc_t &desc) -> Result
 			{
 				using Bd = Block_descriptor;

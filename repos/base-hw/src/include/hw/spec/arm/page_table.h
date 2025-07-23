@@ -157,7 +157,7 @@ struct Hw::Page_table_level_2
 	 */
 	Result lookup(addr_t const virt, addr_t &phys)
 	{
-		return Base::_for_range(virt, 0, 1 << SIZE_LOG2_4KB,
+		return Base::_for_range(virt, 0, 1,
 			[&] (addr_t, addr_t, size_t, desc_t &desc) -> Result
 			{
 				if (Descriptor::present(desc)) {
@@ -344,7 +344,7 @@ struct Hw::Page_table
 		using Pt  = Page_table_level_2;
 		using Ptd = Table_descriptor;
 
-		return Base::_for_range(virt, 0, 1 << SIZE_LOG2_4KB,
+		return Base::_for_range(virt, 0, 1,
 			[&] (addr_t vo, addr_t, size_t, desc_t &desc) -> Result
 			{
 				if (!Page_table_descriptor::table(desc)) {
