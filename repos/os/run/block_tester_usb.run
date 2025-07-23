@@ -1,0 +1,149 @@
+assert {[have_board pc]}
+
+if {[info exists env(GENODE_BLOCK_TESTER_PART_BLOCK)]} {
+set use_part_block 1
+} else {
+set use_part_block 0
+}
+
+create_boot_directory
+
+import_from_depot [depot_user]/src/[base_src] \
+                  [depot_user]/pkg/test_usb_host-[board] \
+                  [depot_user]/src/report_rom \
+                  [depot_user]/src/usb_block \
+                  [depot_user]/src/part_block \
+                  [depot_user]/src/init
+
+build {
+	app/block_tester
+	server/part_block
+	driver/usb_block
+}
+
+append config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100" ram="1M"/>
+
+	<start name="timer">
+		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="report_rom">
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes">
+			<default-policy report="usb -> usb -> devices"/>
+		</config>
+	</start>
+
+	<start name="usb" caps="1500" ram="32M" managing_system="yes">
+		<binary name="init"/>
+		<provides> <service name="Usb"/> </provides>
+		<route>
+			<service name="ROM" label="config">
+				<parent label="drivers.config"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="Timer">  <child name="timer"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="usb_block" ram="4M">
+		<provides> <service name="Block"/> </provides>
+		<config report="yes" writeable="no"/>
+		<route>
+			<service name="Usb">    <child name="usb"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>}
+
+append_if $use_part_block config {
+
+	<start name="part_block">
+		<resource name="RAM" quantum="64M"/>
+			<provides><service name="Block"/></provides>
+		<config io_buffer="32M">
+			<report partitions="yes"/>
+			<default-policy partition="3" writeable="no"/>
+		</config>
+		<route>
+			<service name="Block"> <child name="usb_block"/> </service>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+	</start>}
+
+append config {
+	<start name="block_tester" caps="200" ram="64M">
+		<config verbose="no" report="no" log="yes" stop_on_error="no" scratch_buffer_size="16M">
+			<tests>
+				<sequential io_buffer="16M" length="256M" size="4K"/>
+				<sequential io_buffer="16M" length="256M" size="8K"/>
+				<sequential io_buffer="16M" length="256M" size="32K"/>
+				<sequential io_buffer="16M" length="512M" size="128K"/>
+				<sequential io_buffer="16M" length="512M" size="512K"/>
+				<sequential io_buffer="16M" length="512M" size="2M"/>
+				<sequential io_buffer="16M" length="512M" size="8M"/>
+				<random     io_buffer="16M" length="256M" size="4K" seed="0xdeadbeef"/>
+			</tests>
+		</config>
+		<route>}
+
+append_if $use_part_block config {
+			<service name="Block"><child name="part_block"/></service>}
+append_if [expr !$use_part_block] config {
+			<service name="Block"><child name="usb_block"/></service>}
+
+append config {
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+</config>}
+
+#
+# Define USB host controller config
+#
+set fd [open [run_dir]/genode/usb_host.config w]
+puts $fd { <config bios_handoff="no">
+	<policy label="usb_block -> ">
+		<device vendor_id="0x90c" product_id="0x1000"/>
+	</policy>
+</config> }
+close $fd
+
+install_config $config
+
+build_boot_image [build_artifacts]
+
+#
+# Execute test case
+#
+set disk_image "bin/test.img"
+set cmd "dd if=/dev/zero of=$disk_image bs=1M count=16"
+if {[have_include "power_on/qemu"]} {
+	puts "creating disk image:\n$cmd"
+	catch { exec sh -c $cmd }
+}
+
+#
+# Qemu opts for EHCI
+#
+append qemu_args " -nographic -M pc -boot order=d "
+append qemu_args " -drive if=none,id=disk,file=$disk_image,format=raw "
+append qemu_args " -device usb-ehci,id=ehci -device usb-storage,bus=ehci.0,drive=disk "
+
+run_genode_until {.*child "block_tester" exited with exit value 0.*} 600

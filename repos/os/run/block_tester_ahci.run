@@ -1,0 +1,207 @@
+assert {[have_spec x86]}
+
+if {[info exists env(GENODE_BLOCK_TESTER_PART_BLOCK)]} {
+set use_part_block 1
+} else {
+set use_part_block 0
+}
+
+#
+# Build
+#
+set build_components {
+	core init timer lib/ld
+	server/report_rom
+	app/pci_decode
+	driver/acpi
+	driver/platform
+	driver/ahci
+	server/part_block
+	app/top
+	app/trace_logger
+	trace/policy/null
+	app/block_tester
+}
+
+build $build_components
+
+
+#
+# Create raw image
+#
+catch { exec $dd if=/dev/zero of=bin/nvme.raw bs=1M count=0 seek=32768 }
+
+create_boot_directory
+
+#
+# Generate config
+#
+append config {
+<config verbose="no" prio_levels="2">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+		<service name="TRACE"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100" ram="1M"/>
+
+	<start name="timer" priority="0">
+		<provides><service name="Timer"/></provides>
+	</start>
+
+<!--
+	<start name="top" ram="64M" caps="500" priority="0">
+		<config period_ms="10000"/>
+		<route>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="TRACE"> <parent label=""/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="trace_logger" ram="128M" caps="500" priority="0">
+		<config verbose="yes"
+		        session_ram="90M"
+		        session_arg_buffer="1M"
+		        period_sec="10"
+		        default_policy="null"
+		        default_buffer="4K">
+			<default-policy/>
+		</config>
+		<route>
+			<service name="Timer"> <child name="timer"/> </service>
+			<service name="TRACE"> <parent label=""/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+-->
+
+	<start name="report_rom" ram="2M" priority="0">
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config>
+			<policy label="pci_decode -> system" report="acpi -> acpi"/>
+			<policy label="platform -> devices"  report="pci_decode -> devices"/>
+		</config>
+	</start>
+
+	<start name="acpi" caps="350" ram="4M" priority="0">
+		<route>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="IO_MEM"> <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+		</route>
+	</start>
+
+	<start name="pci_decode" caps="350" ram="2M" priority="-1">
+		<route>
+			<service name="Report">             <child name="report_rom"/> </service>
+			<service name="ROM" label="system"> <child name="report_rom"/> </service>
+			<service name="IO_MEM"> <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+		</route>
+	</start>
+
+	<start name="platform" caps="100" ram="2M" managing_system="yes" priority="-1">
+		<provides>
+			<service name="Platform"/>
+		</provides>
+		<route>
+			<service name="ROM" label="devices"> <child name="report_rom"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="IRQ">     <parent/> </service>
+			<service name="IO_MEM">  <parent/> </service>
+			<service name="IO_PORT"> <parent/> </service>
+			<service name="ROM">     <parent/> </service>
+			<service name="PD">      <parent/> </service>
+			<service name="CPU">     <parent/> </service>
+			<service name="LOG">     <parent/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+		</route>
+		<config>
+			<report devices="yes"/>
+			<policy label="ahci -> "> <pci class="AHCI"/> </policy>
+		</config>
+	</start>
+
+	<start name="ahci" caps="120" ram="24M" priority="-1">
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<default-policy device="2" writeable="no"/>
+		</config>
+		<route>
+			<service name="Platform"><child name="platform"/> </service>
+			<service name="Timer">   <child name="timer"/>    </service>
+			<service name="CPU">     <parent/>                </service>
+			<service name="ROM">     <parent/>                </service>
+			<service name="PD">      <parent/>                </service>
+			<service name="LOG">     <parent/>                </service>
+		</route>
+	</start>}
+
+append_if $use_part_block config {
+
+	<start name="part_block" ram="64M">
+			<provides><service name="Block"/></provides>
+		<config>
+			<report partitions="yes"/>
+			<default-policy partition="8" writeable="no"/>
+		</config>
+		<route>
+			<service name="Block"> <child name="ahci"/> </service>
+			<any-service><parent/><any-child/></any-service>
+		</route>
+	</start>}
+
+append config {
+	<start name="block_tester" caps="200" ram="64M" priority="-1">
+		<config verbose="no" report="no" log="yes" stop_on_error="no" scratch_buffer_size="16M">
+			<tests>
+				<sequential io_buffer="16M" length="1G" size="4K"/>
+				<sequential io_buffer="16M" length="1G" size="8K"/>
+				<sequential io_buffer="16M" length="4G" size="32K"/>
+				<sequential io_buffer="16M" length="6G" size="128K"/>
+				<sequential io_buffer="16M" length="8G" size="512K"/>
+				<sequential io_buffer="16M" length="8G" size="2M"/>
+				<sequential io_buffer="16M" length="8G" size="8M"/>
+				<random     io_buffer="16M" length="512M" size="4K" seed="0xdeadbeef"/>
+			</tests>
+		</config>
+		<route>}
+append_if $use_part_block config {
+			<service name="Block"><child name="part_block"/></service>}
+append_if [expr !$use_part_block] config {
+			<service name="Block"><child name="ahci"/></service>}
+
+append config {
+			<any-service> <parent/> <any-child /> </any-service>
+		</route>
+	</start>
+</config>}
+
+install_config $config
+
+build_boot_image [list {*}[build_artifacts] null]
+
+append qemu_args " -nographic -device ahci,id=ahci -boot d "
+append qemu_args " -drive id=disk,file=bin/nvme.raw,format=raw,if=none             -device ide-hd,drive=disk,bus=ahci.0 "
+append qemu_args " -drive id=cd,file=[run_dir]/../block_tester_ahci.iso,if=none,media=cdrom -device ide-cd,drive=cd,bus=ahci.1 "
+
+run_genode_until {.*child "block_tester" exited with exit value 0.*\n} 600
