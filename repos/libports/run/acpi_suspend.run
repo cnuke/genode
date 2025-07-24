@@ -125,15 +125,22 @@ proc vbox_client { } {
 		</route>
 	</start>
 
-	<start name="vbox.fs" caps="100" } [priority_scenario] {>
-		<resource name="RAM" quantum="1M"/>
-		<binary name="chroot"/>
+	<start name="vbox.fs" caps="200" } [priority_scenario] {>
+		<resource name="RAM" quantum="128M"/>
+		<binary name="vfs"/>
 		<provides>
 			<service name="File_system"/>
 		</provides>
-		<config> <default-policy path="/vm/ubuntu_20.04" writeable="yes"/> </config>
+		<config>
+			<vfs>
+				<ram/>
+				<import>
+					<dir name="vm"> <tar name="vbox_files.tar"/> </dir>
+				</import>
+			</vfs>
+			<default-policy root="/vm/ubuntu-20.04-raw" writeable="yes"/>
+		</config>
 		<route>
-			<service name="File_system"> <child name="nvme-fs"/> </service>
 			<any-service> <parent /> <any-child/> </any-service>
 		</route>
 	</start>
@@ -146,12 +153,11 @@ proc vbox_client { } {
 			<service name="ROM" label="config">
 				<child name="dynamic_rom" label="vbox6_config"/>
 			 </service>
-			<service name="File_system" label="shared">
+			<service name="File_system">
 				<child name="vbox.fs"/>
 			</service>
-			<service name="File_system">
-				<child name="vbox.fs" />
-			</service>
+
+			<service name="Block" label="block0"> <child name="nvme-1.part" label="9"/> </service>
 
 			<service name="ROM" label="VBoxSharedClipboard.so">
 			  <parent label="virtualbox6-sharedclipboard.lib.so"/> </service>
@@ -494,6 +500,40 @@ proc input_config { } {
 			<any-service><parent/> <any-child/> </any-service>
 		</route>
 	</start>
+
+	<start name="usb" caps="200">
+		<binary name="pc_usb_host"/>
+		<resource name="RAM" quantum="16M"/>
+		<provides> <service name="Usb"/> </provides>
+		<config bios_handoff="no">
+			<report devices="yes"/>
+			<policy label_prefix="usb_hid"> <device class="0x3"/> </policy>
+		</config>
+
+		<route>
+			<service name="Timer">    <parent/> </service>
+			<service name="Report"> <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="Event"> <child name="event_filter" label="usb"/> </service>
+			<any-service><parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="usb_hid" caps="180">
+		<resource name="RAM" quantum="11M"/>
+		<config/>
+		<route>
+			<service name="Event"> <child name="event_filter" label="usb"/> </service>
+			<service name="Usb">   <child name="usb"/> </service>
+			<service name="Timer"> <parent/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
 
 	<start name="event_filter" caps="100">
 		<resource name="RAM" quantum="1280K"/>
@@ -948,6 +988,10 @@ import_from_depot [depot_user]/src/init \
                   [depot_user]/src/dynamic_rom \
                   [depot_user]/src/nano3d \
                   [depot_user]/src/log_core \
+                  [depot_user]/src/vfs_import \
+                  [depot_user]/src/pc_usb_host \
+                  [depot_user]/src/usb_hid \
+                  [depot_user]/raw/vbox_files
 
 if {$use_qt_clients} {
 	import_from_depot [depot_user]/pkg/qt5_textedit \
@@ -1053,6 +1097,7 @@ append config {
 				<policy label="ahci -> ">            <pci class="AHCI"/> </policy>
 				<policy label="nvme -> " info="yes"> <pci class="NVME"/> </policy>
 				<policy label="wifi"     info="yes"> <pci class="WIFI"/> </policy>
+				<policy label="usb"      info="yes"> <pci class="USB"/> </policy>
 			</config>
 			<route>
 				<service name="ROM" label="system"> <child name="dynamic_rom"/> </service>
@@ -1089,6 +1134,9 @@ append config {
 				</service>
 				<service name="Platform" label_prefix="fb ->">
 					<child name="platform" label="fb"/>
+				</service>
+				<service name="Platform" label_prefix="usb ->">
+					<child name="platform" label="usb"/>
 				</service>
 				<service name="Platform" label_prefix="intel_fb ->">
 					<child name="gpu"/>
@@ -1166,46 +1214,6 @@ append config {
 					</inline>
 					<sleep milliseconds="100000"/>
 
-<!--
-					<inline description="disable display connectors">
-						<system state="blanking"/>
-					</inline>
-					<sleep milliseconds="10000"/>
-
-					<inline description="notify non-restartable drivers">
-						<system state="driver_stop"/>
-					</inline>
-					<sleep milliseconds="4000"/>
--->
-					<!--
-					     TODO: for a real OS scenario, e.g. Sculpt OS - you
-					     have now to wait until all devices are unused and
-					     powered off, e.g. you have to evaluate the
-					     report of the platform driver until it is in the
-					     right state !!!!!!!
-					-->
-<!--
-					<inline description="prepare suspending">
-						<system state="s3_prepare"/>
-					</inline>
-					<sleep milliseconds="10000"/>
--->
-					<!--
-					     TODO: for a real OS scenario, e.g. Sculpt OS -
-					     waits until s3_prepare is done, e.g. evaluate the
-					     ACPICA sleep_state report!
-					-->
-<!--
-					<inline description="suspend system">
-						<system state="suspend"/>
-					</inline>
-					<sleep milliseconds="10000"/>
-
-					<inline description="resume system">
-						<system state="s3_resume"/>
-					</inline>
-					<sleep milliseconds="10000"/>
--->
 				</rom>
 				<rom name="nitpicker_config">
 					<inline description="discrete">
@@ -1256,12 +1264,12 @@ append config {
 			<vfs>
 				<dir name="dev">
 					<log/> <rtc/> <null/> <gpu/> <zero/>
+						<block name="block0" label="block0" block_buffer_count="128"/>
 <!--
 					<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
 -->
 				</dir>
 				<dir name="pipe"> <pipe/> </dir>
-				<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>
 				<rom name="VBoxSharedClipboard.so"/>
 				<rom name="VBoxSharedFolders.so"/>
 				<fs writeable="yes"/>
@@ -1285,7 +1293,7 @@ append config {
 		</config>
 
 					</inline>
-					<sleep milliseconds="15000"/>
+					<sleep milliseconds="60000"/>
 
 					<inline description="eDP-1">
 
@@ -1293,12 +1301,12 @@ append config {
 			<vfs>
 				<dir name="dev">
 					<log/> <rtc/> <null/> <gpu/> <zero/>
+						<block name="block0" label="block0" block_buffer_count="128"/>
 <!--
 					<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
 -->
 				</dir>
 				<dir name="pipe"> <pipe/> </dir>
-				<dir name="shared"> <fs label="shared" writeable="yes"/> </dir>
 				<rom name="VBoxSharedClipboard.so"/>
 				<rom name="VBoxSharedFolders.so"/>
 				<fs writeable="yes"/>
@@ -1306,8 +1314,8 @@ append config {
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe">
 				<pthread placement="single-cpu"/>
 			</libc>
-<!--
 			<monitor label="eDP-1"/>
+<!--
 			<monitor label="HDMI-A-2"/>
 -->
 			<arg value="virtualbox"/>
