@@ -1,0 +1,118 @@
+diff --git a/src/VBox/Devices/VMMDev/VMMDev.cpp b/src/VBox/Devices/VMMDev/VMMDev.cpp
+index b45852a..465a32a 100644
+--- a/src/VBox/Devices/VMMDev/VMMDev.cpp
++++ b/src/VBox/Devices/VMMDev/VMMDev.cpp
+@@ -3783,6 +3783,7 @@ vmmdevIPort_RequestDisplayChange(PPDMIVMMDEVPORT pInterface, uint32_t cDisplays,
+ 
+     PDMDevHlpCritSectEnter(pDevIns, &pThis->CritSect, VERR_IGNORED);
+ 
++	RTLogPrintf("%s:%d: fMayNotify: %u\n", __func__, __LINE__, fMayNotify);
+     uint32_t i;
+     for (i = 0; i < cDisplays; ++i)
+     {
+@@ -3811,6 +3812,8 @@ vmmdevIPort_RequestDisplayChange(PPDMIVMMDEVPORT pInterface, uint32_t cDisplays,
+         pRequest->fPending = fDifferentResolution && fMayNotify;
+ 
+         fNotifyGuest = fNotifyGuest || fDifferentResolution;
++		fNotifyGuest = true;
++		RTLogPrintf("%s:%d: fNotifyGuest: %u\n", __func__, __LINE__, fNotifyGuest);
+     }
+ 
+     if (RT_SUCCESS(rc) && fMayNotify)
+@@ -3823,18 +3826,21 @@ vmmdevIPort_RequestDisplayChange(PPDMIVMMDEVPORT pInterface, uint32_t cDisplays,
+                 if (pRequest->fPending)
+                 {
+                     VMMDevDisplayDef const *p = &pRequest->displayChangeRequest;
+-                    LogRel(("VMMDev: SetVideoModeHint: Got a video mode hint (%dx%dx%d)@(%dx%d),(%d;%d) at %d\n",
++                    RTLogPrintf("VMMDev: SetVideoModeHint: Got a video mode hint (%dx%dx%d)@(%dx%d),(%d;%d) at %d\n",
+                             p->cx, p->cy, p->cBitsPerPixel, p->xOrigin, p->yOrigin,
+                             !RT_BOOL(p->fDisplayFlags & VMMDEV_DISPLAY_DISABLED),
+-                            RT_BOOL(p->fDisplayFlags & VMMDEV_DISPLAY_ORIGIN), i));
++                            RT_BOOL(p->fDisplayFlags & VMMDEV_DISPLAY_ORIGIN), i);
+                 }
+             }
+ 
++			RTLogPrintf("%s:%d:\n", __func__, __LINE__);
++
+             /* IRQ so the guest knows what's going on */
+             VMMDevNotifyGuest(pDevIns, pThis, pThisCC, VMMDEV_EVENT_DISPLAY_CHANGE_REQUEST);
+         }
+     }
+ 
++	RTLogPrintf("%s:%d:\n", __func__, __LINE__);
+     PDMDevHlpCritSectLeave(pDevIns, &pThis->CritSect);
+     return rc;
+ }
+diff --git a/src/VBox/Main/src-client/DisplayImpl.cpp b/src/VBox/Main/src-client/DisplayImpl.cpp
+index a8611da..8e9548b 100644
+--- a/src/VBox/Main/src-client/DisplayImpl.cpp
++++ b/src/VBox/Main/src-client/DisplayImpl.cpp
+@@ -786,23 +786,29 @@ int Display::i_handleDisplayResize(unsigned uScreenId, uint32_t bpp, void *pvVRA
+ 
+     if (fGuestMonitorChangedEvent)
+     {
+-        if (fDisabled)
++        if (fDisabled) {
++            RTLogPrintf("%s:%d: GuestMonitorChangedEventType_Disabled %u\n", __func__, __LINE__, uScreenId);
+             fireGuestMonitorChangedEvent(mParent->i_getEventSource(),
+                                          GuestMonitorChangedEventType_Disabled,
+                                          uScreenId,
+                                          0, 0, 0, 0);
+-        else
++        }
++        else {
++            RTLogPrintf("%s:%d: GuestMonitorChangedEventType_Enabled %u\n", __func__, __LINE__, uScreenId);
+             fireGuestMonitorChangedEvent(mParent->i_getEventSource(),
+                                          GuestMonitorChangedEventType_Enabled,
+                                          uScreenId,
+                                          xOrigin, yOrigin, w, h);
++        }
+     }
+ 
+-    if (fNewOrigin)
++    if (fNewOrigin) {
++        RTLogPrintf("%s:%d: GuestMonitorChangedEventType_NewOrigin %u\n", __func__, __LINE__, uScreenId);
+         fireGuestMonitorChangedEvent(mParent->i_getEventSource(),
+                                      GuestMonitorChangedEventType_NewOrigin,
+                                      uScreenId,
+                                      xOrigin, yOrigin, 0, 0);
++    }
+ 
+     /* Inform the VRDP server about the change of display parameters. */
+     LogRelFlowFunc(("Calling VRDP\n"));
+@@ -1661,6 +1667,7 @@ HRESULT Display::setVideoModeHint(ULONG aDisplay, BOOL aEnabled,
+     if (aDisplay >= mcMonitors)
+         return E_INVALIDARG;
+ 
++	RTLogPrintf("%s:%d: aEnabled: %u\n", __func__, __LINE__, aEnabled);
+     VMMDevDisplayDef d;
+     d.idDisplay     = aDisplay;
+     d.xOrigin       = aOriginX;
+@@ -1700,10 +1707,12 @@ HRESULT Display::setVideoModeHint(ULONG aDisplay, BOOL aEnabled,
+                                        (  mfGuestVBVACapabilities
+                                         & VBVACAPS_VIDEO_MODE_HINTS)
+                                     && aNotify);
++	RTLogPrintf("%s:%d:\n", __func__, __LINE__);
+     if (   mfGuestVBVACapabilities & VBVACAPS_VIDEO_MODE_HINTS
+         && !(mfGuestVBVACapabilities & VBVACAPS_IRQ)
+         && aNotify)
+     {
++	RTLogPrintf("%s:%d:\n", __func__, __LINE__);
+         mParent->i_sendACPIMonitorHotPlugEvent();
+     }
+ 
+@@ -1715,10 +1724,13 @@ HRESULT Display::setVideoModeHint(ULONG aDisplay, BOOL aEnabled,
+     if (pVMMDev)
+     {
+         PPDMIVMMDEVPORT pVMMDevPort = pVMMDev->getVMMDevPort();
+-        if (pVMMDevPort)
++        if (pVMMDevPort) {
++	        RTLogPrintf("%s:%d:\n", __func__, __LINE__);
+             pVMMDevPort->pfnRequestDisplayChange(pVMMDevPort, 1, &d, false, RT_BOOL(aNotify));
++        }
+     }
+     /* Notify listeners. */
++	RTLogPrintf("%s:%d:\n", __func__, __LINE__);
+     fireGuestMonitorInfoChangedEvent(mParent->i_getEventSource(), aDisplay);
+     return S_OK;
+ }

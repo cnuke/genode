@@ -1,0 +1,21 @@
+diff --git a/repos/ports/src/virtualbox6/main.cc b/repos/ports/src/virtualbox6/main.cc
+index e0b2e5d766..6db40e0884 100644
+--- a/repos/ports/src/virtualbox6/main.cc
++++ b/repos/ports/src/virtualbox6/main.cc
+@@ -473,6 +473,16 @@ struct Main : Event_handler
+ 	Main(Genode::Env &env) : _env(env)
+ 	{
+ 		_config.sigh(_config_handler);
++
++		unsigned const max_id = _machine.monitor_count().value - 1;
++		for (unsigned id = 0; id < max_id; id++) {
++			Genode::error(__func__, ": SetVideoModeHint for ", id);
++			_idisplay->SetVideoModeHint(id /*=display*/,
++			                            false /*=enabled*/, false /*=changeOrigin*/,
++			                            0 /*=originX*/, 0 /*=originY*/,
++			                            0, 0, 0, true);
++		}
++
+ 		_handle_config();
+ 
+ 		/*

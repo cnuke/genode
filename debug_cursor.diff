@@ -1,0 +1,104 @@
+diff --git a/src/VBox/Devices/Graphics/DevVGA-SVGA.cpp b/src/VBox/Devices/Graphics/DevVGA-SVGA.cpp
+index 1ddaa2b..01807e1 100644
+--- a/src/VBox/Devices/Graphics/DevVGA-SVGA.cpp
++++ b/src/VBox/Devices/Graphics/DevVGA-SVGA.cpp
+@@ -2659,8 +2659,8 @@ static DECLCALLBACK(int) vmsvgaR3ResetGmrHandlers(PVGASTATE pThis)
+ static void vmsvgaR3InstallNewCursor(PVGASTATECC pThisCC, PVMSVGAR3STATE pSVGAState, bool fAlpha,
+                                      uint32_t xHot, uint32_t yHot, uint32_t cx, uint32_t cy, uint8_t *pbData, uint32_t cbData)
+ {
++# if 0
+     LogRel2(("vmsvgaR3InstallNewCursor: cx=%d cy=%d xHot=%d yHot=%d fAlpha=%d cbData=%#x\n", cx, cy, xHot, yHot, fAlpha, cbData));
+-# ifdef LOG_ENABLED
+     if (LogIs2Enabled())
+     {
+         uint32_t cbAndLine = RT_ALIGN(cx, 8) / 8;
+@@ -3416,6 +3416,7 @@ vmsvgaR3FifoUpdateCursor(PVGASTATECC pThisCC, PVMSVGAR3STATE  pSVGAState, uint32
+             pThisCC->pDrv->pfnVBVAMousePointerShape(pThisCC->pDrv, RT_BOOL(fVisible), false, 0, 0, 0, 0, NULL);
+             STAM_REL_COUNTER_INC(&pSVGAState->StatFifoCursorVisiblity);
+         }
++	RTLogPrintf("%s:%d: idScreen=%u x=%u y=%u\n", __func__, __LINE__, idScreen, x, y);
+         pThisCC->pDrv->pfnVBVAReportCursorPosition(pThisCC->pDrv, fFlags, idScreen, x, y);
+         STAM_REL_COUNTER_INC(&pSVGAState->StatFifoCursorPosition);
+     }
+diff --git a/src/VBox/Devices/Graphics/DevVGA_VBVA.cpp b/src/VBox/Devices/Graphics/DevVGA_VBVA.cpp
+index 6c69118..1240961 100644
+--- a/src/VBox/Devices/Graphics/DevVGA_VBVA.cpp
++++ b/src/VBox/Devices/Graphics/DevVGA_VBVA.cpp
+@@ -1984,6 +1984,8 @@ int vboxVBVALoadStateExec(PPDMDEVINS pDevIns, PSSMHANDLE pSSM, uint32_t uVersion
+                     rc = pHlp->pfnSSMGetU32 (pSSM, &cbModeHints);
+                     AssertRCReturn(rc, rc);
+                     memset(&pCtx->aModeHints, ~0, sizeof(pCtx->aModeHints));
++    		pCtx->aModeHints[0].fEnabled = false;
++    		pCtx->aModeHints[1].fEnabled = false;
+                     unsigned iHint;
+                     for (iHint = 0; iHint < cModeHints; ++iHint)
+                     {
+@@ -2448,6 +2450,8 @@ static DECLCALLBACK(int) vbvaChannelHandler(void *pvHandler, uint16_t u16Channel
+ 
+     LogFlowFunc(("pvHandler %p, u16ChannelInfo %d, pvBuffer %p, cbBuffer %u\n", pvHandler, u16ChannelInfo, pvBuffer, cbBuffer));
+ 
++	RTLogPrintf("%s:%d\n", __func__, __LINE__);
++
+     PPDMDEVINS      pDevIns = (PPDMDEVINS)pvHandler;
+     PVGASTATE       pThis   = PDMDEVINS_2_DATA(pDevIns, PVGASTATE);
+     PVGASTATECC     pThisCC = PDMDEVINS_2_DATA_CC(pDevIns, PVGASTATECC);
+@@ -2637,8 +2641,8 @@ static DECLCALLBACK(int) vbvaChannelHandler(void *pvHandler, uint16_t u16Channel
+                 }
+                 RT_UNTRUSTED_NONVOLATILE_COPY_FENCE();
+ 
+-                LogRelFlowFunc(("VBVA: ChannelHandler: VBVA_REPORT_INPUT_MAPPING: x=%RI32, y=%RI32, cx=%RU32, cy=%RU32\n",
+-                                inputMapping.x, inputMapping.y, inputMapping.cx, inputMapping.cy));
++                RTLogPrintf("VBVA: ChannelHandler: VBVA_REPORT_INPUT_MAPPING: x=%RI32, y=%RI32, cx=%RU32, cy=%RU32\n",
++                                inputMapping.x, inputMapping.y, inputMapping.cx, inputMapping.cy);
+                 pThisCC->pDrv->pfnVBVAInputMappingUpdate(pThisCC->pDrv,
+                                                            inputMapping.x, inputMapping.y,
+                                                            inputMapping.cx, inputMapping.cy);
+@@ -2658,8 +2662,8 @@ static DECLCALLBACK(int) vbvaChannelHandler(void *pvHandler, uint16_t u16Channel
+                 Report.y               = pReport->y;
+                 RT_UNTRUSTED_NONVOLATILE_COPY_FENCE();
+ 
+-                LogRelFlowFunc(("VBVA: ChannelHandler: VBVA_CURSOR_POSITION: fReportPosition=%RTbool, Id=%RU32, x=%RU32, y=%RU32\n",
+-                                RT_BOOL(Report.fReportPosition), vbvaViewFromBufferPtr(pIns, pCtx, pvBuffer), Report.x, Report.y));
++                RTLogPrintf("VBVA: ChannelHandler: VBVA_CURSOR_POSITION: fReportPosition=%RTbool, Id=%RU32, x=%RU32, y=%RU32\n",
++                                RT_BOOL(Report.fReportPosition), vbvaViewFromBufferPtr(pIns, pCtx, pvBuffer), Report.x, Report.y);
+ 
+                 pThisCC->pDrv->pfnVBVAReportCursorPosition(pThisCC->pDrv, RT_BOOL(Report.fReportPosition), vbvaViewFromBufferPtr(pIns, pCtx, pvBuffer), Report.x, Report.y);
+                 /* This was only ever briefly used by the guest, and a value
+@@ -2842,6 +2846,8 @@ int VBVAInit(PPDMDEVINS pDevIns, PVGASTATE pThis, PVGASTATECC pThisCC)
+              pCtx->cViews = pThis->cMonitors;
+              pCtx->fPaused = true;
+              memset(pCtx->aModeHints, ~0, sizeof(pCtx->aModeHints));
++    		pCtx->aModeHints[0].fEnabled = false;
++    		pCtx->aModeHints[1].fEnabled = false;
+          }
+      }
+ 
+diff --git a/src/VBox/Devices/VMMDev/VMMDev.cpp b/src/VBox/Devices/VMMDev/VMMDev.cpp
+index b45852a..7327c79 100644
+--- a/src/VBox/Devices/VMMDev/VMMDev.cpp
++++ b/src/VBox/Devices/VMMDev/VMMDev.cpp
+@@ -3119,7 +3119,8 @@ vmmdevRequestHandler(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT offPort, uint32_
+         return VINF_SUCCESS;
+     }
+ 
+-    Log2(("VMMDev request issued: %d\n", requestHeader.requestType));
++	if (requestHeader.requestType != VMMDevReq_GuestHeartbeat)
++		Log2(("VMMDev request issued: %d\n", requestHeader.requestType));
+ 
+     VBOXSTRICTRC rcRet = VINF_SUCCESS;
+     /* Check that is doesn't exceed the max packet size. */
+diff --git a/src/VBox/Main/src-client/DisplayImpl.cpp b/src/VBox/Main/src-client/DisplayImpl.cpp
+index a8611da..3bd36b4 100644
+--- a/src/VBox/Main/src-client/DisplayImpl.cpp
++++ b/src/VBox/Main/src-client/DisplayImpl.cpp
+@@ -3630,8 +3630,10 @@ DECLCALLBACK(void) Display::i_displayVBVAReportCursorPosition(PPDMIDISPLAYCONNEC
+     {
+         AssertReturnVoid(aScreenId < pThis->mcMonitors);
+ 
++        RTLogPrintf("%s:%d: old: x=%RU32, y=%RU32\n", __func__, __LINE__, x, y);
+         x += pThis->maFramebuffers[aScreenId].xOrigin;
+         y += pThis->maFramebuffers[aScreenId].yOrigin;
++        RTLogPrintf("%s:%d: new: x=%RU32, y=%RU32\n", __func__, __LINE__, x, y);
+     }
+     fireCursorPositionChangedEvent(pThis->mParent->i_getEventSource(), RT_BOOL(fFlags & VBVA_CURSOR_VALID_DATA), x, y);
+ }
