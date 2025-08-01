@@ -283,6 +283,7 @@ class Genodefb :
 			                       Texture_painter::SOLID,
 			                       false);
 
+			// Genode::error(__func__, " ", this, ": o_x: ", o_x, " o_y: ", o_y, " width: ", width, " height: ", height);
 			_gui->framebuffer.refresh(o_x, o_y, width, height);
 
 			hrc = Unlock();
@@ -322,6 +323,7 @@ class Genodefb :
 			                       Texture_painter::SOLID,
 			                       false);
 
+			// Genode::error(__func__, " ", this, ": o_x: ", o_x, " o_y: ", o_y, " area_vm.w: ", area_vm.w, " area_vm.h: ", area_vm.h);
 			_gui->framebuffer.refresh(o_x, o_y, area_vm.w, area_vm.h);
 
 			hrc = Unlock();

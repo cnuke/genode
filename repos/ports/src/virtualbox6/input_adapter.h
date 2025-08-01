@@ -137,12 +137,12 @@ void Input_adapter::Mouse::handle_input_event(Input::Event const &ev, Point orig
 
 	if (abs_pos_changed || buttons_changed || wheel_changed) {
 		if (_absolute) {
-			Genode::log(__func__, ":", __LINE__, ": ABS x: ", _abs_pos.x, " y: ", _abs_pos.y);
+			// Genode::log(__func__, ":", __LINE__, ": ABS x: ", _abs_pos.x, " y: ", _abs_pos.y);
 			_imouse->PutMouseEventAbsolute(_abs_pos.x, _abs_pos.y, wheel_y, wheel_x, mouse_button_bits);
 		} else {
 			Point const rel = _abs_pos - old_abs_pos;
 
-			Genode::log(__func__, ":", __LINE__, ": REL x: ", rel.x, " y: ", rel.y);
+			// Genode::log(__func__, ":", __LINE__, ": REL x: ", rel.x, " y: ", rel.y);
 			_imouse->PutMouseEvent(rel.x, rel.y, wheel_y, wheel_x, mouse_button_bits);
 		}
 	}

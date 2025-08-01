@@ -89,9 +89,11 @@ struct Main : Event_handler
 	{
 		_config.update();
 
+		Genode::error(__func__, ":", __LINE__);
 		if (!_config.valid())
 			return;
 
+		Genode::error(__func__, ":", __LINE__);
 		Libc::with_libc([&] { _update_monitors(); });
 	}
 
@@ -546,12 +548,19 @@ Main::Monitor::Monitor(Registry<Monitor> &registry, Env &env,
 
 Main::Monitor::~Monitor()
 {
+	Genode::error(__func__, ":", __LINE__, ": ", id);
 	synchronize([&]() {
-		if (fb.constructed() && !fb->fb.isNull())
+		if (fb.constructed() && !fb->fb.isNull()) {
+			Genode::error(__func__, ":", __LINE__, ": ", id);
 			fb->fb->invalidate_gui();
+		}
 	});
 
+	Genode::error(__func__, ":", __LINE__, ": ", id);
+	display->InvalidateAndUpdateScreen(id);
+	Genode::error(__func__, ":", __LINE__, ": ", id);
 	display->SetVideoModeHint(id, false, false, 0, 0, 0, 0, 0, true);
+	Genode::error(__func__, ":", __LINE__, ": ", id);
 }
 
 
@@ -564,6 +573,8 @@ void Main::_update_monitors()
 	unsigned const max_id = _machine.monitor_count().value - 1;
 
 	unsigned id = 0;
+
+	Genode::error(__func__, ":", __LINE__);
 
 	/* handle new and updated monitors */
 	_config.xml().for_each_sub_node("monitor", [&] (Xml_node const &xml) {
@@ -582,6 +593,7 @@ void Main::_update_monitors()
 		_monitors.for_each([&] (Monitor &m) {
 			if (m.id != id) return;
 
+			Genode::error("update ", m.id, " '", label, "'");
 			m.update(label);
 			updated = true;
 		});
@@ -593,9 +605,11 @@ void Main::_update_monitors()
 
 		++id;
 	});
+	Genode::error(__func__, ": id: ", id, " max_id: ", max_id);
 
 	/* disable excess monitors */
 	_monitors.for_each([&] (Monitor &m) {
+		Genode::error("delete ", m.id, " (", id, ")");
 		if (m.id >= id) delete &m; });
 
 	_fb_mode_handler.local_submit();
@@ -628,6 +642,7 @@ void Main::_handle_monitor()
 		if (m.id != ev.id) return;
 
 		m.rect = { { ev.origin_x, ev.origin_y }, m.rect.area };
+		Genode::error("update ", m.id, " rect: ", m.rect);
 	});
 }
 
@@ -661,6 +676,8 @@ void Main::_handle_fb_mode()
 				[&] (Gui::Rect rect) { return rect; },
 				[&] (Gui::Undefined) { return Gui::Rect { { }, { 1024, 768 } }; });
 
+			Genode::error("_handle_fb_mode: ", m.id, " ", gui_win);
+
 			m.rect = Gui::Rect(m.rect.at, gui_win.area);
 
 			m.fb->update_mode(gui_win);
@@ -680,6 +697,8 @@ void Main::_handle_fb_mode()
 			 * blank or partial screen content.
 			 */
 			_idisplay->InvalidateAndUpdateScreen(m.id);
+
+			Genode::error("_handle_fb_mode: ", m.id, " ", m.fb->w(), "x", m.fb->h());
 
 			/*
 			 * XXX May changeOrigin and originX/originY be used to hint guest
@@ -786,10 +805,18 @@ void Main::handle_vbox_event(VBoxEventType_T ev_type, IEvent &ev)
 			mon_ev->COMGETTER(Width)(&width);
 			mon_ev->COMGETTER(Height)(&height);
 
+			Genode::error("GuestMonitorChangedEvent: before ", screen_id,
+			              " o: ", origin_x, "x", origin_y,
+			              " g: ", width, "x", height);
 			unsigned bpp;
 			GuestMonitorStatus_T gms;
 			int ox, oy;
 			_idisplay->GetScreenResolution(screen_id, &width, &height, &bpp, &ox, &oy, &gms);
+
+			Genode::error("GuestMonitorChangedEvent: after ", screen_id,
+			              " o: ", origin_x, "x", origin_y,
+			              " (", ox, "x", oy, ")",
+			              " g: ", width, "x", height);
 
 			/*
 			 * Prevent deadlock in VMMDev's critsect by defering calls to upper
