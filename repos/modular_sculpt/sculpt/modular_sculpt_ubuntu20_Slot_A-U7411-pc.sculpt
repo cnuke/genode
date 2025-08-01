@@ -30,3 +30,5 @@ launcher: vm_ubuntu20_fs
 
 launcher: shell.1 shell.2 shell.3
 launcher: test-capture
+
+build: virtualbox6

@@ -66,12 +66,15 @@
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" pipe="/pipe">
 				<pthread placement="single-cpu"/>
 			</libc>
-			<monitor label="eDP-1"/>
+			<monitor label="INT"/>
+			<monitor label="EXT"/>
 			<webcam vertical_flip="true" fps="30" screen_size="false" width="640" height="480"/>
 			<arg value="virtualbox"/>
 			<env key="VBOX_USER_HOME" value="/"/>
 			<env key="VBOX_LOG_DEST"          value="file=/dev/log"/>
+<!--
 			<env key="VBOX_LOG"               value="+dev_vmm.e.l2.l3.f+main_display.e.l2.l3.f"/>
+-->
 			<env key="VBOX_LOG_FLAGS"         value="thread"/>
 			<env key="VBOX_RELEASE_LOG_DEST"  value="file=/dev/log"/>
 			<env key="VBOX_RELEASE_LOG"       value=""/>
@@ -88,6 +91,7 @@
 			<service name="ROM" label="mesa_gpu.lib.so">     <child name="mesa_gpu-intel"/> </service>
 			<service name="ROM" label="capslock">            <parent label="capslock"/> </service>
 			<service name="ROM" label="platform_info">       <parent label="platform_info"/> </service>
+			<service name="ROM" label_last="virtualbox6">    <parent label="virtualbox6"/> </service>
 			<service name="Gui">                             <child name="wm"/> </service>
 			<service name="Nic">                             <child name="nic_router"/> </service>
 			<service name="Rtc">                             <child name="system_clock"/> </service>
