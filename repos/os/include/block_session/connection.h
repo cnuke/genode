@@ -119,15 +119,15 @@ struct Block::Connection : Genode::Connection<Session>, Session_client
 				}
 
 				static void _with_offset_and_length(Job &job, auto const &fn,
-				                                    block_count_t actual_count = 0)
+				                                    block_count_t consumed_count = 0)
 				{
 					if (!Operation::has_payload(job._operation.type))
 						return;
 
 					Operation const operation  = job._curr_operation();
 					size_t    const block_size = job._connection._info.block_size;
-					size_t    const length     = block_size * (actual_count ? actual_count
-					                                                        : operation.count);
+					size_t    const length     = block_size * (consumed_count ? consumed_count
+					                                                          : operation.count);
 
 					fn(job._position * block_size,
 					   Genode::min(job._payload.bytes, length));
