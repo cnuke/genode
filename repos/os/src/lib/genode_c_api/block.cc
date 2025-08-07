@@ -319,6 +319,9 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 				return Create_error::INSUFFICIENT_RAM;
 			}
 
+			bool const writeable_policy =
+				policy.attribute_value("writeable", false);
+
 			genode_block_session * ret = nullptr;
 			_for_each_device_info([&] (Device_info & di) {
 				if (di.name != device)
@@ -338,7 +341,7 @@ Block_root::Create_result Block_root::_create_session(const char * args,
 						Arg_string::find_arg(args, "offset") .ulonglong_value(0) },
 					.num_blocks = Block::Constrained_view::Num_blocks {
 						Arg_string::find_arg(args, "num_blocks") .ulonglong_value(0) },
-					.writeable  = di.info.writeable && writeable_arg
+					.writeable  = di.info.writeable && writeable_policy && writeable_arg
 				};
 
 				try {
