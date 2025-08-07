@@ -214,6 +214,24 @@ class Block::Request_stream : Genode::Noncopyable
 				                                                    + packet.block_count() - 1)
 				                             <= (_view_offset.value + _info.block_count - 1);
 
+				bool const zero_count_allowed =
+					   packet.operation_type() == Block::Operation::Type::SYNC
+					|| packet.operation_type() == Block::Operation::Type::TRIM;
+
+				bool const read_request =
+					packet.operation_type() == Block::Operation::Type::READ;
+
+				/*
+				 * As all non-read operations lead to some kind of alteration
+				 * of the block-device treat them the same.
+				 *
+				 * For now allow SYNC and TRIM to be issued without specifying
+				 * the portion of the device they actually want to cover as
+				 * some clients are fuzzy in that regard.
+				 */
+				bool const operation_allowed = (operation_in_range || zero_count_allowed)
+					&& (read_request ? true : _info.writeable);
+
 				Operation operation { .type         = packet.operation_type(),
 				                      .block_number = packet.block_number() + _view_offset.value,
 				                      .count        = packet.block_count() };
@@ -223,7 +241,7 @@ class Block::Request_stream : Genode::Noncopyable
 				                  .offset    = packet.offset(),
 				                  .tag       = packet.tag() };
 
-				Response const response = packet_valid && operation_in_range
+				Response const response = packet_valid && operation_allowed
 				                        ? fn(request)
 				                        : Response::REJECTED;
 				bool progress = false;
