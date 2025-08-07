@@ -150,8 +150,7 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 		using Serial_string = String<Identity::Serial_number>;
 		using Model_string  = String<Identity::Model_number>;
 
-		Constructible<Identity>      _identity { };
-		bool                         _writeable { true };
+		Constructible<Identity> _identity { };
 
 	public:
 
@@ -281,10 +280,10 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 			return { .block_size  = _block_size(),
 			         .block_count = _block_count(),
 			         .align_log2  = log2(2ul),
-			         .writeable   = _writeable };
+			         .writeable   = true };
 		}
 
-		void writeable(bool rw) override { _writeable = rw; }
+		void writeable(bool) override { }
 
 		Response submit(Port &port, unsigned long id, Block::Request const &request,
 		                Port_mmio &mmio) override
@@ -296,9 +295,6 @@ class Ata::Protocol : public Ahci::Protocol, Noncopyable
 
 			if ((sync && _slot_states) || _syncing)
 				return Response::RETRY;
-
-			if (_writeable == false && write)
-				return Response::REJECTED;
 
 			if (Block::Operation::has_payload(op.type)) {
 				if (port.sanity_check(id, request) == false || port.dma_base(id) == 0)
