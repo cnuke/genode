@@ -686,10 +686,6 @@ class Usb::Block_driver
 
 			Operation const &op = block_request.operation;
 
-			/* read only */
-			if (_writeable == false && op.type == Type::WRITE)
-				return Response::REJECTED;
-
 			/* range check */
 			block_number_t const last = op.block_number + op.count;
 			if (last > _block_count)
