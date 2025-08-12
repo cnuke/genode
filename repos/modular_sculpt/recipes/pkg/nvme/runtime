@@ -3,9 +3,9 @@
 	<requires> <platform/> <report/> </requires>
 	<provides> <block/> </provides>
 
-	<config> max_hmb_size="16M">
+	<config max_hmb_size="16M">
 		<report namespaces="yes"/>
-		<policy label="1" namespace="1" writeable="yes"/>
+		<default-policy namespace="1" writeable="yes"/>
 	</config>
 	<content>
 		<rom label="ld.lib.so"/>
