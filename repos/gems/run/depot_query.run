@@ -73,7 +73,7 @@ install_config {
 		</config>
 	</start>
 
-	<start name="fs_rom" ram="4M">
+	<start name="fs_rom" ram="5M">
 		<provides> <service name="ROM"/> </provides>
 	</start>
 
