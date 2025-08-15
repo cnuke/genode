@@ -99,7 +99,7 @@ class Kernel::Scheduler
 {
 	public:
 
-		enum { MIN_SCHEDULE_US = 2000 };
+		enum { MIN_SCHEDULE_US = 5000 };
 
 		using vtime_t = time_t;
 
