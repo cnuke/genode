@@ -10,6 +10,7 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/pkg/test_usb_host-[board] \
                   [depot_user]/src/report_rom \
                   [depot_user]/src/usb_block \
+                  [depot_user]/src/part_block \
                   [depot_user]/src/init
 
 build { app/block_tester }
@@ -57,7 +58,7 @@ install_config {
 
 	<start name="usb_block" ram="4M">
 		<provides> <service name="Block"/> </provides>
-		<config report="yes" writeable="no"/>
+		<config report="yes" writeable="yes"/>
 		<route>
 			<service name="Usb">    <child name="usb"/> </service>
 			<service name="Report"> <child name="report_rom"/> </service>
@@ -65,17 +66,28 @@ install_config {
 		</route>
 	</start>
 
-	<start name="block_tester" ram="64M">
-		<config verbose="no" report="no" log="yes" stop_on_error="no">
-			<tests>
-				<sequential length="8M" size="1M" io_buffer="8M" batch="4"/>
-
-				<!-- enable 'writeable="yes"' at usb_block for write test -->
-				<!-- <sequential write="yes" start="4000" length="2M" size="1M" io_buffer="8M" batch="4"/> -->
-			</tests>
+	<start name="part_block" ram="4M">
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<policy label="1" partition="1" writeable="yes"/>
+			<policy label="2" partition="2" writeable="yes"/>
+			<policy label="3" partition="3" writeable="yes"/>
 		</config>
 		<route>
 			<service name="Block"> <child name="usb_block"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="block_tester" ram="64M">
+		<config verbose="no" report="no" log="yes" stop_on_error="no" scratch_val="0x56">
+			<tests>
+				<sequential write="no"  length="32M" size="1M" io_buffer="8M" batch="4"/>
+				<sequential write="yes" length="32M" size="1M" io_buffer="8M" batch="4"/>
+				<sequential write="no"  length="32M" size="1M" io_buffer="8M" batch="4"/>
+			</tests>
+		</config>
+		<route>
+			<service name="Block"> <child name="part_block" label="1"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
 	</start>
@@ -87,7 +99,8 @@ install_config {
 set fd [open [run_dir]/genode/usb_host.config w]
 puts $fd { <config bios_handoff="no">
 	<policy label="usb_block -> ">
-		<device name="usb-1-2"/>
+		<device vendor_id="0x090c" product_id="0x2000"/>
+		<device vendor_id="0x0781" product_id="0x5581"/>
 	</policy>
 </config> }
 close $fd
