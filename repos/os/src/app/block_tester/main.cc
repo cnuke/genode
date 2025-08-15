@@ -41,12 +41,14 @@ namespace Test {
 
 struct Test::Config
 {
+	unsigned char scratch_val;
 	bool stop_on_error, log, report, calculate;
 	size_t scratch_buffer_size;
 
 	static Config from_node(Node const &node)
 	{
 		return {
+			.scratch_val   = node.attribute_value("scratch_val",   (unsigned char)0),
 			.stop_on_error = node.attribute_value("stop_on_error", true),
 			.log           = node.attribute_value("log",           false),
 			.report        = node.attribute_value("report",        false),
@@ -71,9 +73,21 @@ class Test::Scratch_buffer
 
 		char   * const base;
 		size_t   const size;
+		unsigned char const scratch_val;
 
-		Scratch_buffer (Allocator &alloc, size_t size)
-		: _alloc(alloc), base((char*)alloc.alloc(size)), size(size) { }
+		Scratch_buffer (Allocator &alloc, size_t size, unsigned char scratch_val)
+		: _alloc(alloc), base((char*)alloc.alloc(size)), size(size), scratch_val(scratch_val) { }
+
+		void reset() { memset(base, scratch_val, size); }
+
+		void check()
+		{
+			for (unsigned i = 0; i < size; ++i)
+				if ((unsigned char)base[i] != scratch_val) {
+					error("[", i, "] = ", Hex(base[i]));
+					break;
+				}
+		}
 
 		~Scratch_buffer() { destroy(&_alloc, base); }
 };
@@ -190,8 +204,10 @@ struct Test::Block_connection : Block::Connection<Test_job>
 		if (_attr.verbose)
 			log("job ", job.id, ": writing ", length, " bytes at ", offset);
 
-		if (_attr.copy)
+		if (_attr.copy) {
+			_scratch_buffer.reset();
 			_memcpy(dst, _scratch_buffer.base, length);
+		}
 	}
 
 	/**
@@ -206,8 +222,10 @@ struct Test::Block_connection : Block::Connection<Test_job>
 		if (_attr.verbose)
 			log("job ", job.id, ": got ", length, " bytes at ", offset);
 
-		if (_attr.copy)
+		if (_attr.copy) {
 			_memcpy(_scratch_buffer.base, src, length);
+			_scratch_buffer.check();
+		}
 	}
 
 	/**
@@ -503,7 +521,7 @@ struct Test::Main
 	Signal_handler<Main> _finished_sigh {
 		_env.ep(), *this, &Main::_handle_finished };
 
-	Scratch_buffer _scratch_buffer { _heap, _config.scratch_buffer_size };
+	Scratch_buffer _scratch_buffer { _heap, _config.scratch_buffer_size, _config.scratch_val };
 
 	void _construct_scenarios(Node const &config)
 	{
