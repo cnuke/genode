@@ -87,6 +87,8 @@ void Sculpt::gen_mkfs_ext2_start_content(Generator &g,
 {
 	auto gen_args = [&] (Generator &g) {
 		gen_arg(g, "mkfs.ext2");
+		gen_arg(g, "-T");
+		gen_arg(g, "default");
 		gen_arg(g, "-F");
 		gen_arg(g, "/dev/block");
 	};
