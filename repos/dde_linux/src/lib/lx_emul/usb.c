@@ -133,6 +133,8 @@ static void release_device(struct usb_per_dev_data * data)
 	if (usb_lock_device_for_reset(data->dev, NULL))
 		return;
 
+	printk("msleep 3000\n");
+	msleep(3000);
 	usb_reset_device(data->dev);
 	usb_unlock_device(data->dev);
 }
