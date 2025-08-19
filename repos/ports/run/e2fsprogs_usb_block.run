@@ -1,0 +1,194 @@
+assert {[have_board pc]}
+
+if {[have_cmd_switch --autopilot]} {
+	assert {[have_include power_on/qemu]} \
+		"Autopilot mode is not supported on this platform."
+}
+
+create_boot_directory
+import_from_depot [depot_user]/src/[base_src] \
+                  [depot_user]/pkg/test_usb_host-[board] \
+                  [depot_user]/src/report_rom \
+                  [depot_user]/src/usb_block \
+                  [depot_user]/src/part_block \
+                  [depot_user]/src/sequence \
+                  [depot_user]/src/vfs \
+                  [depot_user]/src/vfs_rump \
+                  [depot_user]/src/init
+
+build {
+	lib/vfs
+	lib/vfs_pipe
+	lib/vfs_rump
+	lib/libc
+	lib/libm
+	lib/posix
+	app/e2fsck
+	app/mke2fs
+}
+
+install_config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+
+	<default caps="100" ram="1M"/>
+
+	<start name="timer">
+		<provides> <service name="Timer"/> </provides>
+	</start>
+
+	<start name="report_rom">
+		<provides> <service name="Report"/> <service name="ROM"/> </provides>
+		<config verbose="yes">
+			<default-policy report="usb -> usb -> devices"/>
+		</config>
+	</start>
+
+	<start name="usb" caps="1500" ram="32M" managing_system="yes">
+		<binary name="init"/>
+		<provides> <service name="Usb"/> </provides>
+		<route>
+			<service name="ROM" label="config">
+				<parent label="drivers.config"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<service name="Timer">  <child name="timer"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+
+	<start name="usb_block" ram="4M">
+		<provides> <service name="Block"/> </provides>
+		<config report="yes" writeable="yes"/>
+		<route>
+			<service name="Usb">    <child name="usb"/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+
+	<start name="part_block" ram="4M">
+		<provides> <service name="Block"/> </provides>
+		<config>
+			<policy label="1" partition="1" writeable="yes"/>
+			<policy label="2" partition="2" writeable="yes"/>
+			<policy label="3" partition="3" writeable="yes"/>
+		</config>
+		<route>
+			<service name="Block"> <child name="usb_block"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="sequence" caps="1000" ram="1200M">
+		<config verbose="yes">
+<start name="mke2fs" caps="500" ram="32M">
+	<config>
+		<vfs>
+			<dir name="dev">
+				<log/> <null/> <inline name="rtc">2025-06-02 00:00</inline>
+				<block block_buffer_count="128" io_buffer="4M"/>
+			</dir>
+			<dir name="pipe"> <pipe/> </dir>
+		</vfs>
+		<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"
+		      rng="/dev/random" pipe="/pipe"/>
+		<arg value="mkfs.ext2"/>
+		<arg value="-T"/>
+		<arg value="default"/>
+		<arg value="-F"/>
+		<arg value="/dev/block"/>
+	</config>
+</start>
+<start name="e2fsck" caps="500" ram="32M">
+	<config>
+		<vfs>
+			<dir name="dev">
+				<log/> <null/> <inline name="rtc">2025-06-02 00:00</inline>
+				<block block_buffer_count="128" io_buffer="4M"/>
+			</dir>
+			<dir name="pipe"> <pipe/> </dir>
+		</vfs>
+		<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"
+		      rng="/dev/random" pipe="/pipe"/>
+		<arg value="fsck.ext2"/>
+		<arg value="-F"/>
+		<arg value="/dev/block"/>
+	</config>
+</start>
+<start name="e2fsck" caps="500" ram="32M">
+	<config>
+		<vfs>
+			<dir name="dev">
+				<log/> <null/> <inline name="rtc">2025-06-02 00:00</inline>
+				<block block_buffer_count="128" io_buffer="4M"/>
+			</dir>
+			<dir name="pipe"> <pipe/> </dir>
+		</vfs>
+		<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"
+		      rng="/dev/random" pipe="/pipe"/>
+		<arg value="fsck.ext2"/>
+		<arg value="-F"/>
+		<arg value="/dev/block"/>
+	</config>
+</start>
+<start name="vfs" caps="500" ram="64M">
+	<config>
+		<vfs>
+			<rump fs="ext2fs" ram="48M" writeable="yes"/>
+		</vfs>
+		<default-policy root="/" writeable="yes"/>
+	</config>
+</start>
+		</config>
+		<route>
+			<service name="Block"> <child name="part_block" label="3"/> </service>
+			<service name="Timer"> <child name="timer"/> </service>
+			<any-service> <parent/> </any-service>
+		</route>
+	</start>
+</config>}
+
+#
+# Define USB host controller config
+#
+set fd [open [run_dir]/genode/usb_host.config w]
+puts $fd { <config bios_handoff="no">
+	<policy label="usb_block -> ">
+		<device vendor_id="0x090c" product_id="0x1000"/>
+		<device vendor_id="0x090c" product_id="0x2000"/>
+		<device vendor_id="0x0781" product_id="0x5581"/>
+	</policy>
+</config> }
+close $fd
+
+build_boot_image [build_artifacts]
+
+#
+# Execute test case
+#
+set disk_image "bin/test.img"
+set cmd "dd if=/dev/zero of=$disk_image bs=1M count=16"
+if {[have_include "power_on/qemu"]} {
+	puts "creating disk image:\n$cmd"
+	catch { exec sh -c $cmd }
+}
+
+#
+# Qemu opts for EHCI
+#
+append qemu_args " -nographic -M pc -boot order=d "
+append qemu_args " -drive if=none,id=disk,file=$disk_image,format=raw "
+append qemu_args " -device usb-ehci,id=ehci -device usb-storage,bus=ehci.0,drive=disk "
+
+run_genode_until {.*child "block_tester" exited with exit value 0.*} 100
