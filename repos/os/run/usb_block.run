@@ -99,6 +99,7 @@ install_config {
 set fd [open [run_dir]/genode/usb_host.config w]
 puts $fd { <config bios_handoff="no">
 	<policy label="usb_block -> ">
+		<device vendor_id="0x090c" product_id="0x1000"/>
 		<device vendor_id="0x090c" product_id="0x2000"/>
 		<device vendor_id="0x0781" product_id="0x5581"/>
 	</policy>
