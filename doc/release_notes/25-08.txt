@@ -1,0 +1,188 @@
+
+Block stack renovations
+#######################
+
+Prompted by questions about the I/O performance in virtual-machines running
+on Genode we began to investigate the status quo and started the journey of
+adapting the Block I/O stack in an attempt to optimize it.
+
+This release brings the first set of changes in form of the renovated VFS
+Block plugin and the adjusted partition multiplexer.
+
+
+VFS Block plugin
+================
+
+The plugin itself has a long history as it was first conceived for
+[https://genode.org/documentation/release-notes/14.02#Noux_runtime_for_executing_Unix_software - noux],
+which itself has long been retired by now, and showed its age already.
+Besides the off and on maintenance changes it has not seen much alteration.
+
+With this release we replaced its direct usage of the Block connection with
+the Block Job API that simplifies the implementation as it handles some
+corner-cases internally.
+
+The plugin still creates one connection to a Block service provider but
+operates in a non-blocking fashion. In case multiple VFS handles concurrently
+operate on the connection - in the most common usage patterns there is only
+one VFS handle in use - the Job API serializes all requests. Prior to that
+only one synchronous request could be pending at all times, batching requests
+becomes now possible.
+
+The size of the I/O buffer, i.e. the shared memory dataspace between the
+components, can be configured via the 'io_buffer' attribute, the default
+value is 4 MiB. The previously used 'block_buffer_count' was removed and
+the plugin will issue a warning if it is specified. Requests that are larger
+than the configured I/O buffer are transparently handled by the Job API.
+
+For the time being the underlying block-size needs to be a multiple of 512
+and at most 4096 bytes. Accessing a larger underlying block-size in smaller
+blocks, e.g. issuing 512 byte requests on a 4096 bytes session, is possible
+but might incur substantial overhead as the plugin itself does not contain
+a block-cache.
+
+
+Mediating partition multiplexer
+===============================
+
+Genode's 'part_block' partition multiplexer makes each partition on a
+block device available as its own Block session. It uses one connection
+to a block provider, normally the block device driver, to access the block
+storage.
+Concurrent requests from different Block session are scheduled onto this
+connection, where each client session virtually starts a block number 0 and the
+block count covers the whole partition. The translation to the physical block
+number that the block provider requires to process the request is performed by
+'part_block'.
+On one hand the data-transfer between the block provider and the partition
+multiplexer is done via DMA whenever possible. On the other hand, between
+the multiplexer and the client, the data-transfer is done by the CPU.
+While providing some form of isolation between different clients operating
+this way leads to an increased the CPU load depending on the I/O pattern and
+number of clients. Those cycles, however, could also be used to perform other
+duties.
+
+With this in mind we decided to experiment with taking 'part_block' off the
+I/O path. It is still relevant for parsing the partition-table and making
+different Block sessions available but should no longer play an active
+role in transferring the block data. So some of its original work is now moved
+into the block provider.
+
+To make this idea a reality we structured the effort in the following
+steps as doing so involves changes to Block session as well as the block
+provider:
+
+* Constrain the view of the Block session directly at the connection level
+  to only make a portion of a block device available to a client.
+
+* Add means to handle multiple clients at the block provider (some providers
+  might allow for handling multiple clients separately while other require
+  help in dealing with them).
+
+* Alter 'part_block' in way that it solely deals with parsing the partition
+  table and mediates access to a given partition.
+
+For the first step we added a constraining view type to the Block session.
+It is used within the request-stream, the server-side of the session, to
+constrain the virtual view of the client and to make it possible to perform
+the virtual to physical translation in the request-stream implementation
+itself.
+
+On the client-side the session can be augmented with the following new
+arguments to reference a storage device partially:
+
+* The 'offset' argument specifies the offset from the physical block number
+  where the virtual view of the client must start.
+
+* The 'num_blocks' argument specifies the number of blocks that are covered
+  by the virtual view.
+
+* The 'writeable' argument specifies if the view allows for write access.
+
+Those session arguments are going to help implementing a Block session
+multiplexer that solely mediates access to a given portion of the device.
+In case of the 'writeable' argument the connection and the policy of the
+block provider must match, so it ultimately decides if write-access is
+allowed.
+
+The next step is adapting the various block providers - ahci, nvme, sd_card,
+usb_block and vfs_block because these only allowed for having a single client
+for a given storage device but now have to deal with having multiple ones.
+
+By evaluating the constraining view arguments a provider separates the
+access of different clients. As all block providers by now make use of the
+request-stream facilities dealing with the concrete block requests is
+already taken care off within its implementation.
+
+However, as some block providers are limited by their available hardware
+resources, e.g. I/O queues, we have to employ a multiplexing scheme in those
+cases. It follows the implementation of the old 'part_block' component where
+clients are scheduled in a round-robin fashion onto a single I/O connection.
+The same is now true for the block provider that has to perform this duty now
+and schedule multiple session onto one I/O queue.
+The outlier for now is the NVMe driver where commonly multiple I/O queues are
+available. As fallback a single-queue multiplexing scheme is also available but
+needs to be activate explicitly by setting the 'force_sq' attribute. All other
+block device driver always use single-queue multiplexing under the hood.
+
+In all cases the shared-memory dataspace between the block provider and its
+client uses DMA when possible.
+
+The last step involves switching the partition multiplexer into mediating
+mode made possible with the implementation of the steps prior.
+
+By using the constraining view and the ability of the block provider to manage
+multiple clients the multiplexer can now solely mediate access to the block
+device and the partitions on top of that. It still parses the partition-table
+but only forwards an augmented Block session request, which contains the offset
+where the partition starts as well as the number of blocks covered by the
+partition, to the block provider. The client collaborates with the driver
+directly now.
+
+The 'io_buffer' attribute is made obsolete by this change as the client now
+specifies the I/O buffer size itself and thus may select a more fitting one
+for its own use-case.
+
+Since 'part_block' now only needs its own Block connection to parse the
+partition-table this connection is ephemeral in nature and is closed after
+the parsing has been completed.
+
+With these changes of the VFS plugin as well as the driver and partition
+multiplexer in place we have stream-lined the I/O path and preliminary
+testing is promising. In case of the VFS plugin the complexity of the
+implementation was decreased while opening up new possibilities. The partition
+multiplexer was made simpler at the expense of the block providers, whose
+complexity was increased. That being said, all in all the balance was kept
+while we could measurably lower the CPU load and at the same time increase
+the I/O throughput. Especially on lower-end systems that are more likely
+to be CPU-bound it is noticeable and as another example when multiple
+virtual-machines perform concurrent I/O operations those benefit as well.
+
+As mentioned in the beginning the first steps are made now and we have
+a good foundation to make further adjustments. For example the single-queue
+multiplexing could be made more comprehensive to neither favor nor punish
+clients.
+
+
+Experimental libc POSIX AIO support
+===================================
+
+In an attempt to tap into the existing bandwidth and concurrency available
+by contemporary block devices, guided by the alterations to the Block stack
+described in the previous section, at the libc level we added rudimentary
+support for the POSIX AIO API.
+
+For the moment that support is mostly exercised by 'fio' via its 'posixaio'
+I/O engine and modeled after its requirements and serves exploration and
+testing purposes. As such the implementation does not support asynchronous
+notification mechanisms and thus relies on polling via 'aio_suspend'.
+
+It is implemented in a standalone fashion, which allows for changing the
+implementation almost independently from other parts of the libc. Apart from
+potentially triggering additional features in contrib code it should not
+influence existing ports.
+
+Under the hood the libc will open multiple VFS handles for a given
+file-descriptor and use these to issue multiple requests concurrently.
+It is then up the layers below to make proper use of them, i.e. order or
+batch them accordingly.
