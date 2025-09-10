@@ -47,9 +47,6 @@ namespace Genode {
 	void init_rpc_cap_alloc(Parent &);
 	void init_parent_resource_requests(Env &);
 	void init_heartbeat_monitoring(Env &);
-	void init_thread(Cpu_session &, Local_rm &);
-	void init_thread_start(Capability<Pd_session>);
-	void init_thread_bootstrap(Cpu_session &, Thread_capability);
 	void exec_static_constructors();
 
 	void cxx_demangle(char const*, char*, size_t);

@@ -58,24 +58,21 @@ extern "C" void init_main_thread()
 {
 	prepare_init_main_thread();
 
-	platform_ptr = &init_platform();
+	Platform &platform = init_platform();
+
+	platform_ptr = &platform;
 
 	/*
 	 * Create a 'Thread' object for the main thread
 	 */
-	static constexpr size_t STACK_SIZE = 16*1024;
-
 	struct Main_thread : Thread
 	{
-		Main_thread()
-		:
-			Thread("main", STACK_SIZE, Type::MAIN)
-		{ }
+		Main_thread(Platform &platform) : Thread(platform) { }
 
 		void entry() override { /* never executed */ }
 	};
 
-	static Main_thread main_thread { };
+	static Main_thread main_thread { platform };
 
 	/*
 	 * The new stack pointer enables the caller to switch from its current

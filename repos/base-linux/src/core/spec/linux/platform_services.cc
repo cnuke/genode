@@ -19,7 +19,8 @@
 #include <platform_services.h>
 
 
-void Core::platform_add_local_services(Rpc_entrypoint         &,
+void Core::platform_add_local_services(Genode::Platform       &,
+                                       Rpc_entrypoint         &,
                                        Sliced_heap            &,
                                        Registry<Service>      &,
                                        Trace::Source_registry &,

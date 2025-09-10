@@ -153,9 +153,11 @@ Platform &Genode::init_platform()
 	init_log(platform.parent);
 	init_rpc_cap_alloc(platform.parent);
 	init_cap_slab(platform.pd, platform.parent);
-	init_thread(platform.cpu, platform.local_rm);
-	init_thread_start(platform.pd.rpc_cap());
-	init_thread_bootstrap(platform.cpu, platform.parent.main_thread_cap());
+
+	/* register TID and PID of the main thread at core */
+	Linux_native_cpu_client native_cpu(platform.cpu.native_cpu());
+	native_cpu.thread_id(platform.parent.main_thread_cap(), lx_getpid(), lx_gettid());
+
 	init_exception_handling(platform.ram, platform.local_rm);
 	init_signal_receiver(platform.pd, platform.parent);
 

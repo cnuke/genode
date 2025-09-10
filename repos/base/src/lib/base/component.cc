@@ -86,12 +86,13 @@ struct Genode::Component_env : Env
 		_platform(platform), _ep(ep)
 	{ }
 
-	Parent        &parent() override { return _parent; }
-	Cpu_session   &cpu()    override { return _cpu; }
-	Local_rm      &rm()     override { return _local_rm; }
-	Pd_session    &pd()     override { return _pd; }
-	Ram_allocator &ram()    override { return _ram; }
-	Entrypoint    &ep()     override { return _ep; }
+	Parent        &parent()   override { return _parent; }
+	Cpu_session   &cpu()      override { return _cpu; }
+	Local_rm      &rm()       override { return _local_rm; }
+	Pd_session    &pd()       override { return _pd; }
+	Ram_allocator &ram()      override { return _ram; }
+	Entrypoint    &ep()       override { return _ep; }
+	Platform      &platform() override { return _platform; }
 
 	Cpu_session_capability cpu_session_cap() override { return _cpu_cap; }
 	Pd_session_capability  pd_session_cap()  override { return _pd_cap; }

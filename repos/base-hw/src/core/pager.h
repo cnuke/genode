@@ -236,7 +236,7 @@ class Core::Pager_entrypoint
 
 			public:
 
-				explicit Thread(Affinity::Location);
+				explicit Thread(Genode::Platform &, Affinity::Location);
 
 
 				/**********************
@@ -251,7 +251,7 @@ class Core::Pager_entrypoint
 
 	public:
 
-		explicit Pager_entrypoint(Rpc_cap_factory &);
+		explicit Pager_entrypoint(Genode::Platform &, Rpc_cap_factory &);
 
 		/**
 		 * Associate pager object 'obj' with entry point

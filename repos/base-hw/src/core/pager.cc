@@ -182,9 +182,9 @@ void Pager_entrypoint::Thread::entry()
 }
 
 
-Pager_entrypoint::Thread::Thread(Affinity::Location cpu)
+Pager_entrypoint::Thread::Thread(Genode::Platform &platform, Affinity::Location cpu)
 :
-	Genode::Thread("pager_ep", PAGER_EP_STACK_SIZE, cpu),
+	Genode::Thread(platform, "pager_ep", Stack_size { 2048*sizeof(addr_t) }, cpu),
 	_kobj(_kobj.CALLED_FROM_CORE)
 {
 	start();
@@ -210,11 +210,11 @@ Pager_capability Pager_entrypoint::manage(Pager_object &o)
 }
 
 
-Pager_entrypoint::Pager_entrypoint(Rpc_cap_factory &)
+Pager_entrypoint::Pager_entrypoint(Genode::Platform &platform, Rpc_cap_factory &)
 :
 	_cpus(_nr_of_cpus),
 	_threads((Thread*)_pager_thread_memory)
 {
 	for (unsigned i = 0; i < _cpus; i++)
-		construct_at<Thread>((void*)&_threads[i], Affinity::Location(i, 0));
+		construct_at<Thread>((void*)&_threads[i], platform, Affinity::Location(i, 0));
 }

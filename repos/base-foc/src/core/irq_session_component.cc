@@ -39,18 +39,18 @@ class Core::Interrupt_handler : public Thread
 {
 	private:
 
-		Interrupt_handler()
+		Interrupt_handler(Genode::Platform &platform)
 		:
-			Thread("irq_handler", 2048 * sizeof(long) /* stack */, Type::NORMAL)
+			Thread(platform, "irq_handler", Stack_size { 2048*sizeof(long) }, { })
 		{ start(); }
 
 	public:
 
 		void entry() override;
 
-		static Foc::l4_cap_idx_t handler_cap()
+		static Foc::l4_cap_idx_t handler_cap(Genode::Platform &platform)
 		{
-			static Interrupt_handler handler;
+			static Interrupt_handler handler { platform };
 			return handler.cap().data()->kcap();
 		}
 
@@ -113,7 +113,7 @@ bool Irq_object::associate(unsigned irq, bool msi,
 		return false;
 	}
 
-	if (l4_error(l4_rcv_ep_bind_thread(_capability(), Interrupt_handler::handler_cap(),
+	if (l4_error(l4_rcv_ep_bind_thread(_capability(), Interrupt_handler::handler_cap(_platform),
 	                                   reinterpret_cast<l4_umword_t>(this)))) {
 		error("cannot attach to IRQ ", _irq);
 		return false;
@@ -153,9 +153,10 @@ void Irq_object::ack_irq()
 }
 
 
-Irq_object::Irq_object()
+Irq_object::Irq_object(Genode::Platform &platform)
 :
-	 _cap(cap_map().insert((Cap_index::id_t)platform_specific().cap_id_alloc().alloc()))
+	_platform(platform),
+	_cap(cap_map().insert((Cap_index::id_t)platform_specific().cap_id_alloc().alloc()))
 { }
 
 
@@ -194,10 +195,11 @@ static Range_allocator::Result allocate_legacy(Range_allocator &irq_alloc,
 	return irq_alloc.alloc_addr(1, args.irq_number());
 }
 
-Irq_session_component::Irq_session_component(Range_allocator &irq_alloc,
-                                             const char      *args)
+Irq_session_component::Irq_session_component(Genode::Platform &platform,
+                                             Range_allocator  &irq_alloc,
+                                             const char       *args)
 :
-	_irq_number(allocate_legacy(irq_alloc, Irq_args(args))), _irq_object()
+	_irq_number(allocate_legacy(irq_alloc, Irq_args(args))), _irq_object(platform)
 {
 	Irq_args const irq_args(args);
 

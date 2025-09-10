@@ -24,6 +24,10 @@
 #include <base/internal/expanding_region_map_client.h>
 #include <base/internal/expanding_parent_client.h>
 
+#ifdef USED_BY_CORE
+#error base/interal/platform.h must not be included by core
+#endif
+
 namespace Genode { class Platform; }
 
 
