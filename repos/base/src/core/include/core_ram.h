@@ -115,7 +115,8 @@ class Core::Ram_obj_allocator : Noncopyable
 		 */
 		Result create(auto &&... args)
 		{
-			return _alloc.alloc(sizeof(T), { .log2 = 0 }).convert<Result>(
+			return _alloc.alloc(sizeof(T),
+			                    { .log2 = (uint8_t)log2(alignof(T)) }).convert<Result>(
 				[&] (Accounted_mapped_ram_allocator::Allocation &a) -> Result {
 
 					T *obj_ptr = construct_at<T>(a.ptr(), args...);
