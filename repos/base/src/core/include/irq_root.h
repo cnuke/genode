@@ -32,7 +32,6 @@ struct Core::Irq_root : Root_component<Irq_session_component>
 	 * from the RAM service) would delay the response to time-critical
 	 * calls of the 'Irq_session::ack_irq' function.
 	 */
-	enum { STACK_SIZE = sizeof(long)*1024 };
 	Rpc_entrypoint _session_ep;
 
 	Genode::Platform &_platform;
@@ -52,7 +51,7 @@ struct Core::Irq_root : Root_component<Irq_session_component>
 	Irq_root(Genode::Platform &platform, Range_allocator &irq_alloc, Allocator &md_alloc)
 	:
 		Root_component<Irq_session_component>(&_session_ep, &md_alloc),
-		_session_ep(platform, "irq", Thread::Stack_size { sizeof(long)*1024 }, { }),
+		_session_ep(platform, "irq", Thread::Stack_size { 8*1024 }, { }),
 		_platform(platform), _irq_alloc(irq_alloc)
 	{ }
 };

@@ -54,8 +54,6 @@ namespace Core {
 
 	using Pager_capability = Capability<Pager_object>;
 
-	enum { PAGER_EP_STACK_SIZE = sizeof(addr_t) * 2048 };
-
 	extern void init_page_fault_handling(Rpc_entrypoint &);
 
 	void init_pager_thread_per_cpu_memory(unsigned const cpus, void * mem);

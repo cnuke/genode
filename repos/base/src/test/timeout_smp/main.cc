@@ -44,7 +44,7 @@ class Test_thread
 			Affinity::Space  affinity_space)
 		:
 			Thread {
-				env, "test_thread", Stack_size { 4096*sizeof(long) },
+				env, "test_thread", Stack_size { 32*1024 },
 				affinity_space.location_of_index(
 					cpu_idx % affinity_space.total())
 			},

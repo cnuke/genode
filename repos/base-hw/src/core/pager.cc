@@ -184,7 +184,7 @@ void Pager_entrypoint::Thread::entry()
 
 Pager_entrypoint::Thread::Thread(Genode::Platform &platform, Affinity::Location cpu)
 :
-	Genode::Thread(platform, "pager_ep", Stack_size { 2048*sizeof(addr_t) }, cpu),
+	Genode::Thread(platform, "pager_ep", Stack_size { 16*1024 }, cpu),
 	_kobj(_kobj.CALLED_FROM_CORE)
 {
 	start();

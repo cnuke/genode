@@ -60,7 +60,7 @@ class Signal_handler_thread : Thread, Blockade
 		 */
 		Signal_handler_thread(Env &env)
 		:
-			Thread(env, "signal handler", Stack_size { 4*1024*sizeof(addr_t) }),
+			Thread(env, "signal handler", Stack_size { 32*1024 }),
 			_pd(env.pd()), _cpu(env.cpu())
 		{
 			start();

@@ -84,7 +84,7 @@ namespace Mp_server_test {
 
 		Cpu_compound(Genode::Affinity::Location l, Genode::Env &env)
 		: rpc(env.platform(), "rpc_ep",
-		      Genode::Thread::Stack_size { 2*1024*sizeof(long) }, l) { }
+		      Genode::Thread::Stack_size { 16*1024 }, l) { }
 		~Cpu_compound() { rpc.dissolve(&comp); }
 	};
 
@@ -170,7 +170,7 @@ namespace Affinity_test {
 
 		Spinning_thread(Genode::Env &env, Location location)
 		: Genode::Thread(env, "spinning_thread",
-		                 Stack_size { 2048*sizeof(long) }, location),
+		                 Stack_size { 16*1024 }, location),
 		  location(location), cnt(0ULL) {
 			start(); }
 	};
@@ -283,7 +283,7 @@ namespace Tlb_shootdown_test {
 
 		Thread(Genode::Env &env, Location location, unsigned idx,
 		       volatile unsigned * values)
-		: Genode::Thread(env, "tlb_thread", Stack_size { 2048*sizeof(long) },
+		: Genode::Thread(env, "tlb_thread", Stack_size { 16*1024 },
 		                 location),
 		  cpu_idx(idx), values(values) {
 			  start(); }

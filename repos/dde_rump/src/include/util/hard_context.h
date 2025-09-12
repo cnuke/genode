@@ -132,7 +132,7 @@ class Hard_context_thread : public Hard_context,
 		Hard_context_thread(char const *name, func f, void *arg, int cookie, bool run = true)
 		:
 			Hard_context(cookie),
-			Thread(Rump::env().env(), name, Stack_size { 2048*sizeof(long) }),
+			Thread(Rump::env().env(), name, Stack_size { 16*1024 }),
 			_func(f), _arg(arg)
 		{
 			if (run) start();

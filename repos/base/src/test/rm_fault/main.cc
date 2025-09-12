@@ -90,7 +90,7 @@ struct Exec_faulter : Thread
 
 	Exec_faulter(Env &env, unsigned test)
 	:
-		Thread(env, "exec_fault", Stack_size { 1024*sizeof(addr_t) }),
+		Thread(env, "exec_fault", Stack_size { 8*1024 }),
 		_fault_test(test)
 	{ }
 

@@ -64,7 +64,7 @@ class Core::Irq_root : public Root_component<Irq_session_component>,
 		         Allocator &md_alloc)
 		:
 			Root_component<Irq_session_component>(&_session_ep, &md_alloc),
-			_session_ep(platform, "irq", Thread::Stack_size { 1024*sizeof(long) },
+			_session_ep(platform, "irq", Thread::Stack_size { 8*1024 },
 			            Affinity::Location()),
 			_irq_alloc(irq_alloc)
 		{

@@ -43,7 +43,7 @@ struct Test_thread : Thread
 	}
 
 	Test_thread(Env &env, Name const &name)
-	: Thread(env, name, Stack_size { 1024 * sizeof(addr_t) }),
+	: Thread(env, name, Stack_size { 8*1024 }),
 	  _env(env) { start(); }
 
 	~Test_thread()

@@ -41,7 +41,7 @@ class Core::Interrupt_handler : public Thread
 
 		Interrupt_handler(Genode::Platform &platform)
 		:
-			Thread(platform, "irq_handler", Stack_size { 2048*sizeof(long) }, { })
+			Thread(platform, "irq_handler", Stack_size { 16*1024 }, { })
 		{ start(); }
 
 	public:

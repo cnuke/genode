@@ -77,7 +77,7 @@ class Test_terminal_crosslink::Partner : public Thread
 	public:
 
 		Partner(Env &env, char const *name)
-		: Thread(env, name, Stack_size { 1024*sizeof(addr_t) }),
+		: Thread(env, name, Stack_size { 8*1024 }),
 		  _terminal(env)
 		{
 			_terminal.read_avail_sigh(_sig_rec.manage(_sig_ctx));
