@@ -84,7 +84,7 @@ struct Core::Accounted_mapped_ram_allocator
  * Allocator for objects of type T that allocates each object on distinct RAM
  *
  * Since no two objects can share the same RAM page, the backing store of each
- * object can be released independenty.
+ * object can be released independently.
  */
 template <typename T>
 class Core::Ram_obj_allocator : Noncopyable
