@@ -17,7 +17,7 @@
 /* base-internal includes */
 #include <base/internal/stack.h>
 #include <base/internal/pistachio.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 
 Pistachio::L4_ThreadId_t main_thread_tid;
@@ -43,5 +43,5 @@ void Genode::Thread::_init_native_main_thread(Stack &stack)
 {
 	stack.native_thread().l4id = main_thread_tid;
 
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 }

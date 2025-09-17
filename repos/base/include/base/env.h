@@ -148,7 +148,7 @@ struct Genode::Env : Interface
 	                                   Affinity             const &) = 0;
 
 	/**
-	 * Platform-specific operations with componenent-global side effects
+	 * Token for issuing operations with componenent-global side effects
 	 *
 	 * The type of the returned reference is private to the underlying
 	 * platform. The reference is a mere token for orderly passing the
@@ -157,7 +157,7 @@ struct Genode::Env : Interface
 	 *
 	 * \noapi
 	 */
-	virtual Platform &platform() = 0;
+	virtual Runtime &runtime() = 0;
 
 };
 

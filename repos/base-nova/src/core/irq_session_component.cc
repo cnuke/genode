@@ -233,7 +233,7 @@ static Range_allocator::Result allocate(Range_allocator &irq_alloc, Irq_args con
 }
 
 
-Irq_session_component::Irq_session_component(Genode::Platform &,
+Irq_session_component::Irq_session_component(Runtime &,
                                              Range_allocator &irq_alloc,
                                              const char      *args)
 :

@@ -22,7 +22,7 @@
 
 /* base-internal includes */
 #include <base/internal/stack.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 /* NOVA includes */
 #include <nova/syscalls.h>
@@ -95,7 +95,7 @@ void Thread::_init_native_thread(Stack &stack)
 	_init_trace_control();
 
 	/* create thread at core */
-	_platform.cpu.create_thread(_platform.pd.rpc_cap(), name, _affinity, 0).with_result(
+	_runtime.cpu.create_thread(_runtime.pd.rpc_cap(), name, _affinity, 0).with_result(
 		[&] (Thread_capability cap) { _thread_cap = cap; },
 		[&] (Cpu_session::Create_thread_error) {
 			error("failed to create new thread for local PD"); });
@@ -106,7 +106,7 @@ void Thread::_init_native_main_thread(Stack &stack)
 {
 	Native_thread &nt = stack.native_thread();
 
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 
 	nt.exc_pt_sel = 0;
 	nt.ec_sel     = Nova::EC_SEL_THREAD;
@@ -125,7 +125,7 @@ void Thread::_deinit_native_thread(Stack &stack)
 
 	/* de-announce thread */
 	_thread_cap.with_result(
-		[&] (Thread_capability cap) { _platform.cpu.kill_thread(cap); },
+		[&] (Thread_capability cap) { _runtime.cpu.kill_thread(cap); },
 		[&] (Cpu_session::Create_thread_error) { });
 
 	cap_map().remove(nt.exc_pt_sel, Nova::NUM_INITIAL_PT_LOG2);
@@ -162,7 +162,7 @@ Thread::Start_result Thread::start()
 
 		Cpu_session::Native_cpu::Exception_base exception_base { nt.exc_pt_sel };
 
-		Nova_native_cpu_client native_cpu(_platform.cpu.native_cpu());
+		Nova_native_cpu_client native_cpu(_runtime.cpu.native_cpu());
 		native_cpu.thread_type(cap(), thread_type, exception_base);
 
 		/* local thread have no start instruction pointer - set via portal entry */

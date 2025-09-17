@@ -277,7 +277,7 @@ namespace {
 Entrypoint::Entrypoint(Env &env)
 :
 	_env(env),
-	_rpc_ep(env.platform(), Thread::Name { "ep" },
+	_rpc_ep(env.runtime(), Thread::Name { "ep" },
 	        Thread::Stack_size { Component::stack_size() }, Thread::Location { }),
 
 	/* initialize signalling before creating the first signal receiver */
@@ -309,7 +309,7 @@ Entrypoint::Entrypoint(Env &env, size_t stack_size, char const *name,
                        Affinity::Location location)
 :
 	_env(env),
-	_rpc_ep(env.platform(), name, Thread::Stack_size { stack_size }, location),
+	_rpc_ep(env.runtime(), name, Thread::Stack_size { stack_size }, location),
 	_signalling_initialized(true)
 {
 	_signal_proxy_thread.construct(env, *this, location);

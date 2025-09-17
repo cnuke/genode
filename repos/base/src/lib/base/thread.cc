@@ -92,28 +92,28 @@ Stack::Size_result Stack::size(size_t const size)
 
 
 Thread::Alloc_stack_result
-Thread::_alloc_stack(Platform &platform, Name const &name, Stack_size size)
+Thread::_alloc_stack(Runtime &runtime, Name const &name, Stack_size size)
 {
 	Stack *stack_ptr = Stack_allocator::stack_allocator().alloc(this);
 	if (!stack_ptr)
 		return Stack_error::STACK_AREA_EXHAUSTED;
 
-	return _alloc_stack(platform, *stack_ptr, name, size);
+	return _alloc_stack(runtime, *stack_ptr, name, size);
 }
 
 
-Thread::Alloc_stack_result Thread::_alloc_main_stack(Platform &platform)
+Thread::Alloc_stack_result Thread::_alloc_main_stack(Runtime &runtime)
 {
 	Stack *stack_ptr = Stack_allocator::stack_allocator().alloc_main(this);
 	if (!stack_ptr)
 		return Stack_error::STACK_AREA_EXHAUSTED;
 
-	return _alloc_stack(platform, *stack_ptr, "main", Stack_size { 16*1024 });
+	return _alloc_stack(runtime, *stack_ptr, "main", Stack_size { 16*1024 });
 }
 
 
 Thread::Alloc_stack_result
-Thread::_alloc_stack(Platform &, Stack &stack, Name const &name, Stack_size stack_size)
+Thread::_alloc_stack(Runtime &, Stack &stack, Name const &name, Stack_size stack_size)
 {
 	/* determine size of dataspace to allocate for the stack */
 	enum { PAGE_SIZE_LOG2 = 12 };
@@ -227,7 +227,7 @@ Thread::alloc_secondary_stack(Name const &name, Stack_size size)
 	if (!stack_ptr)
 		return Stack_error::STACK_AREA_EXHAUSTED;
 
-	return _alloc_stack(_platform, *stack_ptr, name, size).convert<Alloc_secondary_stack_result>(
+	return _alloc_stack(_runtime, *stack_ptr, name, size).convert<Alloc_secondary_stack_result>(
 		[&] (Stack const &stack) { return (void *)stack.top(); },
 		[&] (Stack_error e)      { return e; });
 }
@@ -275,15 +275,15 @@ size_t Thread::stack_area_virtual_size()
 
 Thread::Thread(Env &env, Name const &name, Stack_size stack_size, Location location)
 :
-	Thread(env.platform(), name, stack_size, location)
+	Thread(env.runtime(), name, stack_size, location)
 { }
 
 
-Thread::Thread(Platform &platform, Name const &name, Stack_size stack_size,
+Thread::Thread(Runtime &runtime, Name const &name, Stack_size stack_size,
                Affinity::Location affinity)
 :
-	name(name), _platform(platform), _affinity(affinity),
-	_stack(_alloc_stack(platform, name, stack_size))
+	name(name), _runtime(runtime), _affinity(affinity),
+	_stack(_alloc_stack(runtime, name, stack_size))
 {
 	_stack.with_result(
 		[&] (Stack &stack) {
@@ -294,10 +294,10 @@ Thread::Thread(Platform &platform, Name const &name, Stack_size stack_size,
 }
 
 
-Thread::Thread(Platform &platform)
+Thread::Thread(Runtime &runtime)
 :
-	name("main"), _platform(platform), _affinity({ }),
-	_stack(_alloc_main_stack(platform))
+	name("main"), _runtime(runtime), _affinity({ }),
+	_stack(_alloc_main_stack(runtime))
 {
 	_stack.with_result(
 		[&] (Stack &stack) {

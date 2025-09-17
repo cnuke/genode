@@ -24,13 +24,13 @@ namespace Genode {
 
 	class Ram_allocator;
 	class Env;
-	class Platform;
+	class Runtime;
 	class Local_session_id_space;
 
 	extern Region_map    *env_stack_area_region_map;
 	extern Ram_allocator *env_stack_area_ram_allocator;
 
-	Platform &init_platform();
+	Runtime &init_runtime();
 
 	void init_stack_area();
 	void init_exception_handling(Ram_allocator &, Local::Constrained_region_map &);
@@ -56,7 +56,7 @@ namespace Genode {
 	Id_space<Parent::Client> &env_session_id_space();
 
 	void prepare_init_main_thread();
-	void bootstrap_component(Platform &);
+	void bootstrap_component(Runtime &);
 	void binary_ready_hook_for_platform();
 
 	extern bool inhibit_tracing;

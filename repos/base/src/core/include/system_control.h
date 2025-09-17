@@ -21,7 +21,7 @@ namespace Core {
 
 	class System_control;
 
-	System_control & init_system_control(Genode::Platform &, Allocator &, Rpc_entrypoint &);
+	System_control & init_system_control(Runtime &, Allocator &, Rpc_entrypoint &);
 }
 
 

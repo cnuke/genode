@@ -51,9 +51,9 @@ void Core::init_page_fault_handling(Rpc_entrypoint &ep) { _core_ep_ptr = &ep; }
  */
 struct Pager_thread : Thread
 {
-	Pager_thread(Genode::Platform &platform, Affinity::Location location)
+	Pager_thread(Runtime &runtime, Affinity::Location location)
 	:
-		Thread(platform, "pager", Stack_size { 2*4096 }, location)
+		Thread(runtime, "pager", Stack_size { 2*4096 }, location)
 	{
 		/* creates local EC */
 		Thread::start();
@@ -939,7 +939,7 @@ addr_t Pager_object::create_oom_portal()
  ** Pager entrypoint **
  **********************/
 
-Pager_entrypoint::Pager_entrypoint(Genode::Platform &platform, Rpc_cap_factory &)
+Pager_entrypoint::Pager_entrypoint(Runtime &runtime, Rpc_cap_factory &)
 {
 	/* detect enabled CPUs and create per CPU a pager thread */
 	platform_specific().for_each_location([&](Affinity::Location &location) {
@@ -955,7 +955,7 @@ Pager_entrypoint::Pager_entrypoint(Genode::Platform &platform, Rpc_cap_factory &
 			return;
 		}
 
-		pager_threads[pager_index].construct(platform, location);
+		pager_threads[pager_index].construct(runtime, location);
 	});
 }
 

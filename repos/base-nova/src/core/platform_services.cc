@@ -19,7 +19,7 @@
 /*
  * Add x86 specific services 
  */
-void Core::platform_add_local_services(Genode::Platform       &platform,
+void Core::platform_add_local_services(Runtime                &runtime,
                                        Rpc_entrypoint         &ep,
                                        Sliced_heap            &heap,
                                        Registry<Service>      &services,
@@ -32,7 +32,7 @@ void Core::platform_add_local_services(Genode::Platform       &platform,
 	static Vm_root vm_root(ep, heap, core_ram, local_rm, trace_sources);
 	static Core_service<Vm_session_component> vm(services, vm_root);
 
-	static Io_port_root io_root(platform, io_port_ranges, heap);
+	static Io_port_root io_root(runtime, io_port_ranges, heap);
 
 	static Core_service<Io_port_session_component> io_port(services, io_root);
 }

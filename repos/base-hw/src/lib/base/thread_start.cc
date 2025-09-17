@@ -24,7 +24,7 @@
 #include <base/internal/native_utcb.h>
 #include <base/internal/native_env.h>
 #include <base/internal/globals.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 using namespace Genode;
 
@@ -60,7 +60,7 @@ void Thread::_init_native_main_thread(Stack &stack)
 
 	/* adjust initial object state in case of a main thread */
 	stack.native_thread().cap = Hw::_main_thread_cap;
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 }
 
 
@@ -68,15 +68,15 @@ void Thread::_init_native_thread(Stack &stack)
 {
 	_init_trace_control();
 
-	_thread_cap = _platform.cpu.create_thread(_platform.pd.rpc_cap(), name, _affinity,
-	                                          addr_t(&stack.utcb()));
+	_thread_cap = _runtime.cpu.create_thread(_runtime.pd.rpc_cap(), name, _affinity,
+	                                         addr_t(&stack.utcb()));
 }
 
 
 void Thread::_deinit_native_thread(Stack &stack)
 {
 	_thread_cap.with_result(
-		[&] (Thread_capability cap) { _platform.cpu.kill_thread(cap); },
+		[&] (Thread_capability cap) { _runtime.cpu.kill_thread(cap); },
 		[&] (Cpu_session::Create_thread_error) { });
 
 	/* detach userland stack */

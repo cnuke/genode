@@ -24,7 +24,7 @@
 /*
  * Add x86 specific ioport service
  */
-void Core::platform_add_local_services(Genode::Platform       &platform,
+void Core::platform_add_local_services(Runtime                &runtime,
                                        Rpc_entrypoint         &,
                                        Sliced_heap            &sliced_heap,
                                        Registry<Service>      &local_services,
@@ -34,7 +34,7 @@ void Core::platform_add_local_services(Genode::Platform       &platform,
                                        Local_rm               &,
                                        Range_allocator        &io_port_ranges)
 {
-	static Io_port_root io_port_root(platform, io_port_ranges, sliced_heap);
+	static Io_port_root io_port_root(runtime, io_port_ranges, sliced_heap);
 
 	static Core_service<Io_port_session_component> io_port_ls(local_services,
 	                                                          io_port_root);

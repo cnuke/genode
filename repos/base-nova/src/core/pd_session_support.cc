@@ -168,7 +168,7 @@ static System_control_impl &system_instance()
 }
 
 
-System_control & Core::init_system_control(Genode::Platform &platform,
+System_control & Core::init_system_control(Runtime &runtime,
                                            Allocator &alloc, Rpc_entrypoint &)
 {
 	platform_specific().for_each_location([&](Affinity::Location const &location) {
@@ -178,7 +178,7 @@ System_control & Core::init_system_control(Genode::Platform &platform,
 		if (!kernel_hip().is_cpu_enabled(kernel_cpu_id))
 			return;
 
-		auto ep = new (alloc) Rpc_entrypoint (platform, "system_control",
+		auto ep = new (alloc) Rpc_entrypoint (runtime, "system_control",
 		                                      Thread::Stack_size { 20*1024 },
 		                                      Thread::Location { });
 

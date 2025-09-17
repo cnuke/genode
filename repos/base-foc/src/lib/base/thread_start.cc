@@ -25,7 +25,7 @@
 #include <base/internal/stack.h>
 #include <base/internal/cap_map.h>
 #include <base/internal/globals.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 /* Fiasco.OC includes */
 #include <foc/syscall.h>
@@ -43,7 +43,7 @@ void Thread::_deinit_native_thread(Stack &stack)
 	}
 
 	_thread_cap.with_result(
-		[&] (Thread_capability cap) { _platform.cpu.kill_thread(cap); },
+		[&] (Thread_capability cap) { _runtime.cpu.kill_thread(cap); },
 		[&] (Cpu_session::Create_thread_error) { });
 }
 
@@ -53,8 +53,8 @@ void Thread::_init_native_thread(Stack &)
 	_init_trace_control();
 
 	/* create thread at core */
-	_thread_cap = _platform.cpu.create_thread(_platform.pd.rpc_cap(),
-	                                          name, _affinity, 0);
+	_thread_cap = _runtime.cpu.create_thread(_runtime.pd.rpc_cap(),
+	                                         name, _affinity, 0);
 }
 
 
@@ -64,7 +64,7 @@ void Thread::_init_native_main_thread(Stack &stack)
 
 	/* adjust values whose computation differs for a main thread */
 	stack.native_thread().kcap = Foc::MAIN_THREAD_CAP;
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 
 	if (_thread_cap.failed()) {
 		error("failed to re-initialize main thread");
@@ -83,7 +83,7 @@ Thread::Start_result Thread::start()
 
 	return _thread_cap.convert<Start_result>(
 		[&] (Thread_capability cap) {
-			Foc_native_cpu_client native_cpu(_platform.cpu.native_cpu());
+			Foc_native_cpu_client native_cpu(_runtime.cpu.native_cpu());
 
 			/* get gate-capability and badge of new thread */
 			Foc_thread_state state { };

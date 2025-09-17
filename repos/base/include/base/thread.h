@@ -27,7 +27,7 @@ namespace Genode {
 	struct Native_thread;
 	class Thread;
 	class Stack;
-	class Platform;
+	class Runtime;
 	class Env;
 }
 
@@ -58,9 +58,9 @@ class Genode::Thread
 
 		using Alloc_stack_result = Unique_attempt<Stack &, Stack_error>;
 
-		Alloc_stack_result _alloc_stack(Platform &, Stack &, Name const &, Stack_size);
-		Alloc_stack_result _alloc_stack(Platform &, Name const &, Stack_size);
-		Alloc_stack_result _alloc_main_stack(Platform &);
+		Alloc_stack_result _alloc_stack(Runtime &, Stack &, Name const &, Stack_size);
+		Alloc_stack_result _alloc_stack(Runtime &, Name const &, Stack_size);
+		Alloc_stack_result _alloc_main_stack(Runtime &);
 
 		/**
 		 * Detach and release stack of the thread
@@ -102,7 +102,7 @@ class Genode::Thread
 		Cpu_session::Create_thread_result _thread_cap =
 			Cpu_session::Create_thread_error::DENIED;
 
-		Platform &_platform;
+		Runtime &_runtime;
 
 		/**
 		 * Session-local thread affinity
@@ -163,7 +163,7 @@ class Genode::Thread
 		 *
 		 * \noapi
 		 */
-		Thread(Platform &, Name const &, Stack_size, Location);
+		Thread(Runtime &, Name const &, Stack_size, Location);
 
 		/**
 		 * Constructor
@@ -186,7 +186,7 @@ class Genode::Thread
 		 *
 		 * \noapi
 		 */
-		Thread(Platform &);
+		Thread(Runtime &);
 
 		/**
 		 * Destructor

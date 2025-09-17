@@ -15,7 +15,7 @@
 #include <base/thread.h>
 
 /* base-internal includes */
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 
 void Genode::prepare_init_main_thread()  { }
@@ -25,5 +25,5 @@ void Genode::Thread::_init_native_thread(Stack &) { }
 
 void Genode::Thread::_init_native_main_thread(Stack &)
 {
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 }

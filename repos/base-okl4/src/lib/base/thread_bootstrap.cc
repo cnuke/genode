@@ -18,7 +18,7 @@
 /* base-internal includes */
 #include <base/internal/okl4.h>
 #include <base/internal/stack.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 using namespace Genode;
 
@@ -46,5 +46,5 @@ void Thread::_init_native_thread(Stack &) { }
 void Thread::_init_native_main_thread(Stack &stack)
 {
 	stack.native_thread().l4id.raw = main_thread_tid.raw;
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 }

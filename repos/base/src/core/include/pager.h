@@ -181,9 +181,9 @@ class Core::Pager_entrypoint : public Object_pool<Pager_object>,
 		 *                     for the pager objects managed by this
 		 *                     entry point
 		 */
-		Pager_entrypoint(Genode::Platform &platform, Rpc_cap_factory &cap_factory)
+		Pager_entrypoint(Runtime &runtime, Rpc_cap_factory &cap_factory)
 		:
-			Thread(platform, "pager_ep", Stack_size { 16*1024 }, { }),
+			Thread(runtime, "pager_ep", Stack_size { 16*1024 }, { }),
 			_cap_factory(cap_factory)
 		{ start(); }
 

@@ -38,7 +38,7 @@
 /* base includes */
 #include <trace/source_registry.h>
 
-using Platform = Core::Platform;
+using namespace Core;
 
 
 /**************

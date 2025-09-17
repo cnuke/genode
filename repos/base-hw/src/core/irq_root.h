@@ -60,11 +60,11 @@ class Core::Irq_root : public Root_component<Irq_session_component>,
 		 * \param irq_alloc    IRQ range that can be assigned to clients
 		 * \param md_alloc     meta-data allocator to be used by root component
 		 */
-		Irq_root(Genode::Platform &platform, Range_allocator &irq_alloc,
+		Irq_root(Runtime &runtime, Range_allocator &irq_alloc,
 		         Allocator &md_alloc)
 		:
 			Root_component<Irq_session_component>(&_session_ep, &md_alloc),
-			_session_ep(platform, "irq", Thread::Stack_size { 8*1024 },
+			_session_ep(runtime, "irq", Thread::Stack_size { 8*1024 },
 			            Affinity::Location()),
 			_irq_alloc(irq_alloc)
 		{

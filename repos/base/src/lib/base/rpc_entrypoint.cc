@@ -32,7 +32,7 @@ void Rpc_entrypoint::_dissolve(Rpc_object_base *obj)
 	/* make sure nobody is able to find this object */
 	remove(obj);
 
-	_free_rpc_cap(_platform, obj->cap());
+	_free_rpc_cap(_runtime, obj->cap());
 
 	/* effectively invalidate the capability used before */
 	obj->cap(Untyped_capability());
@@ -62,12 +62,12 @@ bool Rpc_entrypoint::is_myself() const
 }
 
 
-Rpc_entrypoint::Rpc_entrypoint(Platform &platform, Name const &name,
+Rpc_entrypoint::Rpc_entrypoint(Runtime &runtime, Name const &name,
                                Stack_size stack_size, Affinity::Location location)
 :
-	Thread(platform, name, stack_size, location),
+	Thread(runtime, name, stack_size, location),
 	_cap(Untyped_capability()),
-	_platform(platform)
+	_runtime(runtime)
 {
 	Thread::start();
 	_block_until_cap_valid();

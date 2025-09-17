@@ -19,7 +19,7 @@
 
 /* base-internal includes */
 #include <base/internal/native_thread.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 
 /**
@@ -134,7 +134,7 @@ int main()
 {
 	using namespace Genode;
 
-	bootstrap_component(init_platform());
+	bootstrap_component(init_runtime());
 
 	/* never reached */
 }
@@ -513,9 +513,9 @@ void Thread::join()
 }
 
 
-Thread::Thread(Platform &platform, Name const &name, Stack_size, Affinity::Location)
+Thread::Thread(Runtime &runtime, Name const &name, Stack_size, Affinity::Location)
 :
-	name(name), _platform(platform), _affinity()
+	name(name), _runtime(runtime), _affinity()
 {
 	Native_thread::Meta_data *meta_data =
 		new (global_alloc()) Thread_meta_data_created(this);
@@ -533,11 +533,11 @@ Thread::Thread(Platform &platform, Name const &name, Stack_size, Affinity::Locat
 
 		nt.meta_data->wait_for_construction();
 
-		_thread_cap = _platform.cpu.create_thread(_env_ptr->pd_session_cap(), name,
-		                                          Location(), 0);
+		_thread_cap = _runtime.cpu.create_thread(_env_ptr->pd_session_cap(), name,
+		                                         Location(), 0);
 		_thread_cap.with_result(
 			[&] (Thread_capability cap) {
-				Linux_native_cpu_client native_cpu(_platform.cpu.native_cpu());
+				Linux_native_cpu_client native_cpu(_runtime.cpu.native_cpu());
 				native_cpu.thread_id(cap, nt.pid, nt.tid);
 			},
 			[&] (Cpu_session::Create_thread_error) {
@@ -549,7 +549,7 @@ Thread::Thread(Platform &platform, Name const &name, Stack_size, Affinity::Locat
 
 Thread::Thread(Env &env, Name const &name, Stack_size size, Location location)
 :
-	Thread(env.platform(), name, size, location)
+	Thread(env.runtime(), name, size, location)
 { }
 
 
@@ -577,16 +577,16 @@ Thread::~Thread()
 
 	/* inform core about the killed thread */
 	_thread_cap.with_result(
-		[&] (Thread_capability cap) { _platform.cpu.kill_thread(cap); },
+		[&] (Thread_capability cap) { _runtime.cpu.kill_thread(cap); },
 		[&] (Cpu_session::Create_thread_error) { });
 }
 
 
-/**************
- ** Platform **
- **************/
+/*************
+ ** Runtime **
+ *************/
 
-void Platform::_attach_stack_area()
+void Runtime::_attach_stack_area()
 {
 	/*
 	 * Omit attaching the stack area to the local address space for hybrid

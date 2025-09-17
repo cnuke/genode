@@ -19,7 +19,7 @@
 
 /* base-internal includes */
 #include <base/internal/stack.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 /* Linux syscall bindings */
 #include <linux_syscalls.h>
@@ -73,7 +73,7 @@ void Thread::_thread_start()
 
 	/* inform core about the new thread and process ID of the new thread */
 	thread.with_native_thread([&] (Native_thread &nt) {
-		Linux_native_cpu_client native_cpu(thread._platform.cpu.native_cpu());
+		Linux_native_cpu_client native_cpu(thread._runtime.cpu.native_cpu());
 		native_cpu.thread_id(thread.cap(), nt.pid, nt.tid);
 	});
 
@@ -91,11 +91,11 @@ void Thread::_thread_start()
 
 void Thread::_init_native_thread(Stack &stack)
 {
-	_platform.cpu.create_thread(_platform.pd.rpc_cap(), stack.name(),
-	                            Affinity::Location(), 0).with_result(
+	_runtime.cpu.create_thread(_runtime.pd.rpc_cap(), stack.name(),
+	                           Affinity::Location(), 0).with_result(
 		[&] (Thread_capability cap) { _thread_cap = cap; },
 		[&] (Cpu_session::Create_thread_error) {
-			error("Thread::_init_platform_thread: create_thread failed");
+			error("Thread::_init_native_thread: create_thread failed");
 		});
 }
 
@@ -104,7 +104,7 @@ void Thread::_init_native_main_thread(Stack &stack)
 {
 	/* adjust initial object state for main threads */
 	stack.native_thread().futex_counter = main_thread_futex_counter;
-	_thread_cap = _platform.parent.main_thread_cap();
+	_thread_cap = _runtime.parent.main_thread_cap();
 }
 
 
@@ -139,7 +139,7 @@ void Thread::_deinit_native_thread(Stack &stack)
 
 	/* inform core about the killed thread */
 	_thread_cap.with_result(
-		[&] (Thread_capability cap) { _platform.cpu.kill_thread(cap); },
+		[&] (Thread_capability cap) { _runtime.cpu.kill_thread(cap); },
 		[&] (Cpu_session::Create_thread_error) { });
 }
 

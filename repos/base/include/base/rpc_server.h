@@ -345,7 +345,7 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		Native_capability _caller       { };
 		Blockade          _cap_valid    { };  /* thread startup synchronization        */
 		Blockade          _delay_exit   { };  /* delay destructor until server settled */
-		Platform         &_platform;          /* for creating capabilities             */
+		Runtime          &_runtime;           /* for creating capabilities             */
 		Exit_handler      _exit_handler { };
 		Capability<Exit>  _exit_cap     { };
 
@@ -390,13 +390,13 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		 * The 'entry' argument is used only on NOVA. It is the server-side
 		 * instruction pointer to be associated with the RPC object capability.
 		 */
-		Alloc_rpc_cap_result _alloc_rpc_cap(Platform &, Native_capability ep,
+		Alloc_rpc_cap_result _alloc_rpc_cap(Runtime &, Native_capability ep,
 		                                    addr_t entry = 0);
 
 		/**
 		 * Free RPC object capability
 		 */
-		void _free_rpc_cap(Platform &, Native_capability);
+		void _free_rpc_cap(Runtime &, Native_capability);
 
 		/**
 		 * Thread interface
@@ -407,7 +407,7 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 
 	public:
 
-		Rpc_entrypoint(Platform &, Name const &, Stack_size, Affinity::Location);
+		Rpc_entrypoint(Runtime &, Name const &, Stack_size, Affinity::Location);
 
 		~Rpc_entrypoint();
 

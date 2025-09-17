@@ -34,12 +34,12 @@ struct Core::Irq_root : Root_component<Irq_session_component>
 	 */
 	Rpc_entrypoint _session_ep;
 
-	Genode::Platform &_platform;
-	Range_allocator  &_irq_alloc;    /* platform irq allocator */
+	Runtime         &_runtime;
+	Range_allocator &_irq_alloc;    /* platform irq allocator */
 
 	Create_result _create_session(const char *args) override
 	{
-		return _alloc_obj(_platform, _irq_alloc, args);
+		return _alloc_obj(_runtime, _irq_alloc, args);
 	}
 
 	/**
@@ -48,11 +48,11 @@ struct Core::Irq_root : Root_component<Irq_session_component>
 	 * \param irq_alloc    IRQ range that can be assigned to clients
 	 * \param md_alloc     meta-data allocator to be used by root component
 	 */
-	Irq_root(Genode::Platform &platform, Range_allocator &irq_alloc, Allocator &md_alloc)
+	Irq_root(Runtime &runtime, Range_allocator &irq_alloc, Allocator &md_alloc)
 	:
 		Root_component<Irq_session_component>(&_session_ep, &md_alloc),
-		_session_ep(platform, "irq", Thread::Stack_size { 8*1024 }, { }),
-		_platform(platform), _irq_alloc(irq_alloc)
+		_session_ep(runtime, "irq", Thread::Stack_size { 8*1024 }, { }),
+		_runtime(runtime), _irq_alloc(irq_alloc)
 	{ }
 };
 

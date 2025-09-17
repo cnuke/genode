@@ -20,7 +20,7 @@
 
 /* base-internal includes */
 #include <base/internal/globals.h>
-#include <base/internal/platform.h>
+#include <base/internal/runtime.h>
 
 using namespace Genode;
 
@@ -40,7 +40,7 @@ void Genode::init_rpc_cap_alloc(Parent &parent) { _parent_ptr = &parent; }
 
 
 Rpc_entrypoint::Alloc_rpc_cap_result
-Rpc_entrypoint::_alloc_rpc_cap(Platform &platform, Native_capability, addr_t)
+Rpc_entrypoint::_alloc_rpc_cap(Runtime &runtime, Native_capability, addr_t)
 {
 	for (;;) {
 
@@ -49,7 +49,7 @@ Rpc_entrypoint::_alloc_rpc_cap(Platform &platform, Native_capability, addr_t)
 
 		Native_capability result { };
 
-		platform.pd.alloc_rpc_cap(_cap).with_result(
+		runtime.pd.alloc_rpc_cap(_cap).with_result(
 			[&] (Native_capability cap) { result = cap; },
 			[&] (Alloc_error e) {
 				switch (e) {
@@ -71,7 +71,7 @@ Rpc_entrypoint::_alloc_rpc_cap(Platform &platform, Native_capability, addr_t)
 }
 
 
-void Rpc_entrypoint::_free_rpc_cap(Platform &platform, Native_capability cap)
+void Rpc_entrypoint::_free_rpc_cap(Runtime &runtime, Native_capability cap)
 {
-	return platform.pd.free_rpc_cap(cap);
+	return runtime.pd.free_rpc_cap(cap);
 }

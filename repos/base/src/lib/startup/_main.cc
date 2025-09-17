@@ -25,7 +25,7 @@ using namespace Genode;
 
 addr_t init_main_thread_result;
 
-static Platform *platform_ptr;
+static Runtime *runtime_ptr;
 
 
 /**
@@ -58,21 +58,21 @@ extern "C" void init_main_thread()
 {
 	prepare_init_main_thread();
 
-	Platform &platform = init_platform();
+	Runtime &runtime = init_runtime();
 
-	platform_ptr = &platform;
+	runtime_ptr = &runtime;
 
 	/*
 	 * Create a 'Thread' object for the main thread
 	 */
 	struct Main_thread : Thread
 	{
-		Main_thread(Platform &platform) : Thread(platform) { }
+		Main_thread(Runtime &runtime) : Thread(runtime) { }
 
 		void entry() override { /* never executed */ }
 	};
 
-	static Main_thread main_thread { platform };
+	static Main_thread main_thread { runtime };
 
 	/*
 	 * The new stack pointer enables the caller to switch from its current
@@ -123,7 +123,7 @@ namespace Genode {
 
 extern "C" int _main() /* executed with the stack within the stack area */
 {
-	bootstrap_component(*platform_ptr);
+	bootstrap_component(*runtime_ptr);
 
 	/* never reached */
 	return 0;

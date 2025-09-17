@@ -19,7 +19,7 @@
 
 namespace Genode {
 	class Rpc_entrypoint;
-	class Platform;
+	class Runtime;
 }
 
 
@@ -43,7 +43,7 @@ namespace Core {
 	void init_core_signal_transmitter(Rpc_entrypoint &ep);
 
 
-	Rpc_entrypoint &core_signal_ep(Genode::Platform &, Rpc_entrypoint &core_ep);
+	Rpc_entrypoint &core_signal_ep(Runtime &, Rpc_entrypoint &core_ep);
 }
 
 #endif /* _CORE__INCLUDE__SIGNAL_TRANSMITTER_H_ */

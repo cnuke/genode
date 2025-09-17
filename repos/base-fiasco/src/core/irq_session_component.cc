@@ -113,9 +113,9 @@ void Irq_object::entry()
 }
 
 
-Irq_object::Irq_object(Genode::Platform &platform, unsigned irq)
+Irq_object::Irq_object(Runtime &runtime, unsigned irq)
 :
-	Thread(platform, "irq", Stack_size { 4096 }, { }),
+	Thread(runtime, "irq", Stack_size { 4096 }, { }),
 	_irq(irq)
 { }
 
@@ -129,12 +129,12 @@ static Range_allocator::Result allocate(Range_allocator &irq_alloc, Irq_args con
 }
 
 
-Irq_session_component::Irq_session_component(Genode::Platform &platform,
-                                             Range_allocator  &irq_alloc,
-                                             const char       *args)
+Irq_session_component::Irq_session_component(Runtime         &runtime,
+                                             Range_allocator &irq_alloc,
+                                             const char      *args)
 :
 	_irq_number(allocate(irq_alloc, Irq_args(args))),
-	_irq_object(platform, Irq_args(args).irq_number())
+	_irq_object(runtime, Irq_args(args).irq_number())
 {
 	if (_irq_number.failed()) {
 		error("unavailable IRQ ", Irq_args(args).irq_number(), " requested");

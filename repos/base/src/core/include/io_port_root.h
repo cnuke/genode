@@ -29,9 +29,9 @@ namespace Core {
 
 struct Core::Io_port_handler : Rpc_entrypoint
 {
-	Io_port_handler(Genode::Platform &platform)
+	Io_port_handler(Runtime &runtime)
 	:
-		Rpc_entrypoint(platform, "ioport", Genode::Thread::Stack_size { 4096 },
+		Rpc_entrypoint(runtime, "ioport", Genode::Thread::Stack_size { 4096 },
 		               Genode::Thread::Location { })
 	{ }
 };
@@ -53,10 +53,9 @@ struct Core::Io_port_root : private Io_port_handler,
 	 * \param io_port_alloc  platform IO_PORT allocator
 	 * \param md_alloc       meta-data allocator to be used by root component
 	 */
-	Io_port_root(Genode::Platform &platform, Range_allocator &io_port_alloc,
-	             Allocator &md_alloc)
+	Io_port_root(Runtime &runtime, Range_allocator &io_port_alloc, Allocator &md_alloc)
 	:
-		Io_port_handler(platform),
+		Io_port_handler(runtime),
 		Root_component<Io_port_session_component>(this, &md_alloc),
 		_io_port_alloc(io_port_alloc)
 	{ }
