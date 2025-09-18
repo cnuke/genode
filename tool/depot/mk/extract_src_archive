@@ -96,10 +96,13 @@ $(DEPOT_ARCHIVE_DIR)/api: $(RECIPE_DIR)/api
 	api=$$(< $<); \
 	  hash_file=$(GENODE_DIR)/repos/**/recipes/api/$$api/hash; \
 	  if [ ! -f $$hash_file ]; then \
-	    echo "Error: library '$(ARCHIVE)' implements unknown API '$$api',"; \
-	    echo "       expected $$hash_file"; \
-	    rm -r $(DEPOT_ARCHIVE_DIR); \
-	    exit -1; \
+	    hash_file=$(GENODE_DIR)/repos/**/**/recipes/api/$$api/hash; \
+	    if [ ! -f $$hash_file ]; then \
+	      echo "Error: library '$(ARCHIVE)' implements unknown API '$$api',"; \
+	      echo "       expected $$hash_file"; \
+	      rm -r $(DEPOT_ARCHIVE_DIR); \
+	      exit -1; \
+	    fi; \
 	  fi; \
 	  hash_file_content=$$(< $$hash_file); \
 	  version=$${hash_file_content%% *}; \

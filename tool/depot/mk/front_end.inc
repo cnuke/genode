@@ -14,6 +14,7 @@ REPOSITORIES ?= $(shell find $(GENODE_DIR)/repos -follow -mindepth 1 -maxdepth 1
 
 # list of all repositories that contain depot recipes
 REP_RECIPES_DIRS := $(wildcard $(addsuffix /recipes,$(REPOSITORIES)))
+REP_RECIPES_DIRS += $(wildcard $(addsuffix /legacy/recipes,$(REPOSITORIES)))
 
 # list of possible locations of pubkey/download files
 REP_SCULPT_DEPOT_DIRS := $(wildcard $(addsuffix /sculpt/depot,$(REPOSITORIES)))

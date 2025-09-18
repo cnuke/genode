@@ -60,5 +60,5 @@ REPOSITORIES += $(GENODE_DIR)/repos/demo
 #
 #   https://github.com/genodelabs/genode-world
 #
-#REPOSITORIES += $(GENODE_DIR)/repos/world
+#REPOSITORIES += $(GENODE_DIR)/repos/world/legacy
 

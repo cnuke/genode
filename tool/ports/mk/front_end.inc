@@ -22,6 +22,7 @@ REPOSITORIES ?= $(shell find $(GENODE_DIR)/repos -follow -mindepth 1 -maxdepth 1
 
 # list of all repositories that contain ports of 3rd-party source code
 _REP_PORTS_DIRS := $(wildcard $(addsuffix /ports,$(REPOSITORIES)))
+_REP_PORTS_DIRS += $(wildcard $(addsuffix /legacy/ports,$(REPOSITORIES)))
 
 # list of all available ports
 _PORTS := $(foreach DIR,$(_REP_PORTS_DIRS),$(wildcard $(DIR)/*.port))
