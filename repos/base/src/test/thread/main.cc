@@ -369,59 +369,6 @@ struct Lock_helper : Thread
 };
 
 
-/**********************************
- ** Using cxa guards concurrently *
- **********************************/
-
-struct Cxa_helper : Thread
-{
-	Blockade &in_cxa;
-	Blockade &sync_startup;
-	int       test;
-	bool      sync;
-
-	Cxa_helper(Env &env, Name const &name, Blockade &cxa,
-	           Blockade &startup, int test, bool sync = false)
-	:
-		Thread(env, name, STACK_SIZE, Thread::Location()),
-		in_cxa(cxa), sync_startup(startup), test(test), sync(sync)
-	{ }
-
-	void entry() override
-	{
-		log(" thread '", name, "' started");
-
-		if (sync)
-			sync_startup.wakeup();
-
-		struct Contention {
-			Contention(Name name, Blockade &in_cxa, Blockade &sync_startup)
-			{
-				log(" thread '", name, "' in static constructor");
-				sync_startup.wakeup();
-				in_cxa.block();
-			}
-		};
-
-		if (test == 1)
-			static Contention contention (name, in_cxa, sync_startup);
-		else
-		if (test == 2)
-			static Contention contention (name, in_cxa, sync_startup);
-		else
-		if (test == 3)
-			static Contention contention (name, in_cxa, sync_startup);
-		else
-		if (test == 4)
-			static Contention contention (name, in_cxa, sync_startup);
-		else
-			throw -25;
-
-		log(" thread '", name, "' done");
-	}
-};
-
-
 /*********************************************
  ** Successive construction and destruction **
  *********************************************/
