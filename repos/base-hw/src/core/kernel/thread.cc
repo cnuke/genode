@@ -229,8 +229,7 @@ void Thread::ipc_send_request_succeeded()
 void Thread::ipc_send_request_failed()
 {
 	assert(_state == AWAITS_IPC);
-	_state = ACTIVE;
-	_activate();
+	_state = DEAD;
 	helping_finished();
 }
 
@@ -891,10 +890,10 @@ void Thread::_call()
 		}
 	case Core_call_id::VCPU_CREATE:
 		{
-			_call_vcpu_create(*user_arg_1<C_vcpu*>(), user_arg_2<unsigned>(),
-			                  *user_arg_3<Board::Vcpu_state*>(),
-			                  *user_arg_4<Vcpu::Identity*>(),
-			                  user_arg_5<capid_t>());
+			user_ret(_call_vcpu_create(*user_arg_1<C_vcpu*>(), user_arg_2<unsigned>(),
+			                           *user_arg_3<Board::Vcpu_state*>(),
+			                           *user_arg_4<Vcpu::Identity*>(),
+			                           user_arg_5<capid_t>()));
 			return;
 		}
 	case Core_call_id::VCPU_DESTROY:

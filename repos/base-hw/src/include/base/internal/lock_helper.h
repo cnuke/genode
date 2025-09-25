@@ -64,7 +64,7 @@ static inline bool thread_check_stopped_and_restart(Genode::Thread *thread_ptr)
 	case Kernel::Thread_restart_result::ALREADY_ACTIVE: return false;
 	case Kernel::Thread_restart_result::INVALID:        break;
 	};
-	return false;
+	return true;
 }
 
 
