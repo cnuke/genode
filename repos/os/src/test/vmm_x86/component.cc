@@ -566,7 +566,7 @@ void Vmm::Vcpu::_cpu_init(Vcpu_state &state)
 	 * magic number to check for testing purpuse
 	 */
 	state.tsc_aux.charge((0xaffeU << 16) | _id);
-	state.tsc_offset.charge(0xff00UL << 48);
+	state.tsc_offset.charge(0xff00ULL << 48);
 }
 
 
