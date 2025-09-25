@@ -61,8 +61,8 @@ class Core::Page_table_allocator : public Hw::Page_table_allocator
 				return ret;
 			}
 
-			Reconstructible<Key> v;
-			Reconstructible<Key> p;
+			Key v;
+			Key p;
 
 			List_element elem { this };
 
@@ -73,22 +73,6 @@ class Core::Page_table_allocator : public Hw::Page_table_allocator
 				table(ram),
 				v(virt_dict, virt(), *this),
 				p(phys_dict, table.phys_addr(), *this) {}
-
-			void set(List       &empty_list,
-			         Dictionary &virt_dict,
-			         Dictionary &phys_dict)
-			{
-				empty_list.remove(&elem);
-				v.construct(virt_dict, virt(), *this);
-				p.construct(phys_dict, table.phys_addr(), *this);
-			}
-
-			void unset(List &empty_list)
-			{
-				v.destruct();
-				p.destruct();
-				empty_list.insert(&elem);
-			}
 		};
 
 		Accounted_mapped_ram_allocator &_accounted_mapped_ram;
@@ -111,6 +95,16 @@ class Core::Page_table_allocator : public Hw::Page_table_allocator
 			_accounted_mapped_ram(ram),
 			_alloc_tables(heap, _initial_sb_tables)
 		{}
+
+		~Page_table_allocator()
+		{
+			while (_empty_list.first()) {
+				List_element *le = _empty_list.first();
+				_empty_list.remove(le);
+				le->object()->~Entry();
+				Allocation { _alloc_tables, { le->object(), sizeof(Entry) } };
+			}
+		}
 
 		Attempt<addr_t, Lookup_error> _phys_addr(addr_t virt_addr) override
 		{
@@ -136,8 +130,8 @@ class Core::Page_table_allocator : public Hw::Page_table_allocator
 			List_element *le = _empty_list.first();
 
 			if (le) {
+				_empty_list.remove(le);
 				Entry &entry = *le->object();
-				entry.set(_empty_list, _virt_dict, _phys_dict);
 				entry.table.obj([&] (Entry::Table &t) { ptr = &t; });
 				return { *this, { ptr, sizeof(Entry::Table) }};
 			}
@@ -168,7 +162,7 @@ class Core::Page_table_allocator : public Hw::Page_table_allocator
 		void _free(Allocation &a) override
 		{
 			_virt_dict.with_element((addr_t)a.ptr,
-				[&] (Key &k) { k.entry.unset(_empty_list); },
+				[&] (Key &k) { _empty_list.insert(&k.entry.elem); },
 				[] () { });
 		}
 };
