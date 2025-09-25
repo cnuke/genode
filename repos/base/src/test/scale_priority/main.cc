@@ -33,7 +33,7 @@ struct Main
 	long const     highest_prio_end   { platform_prio_size-1 };
 	long const     lowest_prio_start  { prio_max * platform_prio_size };
 
-	size_t arg_buffer_ram  { 2*4096 };
+	size_t arg_buffer_ram  { 4*4096 };
 	size_t trace_ram_quota { arg_buffer_ram + 4 * 4096 };
 
 	Trace::Connection trace { env,
