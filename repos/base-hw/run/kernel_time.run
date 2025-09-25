@@ -1,3 +1,9 @@
+# Test requires SMP, hence exclude single-core platforms
+if {[have_include "power_on/qemu"]} {
+	if {[have_board pbxa9]}     { return 0 }
+	if {[have_board zynq_qemu]} { return 0 }
+}
+
 build { core init lib/ld timer test/kernel_time }
 
 create_boot_directory

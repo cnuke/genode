@@ -63,6 +63,11 @@ struct Main
 
 	Main(Env &env) : env(env)
 	{
+		if (env.cpu().affinity_space().total() == 1) {
+			error("Test requires SMP");
+			env.parent().exit(1);
+		}
+
 		timer.msleep(5000);
 		probe.start();
 
