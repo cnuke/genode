@@ -119,7 +119,8 @@ SRC_LIB_TIMEOUT += duration.cc \
                    hw/timer_connection_timestamp.cc \
                    timeout.cc \
                    timer_connection.cc \
-                   timer_connection_time.cc
+                   timer_connection_time.cc \
+                   timer_connection_timestamp.cc
 
 SRC_LIB_STARTUP += _main.cc \
                    $(addprefix spec/,${call selected_content,SRC_LIB_STARTUP_SPECS})
