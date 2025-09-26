@@ -60,36 +60,13 @@
 		</route>
 	</start>
 
-	<start name="fs_rom" priority="-3" pkg="jschlatow/pkg/fs_rom/2025-04-09">
+	<start name="fs_rom" priority="-3">
 		<route>
 			<service name="File_system"> <parent identity="report"/> </service>
 		</route>
 	</start>
 
-	<start name="system_info" pkg="jschlatow/pkg/system_info/2025-04-11" priority="-3">
-		<route>
-			<service name="Gui"> <parent label="backdrop"/> </service>
-			<service name="Rtc"> <child name="system_clock"/> </service>
-			<service name="ROM" label="drivers/iommu"> <child name="fs_rom"/> </service>
-			<service name="ROM" label="runtime/nic_router/state"> <child name="fs_rom"/> </service>
-		</route>
-		<config default_timezone="CET-1CEST,M3.5.0,M10.5.0" background_color="#333955">
-			<vfs> <dir name="dev"> <log/> <rtc/> </dir> </vfs>
-			<libc stdout="/dev/log" rtc="/dev/rtc"/>
-			<label>Goa Testbed</label>
-			<clock/>
-			<tabular rom="runtime/nic_router/state" alt="no IP found">
-				<node type="domain" name="uplink">
-					<row label="Uplink" attribute="ipv4"/>
-				</node>
-				<node type="domain" name="default">
-					<row label="Default" attribute="ipv4"/>
-				</node>
-			</tabular>
-		</config>
-	</start>
-
-	<start name="goa_testbed" pkg="jschlatow/pkg/goa_testbed/2025-04-11" priority="-3">
+	<start name="goa_testbed" pkg="genodelabs/pkg/goa_testbed/2025-09-25" priority="-3">
 		<route>
 			<service name="TRACE">       <parent/> </service>
 			<service name="VM">          <parent/> </service>
