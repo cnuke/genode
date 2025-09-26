@@ -201,10 +201,10 @@ namespace Kernel {
 	 * \param thread  pointer to thread kernel object
 	 * \param on      enable or disable
 	 */
-	inline void thread_single_step(Thread &thread, bool &on)
+	inline void thread_single_step(Thread &thread, bool on)
 	{
 		core_call(Core_call_id::THREAD_SINGLE_STEP, (Call_arg)&thread,
-		          (Call_arg)&on);
+		          (Call_arg)on);
 	}
 
 	/**
