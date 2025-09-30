@@ -1,6 +1,10 @@
 # Test requires SMP, hence exclude single-core platforms
+assert {![have_board rpi]}
+assert {![have_board imx53_qsb]}
+assert {![have_board imx53_qsb_tz]}
 if {[have_include "power_on/qemu"]} {
 	if {[have_board pbxa9]}           { return 0 }
+	if {[have_board pc]}              { return 0 }
 	if {[have_board zynq_qemu]}       { return 0 }
 	if {[have_board virt_qemu_riscv]} { return 0 }
 }
