@@ -220,8 +220,7 @@ void Thread::signal_receive_signal(void * const base, size_t const size)
 void Thread::ipc_send_request_succeeded()
 {
 	assert(_state == AWAITS_IPC);
-	_state = ACTIVE;
-	_activate();
+	_become_active();
 	helping_finished();
 }
 
@@ -229,7 +228,7 @@ void Thread::ipc_send_request_succeeded()
 void Thread::ipc_send_request_failed()
 {
 	assert(_state == AWAITS_IPC);
-	_state = DEAD;
+	_become_inactive(DEAD);
 	helping_finished();
 }
 
@@ -243,6 +242,9 @@ void Thread::ipc_await_request_succeeded()
 
 void Thread::_become_active()
 {
+	if (_state == DEAD)
+		return;
+
 	if (_state != ACTIVE && !_paused) Cpu_context::_activate();
 	_state = ACTIVE;
 }
@@ -250,7 +252,11 @@ void Thread::_become_active()
 
 void Thread::_become_inactive(State const s)
 {
-	if (_state == ACTIVE && !_paused) Cpu_context::_deactivate();
+	if (_state == DEAD)
+		return;
+
+	if ((_state == ACTIVE && !_paused) || (s == DEAD))
+		Cpu_context::_deactivate();
 	_state = s;
 }
 
