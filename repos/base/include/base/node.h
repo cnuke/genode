@@ -121,6 +121,8 @@ class Genode::Node : Noncopyable
 
 		void _for_each_quoted_line(With_quoted_line::Ft const &) const;
 
+		friend class Generator;  /* for 'Generator::append_node' */
+
 	public:
 
 		Node() { /* type is "empty" */ };
@@ -330,7 +332,14 @@ class Genode::Generator : Noncopyable
 		[[nodiscard]] bool append_node(auto const &node, Max_depth const &max_depth)
 		{
 			if (_xml_ptr) return _xml_ptr->append_node(node, { max_depth.value });
-			if (_hrd_ptr) return _hrd_ptr->append_node(node, { max_depth.value });
+			if (_hrd_ptr)
+				return node._with(
+					[&] (Xml_node const &) {
+						return _hrd_ptr->append_node(node, { max_depth.value }); },
+					[&] (Hrd_node const &hrd) {
+						return _hrd_ptr->append_node(hrd), true; },
+					[&] {
+						return true; });
 
 			return false;
 		}
@@ -338,7 +347,14 @@ class Genode::Generator : Noncopyable
 		[[nodiscard]] bool append_node_content(auto const &node, Max_depth const &max_depth)
 		{
 			if (_xml_ptr) return _xml_ptr->append_node_content(node, { max_depth.value });
-			if (_hrd_ptr) return _hrd_ptr->append_node_content(node, { max_depth.value });
+			if (_hrd_ptr)
+				return node._with(
+					[&] (Xml_node const &) {
+						return _hrd_ptr->append_node_content(node, { max_depth.value }); },
+					[&] (Hrd_node const &hrd) {
+						return _hrd_ptr->append_node_content(hrd), true; },
+					[&] {
+						return true; });
 
 			return false;
 		}
