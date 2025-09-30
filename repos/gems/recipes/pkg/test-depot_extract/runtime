@@ -119,7 +119,7 @@
 			<binary name="sequence"/>
 			<config>
 				<start name="dummy" caps="100">
-					<config> <sleep ms="7000"/> <exit/> </config>
+					<config> <sleep ms="12000"/> <exit/> </config>
 				</start>
 				<start name="fs_query" caps="120" ram="2M">
 					<config>
