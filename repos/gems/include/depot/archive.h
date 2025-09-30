@@ -28,16 +28,18 @@ struct Depot::Archive
 	using Path    = String<100>;
 	using User    = String<64>;
 	using Name    = String<80>;
+	using Arch    = String<10>;
 	using Version = String<40>;
 
 	enum Type { PKG, RAW, API, SRC, BIN, DBG, IMAGE, INDEX };
 
 	struct Unknown { };
 
-	using User_result    = Attempt<User,    Unknown>;
-	using Type_result    = Attempt<Type,    Unknown>;
-	using Name_result    = Attempt<Name,    Unknown>;
-	using Version_result = Attempt<Version, Unknown>;
+	using User_result     = Attempt<User,    Unknown>;
+	using Type_result     = Attempt<Type,    Unknown>;
+	using Name_result     = Attempt<Name,    Unknown>;
+	using Version_result  = Attempt<Version, Unknown>;
+	using Bin_path_result = Attempt<Path,    Unknown>;
 
 
 	/**
@@ -187,6 +189,20 @@ struct Depot::Archive
 	{
 		return (index(path) || image_index(path)) ? Path(path, ".xz")
 		                                          : Path(path, ".tar.xz");
+	}
+
+	/**
+	 * Return path to binary archive for a given src archive
+	 */
+	static Bin_path_result bin_path(Path const &src, Arch const &arch)
+	{
+		return user(src).convert<Bin_path_result>([&] (User const &user) {
+			return name(src).convert<Bin_path_result>([&] (Name const &name) {
+				return version(src).convert<Bin_path_result>([&] (Version const &version) {
+					return Path { user, "/bin/", arch, "/", name, "/", version };
+				}, [&] (Unknown) -> Unknown { return { }; });
+			}, [&] (Unknown) -> Unknown { return { }; });
+		}, [&] (Unknown) -> Unknown { return { }; });
 	}
 };
 

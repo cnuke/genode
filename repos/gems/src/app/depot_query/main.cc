@@ -27,9 +27,11 @@ Depot_query::Main::_find_rom_in_pkg(File_content    const &archives,
 
 			switch (type) {
 			case Archive::SRC:
-				_with_bin_path(archive_path, [&] (Archive::Path const &bin_path) {
-					if (_file_exists(bin_path, rom_label))
-						result = Archive::Path { bin_path, "/", rom_label }; });
+				Archive::bin_path(archive_path, _architecture).with_result(
+					[&] (Archive::Path const &bin_path) {
+						if (_file_exists(bin_path, rom_label))
+							result = Archive::Path { bin_path, "/", rom_label }; },
+					[&] (Archive::Unknown) { });
 				break;
 
 			case Archive::RAW:
@@ -253,8 +255,10 @@ void Depot_query::Main::_collect_binary_dependencies(Archive::Path const &path,
 			break;
 
 		case Archive::SRC:
-			_with_bin_path(path, [&] (Archive::Path const &bin_path) {
-				dependencies.record(bin_path, require_verify); });
+			Archive::bin_path(path, _architecture).with_result(
+				[&] (Archive::Path const &bin_path) {
+					dependencies.record(bin_path, require_verify); },
+				[&] (Archive::Unknown) { });
 			break;
 
 		case Archive::RAW:
