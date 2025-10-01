@@ -219,8 +219,7 @@ void Component::construct(Genode::Env &env)
 		Hrd_generator::generate({ buf, sizeof(buf)}, "compound", [&] (Hrd_generator &g) {
 			node.with_sub_node("config", [&] (Hrd_node const &node) {
 				node.with_sub_node("vfs", [&] (Hrd_node const &node) {
-					if (!g.append_node(node, { 10 }))
-						warning("g.append_node unexpectedly failed");
+					g.append_node(node);
 				}, [] { });
 			}, [] { });
 		}).with_result(
