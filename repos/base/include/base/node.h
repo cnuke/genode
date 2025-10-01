@@ -329,7 +329,7 @@ class Genode::Generator : Noncopyable
 
 		void node_attributes(Node const &node);
 
-		[[nodiscard]] bool append_node(auto const &node, Max_depth const &max_depth)
+		[[nodiscard]] bool append_node(Node const &node, Max_depth const &max_depth)
 		{
 			if (_xml_ptr) return _xml_ptr->append_node(node, { max_depth.value });
 			if (_hrd_ptr)
@@ -344,7 +344,7 @@ class Genode::Generator : Noncopyable
 			return false;
 		}
 
-		[[nodiscard]] bool append_node_content(auto const &node, Max_depth const &max_depth)
+		[[nodiscard]] bool append_node_content(Node const &node, Max_depth const &max_depth)
 		{
 			if (_xml_ptr) return _xml_ptr->append_node_content(node, { max_depth.value });
 			if (_hrd_ptr)
@@ -355,6 +355,34 @@ class Genode::Generator : Noncopyable
 						return _hrd_ptr->append_node_content(hrd), true; },
 					[&] {
 						return true; });
+
+			return false;
+		}
+
+		/**
+		 * Append copy of XML node
+		 *
+		 * \deprecated  accommodate components not fully converted to Node API yet
+		 * \noapi
+		 */
+		[[nodiscard]] bool append_node(Xml_node const &node, Max_depth const &max_depth)
+		{
+			if (_xml_ptr) return _xml_ptr->append_node(node, { max_depth.value });
+			if (_hrd_ptr) return _hrd_ptr->append_node(node, { max_depth.value });
+
+			return false;
+		}
+
+		/**
+		 * Append body of XML node
+		 *
+		 * \deprecated  accommodate components not fully converted to Node API yet
+		 * \noapi
+		 */
+		[[nodiscard]] bool append_node_content(Xml_node const &node, Max_depth const &max_depth)
+		{
+			if (_xml_ptr) return _xml_ptr->append_node_content(node, { max_depth.value });
+			if (_hrd_ptr) return _hrd_ptr->append_node_content(node, { max_depth.value });
 
 			return false;
 		}
