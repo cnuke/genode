@@ -126,7 +126,7 @@ class Genodefb :
 
 		void update_mode(Gui::Rect gui_win)
 		{
-			Lock_guard(*this);
+			Lock_guard guard(*this);
 
 			_gui_win = gui_win;
 
@@ -140,7 +140,7 @@ class Genodefb :
 
 		void invalidate_gui()
 		{
-			Lock_guard(*this);
+			Lock_guard guard(*this);
 
 			_gui  = nullptr;
 			_view = nullptr;
@@ -170,7 +170,7 @@ class Genodefb :
 			ComPtr<IDisplaySourceBitmap> tmp { };
 			_display->QuerySourceBitmap(screen, tmp.asOutParam());
 
-			Lock_guard(*this);
+			Lock_guard guard(*this);
 
 			/* save the new bitmap reference */
 			_display_bitmap = tmp;
@@ -228,7 +228,7 @@ class Genodefb :
 
 		HRESULT NotifyUpdate(ULONG o_x, ULONG o_y, ULONG width, ULONG height) override
 		{
-			Lock_guard(*this);
+			Lock_guard guard(*this);
 
 			if (!_fb_base || !_gui)
 				return S_OK;
@@ -285,7 +285,7 @@ class Genodefb :
 		                               PRUint32 imageSize,
 		                               PRUint8 *image) override
 		{
-			Lock_guard(*this);
+			Lock_guard guard(*this);
 
 			if (!_fb_base || !_gui)
 				return S_OK;
