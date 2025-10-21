@@ -144,7 +144,7 @@ class Depot_download_manager::Import
 				case BLESSED:                  return "stage";  /* prepare extraction */
 				case STAGED:                   return "extract";
 				case EXTRACTED:                return "finalize";
-				case COMMITTED:                return "done";
+				case COMMITTED:                return "committed";
 				case MALFORMED:                return "malformed";
 				};
 				return "";
