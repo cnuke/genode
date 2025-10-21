@@ -288,7 +288,7 @@ class Acpica::Io_mem
 
 			auto iom = new (Acpica::heap()) Genode::Io_mem_connection(Acpica::env(), phys, size);
 			if (!iom->dataspace().valid()) {
-				destroy(Acpica::heap(), io_mem->_io_mem);
+				destroy(Acpica::heap(), iom);
 				return nullptr;
 			}
 
