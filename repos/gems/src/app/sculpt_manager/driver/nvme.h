@@ -46,6 +46,7 @@ struct Sculpt::Nvme_driver : private Noncopyable
 			gen_named_node(g, "binary", "nvme");
 			gen_provides<Block::Session>(g);
 			g.node("config", [&] {
+				g.attribute("max_hmb_size", "64M");
 				g.attribute("system", "yes");
 				g.node("report", [&] { g.attribute("namespaces", "yes"); });
 				g.node("policy", [&] {
@@ -66,7 +67,7 @@ struct Sculpt::Nvme_driver : private Noncopyable
 	{
 		_nvme.conditional(board_info.detected.nvme,
 		                  registry, "nvme", Priority::DEFAULT,
-		                  Ram_quota { 8*1024*1024 }, Cap_quota { 100 });
+		                  Ram_quota { 72*1024*1024 }, Cap_quota { 100 });
 	}
 
 	void with_namespaces(auto const &fn) const
