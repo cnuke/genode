@@ -379,6 +379,7 @@ install_config {
 		<provides> <service name="File_system"/> </provides>
 		<config>
 			<vfs>
+				<ram_log name="log" limit="1M"/>
 				<ram/>
 				<import>
 					<inline name="log">### start ###</inline>
