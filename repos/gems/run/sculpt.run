@@ -382,7 +382,6 @@ install_config {
 				<ram_log name="log" limit="1M"/>
 				<ram/>
 				<import>
-					<inline name="log">### start ###</inline>
 					<dir name="runtime">
 						<inline name="state"><empty/></inline>
 						<dir name="nic_router"> <inline name="state">    <empty/></inline> </dir>
