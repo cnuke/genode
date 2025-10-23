@@ -43,6 +43,7 @@ install_config {
 			<arg value="speedtest"/>
 			<arg value="--verify"/>
 			<arg value="--testset"/> <arg value="main"/>
+			<arg value="test.db"/>
 		</config>
 	</start>
 </config>
