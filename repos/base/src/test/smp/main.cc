@@ -149,9 +149,7 @@ namespace Mp_server_test {
 
 namespace Affinity_test {
 
-	enum {
-		COUNT_VALUE = 10 * 1024 * 1024
-	};
+	enum { COUNT_VALUE = 10 * 1024 };
 
 	struct Spinning_thread : Genode::Thread
 	{
@@ -164,8 +162,10 @@ namespace Affinity_test {
 			Genode::log("Affinity: thread started on CPU ",
 			            location, " spinning...");
 
-			barrier.wakeup();
-			for (;;) cnt = cnt + 1;
+			for (;;) {
+				cnt = cnt + 1;
+				barrier.wakeup();
+			}
 		}
 
 		Spinning_thread(Genode::Env &env, Location location)
