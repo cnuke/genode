@@ -20,6 +20,7 @@ _/src/libc
 _/src/libdrm
 _/src/libflac
 _/src/libiconv
+_/src/libmad
 _/src/libogg
 _/src/libpng
 _/src/libssh
@@ -30,6 +31,7 @@ _/src/nic_router
 _/src/nitpicker
 _/src/openssl
 _/src/opus
+_/src/opusfile
 _/src/pcre
 _/src/posix
 _/src/profile
