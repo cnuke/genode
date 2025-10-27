@@ -1,5 +1,6 @@
 _/pkg/avplay
 _/pkg/download_debian
+_/pkg/ext2_fs
 _/pkg/fs_rom
 _/pkg/part_block
 _/pkg/pdf_view
