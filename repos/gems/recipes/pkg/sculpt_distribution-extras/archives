@@ -7,3 +7,5 @@ _/pkg/pdf_view
 _/pkg/ssh_client
 _/pkg/user_shell
 _/pkg/vbox6-block
+_/pkg/top_view
+_/pkg/msr_gui
