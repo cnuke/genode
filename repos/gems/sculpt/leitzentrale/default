@@ -265,8 +265,10 @@
 				<config>
 					<initial width="100"/>
 					<palette>
-						<color index="0" value="#2f3953"/>
-						<color index="8" value="#2f3953"/>
+						<color index="0"  value="#1c1b19"/>
+						<color index="8"  value="#1c1b19"/>
+						<color index="7"  value="#d0bfa1"/>
+						<color index="15" value="#fce8c3"/>
 					</palette>
 					<vfs>
 						<rom name="VeraMono.ttf"/>
