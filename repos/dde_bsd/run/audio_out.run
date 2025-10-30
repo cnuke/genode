@@ -11,7 +11,7 @@ if {[have_spec linux]} {
 }
 
 # select use of 'Audio_in/Audio_out' or 'Record/Play' sessions
-proc use_record_play_sessions { } { return 1 }
+proc use_record_play_sessions { } { return 0 }
 
 create_boot_directory
 import_from_depot [depot_user]/src/[base_src] \
@@ -20,6 +20,7 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/init \
                   [depot_user]/src/pci_decode \
                   [depot_user]/src/platform \
+                  [depot_user]/src/cpu_burner \
                   [depot_user]/src/report_rom
 
 
@@ -32,6 +33,7 @@ proc build_targets { } {
 		                test/audio_play lib/vfs
 	} else {
 		lappend targets test/audio_out
+		lappend targets server/mixer
 	}
 }
 
