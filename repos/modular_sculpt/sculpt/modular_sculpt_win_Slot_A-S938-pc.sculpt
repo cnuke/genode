@@ -27,3 +27,5 @@ launcher: usb_webcam
 launcher: vm_windows_ahci_Slot_A
 
 launcher: shell.1 shell.2 shell.3
+
+launcher: top_view

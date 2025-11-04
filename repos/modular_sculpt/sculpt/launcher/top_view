@@ -1,0 +1,7 @@
+<launcher pkg="top_view" priority="-2">
+	<route>
+		<service name="File_system" label_prefix="fonts ->"> <child name="fonts_fs"/> </service>
+		<service name="Gui">                                 <child name="wm"/>       </service>
+		<service name="TRACE"> <parent label="global"/> </service>
+	</route>
+</launcher>
