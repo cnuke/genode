@@ -658,9 +658,10 @@ void Main::_handle_sandbox_state(Node const &sandbox_state)
 	case CHECKING:
 		with_exit_code(e2fsck, sandbox_state, [&] (int code) {
 			/* continue if errors were corrected */
-			if (code <= 2)
+			if (code <= 2) {
 				set_state(UNLOCKED);
-			else
+				Signal_transmitter(state_handler).submit();
+			} else
 				error("unable to correct file-system errors");
 		}); 
 		break;
@@ -879,7 +880,10 @@ void Main::generate_sandbox_config(Generator &g) const
 		break;
 
 	case UNLOCKED:
-
+		gen_parent_provides_and_report_nodes(g);
+		gen_tresor_trust_anchor_vfs_start_node(g, tresor_trust_anchor_vfs, jent_avail);
+		gen_tresor_vfs_start_node(g, tresor_vfs, image_name);
+		gen_tresor_vfs_block_start_node(g, tresor_vfs_block);
 		gen_sandbox_cfg_extend_and_rekey(g);
 		if (extend_state != Extend::INACTIVE && ui_config->extend->tree == Ui_config::Extend::VIRTUAL_BLOCK_DEVICE)
 			break;
