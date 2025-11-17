@@ -1,10 +1,10 @@
 <runtime ram="16M" caps="1000" binary="init">
 
 	<events>
-		<timeout meaning="failed" sec="300" />
-		<log meaning="succeeded">
+		<fail after_secondsc="300"/>
+		<succeed>
 			[init] child "gcov" exited with exit value 0
-		</log>
+		</succeed>
 	</events>
 
 	<content>
