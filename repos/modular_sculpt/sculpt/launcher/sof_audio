@@ -1,6 +1,6 @@
 <launcher pkg="pc_audio" priority="0" ram="8M">
 	<affinity xpos="0" width="1"/>
-	<config record_play="no" report_mixer="true" speaker_priority="external" mic_priority="external">
+	<config record_play="yes" report_mixer="true" speaker_priority="external" mic_priority="external">
 		<control type="int"  id="0"  channel="0" name="Headphone Playback Volume" value="87" min="0" max="87"/>
 		<control type="int"  id="0"  channel="1" name="Headphone Playback Volume" value="87" min="0" max="87"/>
 		<control type="int"  id="2"  channel="0" name="Speaker Playback Volume" value="87" min="0" max="87"/>
@@ -25,6 +25,8 @@
 	</config>
 	<route>
 		<service name="Platform"> <parent label="audio"/> </service>
+		<service name="Record"> <child name="mixer"/> </service>
+		<service name="Play">   <child name="mixer"/> </service>
 		<service name="Report"> <parent/> </service>
 		<service name="RM"> <parent/> </service>
 	</route>

@@ -19,15 +19,15 @@
 		<rm/>
 		<rtc/>
 		<usb/>
-		<audio_out/>
-		<audio_in/>
+		<play/>
+		<record/>
 	</requires>
 
 	<config vbox_file="machine.vbox6" xhci="yes" vm_name="linux" capslock="rom" ld_verbose="yes">
 		<vfs>
 			<dir name="dev">
 				<log/> <rtc/> <null/> <gpu/> <zero/>
-				<legacy_oss name="dsp"/>
+				<oss name="dsp" min_ofrag_size="8192" min_ifrag_size="8192"/>
 				<block name="block0" label="block0" io_buffer="8M"/>
 			</dir>
 			<dir name="pipe"> <pipe/> </dir>
@@ -67,7 +67,7 @@
 		<rom label="stdcxx.lib.so"/>
 		<rom label="vfs.lib.so"/>
 		<rom label="vfs_gpu.lib.so"/>
-		<rom label="vfs_legacy_oss.lib.so"/>
+		<rom label="vfs_oss.lib.so"/>
 		<rom label="vfs_pipe.lib.so"/>
 		<rom label="virtualbox6"/>
 		<rom label="virtualbox6-shaderlib.lib.so"/>

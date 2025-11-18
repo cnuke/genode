@@ -33,12 +33,8 @@
 
 	<start name="default_fs_shell"/>
 
-	<start name="audio_mixer">
-		<route>
-			<service name="Audio_out"> <child name="sof_audio"/> </service>
-			<service name="Report"> <parent/> </service>
-		</route>
-	</start>
+	<start name="mixer"/>
+
 	<start name="sof_audio"/>
 
 	<start name="usb_webcam"/>
