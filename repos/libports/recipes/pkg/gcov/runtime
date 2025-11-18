@@ -1,11 +1,9 @@
 <runtime ram="16M" caps="1000" binary="init">
 
-	<events>
-		<fail after_secondsc="300"/>
-		<succeed>
-			[init] child "gcov" exited with exit value 0
-		</succeed>
-	</events>
+	<fail after_seconds="300"/>
+	<succeed>
+		[init] child "gcov" exited with exit value 0
+	</succeed>
 
 	<content>
 		<rom label="gcov"/>
