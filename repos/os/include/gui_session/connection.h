@@ -72,7 +72,7 @@ class Gui::Connection : private Genode::Connection<Session>
 
 		void _with_info_rom(auto const &fn)
 		{
-			if (!_info_rom.constructed())
+			if (!_info_ds.constructed())
 				_info_rom.construct(_info_rom_capability());
 			fn(*_info_rom);
 		}
@@ -80,7 +80,7 @@ class Gui::Connection : private Genode::Connection<Session>
 		void _with_info_xml(auto const &fn)
 		{
 			_with_info_rom([&] (Rom_session_client &rom) {
-				if ((rom.update() == false) | !_info_ds.constructed())
+				if (!_info_ds.constructed() || rom.update() == false)
 					_info_ds.construct(_env.rm(), rom.dataspace());
 
 				try {
@@ -94,7 +94,7 @@ class Gui::Connection : private Genode::Connection<Session>
 		void _with_info_node(auto const &fn)
 		{
 			_with_info_rom([&] (Rom_session_client &rom) {
-				if ((rom.update() == false) | !_info_ds.constructed())
+				if (!_info_ds.constructed() || rom.update() == false)
 					_info_ds.construct(_env.rm(), rom.dataspace());
 
 				fn(Node(Const_byte_range_ptr(_info_ds->local_addr<char>(),
