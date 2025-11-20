@@ -33,12 +33,30 @@
 
 	<start name="default_fs_shell"/>
 
-	<start name="audio_mixer">
-		<route>
-			<service name="Audio_out"> <child name="sof_audio"/> </service>
-			<service name="Report"> <parent/> </service>
-		</route>
+	<start name="mixer">
+		<config jitter_ms="10" warning_rate_ms="0">
+			<mix name="left">
+				<play label="vm_ubuntu_nvme_Slot_B -> left"  volume="0.5"/>
+				<play label="vm_windows_nvme_Slot_A -> left" volume="0.5"/>
+			</mix>
+			<mix name="right">
+				<play label="vm_ubuntu_nvme_Slot_B -> right"  volume="0.5"/>
+				<play label="vm_windows_nvme_Slot_A -> right" volume="0.5"/>
+			</mix>
+
+			<mix name="mic_left">  <play label="sof_audio -> mic_left"/>  </mix>
+			<mix name="mic_right"> <play label="sof_audio -> mic_right"/> </mix>
+
+			<policy label="vm_ubuntu_nvme_Slot_B -> left"   record="mic_left"  period_ms="46" jitter_ms="23" volume="1.0"/>
+			<policy label="vm_ubuntu_nvme_Slot_B -> right"  record="mic_right" period_ms="46" jitter_ms="23" volume="1.0"/>
+			<policy label="vm_windows_nvme_Slot_A -> left"  record="mic_left"  period_ms="46" jitter_ms="23" volume="1.0"/>
+			<policy label="vm_windows_nvme_Slot_A -> right" record="mic_right" period_ms="46" jitter_ms="23" volume="1.0"/>
+
+			<policy label="sof_audio -> left"   record="left"  period_ms="12" jitter_ms="5" volume="1.0"/>
+			<policy label="sof_audio -> right"  record="right" period_ms="12" jitter_ms="5" volume="1.0"/>
+		</config>
 	</start>
+
 	<start name="sof_audio"/>
 
 	<start name="usb_webcam"/>
