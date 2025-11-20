@@ -144,12 +144,9 @@ class Audio_out::Out
 				p_left->mark_as_played();
 				p_right->mark_as_played();
 
-			} else {
-				_play_silence();
-				return;
-			}
 
-			_advance_position(p_left, p_right);
+				_advance_position(p_left, p_right);
+			} else { _play_silence(); }
 
 			/* always report when a period has passed */
 			Session_component *channel_left  = channel_acquired[LEFT];
