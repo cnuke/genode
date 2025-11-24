@@ -1,0 +1,827 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 25.11
+              ===============================================
+
+                               Genode Labs
+
+
+
+; intro
+; @nfeske
+
+
+Genode-world using the Goa SDK
+##############################
+
+; @cnuke, @chelmuth
+
+commit 114b23ff55f17f394921d1ecc775e61eece28193
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Thu Sep 18 14:43:22 2025 +0200
+
+    Move existing content into legacy sub-directory
+    
+    This commit moves the already existing content of the _genode-world_
+    repository into the _legacy_ sub-directory. Adjusting the currently
+    checked-out repository is necessary to prevent the interruption of
+    the development process.
+    
+    Please look at the updated _README_ file for further information.
+    
+    Issue #412.
+
+commit 3e415afacd94f2b0db7701d56236f2495938d45c
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Sep 19 12:51:21 2025 +0200
+
+    Adapt README to the new shape of the repository
+    
+    Issue #412.
+
+commit e391bd7087df2a56e4d1c8d794bbf93bfe89f59f
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Fri Oct 24 16:58:18 2025 +0200
+
+    Set wildcard user for projects within world
+    
+    Issue #412.
+
+
+Enhanced Goa SDK
+================
+
+; @jschlatow, @ssumpf
+
+commit 6e29c9d9f174420db33e6ece223b697bbf40fa38
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 5 09:28:30 2025 +0200
+
+    use hrd tool for config parsing/generation
+    
+    The hrd tool is used XML/HRD parsing. Config generation is now done
+    in form of HRD. If the --hrd option is absent, the generated HRD
+    is converted into XML using the hrd tool.
+    
+    Fixes #142
+
+commit d537b4ea75488fe53a790a885c81fe283041869c
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Aug 21 21:53:03 2025 +0200
+
+    build.tcl: add option to silence sandboxed_build_command
+    
+    This is useful when reading the output from stdout of external commands
+    with 'verbose' enabled.
+    
+    issue #144
+
+commit 1ff73aa8a75ee09eb840226be26e7c4bf87e813c
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Aug 21 21:56:21 2025 +0200
+
+    meson: support both, shared libs and executables
+    
+    * use "meson introspect --targets" in order to obtain and distinguish a
+      list of executable/shared library targets
+    * parse Json output of Meson's introspect
+    * split build into a shared library and a executable build stage
+    * use "meson configure" to adjust the ld_flags - depending on build stage
+    * add rpath_link for library search during linking
+    * support arm_v8a
+    * support subprojects
+    
+    issue #144
+
+commit 8a01bdd1670143e92399d3a008b6dca4f73458c3
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sat Sep 6 19:53:01 2025 +0200
+
+    api: allow '[directory:]<selector>' syntax
+    
+    also remove superfluous TABs from build.tcl
+    
+    issue #144
+
+commit 6627f9d8ee7b5051c7e26eee54601ca759273b2f
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Sep 9 18:23:24 2025 +0200
+
+    cargo: automatically install rust toolchain
+    
+    We currently need a compatible nightly toolchain to use cargo's `-Z`
+    option. If the known-to-work version is not installed and active
+    in the user's home directory, the toolchain gets installed at Goa's
+    install_dir.
+    
+    Fixes #107
+
+commit 7337c187b7a46cc57fc5acdfbabc6790b571333a
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 26 15:13:25 2025 +0200
+
+    import: allow revision for sparse git checkouts
+    
+    When cloning with `--sparse`, git implies `--single-branch` and thus
+    all tags and branches get lost.
+
+commit 268a058952501dbf42162d329975201aea70ee5f
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 26 13:31:54 2025 +0200
+
+    use hrd for index export
+    
+    Issue #142
+
+commit b9dcc11338a576093428d68a5ca2d7b13ad9190d
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Wed Sep 10 15:34:18 2025 +0200
+
+    archive-versions: add optional --archive arguments
+    
+    When supplied with one or multiple `--archive <archive-name>` arguments,
+    `goa archive-version` prints version information only for the requested
+    archives.
+    
+    Issue #117
+
+commit 62cbda1db8e69c6aeab6f823d3022c73165ce367
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 11 11:55:10 2025 +0200
+
+    depot tools: support download of depot index
+    
+    Issue #117
+
+commit 56788e4c56b0fe2174021203cb12b57f8ed66b23
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Sep 11 13:57:11 2025 +0200
+
+    query version information from depot-index files
+    
+    When supplied with the `--update-index` command-line argument or when
+    the `update_config` variable is set to 1, Goa automatically downloads
+    depot index files in order to look-up archive versions. This is
+    only done as a last resort, i.e. if there is no version information
+    defined in _goarc_ files and if Goa did not find a corresponding project
+    directory.
+    
+    Issue #117
+
+commit d26344573664cc5dd25f06602ffb0d201fd2608c
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Fri Sep 26 13:34:40 2025 +0200
+
+    support src and api nodes in depot index
+    
+    Issue #117
+
+commit d340866e01dda1cca95dd4ae36b31f245fcb7951
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 29 18:07:54 2025 +0200
+
+    add support for _profile_ library
+    
+    The profile library introduced by genodelabs/genode#5674 is a static
+    library using -finstrument-functions to collect and periodically output
+    profiling data. This commit adds a quirk for supporting the use of
+    this library in Goa projects. The output can be parsed with the
+    _backtrace_ tool or by executing the `goa backtrace` command.
+    
+    Fixes #149
+
+commit baf7f1e10106d13e434f6b76fc94962eccf3b116
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Sep 29 18:12:07 2025 +0200
+
+    examples: add profiling example
+    
+    Issue #149
+
+commit 241568b669469e32c3b80e28b18caeb5bb0ab82b
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Mon Oct 20 17:30:16 2025 +0200
+
+    Update to Sculpt 25.10
+
+commit 379e32a0f6a9eac173677d53bb22defec15f3bc9
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Oct 23 09:31:35 2025 +0200
+
+    meson: pkg-config tool_dir
+    
+    The tool_dir was set for pkg-config only. It now has to be correct
+    because sourcing query.tcl in util.tcl requires it.
+    
+    issue genodelabs/goa#153
+
+commit 6d9b6d68d994347ec17f57e91ad7a0edcaeea41c
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Thu Oct 23 14:18:28 2025 +0200
+
+    Add support for wildcard depot user
+    
+    This commit adds support for the wildcard depot user "_" in _used_apis_
+    and _archives_ files. The wildcard depot user is replaced with Goa's
+    depot_user config (if set). Goa's default depot_user config is "_" and
+    implies `--depot-overwrite``.
+    
+    Issue #146
+
+commit 789c5b83c031b97cc617736764fce1519c33a0b1
+Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
+Date:   Tue Oct 28 14:35:36 2025 +0100
+
+    add `goa exported` and `goa published` commands
+    
+    These commands allow identifying whether a version update is required
+    by comparing the current project state with the exported/published
+    version.
+    
+    Fixes #154
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+Human-inclined data (HID) processing
+====================================
+
+; @nfeske
+
+commit 2036e673354466c8241324a198252d5e20d4ffaa
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Sep 30 17:07:15 2025 +0200
+
+    Support for generating tabular HRD data
+    
+    The 'Generator::tabular' method instructs the HRD generator to format
+    the contained nodes in tabular way. Two forms are supported: In the
+    presence of nested nodes, the nodes appear as table columns and
+    attributes appear densely. With only one node level, attributes are
+    formatted as a table. Trailing optional attributes are displayed
+    densely.
+    
+    Fixes #5708
+
+commit 238cd936fd34bdba81b7e8aeeac610e263a8b6a6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 23 15:23:08 2025 +0200
+
+    HRD formatting tweaks
+    
+    Use tabular style where appropriate. Use "yes" or "no" instead of
+    "true" or "false" for boolean values, which is shorter and easier
+    on the eyes. In the presence of multiple attributes, let= "name"
+    appear first. So "connector name: HDMI-1" becomes "connector HDMI-1".
+    
+    Issue #5708
+
+commit fc60c67e38bfc7dcd670cfb012cec61c4c64f5c2
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Oct 30 10:35:06 2025 +0100
+
+    vbox6: do not depend on XML for USB passthrough
+
+[adjusted almost all component to be syntax-agnostic]
+
+
+API curation
+============
+
+; @nfeske
+
+commit dbd25a94e7513e3a0dad4ebe724b09e12cc8e9dd
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Sep 10 14:52:37 2025 +0200
+
+    base: decouple Thread API from CPU session
+    
+    This patch removes the deprecated Thread constructors and introduces the
+    use of 'Genode::Runtime' as token for global side effects, like the
+    interplay with the stack area.
+    
+    This change has ripple effects towards all places where 'Thread' objects
+    are manually constructed, e.g., 'Rpc_entrypoint'. Since all users must
+    be adapted anyway, this patch takes the opportunity of removing basic
+    types as constructor arguments.
+    
+    Fixes #5681
+
+
+Automatic component restart upon stopped heartbeat
+==================================================
+
+; @nfeske
+
+commit 0b36aa771d4e2f5092f5f96bb50712aa1070564a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Oct 21 16:50:45 2025 +0200
+
+    init: automatic restart after skipped heartbeats
+    
+    This patch simplifies the use of the heartbeat-monitoring mechanism by
+    adding the usual policy of restarting a non-responding child as a
+    feature to init. It is enabled by setting the 'restart_after_skipped'
+    attribute of the child's heartbeat node to a value greater than 0.
+    
+    Fixes #5718
+
+
+TCP/IP improvements
+===================
+
+; @ssumpf
+
+commit 3cee815f718a5e492a85d4df442f7d2507478b1e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Sep 22 08:36:05 2025 +0200
+
+    lxip: enable KEEPALIVE/REUSEADDR
+    
+    issue #5706
+
+commit 28ddde729ec2c4e552fd3909a1c4d334cc7405dc
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Sun Sep 28 21:32:55 2025 +0200
+
+    lwip: add support for sockopts
+    
+    * KEEPALIVE/REUSEADDR
+    * set so_error according to error returned by lwip (preparation for
+      SO_ERROR)
+    
+    issue #5706
+
+commit d7e5331486e153a8e89562f0f44d82e738ab7056
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Sep 24 09:27:26 2025 +0200
+
+    vfs/ip: add sockopt-file system
+    
+    * add Single_file_system based sockopt files in directory-file system
+      'sockopts'
+    * remove port checks because overlapping is handled by the IP-stacks now
+    
+    issue #5706
+
+commit 07e4351aaca5be3d9ead071ac909991218ae7a4e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Thu Sep 25 19:16:24 2025 +0200
+
+    libc: socket_fs_plugin support more sockopts
+    
+    Add support for KEEPALIVE/REUSEADDR
+    
+    issue #5706
+
+commit 40c5b333158dd5cbf5984ddda7f80f1888267336
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Sep 24 22:18:42 2025 +0200
+
+    run/sockopt_libc: libc based sockopt test
+    
+    * test sockopts
+    * no network required
+    
+    fixes #5706
+
+
+Memory-capped log-message aggregation
+=====================================
+
+; @nfeske
+
+commit edc9453b9b013e7a16a08409d0f856f16c5e7caa
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 22 16:27:13 2025 +0200
+
+    VFS plugin for constrained logging to RAM
+    
+    The ram_log VFS plugin stores up to 'limit' bytes of an append-only file
+    in RAM. Should the content written to the file exceed the configured
+    limit, the oldest content is replaced by zeros, making room for the
+    most recent logged information.
+    
+    Issue #5721
+
+commit d840677d89c283b0547fee43960abd142c3e45d4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 22 16:39:56 2025 +0200
+
+    sculpt: guard /report/log via ram_log VFS plugin
+    
+    Fixes #5721
+
+commit e93c5a7903306d515674b7953fb1709ed05e28e6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Oct 22 18:01:32 2025 +0200
+
+    sculpt,terminal_log: show log lines with timestamp
+    
+    The patch changes terminal_log such that each log line is prefixed with
+    a timestamp in seconds, showing one digit after the comma. Since this
+    change makes the component depend on the timer, the patch adjusts the
+    (few) users accordingly.
+    
+    Fixes #5422
+
+
+Simplified configuration of POSIX environment and arguments
+===========================================================
+
+; @nfeske
+
+commit 12f5b4c8db280b4ed6912e85f19e17a0c8ed7152
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Oct 25 11:25:26 2025 +0200
+
+    posix: support optional arg 'name' attribute
+    
+    Since tag-value argument pairs are technically two separate arguments,
+    they have to appear as separate arg nodes in the configuration, e.g.:
+    
+    + config
+      + arg | : -geometry
+      + arg | : 1024x768
+    
+    This wastes vertical space and does not convey well that both lines
+    belong together.
+    
+    By combining an optional 'name' attribute with quoted content, however,
+    tag-value arguments can nicely be written on a single line:
+    
+    + config
+      + arg -geometry | : 1024x768
+    
+    Fixes #5726
+
+
+Streamlined on-target test suite
+================================
+
+; @nfeske
+
+commit 603051c2fe9d9206bcb431c4d994dcd08764c2be
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 11 19:41:46 2025 +0100
+
+    depot_autopilot: modernize and don't rely on XML
+    
+    - Split test orchestration from the child-deployment from pkgs
+      by introducing a dedicated 'Plan' independend from 'Children'.
+    
+    - Converge the code back towards depot_deploy. Large parts of the
+      code in child.h and children.h actually originated from depot_deploy,
+      but got largely reformatted (i.e., by moving code to child.cc).
+      With this patch, depot_autopilot uses the implementation of
+      depot_deploy.
+    
+    - Replace the use of Xml_node by Node
+    
+    - Remove use of C++ exceptions
+    
+    - Remove local utilities like pointer.h and list.h
+    
+    - Drop deprecated <events> declarations
+    
+    - Drop log_prefix attribute from <fail> and <succeed> nodes.
+      This feature was implemented due to a suggestion in #4922 but
+      apparently remained unused.
+    
+    - Limit output of seconds to two digits after the comma because
+      the milliseconds digit is never inspected in practice.
+    
+    - Coding-style tweaks, e.g., removing superfluous braces around
+      single statements, avoiding superfluous Genode:: prefixes, and
+      introducing a proper Depot_autopilot namespace.
+    
+    Fixes #5745
+
+commit 6b04a700a79317254eef4974526cdefb43315cf1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Nov 20 15:50:18 2025 +0100
+
+    depot_autopilot: drop misleading [init] log prefix
+    
+    This patch removes the hardcoded [init] prefix from the test's log
+    output, which used to be enforced even for tests that did not involve
+    init.
+    
+    Note that this patch slightly tightens the meaning of the log pattern:
+    The previous version accepted a match of a pattern line against any part
+    of a log line. The new version accepts a match only if the pattern line
+    matches the log line from the beginning of the line. The previous
+    matching semantics can be achieved by starting a pattern line with a
+    wildcard.
+    
+    Fixes #5749
+
+commit 996d11ad05f5bc8c738687cf41c6233b676b4570
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Nov 20 21:13:04 2025 +0100
+
+    depot_autopilot: exit as success/fail criterion
+    
+    This patch introduces the 'exit' attribute to success/fail nodes, which
+    allows for the specifying expected exit values to finish the test. Until
+    now, this was only possible matching the log output of an intermediate
+    init instance.
+    
+    Issue #5753
+
+commit 1941698fd9ad293734fd9a1996c22ec9011ed98b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Nov 20 23:44:28 2025 +0100
+
+    depot_autopilot.run: shorten log prefix to "test"
+    
+    By rewriting the label of the depot_autopilot's LOG session, we
+    avoid an overly long label prefix on every line and move the
+    actual test messages more into focus.
+    
+    Issue #5753
+
+
+Device drivers
+##############
+
+; @chelmuth
+
+USB-to-serial adapters
+======================
+
+commit 3022954f80be1d0c256a4b5a8d9d2f4694d8f345
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Fri Sep 5 14:55:42 2025 +0200
+
+    Support USB-to-serial adapters
+    
+    Included drivers:
+    
+      Prolific 2303 Single Port (PL2303)
+      FTDI Single Port (FT232, FT245)
+      Winchiphead CH341 Single Port
+      CP210x UART Bridge
+    
+    Tested devices:
+    
+      067b:2303  PL2303
+      0557:2008  PL2303
+      0403:6001  FT232
+    
+    See usb_serial.run usb_serial_bash.run for integration examples.
+    
+    Issue #5686
+
+Improved Intel GPU support
+==========================
+
+; @ssumpf
+
+commit 6b19a30daaff4815e543dd4620162c8e312dfc29
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon Nov 17 08:52:39 2025 +0100
+
+    gpu/intel: enable Alder Lake GPUs
+    
+    This commit enables basic Alder Lake-GPU support (device id: 0x46a6).
+    There are no optimization in place.
+    
+    issue #5742
+
+commit 6e9965e64a46d4a33b1192d1d71d68a383e8aa8d
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Nov 18 11:45:39 2025 +0100
+
+    libdrm: add vtable to Gpu::Vram
+    
+    Commit "libdrm: move Gpu::Vram into separate namespace"
+    (db02e04d0c5465579a3d7d66dac17f2fc5ca830a) lead to an implementation
+    where both, lima and etnaviv, inherit from an empty Gpu::Vram class.
+    This causes the problem that the ID-space in both implementations is of
+    type Gpu::Vram, leading to the respective destructors (Lima::~Vram,
+    Etnaviv::~Vram) not being called upon destruction, and thus, not freeing
+    GPU memory.
+    
+    Featured in this commit:
+    
+    * move the Gpu::Vram definition into separate header which is used by
+      entaviv/lima
+    
+    * add virtual destructor to Gpu::Vram
+    
+    issue #5748
+
+commit 1f1bc09ea9c6e92006a811860ea0c935ffd49a8e
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Tue Nov 4 14:35:02 2025 +0100
+
+    mesa/iris: make bo-cache configurable
+    
+    The buffer-object cache requires quite some memory overhead but also
+    brings a lot of performance in low-latency benchmarks like glMark2. With
+    this commit we make the cache configurable trough the IRIS_USE_BO_CACHE
+    environment variable (default is true).
+    
+    issue #5748
+
+
+Platforms
+#########
+
+Execution on bare hardware (base-hw)
+====================================
+
+; @skalk
+
+commit b5c19addc5874b2c7b330c964faae757f8549897
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Sep 10 14:23:40 2025 +0200
+
+    hw: account for ressources of page-tables
+    
+    Add another page-table allocator that is able to dynamically extend
+    its memory, and thereby uses core's mapped memory that gets accounted
+    to the corresponding pd-session, or vm-session.
+    
+    The static page-allocator variant is kept for core's page-table, and
+    bootstrap.
+    
+    Fix #5645
+
+commit cfc7a9b9eb3ec99612bd517502fb1771f2409c98
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Sep 4 16:44:51 2025 +0200
+
+    hw: use typed return and id-values in syscalls
+    
+    * Introduce enum class definitions for syscall IDs
+    * Introduce specific return types per syscall with result
+    * Eliminate result values, which were never evalulated
+    * Distinguish architecture-specific register access from
+      system-call argument mapping
+    * Evalulate all arguments and return values inside the top-level
+      Kernel::Thread::_call member function, only use typed values
+      in all sub-functions
+    * Name kernel-internal sub-functions for system-call execution
+      in a unified fashion like: _call_[kobject]_[function],
+      whereby kobject means something like: thread, pd, irq, vcpu,
+      or signal, and function can be things like: pause, create, destroy,
+      and so on
+    
+    Fix #5384
+
+commit ff8eda28988a34e128b704fc1f401426cd38d18e
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Jun 13 15:01:31 2025 +0200
+
+    base-hw: map cpu-priorities to scheduling-groups
+    
+    Implement heuristic that matches the intention of Sculpt OS with
+    two init-levels: top-level static init with two prioritiy levels,
+    and dynamic runtime-init with up to eight priority levels.
+    
+    Ref #5117
+    Ref #5605
+
+commit dcce5c2efa99230423233761efd17ed933d3a489
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Oct 22 18:12:43 2025 +0200
+
+    hw: consistently differentiate local and global IC
+    
+    This patch tries to cleanup the architectural inconsistencies of interrupt
+    controller implementations by:
+    
+    * Consistently differentiate in between Board::Local_interrupt_controller and
+      Board::Global_interrupt_controller within kernel and bootstrap
+    * The name Board::Pic is thereby replaced by Board::Local_interrupt_controller
+    * Move the global parts of ARM's GICv2 and GICv3 to the corresponding
+      Board::Global_interrupt_controller classes, replacing dummy ones
+    * The maximum number of all (including shared) interrupts is part of the
+      Global_interrupt_controller now
+    * In bootstrap on platforms where IC initialization is crucial,
+      initialize Global_interrupt_controller and Local_interrupt_controller
+      at the same scope to enhance readability
+    
+    Implicitly, this commit removes a regression on ARMv8a boards with GICv2,
+    like the Pinephone that was brought in by:
+    
+    Issue #5640
+    Fix #5722
+
+commit f438d3ed145c79f14e3f8dd52182322f466385bb
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Nov 13 13:31:05 2025 +0100
+
+    hw: use X2APIC instead of LAPIC if possible on x86
+    
+    This commit introduces the X2APIC implementation in base-hw. To be able
+    to keep the register definitions and usage in the class, this commit
+    introduces a local "Mmio" access utility used by the underlying
+    Genode::Mmio template, which uses the correct way to access the APIC,
+    either by MSR or MMIO access.
+    
+    Ref #5752
+
+commit f13f65eec265b2cc449fbff4c50071c033e757c4
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Nov 20 16:09:20 2025 +0100
+
+    hw: enable ACPI X2APIC detection
+    
+    This commit extends the bootstrap ACPI code to detect X2APIC
+    local-cpu interrup controller interfaces, and retrieve the
+    APIC IDs of the different cpu cores.
+    The current implementation is limited to APIC IDs beneath 0x100.
+    If the hardware provides bigger IDs, the boot-process will fail.
+    
+    Fix #5752
+
+
+seL4 kernel
+===========
+
+; @alex-ab
+
+commit 9ef3271d14fed2e37a9bddc9209845a91ed62c15
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Sep 1 11:50:11 2025 +0200
+
+    sel4: adjust kernel config for ARM 32bit
+    
+    With the seL4 13 Update the sed tool could not apply the config parameter
+    adjustments, since the pattern it was looking for changed slightly.
+    
+    Issue #5581
+
+commit e8d9e45cf3cf932fcd70a3eab4cd8af474d7d589
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Jun 9 21:46:57 2025 +0200
+
+    sel4: add principal armv8 support
+    
+    Enable support for imx8mq_evk and virt_qemu_arm_v8
+    
+    The sel4_tools got updated to an compatible version to run with ARMv8 seL4 13.0
+    
+    Fixes #5746
+
+
+Build system and tooling
+########################
+
+; @nfeske
+
+commit 5a900cd3ea898d95e2b628686e5765f6cdf2f064
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Sep 29 16:21:34 2025 +0200
+
+    tool/hrd: add -i for changing hrd file in place
+    
+    Fixes #5698
+
+commit 2e493ea4c6b9d926a583596df2a7219a701222ff
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Oct 24 14:33:52 2025 +0200
+
+    tool/hrd: don't decorate top-level attribute lines
+    
+    Skip the leading '|' for the top-level node because the pipe does
+    not continue below the first sub node, which looks inconsistently.
+
+commit ca549ed2704a607711f5ae385d3595823a6f97ae
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Sat Oct 25 12:33:09 2025 +0200
+
+    tool/run: accept both XML and HRD
+    
+    Issue #5710
+
+commit 55824c04c3285b9f478f62065327094c58cc4e3d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Nov 7 22:35:08 2025 +0100
+
+    tool/hrd: preserve formatting when filtering
+    
+    Let the parser capture the existing formatting by recording the
+    whitespace sequence ("prespace") preceeding the actual content. Such
+    prespace may contain spaces, newlines, and pipe characters. This
+    information is used to largely preserve the formatting during the set,
+    disable, enable, and remove commands.
+    
+    Fixes #5737
+
+commit 9457bc6ec91e570a5e35484e136b9dd2730f697d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Nov 18 17:14:51 2025 +0100
+
+    test.run: remove dependency from XML
+    
+    This patch replaces the use of xmllint by tool/hrd, thereby allowing
+    pkg/runtime files to be formatted as either XML or HRD.
+    
+    Issue #5745
+
