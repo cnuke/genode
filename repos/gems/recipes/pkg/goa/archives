@@ -14,6 +14,7 @@ _/src/init
 _/src/libc
 _/src/libiconv
 _/src/libssh
+_/src/libusb
 _/src/ncurses
 _/src/nic_router
 _/src/nitpicker
@@ -38,6 +39,7 @@ _/src/vfs_audit
 _/src/vfs_block
 _/src/vfs_import
 _/src/vfs_jitterentropy
+_/src/vfs_libusb
 _/src/vfs_lwip
 _/src/vfs_pipe
 _/src/vfs_rump
