@@ -344,7 +344,7 @@ proc prepare_to_run_genode { } {
 			<provides> <service name="ROM"/> </provides>
 		</start>
 
-		<start name="depot_query" priority="-1" ram="2M">
+		<start name="depot_query" priority="-1" ram="3M">
 			<config query="rom">
 				<vfs> <dir name="depot"> <fs label="depot -> /"/> </dir> </vfs>
 			</config>
