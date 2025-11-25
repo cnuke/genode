@@ -570,55 +570,32 @@ Date:   Mon Jun 9 21:46:57 2025 +0200
 Build system and tooling
 ########################
 
-; @nfeske
+The practical evaluation of the new human-inclined data (HID) format
+motivated improvements of the HID-processing tool _/tool/hid_ (formerly named
+_/tool/hrd_), the run tool, and the _os/run/test.run_ utility.
 
-commit 5a900cd3ea898d95e2b628686e5765f6cdf2f064
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Mon Sep 29 16:21:34 2025 +0200
+HID processing
+--------------
 
-    tool/hrd: add -i for changing hrd file in place
-    
-    Fixes #5698
+The hid tool located at _/tool/hid_ received a new option '-i', which applies
+modification of a HID file in place. So the 'set', 'enable', 'disable', and
+'remove' command can be used directly on a file.
+Those manipulations have now been improved to largely preserve the formatting
+of the existing file. So prior manual formatting and commenting work does no
+longer go wasted when using the tool for subsequent data manipulation.
 
-commit 2e493ea4c6b9d926a583596df2a7219a701222ff
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Oct 24 14:33:52 2025 +0200
+We slightly tweaked the style produced by the 'format' command. Those
+tweaks are an ongoing iterative process to find the sweet spot for default
+HID formatting. Do not take the current style as a given.
 
-    tool/hrd: don't decorate top-level attribute lines
-    
-    Skip the leading '|' for the top-level node because the pipe does
-    not continue below the first sub node, which looks inconsistently.
+Run and test.run
+----------------
 
-commit ca549ed2704a607711f5ae385d3595823a6f97ae
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Oct 25 12:33:09 2025 +0200
+The run tool has become able to tolerate the HID format in addition to XML.
+Note that schema validation is currently performed only when using XML. The
+definition of how to express a schema for HID is current work in progress.
 
-    tool/run: accept both XML and HRD
-    
-    Issue #5710
-
-commit 55824c04c3285b9f478f62065327094c58cc4e3d
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Fri Nov 7 22:35:08 2025 +0100
-
-    tool/hrd: preserve formatting when filtering
-    
-    Let the parser capture the existing formatting by recording the
-    whitespace sequence ("prespace") preceeding the actual content. Such
-    prespace may contain spaces, newlines, and pipe characters. This
-    information is used to largely preserve the formatting during the set,
-    disable, enable, and remove commands.
-    
-    Fixes #5737
-
-commit 9457bc6ec91e570a5e35484e136b9dd2730f697d
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Nov 18 17:14:51 2025 +0100
-
-    test.run: remove dependency from XML
-    
-    This patch replaces the use of xmllint by tool/hrd, thereby allowing
-    pkg/runtime files to be formatted as either XML or HRD.
-    
-    Issue #5745
+The test.run script has been converted to use the _/tool/hid_ instead of
+xmllint to retrieve information from test packages. Thanks to this change,
+the runtime definitions of test packages can now be formatted as HID.
 
