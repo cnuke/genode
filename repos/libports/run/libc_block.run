@@ -106,15 +106,14 @@ install_config {
 					</import>
 				</vfs>
 				<default-policy file="/test.hda" block_size="512"
-				                writeable="yes"/>
+				                writeable="yes" maximum_transfer_size="512K"/>
 			</config>
 			<route>
 				<any-service> <parent/> </any-service>
 			</route>
 		</start>
 
-	<start name="sequence" caps="600">
-		<resource name="RAM" quantum="32M"/>
+	<start name="sequence" caps="600" ram="32M">
 		<affinity xpos="1" ypos="0" width="1" height="1"/>
 		<config keep_going="yes">
 } [dd_config  512 /dev/block /dev/null 0] {
