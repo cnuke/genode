@@ -89,7 +89,7 @@ corresponding article on genodians.org.
 
 :Genodians article "What's new in Goa 25.10":
 
-    [https://genodians.org/jschlatow/2025-11-03-goa-25-10]
+  [https://genodians.org/jschlatow/2025-11-03-goa-25-10]
 
 
 Base framework and OS-level infrastructure
