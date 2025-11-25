@@ -17,36 +17,255 @@ Genode-world using the Goa SDK
 
 ; @cnuke, @chelmuth
 
-commit 114b23ff55f17f394921d1ecc775e61eece28193
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Thu Sep 18 14:43:22 2025 +0200
+In the beginning of 2025 we
+[https://genode.discourse.group/t/announcement-for-the-restructuring-of-the-world-repository/138 - announced]
+our plans to restructure _genode-world_ from a Genode repository into one
+that houses Goa projects instead. As we aim for Goa to become the designated
+way how software is ported to and even developed for Genode adjusting
+_genode-world_ is a natural first step.
 
-    Move existing content into legacy sub-directory
-    
-    This commit moves the already existing content of the _genode-world_
-    repository into the _legacy_ sub-directory. Adjusting the currently
-    checked-out repository is necessary to prevent the interruption of
-    the development process.
-    
-    Please look at the updated _README_ file for further information.
-    
-    Issue #412.
+The content of the old repository will live on for some finite amount of
+time within the _legacy_ sub-directory of the repository to ease the
+ongoing transition phase. If you are still relying on software from this
+repository you may have to replace your current checkout to keep it
+operational.
 
-commit 3e415afacd94f2b0db7701d56236f2495938d45c
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Sep 19 12:51:21 2025 +0200
+Replace the 'repos/world' directory with a symlink pointing to the _legacy_
+sub-directory within your checkout. In case you followed the original _README_
+file it is safe to move your direct checkout directory out of Genode's _repos_
+directory:
 
-    Adapt README to the new shape of the repository
-    
-    Issue #412.
+! mv genode/repos/world ../../genode-world
+! ln -sf <path>/genode-world/legacy genode/repos/world
 
-commit e391bd7087df2a56e4d1c8d794bbf93bfe89f59f
-Author: Josef Söntgen <josef.soentgen@genode-labs.com>
-Date:   Fri Oct 24 16:58:18 2025 +0200
+Afterwards the repository can be used as before like a regular Genode
+repository, further alterations are not necessary.
 
-    Set wildcard user for projects within world
-    
-    Issue #412.
+Since Goa is now required to contribute to _genode-world_, the first step
+is setting it up and making your self comfortable using it. The
+[https://genode.org/documentation/genode-applications-25-04.pdf - Genode Applications book]
+will help you along the way. It describes how to install Goa, how to set it
+up and also contains practical tutorials encouraging you to get your feet wet.
+Keeping it close while starting your journey is strongly recommended.
+
+_A word of caution, which mirrors what is also noted in the_
+_[https://genode.org/documentation/genode-applications-25-04.pdf - Genode Applications book]._
+_Goa expects a recent Ubuntu LTS version, as this is currently the_
+_recommended Linux distribution to develop Genode on, because it assumes a_
+_certain feature set in the tools it builds upon. That includes tools_
+_it uses directly, like bubblewrap to implement its sandboxing mechanism,_
+_as well as the build-systems it incorporates and manages. These are tied_
+_to the project using them where version checks might fail or required_
+_features are missing in case the tool provided by the Linux distribution_
+_is too old. We noticed that with 'cmake' and 'Meson'._
+_Assistance with commonly encountered short-comings is given at the end_
+_of this section._
+
+As the technical aspects of using Goa are already well covered in the book,
+let us dive into the conventions established within this shared Goa projects
+repository. Note that these conventions are not set in stone as they are
+still evolving and should rather be perceived as guide lines we may amend.
+
+
+Conventions in genode-world
+---------------------------
+
+In its current iteration the various Goa projects are loosely categorized
+by top-level directories that roughly define which type of software is to
+expected inside, e.g. 'database' contains a port of sqlite3.
+
+The notable exceptions are the 'legacy' and 'pkg' directories:
+
+* :legacy: contains the content of the original _genode-world_ repository,
+   whose existence is discussed above.
+
+* :pkg: contains pkg archives that accumulate all dependencies for a given
+  component version. Those dependencies may be more volatile than the actual
+  component version, e.g. the sqlite3 version does not change and neither
+  does the API version of the libc but the version of the libc library
+  implementing this API changes.
+
+As a fitting category directory might not yet exist for a new project,
+creating one can be necessary. For that common sense resting on the
+project itself, e.g. linphone could be put either into network or voip,
+and/or consulting how other projects/OSes categorize their software,
+e.g. the various *BSD ports collections, is a valid approach.
+
+_Note that we are still in an experimental phase and the categorization_
+_gives the repository some degree of structure and is meant as aid for_
+developers._
+_Goa itself is indifferent to how project repositories are structured_
+_internally._
+
+Since the _genode-world_ repository follows the current Sculpt OS release and
+for that matter depends on depot archives that are managed within the Genode
+repository, these archives are provided by the 'genodelabs' depot user.
+Among others they include the archives required by POSIX components like
+'libc', 'libm', and 'posix'.
+The current list of the archives concerning Goa can be found in the _archives_
+file in the _pkg/goa_ depot archive as well as in the Goa repository itself
+in _share/goa/goarc_.
+
+These archives should primarily be used in case a project depends on one
+of them. All other dependencies and projects, or rather archives, referenced
+within _genode-world_ should make use of the wildcard '_' depot user because
+_genode-world_ is a shared Goa projects repository. As _pkg/goa_ contains
+only a subset of all available archives and is extended on demand you may
+stumple upon a dependency for which no readily available 'genodelabs'
+archive exists yet. Also using '_' in this case is reasonable but this
+circumstance should be noted to be remedied in a later release.
+
+This depot user is special and is replaced with the depot user specified via
+the '--depot-user' flag (or the corresponding setting in the _goarc_ file),
+this allows different depot users to publish the same project without any
+alteration to its ingredients given in the _used_apis_ and _archives_ files.
+
+The version information within this repository is manually managed via its
+top-level _goarc_ file for the moment and also makes use of the wildcard user
+and thus these information are applied for all other depot users as well.
+Bumping a given version of a project should at least happen whenever a new
+Sculpt OS version is released.
+
+The usage of the depot wildcard user is in contrast to prior private Goa
+projects repositories where the depot user was mostly hard-coded to the
+users providing the Goa projects. Those repositories could be updated
+as well.
+
+
+Interplay with Genode repositories
+----------------------------------
+
+Using Goa is a one way street in that it is not possible to reference
+depot archives created by Goa from archives generated by Genode's
+build-system from recipes in a Genode repository. You can depend on archives
+produced in this way but not the other way around.
+
+Goa projects are intended for being deployed on Sculpt OS and being tested
+with Goa itself using 'goa run' either on base-linux or on a machine running
+the 'goa_testbed' pkg on Sculpt OS.
+
+That being said, it is possible to import archives produced by Goa in run-scripts.
+
+For example, the 'legacy/run/chrony.run' run-script contains the following
+snippet:
+
+!import_from_depot [depot_user]/src/[base_src] \
+!                  [depot_user]/pkg/[drivers_nic_pkg] \
+!                  [depot_user]/pkg/system_rtc-[board] \
+!                  [depot_user]/src/gmp \
+!                  [depot_user]/src/init \
+!                  [depot_user]/src/libc \
+!                  [depot_user]/src/nic_router \
+!                  [depot_user]/src/posix \
+!                  [depot_user]/src/stdcxx \
+!                  [depot_user]/src/vfs \
+!                  [depot_user]/src/vfs_jitterentropy \
+!                  [depot_user]/src/vfs_lxip \
+!                  [depot_user]/src/vfs_pipe \
+!                  [depot_user]/src/nettle/3.7-2025-10-01 \
+!                  [depot_user]/src/gnutls/3.6.16-2025-10-02 \
+!                  [depot_user]/src/chrony/4.6.1-2025-10-02
+
+As you can see it references a long list of depot archives. Most of them
+are managed by Genode's build-system with the help of the depot tools.
+The last items in the list refer directly to the current version of 'chrony'
+and its dependencies produced by Goa. Since they contain a given version
+the 'run' tool can incorporate them without resorting to recipes that do not
+exist for Goa projects.
+
+As a consequence the run-script has to be adjusted every time the versions of the
+Goa projects change and so this approach should be employed sparingly.
+
+For the time being this approach allows us to test Goa projects within our CI
+pipeline while properly intergrating Goa is still an ongoing process.
+Extending Goa with more 'run' back ends besides base-linux and Sculpt as well
+as provide an autopilot-like experience are some of the puzzle pieces yet to
+be placed.
+
+
+Sandbox build environment on Ubuntu LTS 24.04
+---------------------------------------------
+
+Goa provides a sandboxed build environment based on 'bubblewrap'. It confines
+the execution of the original build-system of the Goa project to the
+pre-configured sandbox in an attempt to prevent any misdoings triggered by
+run-away processing in the original build-system.
+
+When using Ubuntu apparmor might interfere with employing bubblewrap.
+
+In case you encounter an error like the following
+
+  'bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted'
+
+you have to properly configure apparmor to allow for using user namespaces
+with bubblewrap.
+
+The following snippet shows the content of '/etc/apparmor.d/goa' and needs
+to be adapted to the path where 'goa' is installed:
+
+!# This profile allows everything and only exists to give the
+!# application a name instead of having the label "unconfined"
+!
+!abi <abi/4.0>,
+!include <tunables/global>
+!
+!profile goa /path/to/goa/bin/goa flags=(unconfined) {
+!  userns,
+!
+!  # Site-specific additions and overrides. See local/README for details.
+!  include if exists <local/goa>
+!}
+
+Please make sure that the 'apparmor-profiles' package has been
+installed. Reloading the apparmor service should lead to a working
+sand-boxing with goa:
+
+! systemctl reload apparmor
+
+In contrast to this advice you can also disable sandboxing completely,
+either by setting the environment variable 'DISABLE_SANDBOX=1' or adding
+
+! set disable_sandbox 1
+
+to your user's _goarc_ file.
+
+
+Leaky build-host environment isolation
+--------------------------------------
+
+The sandbox mechanism guards against interference problems on the build-host,
+like accessing private files or creating files in the wrong locations,
+stemming from the build process itself.
+
+However, since the build process at times needs access to tools provided by the
+build-host—depending on the build-system—the build process might pick up
+configurations purely intend for use by the build-host and not Goa.
+
+This circumstance can show itself by suspicious looking flags, e.g. occurrence
+of -I/usr/include/SDL2, or by aborting the build process because there are
+unmet dependencies, e.g. libusb-dev is not found, as the build-system's probe
+mechanism falls back on the build-host environment rather than Goa.
+
+As dependencies for Goa projects are resolved via the 'used_apis' file that
+instructs Goa to set the right compiler and linker flags, building
+a project usually should work fine, it is just the build-system's probing
+mechanism that needs guidance.
+
+This problem may arise because build-host environments are not necessarily
+the same. For example, the creator of the Goa project might have had more
+or other development packages installed than the one trying to build the Goa
+project afterwards and thus the build-system might behave differently.
+
+In such a case patches to the Goa project in question might be in order.
+It is tempting to install additional development packages to trick the
+build-system into compliance but restricting the impact of the build-host
+pays long-term.
+
+To get a better grasp on the problem building the project with the
+'--verbose' argument and checking the artifacts in _var/build_ produced
+by the build-process is reasonable:
+
+! goa build --verbose
 
 
 Enhanced Goa SDK
