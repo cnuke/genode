@@ -291,9 +291,10 @@ with the success criterion of the test. The depot-autopilot deploys each test
 after another, detect successes or failures, and collects the results. The
 test suite is currently comprised of around 80 packages.
 
-Even though the depot-autopilot serves us well since introduced in 2018,
-code-wise, it has largely remained at its initial stage with a fair amount of
-ad-hoc solutions.
+Even though the depot-autopilot serves us well since
+[https://genode.org/documentation/release-notes/18.11#Automated_test_infrastructure_hosted_on_top_of_Genode - introduced in 2018],
+code-wise, it has largely remained at its initial stage with a fair share of
+ad-hoc decisions.
 Our recent move to the
 [https://genode.org/documentation/release-notes/25.08#Syntax-agnostic_configuration_and_reporting - syntax-agnostic]
 'Genode::Node' API ultimately prompted us to rewrite the depot-autopilot
