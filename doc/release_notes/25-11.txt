@@ -290,43 +290,44 @@ Date:   Thu Oct 30 10:35:06 2025 +0100
 API curation
 ============
 
-; @nfeske
+The 'Thread' API still maintained compatibility to old interfaces we declared
+as deprecated already in 2016 when we fully embraced dependency injection and
+went on our mission to remove component-global side effects from the API.
+Until now, however, some of those old interfaces where relied on by the
+framework itself. Those parts have now been reworked, using 'Genode::Runtime'
+as token for invoking global side effects, like the interplay with the stack
+area. Thanks to these changes, the deprecated Thread constructors could now
+be removed.
 
-commit dbd25a94e7513e3a0dad4ebe724b09e12cc8e9dd
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Sep 10 14:52:37 2025 +0200
-
-    base: decouple Thread API from CPU session
-    
-    This patch removes the deprecated Thread constructors and introduces the
-    use of 'Genode::Runtime' as token for global side effects, like the
-    interplay with the stack area.
-    
-    This change has ripple effects towards all places where 'Thread' objects
-    are manually constructed, e.g., 'Rpc_entrypoint'. Since all users must
-    be adapted anyway, this patch takes the opportunity of removing basic
-    types as constructor arguments.
-    
-    Fixes #5681
+This change has ripple effects towards all places where 'Thread' objects are
+manually constructed, e.g., 'Rpc_entrypoint'. Since all users had to be
+adapted anyway, we took the opportunity of removing basic types as constructor
+arguments to foster API safety.
 
 
 Automatic component restart upon stopped heartbeat
 ==================================================
 
-; @nfeske
+Genode's existing
+[https://genode.org/documentation/genode-foundations/25.05/system_configuration/The_init_component.html#Component_health_monitoring - heartbeat-monitoring mechanism]
+reflects the condition of a non-responding component in init's state report,
+which can be evaluated by a management component to take a deliberate policy
+decision. The usual response is the restart of the child by increasing the
+child's version attribute. Since this policy has become so proliferated,
+however, it is sensible to support it directly in init, eliminating the need
+for a separate management component.
 
-commit 0b36aa771d4e2f5092f5f96bb50712aa1070564a
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Oct 21 16:50:45 2025 +0200
+The new mechanism can be enabled in the configuration of the init component by
+setting the 'restart_after_skipped' attribute of the child's 'heartbeat' node
+to a value greater than 0. This way, the maximum rate of restarts can be
+controlled per child.
 
-    init: automatic restart after skipped heartbeats
-    
-    This patch simplifies the use of the heartbeat-monitoring mechanism by
-    adding the usual policy of restarting a non-responding child as a
-    feature to init. It is enabled by setting the 'restart_after_skipped'
-    attribute of the child's heartbeat node to a value greater than 0.
-    
-    Fixes #5718
+Thanks to this feature, the self-healing abilities of Sculpt OS are no longer
+limited to components managed by the system but can now be leveraged for
+user-deployed components and launchers. For example, the touchpad driver,
+which knowingly fails once every dozen boots on some laptops, is now
+automatically restarted when it got stuck, making the touchpad ultimately
+available upon the second try, just a few seconds later.
 
 
 TCP/IP improvements
@@ -388,160 +389,115 @@ Date:   Wed Sep 24 22:18:42 2025 +0200
     fixes #5706
 
 
-Memory-capped log-message aggregation
-=====================================
+Memory-capped log aggregation
+=============================
 
-; @nfeske
+Sculpt's report file system is an in-memory file system with a statically
+defined RAM quota of 16 MiB. Besides aggregating reports of various components
+(in particular device drivers), it hosts the _/report/log_ file, which gathers
+the diagnostic output of all components. During normal use, the log file is in
+the order of 100 KiB. However, in the presence of a rampaging component that
+prints messages in an infinite loop, the report file system can eventually
+fill up. To counter such situations, we introduced a new VFS plugin.
 
-commit edc9453b9b013e7a16a08409d0f856f16c5e7caa
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 22 16:27:13 2025 +0200
+The new 'ram_log' VFS plugin stores up to a limited number of bytes of an
+append-only file in RAM. Should the content written to the file exceed the
+configured limit, the oldest content is replaced by zeros, making room for the
+most recent logged information in memory. The file still appears growing in
+size but only the most recent data remains present. In Sculpt 25.10 the log
+is now capped at 1 MiB, effectively protecting the report file system from
+exhaustion.
 
-    VFS plugin for constrained logging to RAM
-    
-    The ram_log VFS plugin stores up to 'limit' bytes of an append-only file
-    in RAM. Should the content written to the file exceed the configured
-    limit, the oldest content is replaced by zeros, making room for the
-    most recent logged information.
-    
-    Issue #5721
-
-commit d840677d89c283b0547fee43960abd142c3e45d4
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 22 16:39:56 2025 +0200
-
-    sculpt: guard /report/log via ram_log VFS plugin
-    
-    Fixes #5721
-
-commit e93c5a7903306d515674b7953fb1709ed05e28e6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Wed Oct 22 18:01:32 2025 +0200
-
-    sculpt,terminal_log: show log lines with timestamp
-    
-    The patch changes terminal_log such that each log line is prefixed with
-    a timestamp in seconds, showing one digit after the comma. Since this
-    change makes the component depend on the timer, the patch adjusts the
-    (few) users accordingly.
-    
-    Fixes #5422
+Vaguely related while speaking of Sculpt OS, the 'terminal_log' component has
+been changed to prefix each line with a timestamp in seconds, showing one
+digit after the comma. Note that this change makes the component depend on
+a timer service now.
 
 
-Simplified configuration of POSIX environment and arguments
-===========================================================
+Simplified configuration of POSIX components
+============================================
 
-; @nfeske
+Tag-value argument pairs of traditional POSIX applications are technically two
+distinct arguments, appearing as two consecutive elements in the 'argv' array.
+Hence, such pairs have to appear as separate arg nodes in the configuration, e.g.:
 
-commit 12f5b4c8db280b4ed6912e85f19e17a0c8ed7152
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Sat Oct 25 11:25:26 2025 +0200
+! <arg>-geometry</arg> <arg>1024x768</arg>
 
-    posix: support optional arg 'name' attribute
-    
-    Since tag-value argument pairs are technically two separate arguments,
-    they have to appear as separate arg nodes in the configuration, e.g.:
-    
-    + config
-      + arg | : -geometry
-      + arg | : 1024x768
-    
-    This wastes vertical space and does not convey well that both lines
-    belong together.
-    
-    By combining an optional 'name' attribute with quoted content, however,
-    tag-value arguments can nicely be written on a single line:
-    
-    + config
-      + arg -geometry | : 1024x768
-    
-    Fixes #5726
+or in HID syntax:
+
+! + arg | : -geometry
+! + arg | : 1024x768
+
+This appears not only as wasteful but also does not convey well that both arg
+nodes belong together. We now added the ability to define a pair of 'argv'
+elements using a single 'arg' node. By combining an optional 'name' attribute
+with quoted content, tag-value arguments can now nicely be expressed as one
+arg node:
+
+! <arg name="-geometry">1024x768</arg>
+
+or respectively in HID syntax:
+
+! + arg -geometry | : 1024x768
 
 
 Streamlined on-target test suite
 ================================
 
-; @nfeske
+The depot-autopilot component orchestrates the execution of the framework's
+comprehensive test suite on a test target, using Genode's package management.
+Each test has the form of a package with its _runtime_ definition augmented
+with the success criterion of the test. The depot-autopilot deploys each test
+after another, detect successes or failures, and collects the results. The
+test suite is currently comprised of around 80 packages.
 
-commit 603051c2fe9d9206bcb431c4d994dcd08764c2be
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Nov 11 19:41:46 2025 +0100
+Even though the depot-autopilot serves us well since introduced in 2018,
+code-wise, it has largely remained at its initial stage with a fair amount of
+ad-hoc solutions.
+Our recent move to the
+[https://genode.org/documentation/release-notes/25.08#Syntax-agnostic_configuration_and_reporting - syntax-agnostic]
+'Genode::Node' API ultimately prompted us to rewrite the depot-autopilot
+orchestrator and to streamline the suite of tests.
 
-    depot_autopilot: modernize and don't rely on XML
-    
-    - Split test orchestration from the child-deployment from pkgs
-      by introducing a dedicated 'Plan' independend from 'Children'.
-    
-    - Converge the code back towards depot_deploy. Large parts of the
-      code in child.h and children.h actually originated from depot_deploy,
-      but got largely reformatted (i.e., by moving code to child.cc).
-      With this patch, depot_autopilot uses the implementation of
-      depot_deploy.
-    
-    - Replace the use of Xml_node by Node
-    
-    - Remove use of C++ exceptions
-    
-    - Remove local utilities like pointer.h and list.h
-    
-    - Drop deprecated <events> declarations
-    
-    - Drop log_prefix attribute from <fail> and <succeed> nodes.
-      This feature was implemented due to a suggestion in #4922 but
-      apparently remained unused.
-    
-    - Limit output of seconds to two digits after the comma because
-      the milliseconds digit is never inspected in practice.
-    
-    - Coding-style tweaks, e.g., removing superfluous braces around
-      single statements, avoiding superfluous Genode:: prefixes, and
-      introducing a proper Depot_autopilot namespace.
-    
-    Fixes #5745
+* A test's success criterion is now consistently expressed in the form of
+  'succeed' or 'fail' nodes. The long deprecated 'events' declarations are no
+  longer supported.
 
-commit 6b04a700a79317254eef4974526cdefb43315cf1
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Nov 20 15:50:18 2025 +0100
+* The support for the 'log_prefix' attribute in 'fail' and 'succeed' nodes
+  has been dropped as it has remained unused.
 
-    depot_autopilot: drop misleading [init] log prefix
-    
-    This patch removes the hardcoded [init] prefix from the test's log
-    output, which used to be enforced even for tests that did not involve
-    init.
-    
-    Note that this patch slightly tightens the meaning of the log pattern:
-    The previous version accepted a match of a pattern line against any part
-    of a log line. The new version accepts a match only if the pattern line
-    matches the log line from the beginning of the line. The previous
-    matching semantics can be achieved by starting a pattern line with a
-    wildcard.
-    
-    Fixes #5749
+* Time values are now printed with two digits after the comma because
+  the milliseconds digit is never inspected in practice.
 
-commit 996d11ad05f5bc8c738687cf41c6233b676b4570
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Nov 20 21:13:04 2025 +0100
+* The formerly hard-coded '[init]' prefix of each test's log output,
+  regardless of whether init was actually being used or not, has been
+  removed.
 
-    depot_autopilot: exit as success/fail criterion
-    
-    This patch introduces the 'exit' attribute to success/fail nodes, which
-    allows for the specifying expected exit values to finish the test. Until
-    now, this was only possible matching the log output of an intermediate
-    init instance.
-    
-    Issue #5753
+* The meaning of log patters have been slightly tightened:
+  The previous version accepted a match of a pattern line against any part
+  of a log line. The new version accepts a match only if the pattern line
+  matches the log line from the beginning of the line. The previous
+  matching semantics can be achieved by starting a pattern line with the
+  wildcard '*'.
 
-commit 1941698fd9ad293734fd9a1996c22ec9011ed98b
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Nov 20 23:44:28 2025 +0100
+* Exit codes can now be used as success criterion by specifying an 'exit'
+  attribute to 'succeed' and 'fail' nodes. If a 'succeed' node features both
+  an exit code and a log pattern, both conditions must be satisfied.
 
-    depot_autopilot.run: shorten log prefix to "test"
-    
-    By rewriting the label of the depot_autopilot's LOG session, we
-    avoid an overly long label prefix on every line and move the
-    actual test messages more into focus.
-    
-    Issue #5753
+  This feature alleviates the need to wrap a test in an init instance for the
+  mere matching of the "child ... has exited ..." message, which was a pattern
+  found in about 25% of the test packages. Those tests now benefit from
+  simpler runtime definitions and shorter log output.
+
+  Whenever a test completes due to its exit code, the summary report marks the
+  test as 'exit'.
+
+* The depot_autopilot.run script changes the LOG label for test output from
+  "init -> depot_autopilot" to "init -> test" to reduce the likelihood for
+  line breaks.
+
+* The duration of the entire test suite has been reduced by one third,
+  mostly due to the tightening of the parameters of time-driven tests.
 
 
 Device drivers
