@@ -52,194 +52,44 @@ Date:   Fri Oct 24 16:58:18 2025 +0200
 Enhanced Goa SDK
 ================
 
-; @jschlatow, @ssumpf
+The updated Goa SDK comes with a series of enhancements eliminating a few
+points of friction such as the automated tool-chain installation for Rust,
+the two-stage build process for Meson projects with executable and library
+targets, and the augmented resolution of version information:
 
-commit 6e29c9d9f174420db33e6ece223b697bbf40fa38
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Sep 5 09:28:30 2025 +0200
+Goa always supported re-using other users' depot archives such as ported
+libraries. However, determining what version to use has never been properly
+addressed apart from a built-in curated list of archives from _genodelabs_. We
+therefore equipped Goa with the ability to publish a depot index that contains
+the versions not only of pkg archives but also of src and api archives. This
+enables users to record and publish certain versions of their ported libraries
+or re-usable components. Vice versa, Goa will automatically look up this version
+information from a user's depot index if necessary. In addition to version
+information, using archives of other users often requires having a look into
+their documentation. This is addressed by the new 'info' command that nicely
+displays the _README_ file from a selected depot archive.
 
-    use hrd tool for config parsing/generation
-    
-    The hrd tool is used XML/HRD parsing. Config generation is now done
-    in form of HRD. If the --hrd option is absent, the generated HRD
-    is converted into XML using the hrd tool.
-    
-    Fixes #142
+Further enhancements are aligned to the genode-world use case: We added the
+notion of a wildcard depot user to allow different users to publish the same
+Goa project in their depot. Moreover, the new 'exported' and 'published'
+commands provide assistance in determining whether the exported/published
+archives are up-to-date with the project's state. For convenience, we
+added a '--if-needed' option to the 'bump-version' command. When provided,
+Goa omits bumping a project's version if the exported archive is already
+up-to-date.
 
-commit d537b4ea75488fe53a790a885c81fe283041869c
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Aug 21 21:53:03 2025 +0200
+Internally, we entirely overhauled the parsing of configuration files in Goa
+in order to untie it from XML and give way to the new human-oriented
+configuration format.
 
-    build.tcl: add option to silence sandboxed_build_command
-    
-    This is useful when reading the output from stdout of external commands
-    with 'verbose' enabled.
-    
-    issue #144
+To round things of, we have integrated support for library-based
+performance profiling leveraging GCC's '-finstrument-functions'. For more
+details on this and the aforementioned changes, please refer to the
+corresponding article on genodians.org.
 
-commit 1ff73aa8a75ee09eb840226be26e7c4bf87e813c
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Aug 21 21:56:21 2025 +0200
+:Genodians article "What's new in Goa 25.10":
 
-    meson: support both, shared libs and executables
-    
-    * use "meson introspect --targets" in order to obtain and distinguish a
-      list of executable/shared library targets
-    * parse Json output of Meson's introspect
-    * split build into a shared library and a executable build stage
-    * use "meson configure" to adjust the ld_flags - depending on build stage
-    * add rpath_link for library search during linking
-    * support arm_v8a
-    * support subprojects
-    
-    issue #144
-
-commit 8a01bdd1670143e92399d3a008b6dca4f73458c3
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Sat Sep 6 19:53:01 2025 +0200
-
-    api: allow '[directory:]<selector>' syntax
-    
-    also remove superfluous TABs from build.tcl
-    
-    issue #144
-
-commit 6627f9d8ee7b5051c7e26eee54601ca759273b2f
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Tue Sep 9 18:23:24 2025 +0200
-
-    cargo: automatically install rust toolchain
-    
-    We currently need a compatible nightly toolchain to use cargo's `-Z`
-    option. If the known-to-work version is not installed and active
-    in the user's home directory, the toolchain gets installed at Goa's
-    install_dir.
-    
-    Fixes #107
-
-commit 7337c187b7a46cc57fc5acdfbabc6790b571333a
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Sep 26 15:13:25 2025 +0200
-
-    import: allow revision for sparse git checkouts
-    
-    When cloning with `--sparse`, git implies `--single-branch` and thus
-    all tags and branches get lost.
-
-commit 268a058952501dbf42162d329975201aea70ee5f
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Sep 26 13:31:54 2025 +0200
-
-    use hrd for index export
-    
-    Issue #142
-
-commit b9dcc11338a576093428d68a5ca2d7b13ad9190d
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Wed Sep 10 15:34:18 2025 +0200
-
-    archive-versions: add optional --archive arguments
-    
-    When supplied with one or multiple `--archive <archive-name>` arguments,
-    `goa archive-version` prints version information only for the requested
-    archives.
-    
-    Issue #117
-
-commit 62cbda1db8e69c6aeab6f823d3022c73165ce367
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Thu Sep 11 11:55:10 2025 +0200
-
-    depot tools: support download of depot index
-    
-    Issue #117
-
-commit 56788e4c56b0fe2174021203cb12b57f8ed66b23
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Thu Sep 11 13:57:11 2025 +0200
-
-    query version information from depot-index files
-    
-    When supplied with the `--update-index` command-line argument or when
-    the `update_config` variable is set to 1, Goa automatically downloads
-    depot index files in order to look-up archive versions. This is
-    only done as a last resort, i.e. if there is no version information
-    defined in _goarc_ files and if Goa did not find a corresponding project
-    directory.
-    
-    Issue #117
-
-commit d26344573664cc5dd25f06602ffb0d201fd2608c
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Fri Sep 26 13:34:40 2025 +0200
-
-    support src and api nodes in depot index
-    
-    Issue #117
-
-commit d340866e01dda1cca95dd4ae36b31f245fcb7951
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Mon Sep 29 18:07:54 2025 +0200
-
-    add support for _profile_ library
-    
-    The profile library introduced by genodelabs/genode#5674 is a static
-    library using -finstrument-functions to collect and periodically output
-    profiling data. This commit adds a quirk for supporting the use of
-    this library in Goa projects. The output can be parsed with the
-    _backtrace_ tool or by executing the `goa backtrace` command.
-    
-    Fixes #149
-
-commit baf7f1e10106d13e434f6b76fc94962eccf3b116
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Mon Sep 29 18:12:07 2025 +0200
-
-    examples: add profiling example
-    
-    Issue #149
-
-commit 241568b669469e32c3b80e28b18caeb5bb0ab82b
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Mon Oct 20 17:30:16 2025 +0200
-
-    Update to Sculpt 25.10
-
-commit 379e32a0f6a9eac173677d53bb22defec15f3bc9
-Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
-Date:   Thu Oct 23 09:31:35 2025 +0200
-
-    meson: pkg-config tool_dir
-    
-    The tool_dir was set for pkg-config only. It now has to be correct
-    because sourcing query.tcl in util.tcl requires it.
-    
-    issue genodelabs/goa#153
-
-commit 6d9b6d68d994347ec17f57e91ad7a0edcaeea41c
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Thu Oct 23 14:18:28 2025 +0200
-
-    Add support for wildcard depot user
-    
-    This commit adds support for the wildcard depot user "_" in _used_apis_
-    and _archives_ files. The wildcard depot user is replaced with Goa's
-    depot_user config (if set). Goa's default depot_user config is "_" and
-    implies `--depot-overwrite``.
-    
-    Issue #146
-
-commit 789c5b83c031b97cc617736764fce1519c33a0b1
-Author: Johannes Schlatow <johannes.schlatow@genode-labs.com>
-Date:   Tue Oct 28 14:35:36 2025 +0100
-
-    add `goa exported` and `goa published` commands
-    
-    These commands allow identifying whether a version update is required
-    by comparing the current project state with the exported/published
-    version.
-    
-    Fixes #154
+    [https://genodians.org/jschlatow/2025-11-03-goa-25-10]
 
 
 Base framework and OS-level infrastructure
