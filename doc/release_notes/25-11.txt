@@ -98,43 +98,33 @@ Base framework and OS-level infrastructure
 Human-inclined data (HID) processing
 ====================================
 
-; @nfeske
+With [https://genode.org/documentation/release-notes/25.08#Consideration_of_a_lean_alternative_to_XML - Genode 25.08],
+we started the practical exploration of a new syntax for configurations and
+state reports. The recent Sculpt OS release 25.10 was accompanied with a
+flavor that uses the new format by default and allows us to experience all
+of our use cases live on daily use.
 
-commit 2036e673354466c8241324a198252d5e20d4ffaa
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Tue Sep 30 17:07:15 2025 +0200
+:Genodians article "Sculpting with less noise and more clarity":
 
-    Support for generating tabular HRD data
-    
-    The 'Generator::tabular' method instructs the HRD generator to format
-    the contained nodes in tabular way. Two forms are supported: In the
-    presence of nested nodes, the nodes appear as table columns and
-    attributes appear densely. With only one node level, attributes are
-    formatted as a table. Trailing optional attributes are displayed
-    densely.
-    
-    Fixes #5708
+  [https://genodians.org/nfeske/2025-10-30-sculpt-human]
 
-commit 238cd936fd34bdba81b7e8aeeac610e263a8b6a6
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 23 15:23:08 2025 +0200
+To make this possible, all components relevant for Sculpt OS have been
+relieved from their formerly hardwired dependency from XML by using the
+'Genode::Node' API.
 
-    HRD formatting tweaks
-    
-    Use tabular style where appropriate. Use "yes" or "no" instead of
-    "true" or "false" for boolean values, which is shorter and easier
-    on the eyes. In the presence of multiple attributes, let= "name"
-    appear first. So "connector name: HDMI-1" becomes "connector HDMI-1".
-    
-    Issue #5708
+While practically using and discussing the new format, we quickly found its
+original working title (human-readable data - HRD) a little bit unpleasant.
+So HRD has been renamed to HID, which stands for human-inclined data.
 
-commit fc60c67e38bfc7dcd670cfb012cec61c4c64f5c2
-Author: Norman Feske <norman.feske@genode-labs.com>
-Date:   Thu Oct 30 10:35:06 2025 +0100
-
-    vbox6: do not depend on XML for USB passthrough
-
-[adjusted almost all component to be syntax-agnostic]
+The benefit of the new format becomes most striking when information lends
+itself to be presented in tabular form. For example, a list of Wifi
+accesspoints with their respective properties, or a table of session-routing
+rules. To ease the output of such tabular data, the 'Generator' API has been
+extended with a new 'tabular' method. It instructs the HID generator to format
+the contained nodes in tabular way. Two forms are supported: In the presence
+of nested nodes, the nodes appear as table columns and attributes appear
+densely. With only one node level, attributes are formatted as a table.
+Trailing optional attributes are displayed densely.
 
 
 API curation
