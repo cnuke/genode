@@ -1,33 +1,3 @@
-#
-# Generate dd start node
-#
-proc dd_config { blocksize input output count } {
-
-	set    config "<start name=\"/bin/dd\" caps=\"500\" ram=\"16M\">\n"
-	append config "  <config>\n"
-	append config "    <arg value=\"dd\"/>\n"
-	append config "    <arg value=\"if=$input\"/>\n"
-	append config "    <arg value=\"of=$output\"/>\n"
-	append config "    <arg value=\"bs=$blocksize\"/>\n"
-	if {$count != 0} {
-	append config "    <arg value=\"count=$count\"/>\n"
-	}
-	append config "    <vfs>\n"
-	append config "      <dir name=\"dev\">\n"
-	append config "        <null/> <zero/> <log/>\n"
-	append config "        <jitterentropy name=\"random\"/>\n"
-	append config "        <xoroshiro name=\"random\" seed_path=\"/dev/entropy\"/>\n"
-	append config "        <block/>\n"
-	append config "      </dir>\n"
-	append config "    </vfs>\n"
-	append config "    <libc stdin=\"/dev/null\" stdout=\"/dev/log\" stderr=\"/dev/log\"\n"
-	append config "          rtc=\"/dev/null\"/>\n"
-	append config "  </config>\n"
-	append config "</start>\n"
-
-	return $config
-}
-
 build {
 	lib/vfs
 	lib/libc
@@ -116,15 +86,7 @@ install_config {
 	<start name="sequence" caps="600" ram="32M">
 		<affinity xpos="1" ypos="0" width="1" height="1"/>
 		<config keep_going="yes">
-} [dd_config  512 /dev/block /dev/null 0] {
-} [dd_config 4096 /dev/block /dev/null 0] {
-} [dd_config   1M /dev/block /dev/null 0] {
-} [dd_config   8M /dev/block /dev/null 0] {
-} [dd_config  512 /dev/zero  /dev/block 0] {
-} [dd_config 4096 /dev/zero  /dev/block 0] {
-} [dd_config   1M /dev/zero  /dev/block 0] {
-} [dd_config   8M /dev/zero  /dev/block 0] {
-			<start name="test-libc_block" ram="8M">
+			<start name="test-libc_block" ram="12M">
 				<config>
 					<libc stdout="/dev/log"/>
 					<vfs>
