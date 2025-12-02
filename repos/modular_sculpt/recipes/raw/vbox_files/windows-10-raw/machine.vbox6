@@ -19,7 +19,7 @@
         <LongMode enabled="true"/>
         <HardwareVirtExLargePages enabled="false"/>
       </CPU>
-      <Memory RAMSize="6500"/>
+      <Memory RAMSize="4000"/>
       <HID Pointing="PS2Mouse" Keyboard="PS2Keyboard"/>
       <Boot>
         <Order position="1" device="DVD"/>
