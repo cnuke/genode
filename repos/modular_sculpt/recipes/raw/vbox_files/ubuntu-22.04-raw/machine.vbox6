@@ -14,7 +14,7 @@
       <DVDImages/>
     </MediaRegistry>
     <Hardware>
-      <CPU count="4" hotplug="false">
+      <CPU count="2" hotplug="false">
         <PAE enabled="true"/>
         <LongMode enabled="true"/>
         <HardwareVirtExLargePages enabled="false"/>
