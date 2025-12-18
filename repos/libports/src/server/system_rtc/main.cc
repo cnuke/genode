@@ -93,9 +93,9 @@ struct Rtc::Time
 	Signal_context_capability _notify_sigh;
 
 	Timer::Connection _timer { _env };
-	Rtc::Connection _rtc     { _env };
+	Constructible<Rtc::Connection> _rtc { };
 
-	Util::Point_in_time _time_base { };
+	Util::Point_in_time _time_base { 0, 0 };
 
 	void _update_time(Timestamp const &ts)
 	{
@@ -108,7 +108,10 @@ struct Rtc::Time
 
 	void _handle_rtc_set()
 	{
-		Timestamp ts = _rtc.current_time();
+		if (!_rtc.constructed())
+			return;
+
+		Timestamp ts = _rtc->current_time();
 		log("Set RTC base from RTC driver to ", ts);
 		_update_time(ts);
 	}
@@ -119,6 +122,9 @@ struct Rtc::Time
 	Attached_rom_dataspace _config_rom { _env, "config" };
 	bool const _set_rtc {
 		_config_rom.node().attribute_value("allow_setting_rtc", false) };
+
+	bool const _standalone_mode {
+		_config_rom.node().attribute_value("standalone_mode", false) };
 
 	Constructible<Attached_rom_dataspace> _set_rtc_rom { };
 
@@ -188,8 +194,11 @@ struct Rtc::Time
 	Time(Env &env, Signal_context_capability notify_sigh)
 	: _env { env }, _notify_sigh { notify_sigh }
 	{
-		_rtc.set_sigh(_rtc_set_sigh);
-		_handle_rtc_set();
+		if (!_standalone_mode) {
+			_rtc.construct(env);
+			_rtc->set_sigh(_rtc_set_sigh);
+			_handle_rtc_set();
+		}
 
 		if (_set_rtc) {
 			_set_rtc_rom.construct(env, "set_rtc");
