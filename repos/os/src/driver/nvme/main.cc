@@ -725,8 +725,7 @@ struct Nvme::Io_queue : Noncopyable
  * Controller
  */
 class Nvme::Controller : Platform::Device,
-                         Platform::Device::Mmio<0x1010>,
-                         Platform::Device::Irq
+                         Platform::Device::Mmio<0x1010>
 {
 	using Mmio = Genode::Mmio<SIZE>;
 
@@ -937,6 +936,8 @@ class Nvme::Controller : Platform::Device,
 	Genode::Env          &_env;
 	Platform::Connection &_platform;
 	Mmio::Delayer        &_delayer;
+
+	Constructible<Platform::Device::Irq> _device_irq { };
 
 	/*
 	 * There is a completion and submission queue for
@@ -1561,10 +1562,12 @@ class Nvme::Controller : Platform::Device,
 	:
 		Platform::Device(platform),
 		Platform::Device::Mmio<SIZE>((Platform::Device&)*this),
-		Platform::Device::Irq((Platform::Device&)*this),
 		_env(env), _platform(platform), _delayer(delayer)
 	{
-		sigh(irq_sigh);
+		Genode::error(__func__, ":", __LINE__);
+		_device_irq.construct((Platform::Device&)*this);
+		Genode::error(__func__, ":", __LINE__, ": Platform::Device::Irq");
+		_device_irq->sigh(irq_sigh);
 	}
 
 	/**
@@ -1603,7 +1606,7 @@ class Nvme::Controller : Platform::Device,
 	/**
 	 * Acknowledge interrupt
 	 */
-	void ack_irq() { Platform::Device::Irq::ack(); }
+	void ack_irq() { _device_irq->ack(); }
 
 	/*
 	 * Identify NVM system
