@@ -2495,7 +2495,11 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 	Signal_handler<Main> _request_handler { _env.ep(), *this, &Main::_handle_requests };
 	Signal_handler<Main> _irq_handler     { _env.ep(), *this, &Main::_handle_irq };
 
+	struct DBGDI { DBGDI() { Genode::error(__func__, ":", __LINE__); } } _DBGDI { };
+
 	Nvme::Driver _driver { _env, _config_rom, _irq_handler, _request_handler };
+
+	struct DBGDO { DBGDO() { Genode::error(__func__, ":", __LINE__); } } _DBGDO { };
 
 	using Session_space = Id_space<Block_session_component>;
 	Session_space _sessions { };
@@ -2800,8 +2804,6 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 
 	Main(Genode::Env &env) : _env(env)
 	{
-		Genode::error(__func__, ":", __LINE__, ": hello");
-
 		/*
 		 * Mark first id (0) as used so that it is never allocated
 		 * automatically and use it to denote an unset session id.
