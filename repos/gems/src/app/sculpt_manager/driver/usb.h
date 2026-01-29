@@ -147,9 +147,7 @@ struct Sculpt::Usb_driver : private Noncopyable
 		});
 
 		start_node(_net, "usb_net", [&] {
-			g.node("config", [&] {
-				g.attribute("mac", "02:00:00:00:01:05");
-			});
+			g.node("config", [&] { });
 			g.tabular_node("route", [&] {
 				gen_service_node<Usb::Session>(g, [&] {
 					gen_named_node(g, "child", "usb"); });
