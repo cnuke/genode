@@ -14,4 +14,8 @@
 		<device vendor_id="0x5986" product_id="0x706"/>  <!-- x260 webcam -->
 	</policy>
 
+	<policy label_prefix="usb_net ->">
+		<device vendor_id="0xbda" product_id="0x8156"/>  <!-- Realtek LAN -->
+	</policy>
+
 </config>
