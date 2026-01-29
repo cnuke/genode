@@ -1,0 +1,15 @@
+<runtime ram="16M" caps="200" binary="usb_net">
+
+	<provides> <terminal/> </provides>
+
+	<requires>
+		<uplink label="uplink_session"/>
+		<timer/>
+	</requires>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="usb_net"/>
+	</content>
+
+</runtime>
