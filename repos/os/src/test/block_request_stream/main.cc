@@ -34,7 +34,7 @@ struct Test::Block_session_component : Rpc_object<Block::Session>,
 	Entrypoint &_ep;
 
 	static constexpr size_t BLOCK_SIZE = 4096;
-	static constexpr size_t NUM_BLOCKS = 16;
+	static constexpr size_t NUM_BLOCKS = (32u << 30) / BLOCK_SIZE;
 
 	using Block::Request_stream::with_requests;
 	using Block::Request_stream::with_content;
