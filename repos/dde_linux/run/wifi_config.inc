@@ -25,6 +25,13 @@ proc wifi_verbose { } {
 	return true
 }
 
+proc wifi_debug { } {
+	if {![info exists ::env(GENODE_WIFI_DEBUG)]} {
+		return false
+	}
+	return true
+}
+
 #
 # wifi-driver config generator (supporting a network list)
 #
@@ -43,13 +50,13 @@ proc wifi_verbose { } {
 #   </inline>}
 #
 
-set wifi_verbose false
-
 proc wifi_config { scan_interval update_quality_interval rfkill networks } {
-	global wifi_verbose
 
 	set    config "<wifi_config"
 	append config " verbose=\"[wifi_verbose]\""
+	if {[wifi_debug]} {
+		append config " log_level=\"debug\""
+	}
 	append config " scan_interval=\"$scan_interval\""
 	append config " update_quality_interval=\"$update_quality_interval\""
 	append config " rfkill=\"$rfkill\""
@@ -68,4 +75,3 @@ proc wifi_config { scan_interval update_quality_interval rfkill networks } {
 
 	return $config
 }
-

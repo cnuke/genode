@@ -217,7 +217,7 @@ append config {
 		<config verbose="yes"/>
 	</start>
 
-	<start name="wifi" caps="260" ram="32M" priority="-1">
+	<start name="wifi" caps="270" ram="32M" priority="-1">
 		<config ld_verbose="yes">
 			<report mac_address="true"/>
 			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc" rng="/dev/urandom"/>
