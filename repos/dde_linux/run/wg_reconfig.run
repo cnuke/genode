@@ -16,18 +16,6 @@
 
 assert {[have_spec arm_v8a] || [have_spec x86_64]}
 
-create_boot_directory
-
-import_from_depot [depot_user]/src/libc \
-                  [depot_user]/src/libssh \
-                  [depot_user]/src/lighttpd \
-                  [depot_user]/src/openssl \
-                  [depot_user]/src/pcre \
-                  [depot_user]/src/posix \
-                  [depot_user]/src/vfs \
-                  [depot_user]/src/vfs_lwip \
-                  [depot_user]/src/zlib
-
 proc peer_1_wg_config {peers} {
 
 	append result {
@@ -89,8 +77,28 @@ proc peer_2_wg_config {peers private_key} {
 	return $result
 }
 
-append config {
+create_boot_directory
+import_from_depot [depot_user]/src/[base_src] \
+                  [depot_user]/src/curl \
+                  [depot_user]/src/dynamic_rom \
+                  [depot_user]/src/fetchurl \
+                  [depot_user]/src/libc \
+                  [depot_user]/src/libssh \
+                  [depot_user]/src/lighttpd \
+                  [depot_user]/src/init \
+                  [depot_user]/src/nic_router \
+                  [depot_user]/src/openssl \
+                  [depot_user]/src/pcre \
+                  [depot_user]/src/ping \
+                  [depot_user]/src/posix \
+                  [depot_user]/src/report_rom \
+                  [depot_user]/src/vfs \
+                  [depot_user]/src/vfs_lwip \
+                  [depot_user]/src/zlib
 
+build { app/wireguard }
+
+append config {
 <config>
 
 	<parent-provides>
@@ -543,17 +551,7 @@ EpA5DBBklj8UE2CdONvN
 
 install_config $config
 
-append targets {
-	core init timer lib/ld server/nic_router app/wireguard server/report_rom app/ping
-	app/fetchurl server/dynamic_rom }
-
-append boot_modules {
-	core init timer nic_router wireguard fetchurl ping report_rom curl.lib.so
-	ld.lib.so dynamic_rom }
-
-build $targets
-
-build_boot_image $boot_modules
+build_boot_image [build_artifacts]
 
 append qemu_args "-nographic "
 
