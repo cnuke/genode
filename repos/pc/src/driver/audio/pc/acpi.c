@@ -80,3 +80,12 @@ acpi_status acpi_walk_resources(acpi_handle device_handle, char *name,
 {
 	return (AE_OK);
 }
+
+
+int acpi_spi_count_resources(struct acpi_device *adev)
+{
+	// FIXME allow for compiling with CS35L56 driver, remove later
+	//       when proper SPI support is in enabled
+	lx_emul_trace(__func__);
+	return 0;
+}
