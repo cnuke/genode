@@ -77,6 +77,7 @@ struct sound_handle
 struct sound_card
 {
 	unsigned               sound_events;
+	enum Device_type       type;
 	enum Device_mode       speaker_mode;
 	enum Device_mode       microphone_mode;
 	bool                   jack_plugged;
@@ -1233,6 +1234,115 @@ static void sound_dispatch(struct sound_card *card, struct snd_card *c)
 	}
 }
 
+#if 0
+static int _probe_stream(struct snd_pcm_str *stream, void *arg)
+{
+	struct genode_routing *routing = (struct genode_routing*)arg;
+
+	char const * const pcm_name = dev_name(stream->dev);
+	char const * const pcm_id   = stream->pcm->id;
+
+	/* MTL/ARL and newer */
+	if (strcmp(pcm_id, "DMIC Raw") > 0) {
+		routing->type = TYPE_DMIC_RAW;
+		memcpy(routing->mic_internal, pcm_name,
+		       min(sizeof(routing->mic_internal), strlen(pcm_name) + 1));
+		return 0;
+	}
+
+	/* TGL/ADL/RPL */
+	if (strcmp(pcm_id, "DMIC") > 0) {
+		routing->type = TYPE_DMIC;
+		memcpy(routing->mic_internal, pcm_name,
+		       min(sizeof(routing->mic_internal), strlen(pcm_name) + 1));
+		return 0;
+	}
+
+	return -1;
+}
+
+
+static void probe_card_devices(struct snd_card       const *card,
+                               struct genode_routing       *routing)
+{
+	/*
+	 * As pcmC0D0 appears to be the default analog HDA device
+	 * we set that unconditionally for now.
+	 */
+	memcpy(routing->playback,     "pcmC0D0p", 8);
+	memcpy(routing->mic_internal, "pcmC0D0c", 8);
+	memcpy(routing->mic_headset,  "pcmC0D0c", 8);
+
+	routing->type = TYPE_HDA;
+
+	for_each_stream(card, _probe_stream, routing);
+}
+
+
+static void probe_mixer_controls(struct mixer const *mixer,
+                                 struct genode_routing *routing)
+{
+	char const * const master_playback_switch = "Master Playback Switch";
+	char const * const master_playback_volume = "Master Playback Volume";
+
+	char const * const speaker_playback_switch   = "Speaker Playback Switch";
+	char const * const headphone_playback_switch = "Headphone Playback Switch";
+	char const * const capture_switch            = "Headphone Playback Switch";
+	char const * const dmic_capture_switch       = "Dmic0 Capture Switch";
+
+	for (i = 0; i < mixer->control_count; i++) {
+		struct snd_ctl_elem_info const *info = &mixer->controls[i].info;
+
+		if (info->type == SNDRV_CTL_ELEM_TYPE_BYTES) continue;
+
+		char const * const ctl_name = (char const *)info->id.name;
+		if (strcmp(ctl_name, master_playback_volume) == 0)
+			routing->master_playback_switch_index = i;
+		else
+
+		if (strcmp(ctl_name, master_playback_switch) == 0)
+			routing->master_playback_volume_index = i;
+		else
+
+		if (strcmp(ctl_name, speaker_playback_switch) == 0)
+			routing->speaker_internal_index = i;
+		else
+
+		if (strcmp(ctl_name, headphone_playback_switch) == 0)
+			routing->speaker_external_index = i;
+		else
+
+		if (strcmp(ctl_name, capture_switch) == 0)
+			routing->mic_internal_index = i;
+		else
+
+		if (strcmp(ctl_name, dmic_capture_switch) == 0)
+			routing->mic_external_index = i;
+		else
+
+		control->id          = i;
+		control->type        = genode_control_type(info->type);
+		control->type_label  = control_labels[info->type];
+		control->value_count = info->count;
+		control->name        = (char const *)info->id.name;
+
+		for (j = 0; j < info->count && j < 2; j++) {
+			control->values[j] = mixer->controls[i].value[j];
+		}
+
+		if (info->type == SNDRV_CTL_ELEM_TYPE_INTEGER) {
+			control->min = info->value.integer.min;
+			control->max = info->value.integer.max;
+		}
+
+		if (info->type != SNDRV_CTL_ELEM_TYPE_ENUMERATED)  continue;
+
+		control->enum_count   = info->value.enumerated.items;
+		control->enum_strings = mixer->controls[i].enum_strings;
+	}
+}
+#endif
+
 
 static int sound_card_task(void *data)
 {
@@ -1241,29 +1351,16 @@ static int sound_card_task(void *data)
 	struct genode_routing routing;
 	int err;
 
-	if (!genode_query_routing(&routing)) {
-		printk("Error: could not query routing information");
-		sleep_forever();
-	}
-
-	struct sound_card sound_card = {
-		.sound_events    = 0,
-		.microphone_mode = DEFAULT,
-		.routing         = &routing,
-		.mixer           = &mixer,
-	};
+	/*
+	 * Report all devices belonging to the sound-card and its
+	 * mixer controls first so that a user is able to start
+	 * the driver to gather information before attempting to
+	 * configure the device.
+	 */
 
 	if (!card) {
 		printk("Error: No sound card found\n");
 		sleep_forever();
-	}
-
-	/* register jack handler */
-	sound_events_add(&sound_card, EVENT_JACK_UNPLUGGED);
-	jack_handler.private = &sound_card;
-	err = input_register_handler(&jack_handler);
-	if (err) {
-		printk("Error: Could not register jack input handler (err=%d\n", err);
 	}
 
 	report_pcm_devices(card);
@@ -1285,6 +1382,40 @@ static int sound_card_task(void *data)
 	if (err) {
 		printk("Error: Mixer controls failed: %d\n", err);
 		sleep_forever();
+	}
+
+	mixer_report_controls(&mixer);
+
+	/*
+	 * Try to configure the found sound-card, either by employing
+	 * the auto-detect mechanism or via parsing the static
+	 * configuration.
+	 */
+
+	if (!genode_query_routing(&routing)) {
+		printk("Error: could not query routing information\n");
+		sleep_forever();
+	}
+
+	// int const auto_detected = genode_auto_routing(&routing);
+	// if (auto_detected) {
+	// 	probe_card_devices(card, &routing);
+	// 	probe_mixer_controls(mixer, &routing);
+	// }
+
+	struct sound_card sound_card = {
+		.sound_events    = 0,
+		.microphone_mode = DEFAULT,
+		.routing         = &routing,
+		.mixer           = &mixer,
+	};
+
+	/* register jack handler */
+	sound_events_add(&sound_card, EVENT_JACK_UNPLUGGED);
+	jack_handler.private = &sound_card;
+	err = input_register_handler(&jack_handler);
+	if (err) {
+		printk("Error: Could not register jack input handler (err=%d\n", err);
 	}
 
 	/* open devices */
