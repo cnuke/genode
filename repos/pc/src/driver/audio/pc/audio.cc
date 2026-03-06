@@ -894,8 +894,6 @@ extern "C" bool genode_query_routing(struct genode_routing *routing)
 	if (!routing)
 		return false;
 
-	bool result = false;
-
 	using Name = Genode::String<32>;
 	Name const config_profile_name =
 		_audio().config.node().attribute_value("profile", Name());
@@ -905,6 +903,28 @@ extern "C" bool genode_query_routing(struct genode_routing *routing)
 		return false;
 	}
 
+	/*
+	 * The special profile 'auto-detect' attemps to automatically
+	 * configure the soundcard and supersedes any other profile.
+	 */
+
+	if (config_profile_name == "auto-detect") {
+
+			char const * const auto_string = "auto";
+
+			memcpy(routing->playback,     auto_string, 5);
+			memcpy(routing->mic_headset,  auto_string, 5);
+			memcpy(routing->mic_internal, auto_string, 5);
+
+			routing->speaker_external_index = 0u;
+			routing->speaker_internal_index = 0u;
+			routing->mic_external_index     = 0u;
+			routing->mic_internal_index     = 0u;
+
+		return true;
+	}
+
+	bool result = false;
 	_audio().config.node().for_each_sub_node("profile", [&] (Node const &node) {
 
 		Name const profile_name = node.attribute_value("name", Name());
@@ -949,4 +969,10 @@ extern "C" bool genode_query_routing(struct genode_routing *routing)
 	});
 
 	return result;
+}
+
+
+extern "C" bool genode_auto_routing(struct genode_routing const *routing)
+{
+	return strcmp(routing->playback, "auto", 4) == 0;
 }

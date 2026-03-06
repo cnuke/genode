@@ -29,6 +29,13 @@ enum Device_mode {
 	DEFAULT = EXTERNAL,
 };
 
+enum Device_type {
+	TYPE_UNKNOWN,
+	TYPE_HDA,
+	TYPE_DMIC,
+	TYPE_DMIC_RAW,
+};
+
 enum Ctrl_type
 {
 	CTRL_INVALID, CTRL_BOOL, CTRL_INTEGER, CTRL_ENUMERATED
@@ -81,6 +88,17 @@ struct genode_routing
 	unsigned speaker_internal_index;
 	unsigned mic_external_index;
 	unsigned mic_internal_index;
+
+	/* used with auto-detect */
+	unsigned master_playback_volume_index;
+	unsigned master_playback_switch_index;
+
+	unsigned speaker_playback_volume_index;
+	unsigned headphone_playback_volume_index;
+
+	unsigned capture_volume_index;
+
+	enum Device_type type;
 };
 
 
@@ -98,6 +116,7 @@ bool genode_mixer_update(void);
 enum Device_mode genode_speaker_mode(void);
 enum Device_mode genode_microphone_mode(void);
 bool genode_query_routing(struct genode_routing *routing);
+bool genode_auto_routing(struct genode_routing const *routing);
 
 void genode_devices_report(struct genode_devices *devices);
 
