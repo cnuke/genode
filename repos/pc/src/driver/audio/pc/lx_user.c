@@ -1129,18 +1129,21 @@ static void update_mixer(struct sound_card *card)
 		if (err) printk("%s:%d err=%d\n", __func__, __LINE__ ,err);
 	}
 
-
 	/* update speaker & mics */
-	index = card->routing->speaker_external_index;
-	value = card->jack_plugged && (card->speaker_mode == EXTERNAL);
-	mixer_control_set(&mixer->controls[index], 0, value);
-	mixer_control_set(&mixer->controls[index], 1, value);
+	if (card->routing->speaker_external_index) {
+		index = card->routing->speaker_external_index;
+		value = card->jack_plugged && (card->speaker_mode == EXTERNAL);
+		mixer_control_set(&mixer->controls[index], 0, value);
+		mixer_control_set(&mixer->controls[index], 1, value);
+	}
 
-	index = card->routing->speaker_internal_index;
-	value = (!card->jack_plugged && (card->speaker_mode == EXTERNAL))
-	         || (card->speaker_mode == INTERNAL);
-	mixer_control_set(&mixer->controls[index], 0, value);
-	mixer_control_set(&mixer->controls[index], 1, value);
+	if (card->routing->speaker_internal_index) {
+		index = card->routing->speaker_internal_index;
+		value = (!card->jack_plugged && (card->speaker_mode == EXTERNAL))
+		         || (card->speaker_mode == INTERNAL);
+		mixer_control_set(&mixer->controls[index], 0, value);
+		mixer_control_set(&mixer->controls[index], 1, value);
+	}
 
 	if (card->routing->mic_external_index) {
 		index = card->routing->mic_external_index;
@@ -1149,11 +1152,21 @@ static void update_mixer(struct sound_card *card)
 		mixer_control_set(&mixer->controls[index], 1, value);
 	}
 
-	index = card->routing->mic_internal_index;
-	value = (!card->jack_plugged && (card->microphone_mode == EXTERNAL))
-	         || (card->microphone_mode == INTERNAL);
-	mixer_control_set(&mixer->controls[index], 0, value);
-	mixer_control_set(&mixer->controls[index], 1, value);
+	if (card->routing->mic_internal_index) {
+		index = card->routing->mic_internal_index;
+		value = (!card->jack_plugged && (card->microphone_mode == EXTERNAL))
+		         || (card->microphone_mode == INTERNAL);
+		mixer_control_set(&mixer->controls[index], 0, value);
+		mixer_control_set(&mixer->controls[index], 1, value);
+	}
+
+	/* capture switch covers internal as well as external, force it on */
+	if (card->routing->mic_internal_index &&
+	    card->routing->mic_external_index &&
+	   (card->routing->mic_internal_index == card->routing->mic_external_index)) {
+		mixer_control_set(&mixer->controls[index], 0, 1);
+		mixer_control_set(&mixer->controls[index], 1, 1);
+	}
 
 	/* rewrite all externally configured and valid mixer controls */
 	mixer_update_controls(mixer, true);
@@ -1234,7 +1247,7 @@ static void sound_dispatch(struct sound_card *card, struct snd_card *c)
 	}
 }
 
-#if 0
+
 static int _probe_stream(struct snd_pcm_str *stream, void *arg)
 {
 	struct genode_routing *routing = (struct genode_routing*)arg;
@@ -1279,6 +1292,7 @@ static void probe_card_devices(struct snd_card       const *card,
 }
 
 
+#if 0
 static void probe_mixer_controls(struct mixer const *mixer,
                                  struct genode_routing *routing)
 {
@@ -1392,16 +1406,17 @@ static int sound_card_task(void *data)
 	 * configuration.
 	 */
 
+	memset(&routing, 0, sizeof (routing));
 	if (!genode_query_routing(&routing)) {
 		printk("Error: could not query routing information\n");
 		sleep_forever();
 	}
 
-	// int const auto_detected = genode_auto_routing(&routing);
-	// if (auto_detected) {
-	// 	probe_card_devices(card, &routing);
-	// 	probe_mixer_controls(mixer, &routing);
-	// }
+	int const auto_detected = genode_auto_routing(&routing);
+	if (auto_detected) {
+		probe_card_devices(card, &routing);
+		// probe_mixer_controls(mixer, &routing);
+	}
 
 	struct sound_card sound_card = {
 		.sound_events    = 0,
