@@ -1082,7 +1082,15 @@ void jack_event(struct input_handle *handle, unsigned int type,
 {
 	struct sound_card *card = handle->private;
 
+	printk("%s:%d EV_SW: %u SW_HEADPHONE_INSERT: %u --- type: %u code: %u\n",
+	       __func__, __LINE__, EV_SW, SW_HEADPHONE_INSERT, type, code);
+
 	if (type != EV_SW || code != SW_HEADPHONE_INSERT) return;
+
+	// TODO SW_MICROPHONE_INSERT
+	//      SW_LINEOUT_INSERT
+	//      SW_LINEIN_INSERT
+	//      (see SND_JACK_SWITCH_TYPES)
 
 	sound_events_add(card, value ? EVENT_JACK_PLUGGED : EVENT_JACK_UNPLUGGED);
 
@@ -1282,9 +1290,9 @@ static void probe_card_devices(struct snd_card       const *card,
 	 * As pcmC0D0 appears to be the default analog HDA device
 	 * we set that unconditionally for now.
 	 */
-	memcpy(routing->playback,     "pcmC0D0p", 8);
-	memcpy(routing->mic_internal, "pcmC0D0c", 8);
-	memcpy(routing->mic_headset,  "pcmC0D0c", 8);
+	memcpy(routing->playback,     "pcmC0D0p", 9);
+	memcpy(routing->mic_internal, "pcmC0D0c", 9);
+	memcpy(routing->mic_headset,  "pcmC0D0c", 9);
 
 	routing->type = TYPE_HDA;
 
