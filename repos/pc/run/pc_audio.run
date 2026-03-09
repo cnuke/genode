@@ -76,6 +76,7 @@ config | prio_levels: 2
   + config
     + report | devices: yes
     + policy | label_prefix: pc_audio | info: yes
+      + device NHLT
       + pci | class: AUDIO
       + pci | class: HDAUDIO
   + route

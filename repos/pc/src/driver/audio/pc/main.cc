@@ -26,6 +26,28 @@ using namespace Genode;
 extern "C" void lx_emul_module_params(void);
 
 
+extern "C" int lx_emul_acpi_table(const char * const name, void *ctx,
+                                  void (*fn) (void *ctx,
+                                              unsigned long addr,
+                                              unsigned long size))
+{
+	using namespace Lx_kit;
+	using namespace Genode;
+
+	int found = 0;
+	env().devices.for_each([&] (Device &d) {
+		if (d.name() != name)
+		return;
+
+		found = 1;
+		d.for_each_io_mem([&] (Device::Io_mem &io_mem) {
+			fn(ctx, io_mem.addr, io_mem.size); });
+	});
+
+	return found;
+}
+
+
 struct Main
 {
 	Env &env;
