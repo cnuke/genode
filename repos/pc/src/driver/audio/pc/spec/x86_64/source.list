@@ -166,6 +166,9 @@ sound/soc/intel/boards/hda_dsp_common.c
 sound/soc/intel/boards/skl_hda_dsp_generic.c
 sound/soc/intel/boards/sof_board_helpers.c
 sound/soc/intel/common/soc-acpi-intel-arl-match.c
+sound/soc/intel/common/soc-acpi-intel-cfl-match.c
+sound/soc/intel/common/soc-acpi-intel-cml-match.c
+sound/soc/intel/common/soc-acpi-intel-cnl-match.c
 sound/soc/intel/common/soc-acpi-intel-hda-match.c
 sound/soc/intel/common/soc-acpi-intel-mtl-match.c
 sound/soc/intel/common/soc-acpi-intel-sdca-quirks.c
@@ -211,6 +214,7 @@ sound/soc/sof/intel/hda-trace.c
 sound/soc/sof/intel/hda.c
 sound/soc/sof/intel/icl.c
 sound/soc/sof/intel/mtl.c
+sound/soc/sof/intel/pci-cnl.c
 sound/soc/sof/intel/pci-mtl.c
 sound/soc/sof/intel/pci-tgl.c
 sound/soc/sof/intel/tgl.c
