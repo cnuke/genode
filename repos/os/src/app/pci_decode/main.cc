@@ -684,40 +684,41 @@ void Main::parse_acpi_device_info(Node const &node, Generator &g)
 	/*
 	 * Intel Meteorlake PCH Pinctrl/GPIO
 	 */
-	gen.node("device", [&]
+	g.node("device", [&]
 	{
-		gen.attribute("name", "INTC1083");
-		gen.attribute("type", "acpi");
-		gen.node("irq", [&]
+		/* also known as INTC105E for Arrow Lake */
+		g.attribute("name", "INTC1083");
+		g.attribute("type", "acpi");
+		g.node("irq", [&]
 		{
-			gen.attribute("number", 14U);
-			gen.attribute("mode", "level");
-			gen.attribute("polarity", "low");
+			g.attribute("number", 14U);
+			g.attribute("mode", "level");
+			g.attribute("polarity", "low");
 		});
-		gen.node("io_mem", [&]
+		g.node("io_mem", [&]
 		{
-			gen.attribute("address", "0xe0d50000");
-			gen.attribute("size",    "0x1000");
+			g.attribute("address", "0xe0d50000");
+			g.attribute("size",    "0x1000");
 		});
-		gen.node("io_mem", [&]
+		g.node("io_mem", [&]
 		{
-			gen.attribute("address", "0xe0d40000");
-			gen.attribute("size",    "0x1000");
+			g.attribute("address", "0xe0d40000");
+			g.attribute("size",    "0x1000");
 		});
-		gen.node("io_mem", [&]
+		g.node("io_mem", [&]
 		{
-			gen.attribute("address", "0xe0d30000");
-			gen.attribute("size",    "0x1000");
+			g.attribute("address", "0xe0d30000");
+			g.attribute("size",    "0x1000");
 		});
-		gen.node("io_mem", [&]
+		g.node("io_mem", [&]
 		{
-			gen.attribute("address", "0xe0d20000");
-			gen.attribute("size",    "0x1000");
+			g.attribute("address", "0xe0d20000");
+			g.attribute("size",    "0x1000");
 		});
-		gen.node("io_mem", [&]
+		g.node("io_mem", [&]
 		{
-			gen.attribute("address", "0xe0d10000");
-			gen.attribute("size",    "0x1000");
+			g.attribute("address", "0xe0d10000");
+			g.attribute("size",    "0x1000");
 		});
 	});
 }
