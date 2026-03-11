@@ -97,15 +97,40 @@ struct Main
  *
  * XXX static fixup list should be replaced by dynamic mapping of BAR
  */
-static uint64_t fixup_bar_base_address(Bdf bdf, unsigned bar, uint64_t addr, uint64_t size)
+static uint64_t fixup_bar_base_address(Config const &cfg,
+                                       Bdf bdf, unsigned bar, uint64_t addr, uint64_t size)
 {
 	auto base_address = addr;
 
+	using C0 = Config_type0;
+	C0 const cfg0(cfg.range());
+
+	auto const vendor_id = cfg0.read<C0::Vendor>();
+	auto const device_id = cfg0.read<C0::Device>();
+
+	auto const subsystem_vendor_id = cfg0.read<C0::Subsystem_vendor>();
+	auto const subsystem_device_id = cfg0.read<C0::Subsystem_device>();
+
+	if (vendor_id != 0x8086 /* Intel */)
+		return 0;
+
 	/* Intel LPSS (I2C) devices - values taken from Linux boot */
-	if (bdf == Bdf { 0, 0x15, 0 } && bar == 0) base_address = 0x4017000000;
-	if (bdf == Bdf { 0, 0x15, 1 } && bar == 0) base_address = 0x4017001000;
-	if (bdf == Bdf { 0, 0x15, 2 } && bar == 0) base_address = 0x4017001000;
-	if (bdf == Bdf { 0, 0x15, 3 } && bar == 0) base_address = 0x4017002000;
+
+	if  (subsystem_vendor_id == 0x1e26 /* Fujitsu */
+	 || (subsystem_vendor_id == 0xf111 && subsystem_device_id == 0x0002) /* Framework 12th Gen */) {
+		if (bdf == Bdf { 0, 0x15, 0 } && bar == 0) base_address = 0x4017000000;
+		if (bdf == Bdf { 0, 0x15, 1 } && bar == 0) base_address = 0x4017001000;
+		if (bdf == Bdf { 0, 0x15, 2 } && bar == 0) base_address = 0x4017001000;
+		if (bdf == Bdf { 0, 0x15, 3 } && bar == 0) base_address = 0x4017002000;
+	}
+
+	if (subsystem_vendor_id == 0xf111 && subsystem_device_id == 0x0009 /* Framework 14th Gen */) {
+		if (bdf == Bdf { 0, 0x15, 0 } && bar == 0) base_address = 0x60192f9000;
+		if (bdf == Bdf { 0, 0x15, 1 } && bar == 0) base_address = 0x60192fa000;
+	}
+
+	if (subsystem_vendor_id == 0x17aa && device_id == 0x51e8 /* Lenovo X1 Nano Gen 2 */)
+		if (bdf == Bdf { 0, 0x15, 0 } && bar == 0) base_address = 0x4107000000;
 
 	if (addr != base_address)
 		log(bdf, " remap MEM BAR", bar, " ", Hex_range(addr, (size_t)size), " to ", Hex(base_address));
@@ -228,7 +253,7 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 		cfg.for_each_bar([&] (uint64_t addr, uint64_t size,
 		                      unsigned bar, bool pf)
 		{
-			addr = fixup_bar_base_address(bdf, bar, addr, size);
+			addr = fixup_bar_base_address(cfg, bdf, bar, addr, size);
 			if (!addr)
 				warning(bdf, " MEM BAR", bar, " ", Hex_range(addr, (size_t)size),
 				        " has invalid base address - consider pci-fixup in parse_pci_function()");
