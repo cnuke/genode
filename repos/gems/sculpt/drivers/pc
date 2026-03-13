@@ -114,6 +114,10 @@ config
     + policy | label_suffix: -> audio             | info: yes
     | + pci | class: AUDIO
     | + pci | class: HDAUDIO
+    + policy | label_suffix: -> pc_audio          | info: yes
+    | + device NHLT
+    | + pci | class: AUDIO
+    | + pci | class: HDAUDIO
     + policy | label: acpica
       + device acpi
 -
