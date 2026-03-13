@@ -1,0 +1,34 @@
+launcher | ram: 10 | caps: 200 | pkg: pc_audio | priority: -1
+
++ config | report_mixer: yes | report_devices: yes
+         | speaker_priority: external | mic_priority: external
+         | . profile: none
+    + profile u7411 | . SOF Tiger Lake
+      + routing | playback: pcmC0D0p | mic_internal: pcmC0D6c | mic_headset: pcmC0D0c
+                | speaker_external_id:  1 | speaker_internal_id:  3
+                | mic_external_id:     13 | mic_internal_id:     30
+      + control Headphone Playback Volume | id:  0 | channel: 0 | type: int  | value: 87 | min: 0 | max: 87
+      + control Headphone Playback Volume | id:  0 | channel: 1 | type: int  | value: 87 | min: 0 | max: 87
+      + control Speaker Playback Volume   | id:  2 | channel: 0 | type: int  | value: 87 | min: 0 | max: 87
+      + control Speaker Playback Volume   | id:  2 | channel: 1 | type: int  | value: 87 | min: 0 | max: 87
+      + control Loopback Mixing           | id:  4              | type: enum | selected: 0
+      + control Auto-Mute Mode            | id:  9              | type: enum | selected: 0
+      + control Input Source              | id: 10              | type: enum | selected: 0
+      + control Input Source              | id: 11              | type: enum | selected: 0
+      + control Capture Volume            | id: 12 | channel: 0 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 12 | channel: 1 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 14 | channel: 0 | type: int  | value: 63 | min: 0 | max: 63
+      + control Capture Volume            | id: 14 | channel: 1 | type: int  | value: 63 | min: 0 | max: 63
+      + control Master Playback Volume    | id: 18 | channel: 0 | type: int  | value: 60 | min: 0 | max: 87
+      + control Master Playback Switch    | id: 19 | channel: 0 | type: bool | value: true
+      + control Dmic0 Capture Volume      | id: 29 | channel: 0 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic0 Capture Volume      | id: 29 | channel: 1 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic1 2nd Capture Volume  | id: 32 | channel: 0 | type: int  | value: 70 | min: 0 | max: 70
+      + control Dmic1 2nd Capture Volume  | id: 32 | channel: 1 | type: int  | value: 70 | min: 0 | max: 70
+
++ route
+  + service Platform | + parent | label: pc_audio
+  + service Record   | + child mixer
+  + service Play     | + child mixer
+  + service Report   | + parent
+-
