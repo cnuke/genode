@@ -6,3 +6,4 @@ _/pkg/system_clock-pc
 _/pkg/mesa_gpu-intel
 _/pkg/bsd_audio
 _/pkg/gdb_x86
+_/pkg/pc_audio

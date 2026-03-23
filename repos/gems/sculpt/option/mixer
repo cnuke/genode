@@ -17,9 +17,11 @@ option
   |     .
   |
   | + mix mic_left
-  |   x play | label: audio -> mic_left
+  |   x play | label: bsd_audio -> mic_left
+  |   x play | label: pc_audio -> mic_left
   | + mix mic_right
-  |   x play | label: audio -> mic_right
+  |   x play | label: bsd_audio -> mic_right
+  |   x play | label: pc_audio -> mic_right
   |
   | x policy | label: vbox6 -> vbox -> left  | record: mic_left
   |            period_ms: 46 | jitter_ms: 23 | volume: 1.0
@@ -29,12 +31,20 @@ option
   | x policy | label: vbox6 -> vbox -> right | record: mic_right
   |            period_ms: 46 | jitter_ms: 23 | volume: 1.0
   |
-  | + policy | label: audio -> left | record: left
+  | + policy | label: bsd_audio -> left | record: left
   |            period_ms: 12 | jitter_ms: 5 | volume: 1.0
   |   .
-  |   . left channel of the audio driver matching its configuration
+  |   . left channel of the BSD audio driver matching its configuration
   |   .
-  | + policy | label: audio -> right | record: right
+  | + policy | label: bsd_audio -> right | record: right
+  |            period_ms: 12 | jitter_ms: 5 | volume: 1.0
+  |
+  | + policy | label: pc_audio -> left | record: left
+  |            period_ms: 12 | jitter_ms: 5 | volume: 1.0
+  |   .
+  |   . left channel of the PC audio driver matching its configuration
+  |   .
+  | + policy | label: pc_audio -> right | record: right
   |            period_ms: 12 | jitter_ms: 5 | volume: 1.0
   |
   + connect | + report | + parent
