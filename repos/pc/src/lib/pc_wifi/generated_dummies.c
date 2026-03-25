@@ -1379,3 +1379,36 @@ u32 xdp_master_redirect(struct xdp_buff * xdp)
 	lx_emul_trace_and_stop(__func__);
 }
 
+
+#include <linux/sync_file.h>
+
+struct sync_file * sync_file_create(struct dma_fence * fence)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sync_file.h>
+
+struct dma_fence * sync_file_get_fence(int fd)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/fs.h>
+
+int simple_attr_open(struct inode *inode, struct file *file,
+             int (*get)(void *, u64 *), int (*set)(void *, u64),
+             const char *fmt)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/fs.h>
+
+int simple_attr_release(struct inode *inode, struct file *file)
+{
+	lx_emul_trace_and_stop(__func__);
+}
