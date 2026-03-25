@@ -495,3 +495,22 @@ unsigned long __FIXADDR_TOP = 0xfffff000;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(6,16,0)
 DEFINE_MUTEX(rps_default_mask_mutex);
 #endif
+
+
+bool irq_fpu_usable(void)
+{
+	lx_emul_trace(__func__);
+	return 0;
+}
+
+
+void kernel_fpu_begin_mask(unsigned int kfpu_mask)
+{
+	lx_emul_trace(__func__);
+}
+
+
+void kernel_fpu_end(void)
+{
+	lx_emul_trace(__func__);
+}

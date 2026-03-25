@@ -10,6 +10,8 @@ ucode_files:
 	cp $(PORT_DIR)/firmware/*.pnvm .
 	cp $(PORT_DIR)/firmware/regulatory.db .
 	cp $(PORT_DIR)/firmware/regulatory.db.p7s .
+	mkdir mediatek && \
+		cp $(PORT_DIR)/firmware/mediatek/*.* mediatek/
 
 LICENSE.wifi:
 	for i in $(PORT_DIR)/firmware/LICEN*E.*; do \
@@ -21,4 +23,5 @@ LICENSE.wifi:
 include $(GENODE_DIR)/repos/base/recipes/content.inc
 
 pc_wifi_firmware.tar: ucode_files LICENSE.wifi
-	$(TAR) --remove-files -cf $@ -C . *.* rtlwifi/*.* && rmdir rtlwifi
+	$(TAR) --remove-files -cf $@ -C . *.* rtlwifi/*.* mediatek/*.* && \
+		rmdir rtlwifi mediatek
