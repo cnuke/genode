@@ -1011,6 +1011,19 @@ void __static_call_update(struct static_call_key *key, void *tramp, void *func)
 #endif
 
 
+#include <asm/uaccess.h>
+
+long strnlen_user(const char __user * str,long count)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/genetlink.h>
+
+struct genl_family netdev_nl_family;
+
+
 /*
  * The dummies below were moved from the generated dummies
  * file to provide the proper forward declarations and

@@ -2,6 +2,7 @@ crypto/compress.h
 crypto/hash.h
 crypto/internal.h
 crypto/skcipher.h
+drivers/dma-buf/dma-buf-sysfs-stats.h
 drivers/net/wireless/ath/ath.h
 drivers/net/wireless/ath/ath9k/ani.h
 drivers/net/wireless/ath/ath9k/ar5008_initvals.h
@@ -150,6 +151,16 @@ drivers/net/wireless/intel/iwlwifi/pcie/gen1_2/internal.h
 drivers/net/wireless/intel/iwlwifi/pcie/iwl-context-info-v2.h
 drivers/net/wireless/intel/iwlwifi/pcie/iwl-context-info.h
 drivers/net/wireless/intel/iwlwifi/pcie/utils.h
+drivers/net/wireless/mediatek/mt76/dma.h
+drivers/net/wireless/mediatek/mt76/mt76.h
+drivers/net/wireless/mediatek/mt76/mt7921/mcu.h
+drivers/net/wireless/mediatek/mt76/mt7921/mt7921.h
+drivers/net/wireless/mediatek/mt76/mt7921/regs.h
+drivers/net/wireless/mediatek/mt76/sdio.h
+drivers/net/wireless/mediatek/mt76/testmode.h
+drivers/net/wireless/mediatek/mt76/trace.h
+drivers/net/wireless/mediatek/mt76/usb_trace.h
+drivers/net/wireless/mediatek/mt76/util.h
 drivers/net/wireless/realtek/rtlwifi/base.h
 drivers/net/wireless/realtek/rtlwifi/btcoexist/halbt_precomp.h
 drivers/net/wireless/realtek/rtlwifi/btcoexist/halbtc8192e2ant.h
@@ -295,6 +306,8 @@ include/linux/mpls.h
 include/linux/mroute.h
 include/linux/mroute6.h
 include/linux/mroute_base.h
+include/linux/mtd/mtd.h
+include/linux/mtd/partitions.h
 include/linux/net_tstamp.h
 include/linux/netfilter.h
 include/linux/netfilter_netdev.h
@@ -400,6 +413,7 @@ include/trace/events/napi.h
 include/trace/events/net.h
 include/trace/events/netlink.h
 include/trace/events/notifier.h
+include/trace/events/page_pool.h
 include/trace/events/qdisc.h
 include/trace/events/skb.h
 include/trace/events/sock.h
@@ -409,6 +423,7 @@ include/uapi/linux/bpf_common.h
 include/uapi/linux/btf.h
 include/uapi/linux/cryptouser.h
 include/uapi/linux/devlink.h
+include/uapi/linux/dma-buf.h
 include/uapi/linux/dpll.h
 include/uapi/linux/errqueue.h
 include/uapi/linux/ethtool_netlink.h
@@ -461,7 +476,10 @@ include/xen/interface/hvm/start_info.h
 include/xen/xen.h
 lib/crypto/x86/sha256.h
 net/core/dev.h
+net/core/mp_dmabuf_devmem.h
 net/core/net-sysfs.h
+net/core/netdev-genl-gen.h
+net/core/page_pool_priv.h
 net/core/sock_destructor.h
 net/ethtool/common.h
 net/mac80211/aead_api.h
@@ -503,3 +521,15 @@ net/wireless/reg.h
 net/wireless/sysfs.h
 net/wireless/trace.h
 net/wireless/wext-compat.h
+include/uapi/mtd/mtd-abi.h
+include/linux/hwmon.h
+include/linux/hwmon-sysfs.h
+include/linux/soc/mediatek/mtk_wed.h
+drivers/net/wireless/mediatek/mt76/mt792x.h
+drivers/net/wireless/mediatek/mt76/mt792x_acpi_sar.h
+drivers/net/wireless/mediatek/mt76/mt792x_regs.h
+drivers/net/wireless/mediatek/mt76/mt792x_trace.h
+drivers/net/wireless/mediatek/mt76/mt76_connac.h
+drivers/net/wireless/mediatek/mt76/mt76_connac2_mac.h
+drivers/net/wireless/mediatek/mt76/mt76_connac3_mac.h
+drivers/net/wireless/mediatek/mt76/mt76_connac_mcu.h

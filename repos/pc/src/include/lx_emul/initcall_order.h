@@ -1,7 +1,7 @@
 /*
  * \brief  Array defining order of Linux Kernel initcalls
  * \author Automatically generated file - do no edit
- * \date   2026-02-27
+ * \date   2026-03-25
  */
 
 #pragma once
@@ -88,6 +88,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_xfd_update_static_branch3",
 	"__initcall_mtrr_if_init3",
 	"__initcall_ffh_cstate_init3",
+	"__initcall_efi_free_boot_services3",
 	"__initcall_kcmp_cookies_init3",
 	"__initcall_acpi_pci_init3",
 	"__initcall_serial_base_init3",
@@ -142,6 +143,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_neigh_init4",
 	"__initcall_fib_notifier_init4",
 	"__initcall_netdev_genl_init4",
+	"__initcall_page_pool_user_init4",
 	"__initcall_ethnl_init4",
 	"__initcall_ieee80211_init4",
 	"__initcall_rfkill_init4",
@@ -285,6 +287,7 @@ static const char * lx_emul_initcall_order[] = {
 	"__initcall_iwl_drv_init6",
 	"__initcall_iwl_init6",
 	"__initcall_iwl_mvm_init6",
+	"__initcall_mt7921_pci_driver_init6",
 	"__initcall_rtl_core_module_init6",
 	"__initcall_rtl92ce_driver_init6",
 	"__initcall_rtl88ee_driver_init6",
