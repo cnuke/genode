@@ -805,14 +805,6 @@ void nbcon_atomic_flush_unsafe(void)
 const struct nla_policy nda_policy[] = {};
 
 
-#include <linux/netdevice.h>
-
-void netdev_rss_key_fill(void * buffer,size_t len)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 #include <linux/irq.h>
 
 struct irq_chip no_irq_chip;

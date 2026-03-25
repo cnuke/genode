@@ -194,7 +194,7 @@ config | verbose: yes | prio_levels: 2
     + service ROM
   + config | verbose: yes
 
-+ start wifi | caps: 270 | ram: 32M | priority: -1
++ start wifi | caps: 300 | ram: 32M | priority: -1
   + config | ld_verbose: yes
   | + report | mac_address: true
   | + libc | stdout: /dev/log | stderr: /dev/log | rtc: /dev/rtc | rng: /dev/urandom

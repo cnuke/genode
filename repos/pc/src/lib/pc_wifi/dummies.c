@@ -364,35 +364,6 @@ void synchronize_rcu_expedited(void)
 }
 
 
-#include <linux/pci.h>
-
-int pci_enable_msi(struct pci_dev *dev)
-{
-	lx_emul_trace(__func__);
-	return -ENOSYS;
-}
-
-
-void pci_disable_msi(struct pci_dev *dev)
-{
-    lx_emul_trace(__func__);
-}
-
-
-int pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries,
-                          int minvec, int maxvec)
-{
-	lx_emul_trace(__func__);
-	return -ENOSYS;
-}
-
-
-void pci_disable_device(struct pci_dev * dev)
-{
-	lx_emul_trace(__func__);
-}
-
-
 #include <linux/leds.h>
 #include <../net/mac80211/ieee80211_i.h> /* struct ieee80211_local */
 
@@ -413,9 +384,11 @@ u16 get_random_u16(void)
 }
 
 
+#include <lx_emul/random.h>
+
 u8 get_random_u8(void)
 {
-	lx_emul_trace_and_stop(__func__);
+	return (u8)lx_emul_random_gen_u32();
 }
 
 
@@ -608,6 +581,8 @@ int iwl_bios_get_ppag_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_wgds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_wrds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_dsbr(struct iwl_fw_runtime *fwrt, u32 *value) { return -ENOENT; }
+int iwl_bios_get_phy_filters(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+__le32 iwl_get_lari_config_bitmap(struct iwl_fw_runtime *fwrt) { return 0; }
 
 
 extern int iwl_fill_lari_config(struct iwl_fw_runtime * fwrt,struct iwl_lari_config_change_cmd * cmd,size_t * cmd_size);
@@ -1009,6 +984,16 @@ void __static_call_update(struct static_call_key *key, void *tramp, void *func)
 }
 
 #endif
+
+#include <linux/netdevice.h>
+
+u8 netdev_rss_key[NETDEV_RSS_KEY_LEN] __read_mostly;
+
+void netdev_rss_key_fill(void *buffer, size_t len)
+{
+	net_get_random_once(netdev_rss_key, sizeof(netdev_rss_key));
+	memcpy(buffer, netdev_rss_key, len);
+}
 
 
 /*
