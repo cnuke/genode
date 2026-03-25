@@ -608,6 +608,8 @@ int iwl_bios_get_ppag_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_wgds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_wrds_table(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
 int iwl_bios_get_dsbr(struct iwl_fw_runtime *fwrt, u32 *value) { return -ENOENT; }
+int iwl_bios_get_phy_filters(struct iwl_fw_runtime *fwrt) { return -ENOENT; }
+__le32 iwl_get_lari_config_bitmap(struct iwl_fw_runtime *fwrt) { return 0; }
 
 
 extern int iwl_fill_lari_config(struct iwl_fw_runtime * fwrt,struct iwl_lari_config_change_cmd * cmd,size_t * cmd_size);
