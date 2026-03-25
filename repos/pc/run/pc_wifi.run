@@ -17,7 +17,7 @@ import_from_depot [depot_user]/src/[base_src] \
                   [depot_user]/src/nic_router \
                   [depot_user]/src/pc_rtc \
                   [depot_user]/src/pci_decode \
-                  [depot_user]/src/platform \
+                  [depot_user]/src/pc_platform \
                   [depot_user]/src/report_rom \
                   [depot_user]/src/vfs_jitterentropy \
                   [depot_user]/src/vfs_lwip \
@@ -71,6 +71,8 @@ config | verbose: yes | prio_levels: 2
   + config | verbose: yes
     + policy | label:  pci_decode -> system | report: acpi -> acpi
     + policy | label:  platform -> devices  | report: pci_decode -> devices
+    + policy | label:  platform -> system       | report: dummy
+    + policy | label:  platform -> sleep_states | report: dummy
   + route
     + service CPU | + parent
     + service LOG | + parent
@@ -99,6 +101,7 @@ config | verbose: yes | prio_levels: 2
     + service ROM                    | + parent
 
 + start platform | caps: 100 | ram: 2M | managing_system: yes
+  + binary pc_platform
   + provides
     + service Dma
     + service Platform
@@ -106,6 +109,8 @@ config | verbose: yes | prio_levels: 2
     + policy | label_prefix: wifi | msix: false | info: yes
       + pci | class: WIFI
   + route
+    + service ROM     | label: system       | + child report_rom
+    + service ROM     | label: sleep_states | + child report_rom
     + service ROM     | label: devices | + child report_rom
     + service Timer                    | + child timer
     + service CPU                      | + parent
@@ -194,7 +199,7 @@ config | verbose: yes | prio_levels: 2
     + service ROM
   + config | verbose: yes
 
-+ start wifi | caps: 270 | ram: 32M | priority: -1
++ start wifi | caps: 300 | ram: 32M | priority: -1
   + config | ld_verbose: yes
   | + report | mac_address: true
   | + libc | stdout: /dev/log | stderr: /dev/log | rtc: /dev/rtc | rng: /dev/urandom
