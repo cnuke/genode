@@ -211,3 +211,9 @@ int pcim_request_all_regions(struct pci_dev *pdev, const char *name)
 	return 0;
 }
 #endif
+
+
+void pci_disable_device(struct pci_dev * dev)
+{
+	lx_emul_trace(__func__);
+}
