@@ -224,6 +224,9 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 		(cfg.read<Config::Vendor>() == VENDOR_INTEL) &&
 		(cfg.read<Config::Base_class_code>() == CLASS_DISPLAY);
 
+	bool const mediatek =
+		(bdf == Bdf(1,0,0) && (cfg.read<Config::Vendor>() == 0x14c3));
+
 	/* disable MSI/MSI-X by default */
 	if (msi) cfg.msi_cap->write<Pci::Config::Msi_capability::Control::Enable>(0);
 	if (msi_x) cfg.msi_x_cap->write<Pci::Config::Msi_x_capability::Control::Enable>(0);
@@ -320,8 +323,10 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 				 * registers and the GTT. While the latter may be accessed
 				 * write-combined, MMIO registers must be mapped uncached.
 				 */
-				if (bar == 0 && intel_graphics_card)
+				if (bar == 0 && (intel_graphics_card || mediatek)) {
+					error("Ignore prefetchable bit");
 					wc = false;
+				}
 
 				g.attribute("wc", wc);
 			});
