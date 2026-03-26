@@ -6,7 +6,6 @@ _/src/intel_gpu
 _/src/nvme
 _/src/pci_decode
 _/src/pc_intel_fb
-_/src/pc_nic
 _/src/pc_platform
 _/src/pc_usb_host
 _/src/ps2
