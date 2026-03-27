@@ -416,3 +416,14 @@ int __rtnl_register_many(const struct rtnl_msg_handler *handlers, int n)
 {
 	return 0;
 }
+
+
+#include <net/genetlink.h>
+
+struct genl_family netdev_nl_family;
+
+
+long strnlen_user(const char __user * str,long count)
+{
+	lx_emul_trace_and_stop(__func__);
+}

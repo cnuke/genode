@@ -1,7 +1,7 @@
 /*
  * \brief  Dummy definitions of Linux Kernel functions
  * \author Automatically generated file - do no edit
- * \date   2026-02-10
+ * \date   2026-03-27
  */
 
 #include <lx_emul.h>
@@ -311,6 +311,14 @@ asmlinkage __visible void dump_stack_lvl(const char * log_lvl)
 }
 
 
+#include <linux/dcache.h>
+
+char * dynamic_dname(char * buffer,int buflen,const char * fmt,...)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/reboot.h>
 
 void emergency_restart(void)
@@ -375,6 +383,14 @@ int ethtool_op_get_ts_info(struct net_device * dev,struct kernel_ethtool_ts_info
 }
 
 
+#include <linux/file.h>
+
+void fd_install(unsigned int fd,struct file * file)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/capability.h>
 
 bool file_ns_capable(const struct file * file,struct user_namespace * ns,int cap)
@@ -399,6 +415,14 @@ void finish_rcuwait(struct rcuwait * w)
 }
 
 
+#include <linux/file.h>
+
+void fput(struct file * file)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <net/gen_stats.h>
 
 void gen_kill_estimator(struct net_rate_estimator __rcu ** rate_est)
@@ -410,6 +434,22 @@ void gen_kill_estimator(struct net_rate_estimator __rcu ** rate_est)
 #include <linux/mii.h>
 
 int generic_mii_ioctl(struct mii_if_info * mii_if,struct mii_ioctl_data * mii_data,int cmd,unsigned int * duplex_chg_out)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <net/genetlink.h>
+
+void * genlmsg_put(struct sk_buff * skb,u32 portid,u32 seq,const struct genl_family * family,int flags,u8 cmd)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/file.h>
+
+int get_unused_fd_flags(unsigned flags)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -661,6 +701,22 @@ void nbcon_atomic_flush_unsafe(void)
 
 #include <linux/netlink.h>
 
+int netlink_broadcast_filtered(struct sock * ssk,struct sk_buff * skb,u32 portid,u32 group,gfp_t allocation,netlink_filter_fn filter,void * filter_data)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netlink.h>
+
+int netlink_has_listeners(struct sock * sk,unsigned int group)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/netlink.h>
+
 bool netlink_strict_get_check(struct sk_buff * skb)
 {
 	lx_emul_trace_and_stop(__func__);
@@ -868,6 +924,14 @@ int proc_doulongvec_minmax(const struct ctl_table * table,int write,void * buffe
 }
 
 
+#include <linux/file.h>
+
+void put_unused_fd(unsigned int fd)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 extern void raw_spin_rq_lock_nested(struct rq * rq,int subclass);
 void raw_spin_rq_lock_nested(struct rq * rq,int subclass)
 {
@@ -898,14 +962,6 @@ enum reboot_mode reboot_mode;
 #include <linux/firmware.h>
 
 void release_firmware(const struct firmware * fw)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
-#include <linux/rhashtable.h>
-
-struct rhash_lock_head __rcu ** rht_bucket_nested(const struct bucket_table * tbl,unsigned int hash)
 {
 	lx_emul_trace_and_stop(__func__);
 }
@@ -1049,6 +1105,22 @@ bool static_key_initialized;
 #include <linux/printk.h>
 
 int suppress_printk;
+
+
+#include <linux/sync_file.h>
+
+struct sync_file * sync_file_create(struct dma_fence * fence)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
+#include <linux/sync_file.h>
+
+struct dma_fence * sync_file_get_fence(int fd)
+{
+	lx_emul_trace_and_stop(__func__);
+}
 
 
 #include <linux/sysctl.h>

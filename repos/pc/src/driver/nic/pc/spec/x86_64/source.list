@@ -12,6 +12,12 @@ drivers/base/devres.c
 drivers/base/driver.c
 drivers/base/platform.c
 drivers/base/property.c
+drivers/dma-buf/dma-buf.c
+drivers/dma-buf/dma-fence-array.c
+drivers/dma-buf/dma-fence-chain.c
+drivers/dma-buf/dma-fence-unwrap.c
+drivers/dma-buf/dma-fence.c
+drivers/dma-buf/dma-resv.c
 drivers/net/ethernet/amd/pcnet32.c
 drivers/net/ethernet/intel/e1000/e1000_ethtool.c
 drivers/net/ethernet/intel/e1000/e1000_hw.c
@@ -90,6 +96,7 @@ lib/debug_locks.c
 lib/dec_and_lock.c
 lib/dynamic_queue_limits.c
 lib/find_bit.c
+lib/genalloc.c
 lib/hexdump.c
 lib/idr.c
 lib/iomap.c
@@ -105,6 +112,7 @@ lib/math/reciprocal_div.c
 lib/radix-tree.c
 lib/rbtree.c
 lib/refcount.c
+lib/rhashtable.c
 lib/scatterlist.c
 lib/siphash.c
 lib/sort.c
@@ -122,14 +130,17 @@ mm/util.c
 mm/util.c
 net/core/datagram.c
 net/core/dev.c
-net/core/dev_api.c
 net/core/dev_addr_lists.c
+net/core/dev_api.c
+net/core/devmem.c
 net/core/gro.c
 net/core/hotdata.c
 net/core/link_watch.c
 net/core/net-sysfs.c
 net/core/net-traces.c
 net/core/net_namespace.c
+net/core/page_pool.c
+net/core/page_pool_user.c
 net/core/skbuff.c
 net/core/xdp.c
 net/devres.c

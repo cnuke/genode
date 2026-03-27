@@ -255,3 +255,19 @@ void *dmam_alloc_attrs(struct device *dev, size_t size, dma_addr_t *dma_handle,
 {
 	return dma_alloc_attrs(dev, size, dma_handle, gfp, attrs);
 }
+
+
+#include <linux/mount.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
+
+struct vfsmount * kern_mount(struct file_system_type * type)
+{
+	struct vfsmount *m;
+
+	m = kzalloc(sizeof (struct vfsmount), 0);
+	if (!m)
+		return (struct vfsmount*)ERR_PTR(-ENOMEM);
+
+	return m;
+}
