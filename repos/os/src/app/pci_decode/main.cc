@@ -378,7 +378,28 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 		bool const supports_irq = irq_pin != 0;
 		bool const supports_msi = msi_capable && (msi_x || msi);
 
-		if (supports_irq || supports_msi)
+		if (supports_irq || supports_msi) {
+			if (msi_capable && msi) {
+				using MSICAP = Pci::Config::Msi_capability;
+				unsigned const mmc =
+					cfg.msi_cap->read<MSICAP::Control::Multi_message_capable>();
+				unsigned const num_vec = 1u << mmc; /* XXX check mmc range */
+				g.node("msi", [&] {
+					g.attribute("num_vec", num_vec);
+				});
+				return;
+			}
+			if (msi_capable && msi_x) {
+				using MSIXCAP = Pci::Config::Msi_x_capability;
+				unsigned const table_size =
+					cfg.msi_x_cap->read<MSIXCAP::Control::Size>();
+				unsigned const num_vec = table_size + 1;
+				g.node("msi-x", [&] {
+					g.attribute("num_vec", num_vec);
+				});
+				return;
+			}
+
 			g.node("irq", [&]
 			{
 				if (msi_capable && msi) {
@@ -407,6 +428,7 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 
 				g.attribute("number", irq);
 			});
+		}
 
 		reserved_memory_list.for_each([&] (Rmrr &rmrr) {
 			if (rmrr.bdf == bdf)
