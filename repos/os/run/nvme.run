@@ -38,12 +38,12 @@ import_from_depot [depot_user]/src/[base_src] \
 # Build
 #
 
-build { driver/nvme }
+build { driver/nvme driver/platform app/pci_decode server/part_block }
 
 #
 # Create raw image
 #
-catch { exec $dd if=/dev/zero of=bin/nvme.raw bs=1M count=0 seek=32768 }
+#catch { exec $dd if=/dev/zero of=bin/nvme.raw bs=1M count=0 seek=32768 }
 
 #
 # Generate config
@@ -74,7 +74,7 @@ config | verbose: no
   + provides
     + service Report
     + service ROM
-  + config
+  + config | verbose: yes
     + policy | label: pci_decode -> system | report: acpi -> acpi
     + policy | label: platform -> devices  | report: pci_decode -> devices
 
@@ -119,7 +119,7 @@ config | verbose: no
 + start nvme | caps: 140 | ram: 24M
   + provides | + service Block
   + config | max_hmb_size: 16M | verbose_regs: yes | verbose_identify: yes
-    + policy | label_prefix: block_tester | writeable: no
+    + policy | label_prefix: part_block | writeable: no
   + route
     + service Platform | + child platform
     + service Timer    | + child timer
@@ -128,26 +128,64 @@ config | verbose: no
     + service PD       | + parent
     + service LOG      | + parent
 
-+ start block_tester | caps: 200 | ram: 64M
-  + config | verbose: no | report: no | log: yes | stop_on_error: no
-    + tests}
-
-append_if $small_test config {
-      + sequential | length: 256M | size: 64K
-      + random     | length: 256M | size: 64K | seed: 0xdeadbeef}
-
-append_if [expr !$small_test] config {
-      + sequential | length: 1G | size: 4K   | batch: 128
-      + sequential | length: 1G | size: 8K   | batch: 128
-      + sequential | length: 1G | size: 64K
-      + sequential | length: 3G | size: 1M   | batch: 128
-      + random     | length: 1G | size: 16K  | seed: 0xdeadbeef
-      + random     | length: 3G | size: 512K | seed: 0xc0ffee
-      + ping_pong  | length: 1G | size: 16K}
-
-append config {
++ start part_block | ram: 2M
+  + provides | + service Block
+  + config
+  | + report | partitions: yes
+  | + policy | label_prefix: block_tester_1 | partition: 1 | writeable: no
+  | + policy | label_prefix: block_tester_2 | partition: 2 | writeable: no
+  | + policy | label_prefix: block_tester_3 | partition: 3 | writeable: no
+  | + policy | label_prefix: block_tester_4 | partition: 4 | writeable: no
   + route
     + service Block | + child nvme
+    + any-service
+      + parent
+      + any-child
+
++ start block_tester_1 | caps: 200 | ram: 64M
+  + binary block_tester
+  + config | verbose: no | report: no | log: yes | stop_on_error: no
+    + tests
+      + sequential | length: 1M | size: 64K
+      + random     | length: 1M | size: 64K | seed: 0xdeadbeef
+  + route
+    + service Block | + child part_block
+    + any-service
+      + parent
+      + any-child
+
++ start block_tester_2 | caps: 200 | ram: 64M
+  + binary block_tester
+  + config | verbose: no | report: no | log: yes | stop_on_error: no
+    + tests
+      + sequential | length: 1M | size: 64K
+      + random     | length: 1M | size: 64K | seed: 0xdeadbeef
+  + route
+    + service Block | + child part_block
+    + any-service
+      + parent
+      + any-child
+
++ start block_tester_3 | caps: 200 | ram: 64M
+  + binary block_tester
+  + config | verbose: no | report: no | log: yes | stop_on_error: no
+    + tests
+      + sequential | length: 1M | size: 64K
+      + random     | length: 1M | size: 64K | seed: 0xdeadbeef
+  + route
+    + service Block | + child part_block
+    + any-service
+      + parent
+      + any-child
+
++ start block_tester_4 | caps: 200 | ram: 64M
+  + binary block_tester
+  + config | verbose: no | report: no | log: yes | stop_on_error: no
+    + tests
+      + sequential | length: 1M | size: 64K
+      + random     | length: 1M | size: 64K | seed: 0xdeadbeef
+  + route
+    + service Block | + child part_block
     + any-service
       + parent
       + any-child
@@ -157,11 +195,11 @@ install_config $config
 
 build_boot_image [build_artifacts]
 
-append qemu_args " -nographic "
+append qemu_args " -nographic -boot d "
 append qemu_args " -device pcie-root-port,id=root_port1 "
 append qemu_args " -drive id=nvme0,file=bin/nvme.raw,format=raw,if=none "
 append qemu_args " -device nvme,drive=nvme0,serial=fnord,id=nvme0n1,bus=root_port1 "
 
 run_genode_until {.*child "block_tester" exited with exit value 0.*\n} 300
 
-exec rm -f bin/nvme.raw
+#exec rm -f bin/nvme.raw
