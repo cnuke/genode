@@ -383,21 +383,61 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 		bool const supports_irq = irq_pin != 0;
 		bool const supports_msi = msi_capable && (msi_x || msi);
 
-		if (supports_irq || supports_msi)
+		if (supports_irq || supports_msi) {
+			/*
+			 * Limit the number of vectors here as most base platforms
+			 * have some finit allocator that manages the MSI range
+			 * and require a disjunct interrupt number for allocation.
+			 *
+			 * (Without lifiting this restriction adding an additional
+			 *  attribute that denotes the usable vectors would be
+			 *  another way to solves this short-coming.)
+			 */
+			enum : unsigned {
+				LIMIT_MSI  = 1u,
+				LIMIT_MSIX = 4u,
+			};
+
+			unsigned max_num_vec = 0;
+			if (msi_capable && msi_x)
+				/*
+				 * Re-use msi_number for both as they are not used
+				 * concurrently and increment afterwards.
+				 */
+				g.node("irq", [&]
+				{
+					g.attribute("type", "msi-x");
+					g.attribute("number", msi_number);
+					using MSIXCAP = Pci::Config::Msi_x_capability;
+					unsigned const table_size =
+						cfg.msi_x_cap->read<MSIXCAP::Control::Size>();
+
+					unsigned const num_vec = min(table_size + 1, LIMIT_MSIX);
+					g.attribute("num_vec", num_vec);
+
+					max_num_vec = max(max_num_vec, num_vec);
+				});
+
+			if (msi_capable && msi)
+				g.node("irq", [&]
+				{
+					g.attribute("type", "msi");
+					g.attribute("number", msi_number);
+					using MSICAP = Pci::Config::Msi_capability;
+					unsigned const mmc =
+						cfg.msi_cap->read<MSICAP::Control::Multi_message_capable>();
+
+					unsigned const num_vec = min(1u << mmc, LIMIT_MSI);
+					g.attribute("num_vec", num_vec);
+
+					max_num_vec = max(max_num_vec, num_vec);
+				});
+
+			/* reserve range */
+			msi_number += max_num_vec;
+
 			g.node("irq", [&]
 			{
-				if (msi_capable && msi) {
-					g.attribute("type", "msi");
-					g.attribute("number", msi_number++);
-					return;
-				}
-
-				if (msi_capable && msi_x) {
-					g.attribute("type", "msi-x");
-					g.attribute("number", msi_number++);
-					return;
-				}
-
 				irq_line_t irq = cfg.read<Config::Irq_line>();
 
 				for_bridge(bdf.bus, [&] (Bridge &b) {
@@ -412,6 +452,7 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 
 				g.attribute("number", irq);
 			});
+		}
 
 		reserved_memory_list.for_each([&] (Rmrr &rmrr) {
 			if (rmrr.bdf == bdf)
@@ -726,6 +767,7 @@ void Main::parse_acpi_device_info(Node const &node, Generator &g)
 			g.node("irq", [&]
 			{
 				g.attribute("type", "msi");
+				g.attribute("num_vec", 1u);
 				g.attribute("number", msi_start++);
 			});
 		});
