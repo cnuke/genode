@@ -679,7 +679,8 @@ class Intel::Io_mmu_factory : public Driver::Io_mmu_factory
 
 			unsigned irq_number { 0 };
 			device.for_each_irq([&] (unsigned idx, unsigned nbr, Irq_session::Type,
-			                         Irq_session::Polarity, Irq_session::Trigger, bool)
+			                         Irq_session::Polarity, Irq_session::Trigger, bool,
+			                         unsigned)
 			{
 				if (idx == 0)
 					irq_number = nbr;

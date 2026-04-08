@@ -149,10 +149,12 @@ void Driver::Device::generate(Generator &g, bool info) const
 					break;
 				case Irq_session::TYPE_MSI:
 					g.attribute("type", "msi");
+					g.attribute("number", irq.number);
 					g.attribute("num_vec", irq.num_vec);
 					break;
 				case Irq_session::TYPE_MSIX:
 					g.attribute("type", "msix");
+					g.attribute("number", irq.number);
 					g.attribute("num_vec", irq.num_vec);
 					break;
 				}
@@ -223,7 +225,15 @@ void Driver::Device::update(Allocator &alloc, Node const &node)
 			if (type.valid()) {
 				irq.type = (type == "msi-x") ? Irq_session::TYPE_MSIX
 				                             : Irq_session::TYPE_MSI;
-				irq.num_vec = num_vec;
+				if (irq.type == Irq_session::TYPE_MSIX)
+					irq.num_vec = num_vec;
+				else
+					/*
+					 * Limit the number of MSI vectors to one
+					 * as supporting more is complicated due to
+					 * their allocation scheme.
+					 */
+					irq.num_vec = 1;
 			}
 
 			return irq;

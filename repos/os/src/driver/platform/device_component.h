@@ -126,7 +126,7 @@ class Driver::Device_component : public Rpc_object<Platform::Device_interface,
 		 ** Platform::Device RPC functions **
 		 ************************************/
 
-		Irq_session_capability     irq(unsigned);
+		Irq_session_capability     irq(Irq_session::Type, unsigned);
 		Io_mem_session_capability  io_mem(unsigned, Range &);
 		Io_port_session_capability io_port_range(unsigned);
 

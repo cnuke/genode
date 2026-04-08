@@ -353,7 +353,7 @@ class Driver::Device : private List_model<Device>::Element
 			unsigned idx = 0;
 			_irq_list.for_each([&] (Irq const &irq) {
 				fn(idx++, irq.number, irq.type, irq.polarity,
-				   irq.mode, irq.shared); });
+				   irq.mode, irq.shared, irq.num_vec); });
 		}
 
 		void for_each_io_mem(auto const &fn) const

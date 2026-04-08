@@ -84,14 +84,14 @@ Genode::Irq_session_capability Device_component::Irq::map(Device_component &dc)
 
 	/* Non-shared Msi-(x) interrupt */
 	dc._with_pci_config([&] (auto &pci_config) {
-		irq.construct(dc._env, number, pci_config.addr, type,
+		irq.construct(dc._env, number + idx, pci_config.addr, type,
 		              Pci::Bdf::rid(pci_config.bdf));
 		Irq_session::Info info = irq->info();
 		dc._with_io_mmu([&] (Io_mmu const &io_mmu) {
 			info = remap(io_mmu.name, pci_config.bdf, info,
 			             Irq_config::Invalid()).session_info;
 		});
-		pci_msi_enable(dc._env, dc, pci_config.addr, info, type);
+		pci_msi_enable(dc._env, dc, pci_config.addr, info, type, idx);
 	});
 
 	return irq.constructed() ? irq->cap() : Irq_session_capability();
@@ -195,7 +195,7 @@ Device_component::io_mem(unsigned idx, Range &range)
 }
 
 
-Genode::Irq_session_capability Device_component::irq(unsigned idx)
+Genode::Irq_session_capability Device_component::irq(Irq_session::Type type, unsigned idx)
 {
 	Irq_session_capability cap;
 
@@ -203,6 +203,9 @@ Genode::Irq_session_capability Device_component::irq(unsigned idx)
 		_irq_registry.for_each([&] (Irq &irq)
 		{
 			if (irq.idx != idx)
+				return;
+
+			if (irq.type != type)
 				return;
 
 			cap = irq.map(*this);
@@ -285,16 +288,26 @@ Device_component::Device_component(Registry<Device_component> &registry,
 	 */
 
 	try {
+		log("device: ", device.name(), " irq");
 		device.for_each_irq([&] (unsigned              idx,
 		                         unsigned              nr,
 		                         Irq_session::Type     type,
 		                         Irq_session::Polarity polarity,
 		                         Irq_session::Trigger  mode,
-		                         bool                  shared)
+		                         bool                  shared,
+		                         unsigned              num_vec)
 		{
 			_with_reserved_quota_for_session<Irq_session>(session, [&] {
-				new (session.heap())
-					Irq(_irq_registry, idx, nr, type, polarity, mode, shared); });
+				if (type == Irq_session::TYPE_MSIX)
+					for (unsigned i = 0; i < num_vec; i++) {
+						log("device: ", device.name(), "number: ", nr, " msix vec[", i, "]");
+						new (session.heap())
+							Irq(_irq_registry, i, nr, type, polarity, mode, false);
+					}
+				else
+					new (session.heap())
+						Irq(_irq_registry, idx, nr, type, polarity, mode, shared);
+			});
 		});
 
 		device.for_each_io_mem([&] (unsigned idx, Range range,

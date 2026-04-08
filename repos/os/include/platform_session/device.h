@@ -44,9 +44,9 @@ class Platform::Device : Interface, Noncopyable
 
 		Name _name;
 
-		Irq_session_capability _irq(unsigned index)
+		Irq_session_capability _irq(Irq_session::Type type, unsigned index)
 		{
-			return _cap.call<Device_interface::Rpc_irq>(index);
+			return _cap.call<Device_interface::Rpc_irq>(type, index);
 		}
 
 		Io_mem_session_capability _io_mem(unsigned index, Range &range)
@@ -134,7 +134,7 @@ class Platform::Device::Irq : Noncopyable
 
 		struct Index { unsigned value; };
 
-		enum class Type { GSI, MSI, MSIX };
+		using Type = Irq_session::Type;
 
 	private:
 
@@ -146,11 +146,11 @@ class Platform::Device::Irq : Noncopyable
 
 		Irq(Device &device, Type type, Index index)
 		:
-			_irq  { device._irq(index.value) },
+			_irq  { device._irq(type, index.value) },
 			_type { type }
 		{ }
 
-		explicit Irq(Device &device) : Irq(device, Type::GSI, Index { 0 })
+		explicit Irq(Device &device) : Irq(device, Type::TYPE_LEGACY, Index { 0 })
 		{
 			error("explicit Device constructor for '", device.name(), "' force GSI(0)");
 		}
@@ -162,7 +162,7 @@ class Platform::Device::Irq : Noncopyable
 		 */
 		void ack()
 		{
-			if (_type == Type::GSI)
+			if (_type == Type::TYPE_LEGACY)
 				_irq.ack_irq();
 		}
 
