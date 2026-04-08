@@ -141,10 +141,21 @@ void Driver::Device::generate(Generator &g, bool info) const
 		});
 		_irq_list.for_each([&] (Irq const &irq) {
 			g.node("irq", [&] () {
-				if (!info)
-					return;
-				g.attribute("number", irq.number);
-				if (irq.shared) g.attribute("shared", true);
+				switch (irq.type) {
+				case Irq_session::TYPE_LEGACY:
+					g.attribute("number", irq.number);
+					g.attribute("type", "gsi");
+					if (irq.shared) g.attribute("shared", true);
+					break;
+				case Irq_session::TYPE_MSI:
+					g.attribute("type", "msi");
+					g.attribute("num_vec", irq.num_vec);
+					break;
+				case Irq_session::TYPE_MSIX:
+					g.attribute("type", "msix");
+					g.attribute("num_vec", irq.num_vec);
+					break;
+				}
 			});
 		});
 		_io_port_range_list.for_each([&] (Io_port_range const &iop) {
@@ -202,15 +213,18 @@ void Driver::Device::update(Allocator &alloc, Node const &node)
 			String<16> polarity = node.attribute_value("polarity", String<16>());
 			String<16> mode     = node.attribute_value("mode",     String<16>());
 			String<16> type     = node.attribute_value("type",     String<16>());
+			unsigned   num_vec  = node.attribute_value("num_vec",  0u);
 			if (polarity.valid())
 				irq.polarity = (polarity == "high") ? Irq_session::POLARITY_HIGH
 				                                    : Irq_session::POLARITY_LOW;
 			if (mode.valid())
 				irq.mode = (mode == "edge") ? Irq_session::TRIGGER_EDGE
 				                            : Irq_session::TRIGGER_LEVEL;
-			if (type.valid())
+			if (type.valid()) {
 				irq.type = (type == "msi-x") ? Irq_session::TYPE_MSIX
 				                             : Irq_session::TYPE_MSI;
+				irq.num_vec = num_vec;
+			}
 
 			return irq;
 		},

@@ -42,6 +42,8 @@ class Platform::Device : Interface, Noncopyable
 
 		Capability<Device_interface> _cap;
 
+		Name _name;
+
 		Irq_session_capability _irq(unsigned index)
 		{
 			return _cap.call<Device_interface::Rpc_irq>(index);
@@ -65,22 +67,27 @@ class Platform::Device : Interface, Noncopyable
 
 		explicit Device(Connection &platform)
 		:
-			_platform(platform), _cap(platform.acquire_device())
+			_platform(platform), _cap(platform.acquire_device()),
+			_name("N/A")
 		{ }
 
 		struct Type { String<64> name; };
 
 		Device(Connection &platform, Type type)
 		:
-			_platform(platform), _cap(platform.device_by_type(type.name.string()))
+			_platform(platform), _cap(platform.device_by_type(type.name.string())),
+			_name(type.name)
 		{ }
 
 		Device(Connection &platform, Name name)
 		:
-			_platform(platform), _cap(platform.acquire_device(name))
+			_platform(platform), _cap(platform.acquire_device(name)),
+			_name(name)
 		{ }
 
 		~Device() { _platform.release_device(_cap); }
+
+		Name const &name() const { return _name; }
 };
 
 
@@ -123,24 +130,41 @@ class Platform::Device::Mmio : Range, Attached_dataspace, public Genode::Mmio<SI
 
 class Platform::Device::Irq : Noncopyable
 {
-	private:
-
-		Irq_session_client _irq;
-
 	public:
 
 		struct Index { unsigned value; };
 
-		Irq(Device &device, Index index) : _irq(device._irq(index.value)) { }
+		enum class Type { GSI, MSI, MSIX };
 
-		explicit Irq(Device &device) : Irq(device, Index { 0 }) { }
+	private:
+
+		Irq_session_client _irq;
+
+		Type _type;
+
+	public:
+
+		Irq(Device &device, Type type, Index index)
+		:
+			_irq  { device._irq(index.value) },
+			_type { type }
+		{ }
+
+		explicit Irq(Device &device) : Irq(device, Type::GSI, Index { 0 })
+		{
+			error("explicit Device constructor for '", device.name(), "' force GSI(0)");
+		}
 
 		/**
 		 * Acknowledge interrupt
 		 *
 		 * This method must be called by the interrupt handler.
 		 */
-		void ack() { _irq.ack_irq(); }
+		void ack()
+		{
+			if (_type == Type::GSI)
+				_irq.ack_irq();
+		}
 
 		/**
 		 * Register interrupt signal handler

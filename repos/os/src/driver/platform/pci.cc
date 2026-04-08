@@ -103,6 +103,12 @@ struct Config_helper
 
 	void disable()
 	{
+		if (_config.msi_cap.constructed())
+			_config.msi_cap->write<Pci::Config::Msi_capability::Control::Enable>(0);
+
+		if (_config.msi_cap.constructed())
+			_config.msi_cap->write<Pci::Config::Msi_x_capability::Control::Enable>(0);
+
 		Config::Command::access_t cmd =
 			_config.read<Config::Command>();
 		Config::Command::Io_space_enable::set(cmd, 0);
@@ -210,7 +216,7 @@ void Driver::pci_msi_enable(Env                    &env,
 
 			/* disable all msi-x table entries beside the first one */
 			unsigned slots = config.msi_x_cap->slots();
-			for (unsigned i = 0; i < slots; i++) {
+			for (unsigned i = 0; i <= slots; i++) {
 				using Entry = Config::Msi_x_capability::Table_entry;
 				Entry e ({msix_table.start + Entry::SIZE*i, msix_table.num_bytes - Entry::SIZE*i});
 				if (!i) {

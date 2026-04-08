@@ -91,6 +91,8 @@ class Driver::Device : private List_model<Device>::Element
 			Irq_session::Trigger  mode     { Irq_session::TRIGGER_UNCHANGED  };
 			bool                  shared   { false                           };
 
+			unsigned              num_vec  { 0 };
+
 			Irq(unsigned number) : number(number) {}
 
 			bool matches(Node const &node) const
