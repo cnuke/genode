@@ -725,8 +725,7 @@ struct Nvme::Io_queue : Noncopyable
  * Controller
  */
 class Nvme::Controller : Platform::Device,
-                         Platform::Device::Mmio<0x1010>,
-                         Platform::Device::Irq
+                         Platform::Device::Mmio<0x1010>
 {
 	using Mmio = Genode::Mmio<SIZE>;
 
@@ -937,6 +936,9 @@ class Nvme::Controller : Platform::Device,
 	Genode::Env          &_env;
 	Platform::Connection &_platform;
 	Mmio::Delayer        &_delayer;
+
+	enum { MAX_MSIX_NUM = 4u };
+	Constructible<Platform::Device::Irq> _irq[MAX_MSIX_NUM] { };
 
 	/*
 	 * There is a completion and submission queue for
@@ -1465,6 +1467,8 @@ class Nvme::Controller : Platform::Device,
 		b.write<Nvme::Sqe_create_cq::Cdw10::Qsize>(_max_io_entries_mask);
 		b.write<Nvme::Sqe_create_cq::Cdw11::Pc>(1);
 		b.write<Nvme::Sqe_create_cq::Cdw11::En>(1);
+		Genode::error(__func__, ": id: ", id, " (", id % MAX_MSIX_NUM, ")");
+		b.write<Nvme::Sqe_create_cq::Cdw11::Iv>(id % MAX_MSIX_NUM);
 
 		write<Admin_sdb::Sqt>(_admin_sq->tail);
 
@@ -1557,14 +1561,71 @@ class Nvme::Controller : Platform::Device,
 	Controller(Genode::Env              &env,
 	           Platform::Connection     &platform,
 	           Mmio::Delayer            &delayer,
-	           Signal_context_capability irq_sigh)
+	           Signal_context_capability irq_sigh_0,
+	           Signal_context_capability irq_sigh_1,
+	           Signal_context_capability irq_sigh_2,
+	           Signal_context_capability irq_sigh_3)
 	:
 		Platform::Device(platform),
 		Platform::Device::Mmio<SIZE>((Platform::Device&)*this),
-		Platform::Device::Irq((Platform::Device&)*this),
 		_env(env), _platform(platform), _delayer(delayer)
 	{
-		sigh(irq_sigh);
+		bool device_available = false;
+		_platform.with_node([&] (Node const &devnodes) {
+			log("Devices: ", devnodes);
+
+			devnodes.with_optional_sub_node("device", [&] (Node const &devnode) {
+
+				/* only consider one device */
+				if (device_available)
+					return;
+
+				bool msix = false;
+				unsigned num_vec = 1;
+				devnode.for_each_sub_node("irq",
+					[&] (Node const &irqnode) {
+						log("irqnode: ", irqnode);
+						using Irq_type = String<8>;
+						Irq_type const irq_type = irqnode.attribute_value("type", Irq_type(""));
+						msix = irq_type == "msix";
+						if (msix) {
+							/* query first and limit later */
+							num_vec = irqnode.attribute_value("num_vec", num_vec);
+							num_vec = min(num_vec, (unsigned)MAX_MSIX_NUM);
+						}
+					});
+
+				if (msix) {
+					for (unsigned i = 0; i < num_vec; i++) {
+						log("Use MSIX with ", num_vec, " vector", num_vec > 1 ? "s" : "", ": ", i);
+						_irq[i].construct((Platform::Device&)*this,
+						                  Platform::Device::Irq::Type::TYPE_MSIX,
+						                  Platform::Device::Irq::Index { i });
+						switch (i) {
+						case 0: _irq[i]->sigh(irq_sigh_0); break;
+						case 1: _irq[i]->sigh(irq_sigh_1); break;
+						case 2: _irq[i]->sigh(irq_sigh_2); break;
+						case 3: _irq[i]->sigh(irq_sigh_3); break;
+						default: break;
+						}
+					}
+				}
+				else {
+					log("Use MSI with 1 vector");
+					_irq[0].construct((Platform::Device&)*this,
+					                  Platform::Device::Irq::Type::TYPE_MSI,
+					                  Platform::Device::Irq::Index { 0 });
+					_irq[0]->sigh(irq_sigh_0);
+				}
+
+				device_available = true;
+			});
+		});
+
+		if (!device_available) {
+			error(__func__, ": devices ROM not available");
+			throw Initialization_failed();
+		}
 	}
 
 	/**
@@ -1603,7 +1664,7 @@ class Nvme::Controller : Platform::Device,
 	/**
 	 * Acknowledge interrupt
 	 */
-	void ack_irq() { Platform::Device::Irq::ack(); }
+	void ack_irq() { _irq[0]->ack(); }
 
 	/*
 	 * Identify NVM system
@@ -1989,11 +2050,19 @@ class Nvme::Driver : Genode::Noncopyable
 			void usleep(uint64_t us) override { Timer::Connection::usleep(us); }
 		} _delayer { _env };
 
-		Signal_context_capability const _irq_sigh;
+		Signal_context_capability const _irq_sigh_0;
+		Signal_context_capability const _irq_sigh_1;
+		Signal_context_capability const _irq_sigh_2;
+		Signal_context_capability const _irq_sigh_3;
 		Signal_context_capability const _restart_sigh;
 
 		Reconstructible<Nvme::Controller> _nvme_ctrlr { _env, _platform,
-		                                                _delayer, _irq_sigh };
+		                                                _delayer,
+		                                                _irq_sigh_0,
+		                                                _irq_sigh_1,
+		                                                _irq_sigh_2,
+		                                                _irq_sigh_3,
+		};
 
 		/***********
 		 ** Block **
@@ -2008,11 +2077,17 @@ class Nvme::Driver : Genode::Noncopyable
 		 */
 		Driver(Genode::Env                       &env,
 		       Genode::Attached_rom_dataspace    &config_rom,
-		       Genode::Signal_context_capability  irq_sigh,
-		       Genode::Signal_context_capability  restart_sigh)
+		       Genode::Signal_context_capability  restart_sigh,
+		       Genode::Signal_context_capability  irq_sigh_0,
+		       Genode::Signal_context_capability  irq_sigh_1,
+		       Genode::Signal_context_capability  irq_sigh_2,
+		       Genode::Signal_context_capability  irq_sigh_3)
 		: _env(env),
 		  _config_rom(config_rom),
-		  _irq_sigh(irq_sigh),
+		  _irq_sigh_0(irq_sigh_0),
+		  _irq_sigh_1(irq_sigh_1),
+		  _irq_sigh_2(irq_sigh_2),
+		  _irq_sigh_3(irq_sigh_3),
 		  _restart_sigh(restart_sigh)
 		{
 			_config_rom.sigh(_config_sigh);
@@ -2144,7 +2219,9 @@ class Nvme::Driver : Genode::Noncopyable
 			if (resume_driver) {
 				_stop_processing = false;
 
-				_nvme_ctrlr.construct(_env, _platform, _delayer, _irq_sigh);
+				_nvme_ctrlr.construct(_env, _platform, _delayer,
+				                     _irq_sigh_0, _irq_sigh_1,
+				                     _irq_sigh_2, _irq_sigh_3);
 				reinit(*_nvme_ctrlr);
 
 				log("driver resumed");
@@ -2490,9 +2567,15 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 	Genode::Attached_rom_dataspace _config_rom { _env, "config" };
 
 	Signal_handler<Main> _request_handler { _env.ep(), *this, &Main::_handle_requests };
-	Signal_handler<Main> _irq_handler     { _env.ep(), *this, &Main::_handle_irq };
+	// Signal_handler<Main> _irq_handler     { _env.ep(), *this, &Main::_handle_irq };
 
-	Nvme::Driver _driver { _env, _config_rom, _irq_handler, _request_handler };
+	Signal_handler<Main> _irq_handler_0   { _env.ep(), *this, &Main::_handle_irq_0 };
+	Signal_handler<Main> _irq_handler_1   { _env.ep(), *this, &Main::_handle_irq_1 };
+	Signal_handler<Main> _irq_handler_2   { _env.ep(), *this, &Main::_handle_irq_2 };
+	Signal_handler<Main> _irq_handler_3   { _env.ep(), *this, &Main::_handle_irq_3 };
+
+	Nvme::Driver _driver { _env, _config_rom, _request_handler,
+	                       _irq_handler_0, _irq_handler_1, _irq_handler_2, _irq_handler_3 };
 
 	using Session_space = Id_space<Block_session_component>;
 	Session_space _sessions { };
@@ -2532,6 +2615,31 @@ struct Nvme::Main : Rpc_object<Typed_root<Block::Session>>
 
 		_driver.with_controller([&] (auto &ctrlr) {
 			ctrlr.ack_irq(); });
+	}
+
+	void _handle_irq_0()
+	{
+		/* admin queue */
+		log("Handle GSI/MSI/MSIX 0");
+		_handle_irq();
+	}
+
+	void _handle_irq_1()
+	{
+		log("Handle MSIX 1");
+		_handle_irq();
+	}
+
+	void _handle_irq_2()
+	{
+		log("Handle MSIX 2");
+		_handle_irq();
+	}
+
+	void _handle_irq_3()
+	{
+		log("Handle MSIX 3");
+		_handle_irq();
 	}
 
 	void _handle_requests_sq()
