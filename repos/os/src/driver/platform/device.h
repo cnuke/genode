@@ -92,6 +92,8 @@ class Driver::Device : private List_model<Device>::Element
 			Irq_session::Trigger  mode     { Irq_session::TRIGGER_UNCHANGED  };
 			bool                  shared   { false                           };
 
+			unsigned              num_vec  { 0 };
+
 			Irq(unsigned number) : number(number) {}
 
 			bool matches(Node const &node) const
@@ -354,7 +356,7 @@ class Driver::Device : private List_model<Device>::Element
 			unsigned idx = 0;
 			_irq_list.for_each([&] (Irq const &irq) {
 				fn(idx++, irq.number, irq.type, irq.polarity,
-				   irq.mode, irq.shared); });
+				   irq.mode, irq.shared, irq.num_vec); });
 		}
 
 		void for_each_io_mem(auto const &fn) const

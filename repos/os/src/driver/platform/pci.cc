@@ -103,6 +103,12 @@ struct Config_helper
 
 	void disable()
 	{
+		if (_config.msi_cap.constructed())
+			_config.msi_cap->write<Pci::Config::Msi_capability::Control::Enable>(0);
+
+		if (_config.msi_cap.constructed())
+			_config.msi_cap->write<Pci::Config::Msi_x_capability::Control::Enable>(0);
+
 		Config::Command::access_t cmd =
 			_config.read<Config::Command>();
 		Config::Command::Io_space_enable::set(cmd, 0);
@@ -168,7 +174,8 @@ void Driver::pci_msi_enable(Env                    &env,
                             Device_component       &dc,
                             addr_t                  cfg_space,
                             Irq_session::Info const info,
-                            Irq_session::Type       type)
+                            Irq_session::Type       type,
+                            unsigned                idx)
 {
 	static constexpr size_t IO_MEM_SIZE = 0x1000;
 
@@ -180,28 +187,44 @@ void Driver::pci_msi_enable(Env                    &env,
 		try {
 			/* find the MSI-x table from the device's memory bars */
 			Platform::Device_interface::Range range;
-			unsigned idx = dc.io_mem_index({config.msi_x_cap->bar()});
-			Io_mem_session_client dsc(dc.io_mem(idx, range));
+			unsigned io_mem_idx = dc.io_mem_index({config.msi_x_cap->bar()});
+			Io_mem_session_client dsc(dc.io_mem(io_mem_idx, range));
 			Attached_dataspace msix_table_ds(env.rm(), dsc.dataspace());
 			Byte_range_ptr msix_table = {
 				msix_table_ds.local_addr<char>() + config.msi_x_cap->table_offset(),
 				msix_table_ds.size() - config.msi_x_cap->table_offset() };
 
-			/* disable all msi-x table entries beside the first one */
-			unsigned slots = config.msi_x_cap->slots();
-			for (unsigned i = 0; i < slots; i++) {
+			/* if it is the first entry disable all msi-x table entries beside this one */
+			unsigned const slots = config.msi_x_cap->slots();
+			if (idx == 0) {
+				for (unsigned i = 0; i <= slots; i++) {
+					using Entry = Config::Msi_x_capability::Table_entry;
+					Entry e ({msix_table.start + Entry::SIZE*i, msix_table.num_bytes - Entry::SIZE*i});
+					if (!i) {
+						uint32_t lower = info.address & 0xfffffffc;
+						uint32_t upper = sizeof(info.address) > 4 ?
+							             (uint32_t)(info.address >> 32) : 0;
+						e.write<Entry::Address_64_lower>(lower);
+						e.write<Entry::Address_64_upper>(upper);
+						e.write<Entry::Data>((uint32_t)info.value);
+						e.write<Entry::Vector_control::Mask>(0);
+					} else
+						e.write<Entry::Vector_control::Mask>(1);
+				}
+			} else {
+				if (idx > slots) {
+					error("invalid index, cannot setup MSI-X");
+					return;
+				}
 				using Entry = Config::Msi_x_capability::Table_entry;
-				Entry e ({msix_table.start + Entry::SIZE*i, msix_table.num_bytes - Entry::SIZE*i});
-				if (!i) {
-					uint32_t lower = info.address & 0xfffffffc;
-					uint32_t upper = sizeof(info.address) > 4 ?
-						(uint32_t)(info.address >> 32) : 0;
-					e.write<Entry::Address_64_lower>(lower);
-					e.write<Entry::Address_64_upper>(upper);
-					e.write<Entry::Data>((uint32_t)info.value);
-					e.write<Entry::Vector_control::Mask>(0);
-				} else
-					e.write<Entry::Vector_control::Mask>(1);
+				Entry e ({msix_table.start + Entry::SIZE*idx, msix_table.num_bytes - Entry::SIZE*idx});
+				uint32_t lower = info.address & 0xfffffffc;
+				uint32_t upper = sizeof(info.address) > 4 ?
+				                 (uint32_t)(info.address >> 32) : 0;
+				e.write<Entry::Address_64_lower>(lower);
+				e.write<Entry::Address_64_upper>(upper);
+				e.write<Entry::Data>((uint32_t)info.value);
+				e.write<Entry::Vector_control::Mask>(0);
 			}
 
 			config.msi_x_cap->enable();
