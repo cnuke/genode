@@ -425,8 +425,14 @@ bus_t Main::parse_pci_function(Bdf        bdf,
 					using MSIXCAP = Pci::Config::Msi_x_capability;
 					unsigned const table_size =
 						cfg.msi_x_cap->read<MSIXCAP::Control::Size>();
-					unsigned const num_vec = table_size + 1;
+					unsigned const num_vec = min(table_size + 1, 4u);
+					if (table_size + 1 > num_vec)
+						warning("MSI-X vectors limited to ", num_vec);
+
 					g.attribute("num_vec", num_vec);
+
+					/* reserve range */
+					msi_number += num_vec;
 				});
 
 
