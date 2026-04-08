@@ -286,14 +286,15 @@ struct Pci::Config : Genode::Mmio<0x45>
 	};
 
 
-	struct Msi_capability : Pci_capability<0xe>
+	struct Msi_capability : Pci_capability<0x18>
 	{
 		struct Control : Register<0x2, 16>
 		{
-			struct Enable                : Bitfield<0,1> {};
-			struct Multi_message_capable : Bitfield<1,3> {};
-			struct Multi_message_enable  : Bitfield<4,3> {};
-			struct Large_address_capable : Bitfield<7,1> {};
+			struct Enable                     : Bitfield<0,1> {};
+			struct Multi_message_capable      : Bitfield<1,3> {};
+			struct Multi_message_enable       : Bitfield<4,3> {};
+			struct Large_address_capable      : Bitfield<7,1> {};
+			struct Per_vector_masking_capable : Bitfield<8,1> {};
 		};
 
 		struct Address_32 : Register<0x4, 32> {};
@@ -302,6 +303,9 @@ struct Pci::Config : Genode::Mmio<0x45>
 		struct Address_64_lower : Register<0x4, 32> {};
 		struct Address_64_upper : Register<0x8, 32> {};
 		struct Data_64          : Register<0xc, 16> {};
+
+		struct Mask_bits    : Register<0x10, 32> {};
+		struct Pending_bits : Register<0x14, 32> {};
 
 		using Pci_capability::Pci_capability;
 
