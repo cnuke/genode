@@ -440,7 +440,7 @@ struct Add_network_cmd : Action
 			break;
 		case State::ADD_NETWORK:
 			ctrl_cmd(_msg, Cmd("SET_NETWORK ", _accesspoint.id,
-			                       " ssid \"", _accesspoint.ssid, "\""));
+			                       " ssid P\"", _accesspoint.ssid, "\""));
 			_state = State::FILL_NETWORK_SSID;
 			break;
 		case State::FILL_NETWORK_SSID:
