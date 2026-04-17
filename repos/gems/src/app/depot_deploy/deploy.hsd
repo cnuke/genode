@@ -89,6 +89,10 @@ schema deploy
     + node | category: target
   + node vm
     + node | category: target
+  + node audio_out
+    + node | category: target
+  + node audio_in
+    + node | category: target
 
 + category provided_service
   + node fs
@@ -121,6 +125,8 @@ schema deploy
   + node irq
   + node trace
   + node vm
+  + node audio_out
+  + node audio_in
 
 + node alias
   + attr name  | type: any

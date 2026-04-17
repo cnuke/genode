@@ -1,50 +1,30 @@
-<config arch="x86_64">
+deploy
++ option board   | required: yes
++ option sculpt  | required: yes
++ option managed | required: yes
 
-	<common_routes>
-		<service name="ROM" label_last="ld.lib.so"> <parent/> </service>
-		<service name="CPU">   <parent/> </service>
-		<service name="PD">    <parent/> </service>
-		<service name="LOG">   <parent/> </service>
-		<service name="Timer"> <parent/> </service>
-	</common_routes>
++ option recall_fs
++ option window_manager
++ option system_shell
 
-	<default-route>
-		<service name="Timer"> <parent/> </service>
-		<any-service> <parent/> <any-child/> </any-service>
-	</default-route>
++ option acpi_support
++ option black_hole
++ option system_clock
++ option touchpad
++ option system_shell
 
-	<start name="acpi_support"/>
-	<start name="black_hole"/>
-	<start name="system_clock"/>
-	<start name="fonts_fs"/>
-	<start name="default_recall_fs"/>
++ child mesa_gpu-cpu | pkg: mesa_gpu-cpu
+  + connect
+    + rm | + parent
 
-	<start name="window_layouter"/>
-	<start name="themed_decorator"/>
-	<start name="wm"/>
++ option sof_audio
++ option usb_webcam
++ option nvme
++ option storage_nvme
++ option vm_ubuntu_nvme_Slot_A
 
-	<start name="mesa_gpu-cpu" pkg="mesa_gpu-cpu" priority="-2">
-		<route>
-			<service name="RM"> <parent/> </service>
-		</route>
-	</start>
-
-	<start name="touchpad"/>
-
-	<start name="default_fs_shell"/>
-
-	<start name="audio_mixer">
-		<route>
-			<service name="Audio_out"> <child name="sof_audio"/> </service>
-			<service name="Report"> <parent/> </service>
-		</route>
-	</start>
-	<start name="sof_audio"/>
-
-	<start name="usb_webcam"/>
-
-	<start name="nvme"/>
-	<start name="storage_nvme"/>
-
-	<start name="vm_ubuntu_nvme_Slot_A"/>
-</config>
++ child audio_mixer | pkg: audio_mixer
+  + connect
+    + audio_out | + child sof_audio
+    + report    | + parent
+-

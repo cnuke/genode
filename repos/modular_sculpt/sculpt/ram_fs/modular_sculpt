@@ -1,15 +1,13 @@
-<config ahci="false" nvme="false">
-	<vfs>
-		<ram/>
-		<import>
-			<dir name="depot"> <tar name="depot.tar"/> </dir>
-		</import>
-		<import>
-			<dir name="vm"> <tar name="vbox_files.tar"/> </dir>
-		</import>
-		<import>
-			<dir name="shared"/>
-		</import>
-	</vfs>
-	<default-policy root="/" writeable="yes"/>
-</config>
+config
++ vfs
+  + ram
+  + import
+    + dir depot
+      + ram
+      + tar depot.tar
+  + import
+    + dir vm | + tar vbox_files.tar
+  + import
+    + dir shared
++ default-policy | root: / | writeable: yes
+-

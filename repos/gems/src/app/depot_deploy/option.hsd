@@ -91,6 +91,10 @@ schema option
     + node | category: target
   + node i2c
     + node | category: target
+  + node audio_out
+    + node | category: target
+  + node audio_in
+    + node | category: target
 
 + category provided_service
   + node fs
@@ -124,6 +128,8 @@ schema option
   + node trace
   + node vm
   + node i2c
+  + node audio_out
+  + node audio_in
 
 + node alias
   + attr name  | type: any
