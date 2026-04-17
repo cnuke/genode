@@ -1347,7 +1347,7 @@ struct Sculpt::Main : Input_event_handler,
 			                         : Path { "/model/deploy" };
 
 			_vfs.edit(path, [&] (Hid_edit &edit) {
-				edit.adjust({ option ? "option" : "deploy", " | + child | : version" },
+				edit.adjust({ option ? "option" : "deploy", " | + child ", name, " | : version" },
 				            0u, [&] (unsigned v) { return v + 1; }); });
 
 		}, [&] { warning("attempt to restart unknown child '", name, "'"); });
