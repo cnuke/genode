@@ -1,0 +1,6 @@
+option
++ child mixer | pkg: mixer | priority: -1
+  + affinity | xpos: 0 | width: 1
+  + config
+    + default | out_volume: 100 | volume: 100
+-

@@ -1,0 +1,116 @@
+config | verbose: yes
++ parent-provides
+  + service ROM
+  + service IRQ
+  + service IO_MEM
+  + service IO_PORT
+  + service PD
+  + service RM
+  + service CPU
+  + service LOG
+  + service Timer
+  + service Report
+
++ report | child_caps: yes | child_ram: yes | init_caps: yes | init_ram: yes
+           delay_ms: 5000
+
++ default-route
+  + any-service
+    + parent
+    + any-child
+
++ default | caps: 100 | ram: 1M
+
++ service Platform | + default-policy | + child platform
+
++ start report_rom | ram: 2M
+  + provides
+    + service Report
+    + service ROM
+  + config | verbose: no
+    + policy | label: pci_decode -> system    | report: acpi -> acpi
+    + policy | label: platform -> acpi        | report: acpi -> acpi
+    + policy | label: platform -> devices     | report: pci_decode -> devices
+    + policy | label: rom_reporter -> acpi    | report: acpi -> acpi
+    + policy | label: rom_reporter -> devices | report: platform -> devices
+
++ start rom_reporter | ram: 2M
+  + config
+    + rom | label: acpi
+    + rom | label: devices
+  + route
+    + service ROM    | label: acpi    | + child report_rom
+    + service ROM    | label: devices | + child report_rom
+    + service Report | label: acpi    | + parent | label: acpi
+    + service Report | label: devices | + parent | label: devices
+    + service LOG                     | + parent
+    + service PD                      | + parent
+    + service CPU                     | + parent
+    + service ROM                     | + parent
+
++ start acpi | caps: 350 | ram: 7M
+  + route
+    + service Report | label: acpi           | + child report_rom
+    + service Report | label: intel_opregion | + parent | label: intel_opregion
+    + service Report | label: smbios_table   | + parent | label: smbios_table
+    + service IO_MEM                         | + parent
+    + service LOG                            | + parent
+    + service PD                             | + parent
+    + service RM                             | + parent
+    + service CPU                            | + parent
+    + service ROM                            | + parent
+
++ start pci_decode | caps: 350 | ram: 2M
+  + route
+    + service Report              | + child report_rom
+    + service ROM | label: system | + child report_rom
+    + service IO_MEM              | + parent
+    + service LOG                 | + parent
+    + service PD                  | + parent
+    + service RM                  | + parent
+    + service CPU                 | + parent
+    + service ROM                 | + parent
+
++ start platform | caps: 400 | ram: 6M | managing_system: yes
+  + binary pc_platform
+  + provides | + service Platform
+  + route
+    + service ROM | label: system       | + parent | label: system
+    + service ROM | label: sleep_states | + parent | label: sleep_states
+    + service ROM | label: devices      | + child report_rom
+    + service ROM | label: acpi         | + child report_rom
+    + service Report | label: devices   | + child report_rom
+    + service Report | label: iommu     | + parent | label: iommu
+    + service IRQ                       | + parent
+    + service IO_MEM                    | + parent
+    + service IO_PORT                   | + parent
+    + service ROM                       | + parent
+    + service PD                        | + parent
+    + service CPU                       | + parent
+    + service LOG                       | + parent
+    + service Timer                     | + parent
+  + config
+    + report | devices: yes | iommu: yes
+    + policy | label: ps2
+    | + device ps2
+    + policy | label: nvme      | info: yes
+    | + pci | class: NVME
+    + policy | label: usb       | info: yes
+    | + pci | class: USB
+    + policy | label: intel_gpu | info: yes
+    | + pci | class: VGA
+    | + pci | class: ISABRIDGE
+    + policy | label: touchpad  | info: yes
+    | + pci | vendor_id: 0x8086 | device_id: 0xa0eb
+    | + device INT34C5 | type: acpi
+    + policy | label: wifi      | info: yes | msix: no
+    | + pci | class: WIFI
+    + policy | label: nic       | info: yes
+    | + pci | class: ETHERNET
+    + policy | label: sof_audio | info: yes
+    | + device NHLT
+    | + pci | class: AUDIO
+    | + pci | class: HDAUDIO
+    + policy | label: acpica
+      + device acpi
+-

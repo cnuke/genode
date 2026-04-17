@@ -1,0 +1,6 @@
+option
++ child ahci | pkg: ahci | priority: -2
++ route
+  + service Platform | + parent
+  + service Report   | + parent
+-

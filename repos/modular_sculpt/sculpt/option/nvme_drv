@@ -1,0 +1,6 @@
+option
++ child nvme_drv | pkg: nvme | priority: -2
+  + connect
+    + platform   | + child platform | label: nvme
+    + report     | + child report
+-

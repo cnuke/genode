@@ -1,0 +1,6 @@
+option
++ child storage_nvme | pkg: part_block | priority: -3
+  + connect
+    + block  | + child nvme_drv | label: 1
+    + report | + child report
+-

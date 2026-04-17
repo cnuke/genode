@@ -1,0 +1,14 @@
+option
++ child touchpad | pkg: pc_i2c_hid | caps: 150 | priority: -2
+  + config
+    + i2c_slave  | irq: 266 | bus_addr: 44 | hid_addr: 32 | gpio_chip: INT34C5
+                 | info: Fujitsu U7411 (SYNAPTICS)
+
+    + i2c_master | bus_speed_hz: 400 | info: Tigerlake
+      + fmcn | hcnt: 193 | lcnt: 313 | hold_time: 80
+
+  + heartbeat | restart_after_skipped: 4
+  + connect
+    + platform | + child platform     | label: touchpad
+    + event    | + child event_filter | label: touchpad
+-

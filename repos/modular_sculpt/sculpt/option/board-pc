@@ -1,0 +1,93 @@
+option
+
++ child platform | binary: init | caps: 1500 | ram: 32M | managing_system: yes
+  + provides
+    + platform
+    + platform nic
+    + platform wifi
+    + platform audio
+    + platform acpica
+  + connect
+    + io_mem            | + parent | . attached to hardware node in the graph
+    + io_port           | + parent
+    + irq               | + parent
+    + rom config        | + child model  | label: child/platform
+    + rom system        | + child model  | label: system
+    + rom sleep_states  | + child report | label: acpi_support/sleep_states
+    + report            | + child report
+    + rm                | + parent
+    + rom ld.lib.so     | + parent
+    + rom report_rom    | + parent
+    + rom rom_reporter  | + parent
+    + rom acpi          | + parent
+    + rom pci_decode    | + parent
+    + rom pc_platform   | + parent
+    + rom platform_info | + parent
+
++ child discover_report | binary: fs_report | ram: 2M | caps: 100
+  + provides | + report
+  + config | + vfs | + fs
+  + connect
+    + fs             | + child model | identity: rw
+    + rom vfs.lib.so | + parent
+
++ child discover | binary: pc_discover | ram: 1M | caps: 100
+  + config
+  + connect
+    + report            | + child discover_report | label: option -> board
+    + rom devices       | + child report          | label: platform/devices
+    + rom board         | + child model           | label: option/board
+    + rom platform_info | + parent
+
++ child usb | binary: pc_usb_host | ram: 16M | caps: 200 | priority: -2 | enabled: yes
+  + provides
+    + usb
+  + connect
+    + platform   | + child platform | label: usb
+    + report     | + child report
+    + rom config | + child model    | label: child/usb
+
++ child intel_gpu | binary: intel_gpu | ram: 32M | caps: 1400 | priority: -2 | enabled: yes
+  + managed | max_ram: 256M | max_caps: 5000
+  + provides
+    + gpu
+    + platform
+  + connect
+    + platform   | + child platform | label: intel_gpu
+    + rom config | + child model    | label: child/gpu
+    + rom system | + child model    | label: system
+    + rm         | + parent
+
++ child intel_fb | binary: pc_intel_fb | ram: 16M | caps: 800 | priority: -2 | enabled: yes
+  + managed | max_ram: 256M | max_caps: 5000
+  + heartbeat | restart_after_skipped: 2
+  + connect
+    + platform           | + child intel_gpu
+    + capture            | + child gui
+    + report             | + child report
+    + rom config         | + child model  | label: fb
+    + rom intel_opregion | + child report | label: platform/intel_opregion
+    + rm                 | + parent
+
++ child ps2 | binary: ps2 | ram: 1M | caps: 100 | priority: -2 | enabled: discover
+  + config | capslock_led: rom | numlock_led: rom | system: yes
+  + connect
+    + platform     | + child platform     | label: ps2
+    + rom capslock | + child report       | label: global_keys/capslock
+    + rom numlock  | + child report       | label: global_keys/numlock
+    + rom system   | + child model        | label: system
+    + event        | + child event_filter | label: ps2
+
++ child usb_hid | binary: usb_hid | ram: 11M | caps: 180 | priority: -2 | enabled: yes
+  .
+  . Enabled/disabled by the sculpt manager according to the presence of
+  . USB-HID devices.
+  .
+  + config | capslock_led: rom | numlock_led: rom
+  + connect
+    + usb          | + child usb
+    + report       | + child report
+    + rom capslock | + child report | label: global_keys/capslock
+    + rom numlock  | + child report | label: global_keys/numlock
+    + event        | + child event_filter | label: usb_hid
+-
