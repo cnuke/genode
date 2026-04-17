@@ -26,6 +26,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#if SLIRP_CONFIG_VERSION_MAX < 4
+#error "Requires libslirp >= 4.7.0"
+#endif
+
 namespace Libslirp {
 	struct Action;
 	class  Context;
@@ -59,7 +63,7 @@ class Libslirp::Context
 		size_t         _fds_len  { 0 };
 		size_t         _fds_size { 0 };
 
-		static int _add_poll(slirp_os_socket fd, int events, void *opaque)
+		static int _add_poll(int fd, int events, void *opaque)
 		{
 			enum { NUM_NEW_FDS = 16 };
 
@@ -112,7 +116,7 @@ class Libslirp::Context
 		 * Callbacks
 		 */
 
-		static slirp_ssize_t _send_packet(const void *buf, size_t len, void *opaque)
+		static ssize_t _send_packet(const void *buf, size_t len, void *opaque)
 		{
 			if (!opaque) return 0;
 
@@ -149,15 +153,9 @@ class Libslirp::Context
 		static void _notify(void *) {
 			Genode::warning(__func__, " not implemented"); }
 
-		static void _register_poll_fd(int, void *) {
-			Genode::warning(__func__, " not implemented"); }
+		static void _register_poll_fd(int, void *) { }
 
-		static void _unregister_poll_fd(int, void *) {
-			Genode::warning(__func__, " not implemented"); }
-
-		static void _register_poll_socket(slirp_os_socket, void *) { }
-
-		static void _unregister_poll_socket(slirp_os_socket, void *) { }
+		static void _unregister_poll_fd(int, void *) { }
 
 		struct SlirpCb _callbacks = {
 			.send_packet        = Context::_send_packet,
@@ -173,12 +171,6 @@ class Libslirp::Context
 			/* fields introduced with config version 4 */
 			.init_completed     = Context::_init_completed,
 			.timer_new_opaque   = Context::_timer_new_opaque,
-
-#if SLIRP_CONFIG_VERSION_MAX >= 6
-			/* fields introduced with config version 6 */
-			.register_poll_socket   = Context::_register_poll_socket,
-			.unregister_poll_socket = Context::_unregister_poll_socket,
-#endif
 		};
 
 		/* make non-copyable because of pointer members */
@@ -191,7 +183,7 @@ class Libslirp::Context
 		: _verbose(verbose),
 		  _action(action)
 		{
-			_config.version = SLIRP_CONFIG_VERSION_MAX;
+			_config.version = 4;
 
 			_config.restricted = 0; /* allow access to internet */
 
@@ -234,12 +226,18 @@ class Libslirp::Context
 			 * Note: Debug output must be enabled in glib via G_MESSAGES_DEBUG=Slirp
 			 *       in base-linux/src/core/native_pd_component.cc
 			 */
+
+#if SLIRP_CONFIG_VERSION_MAX >= 6
 			if (verbose)
 				slirp_set_debug(SLIRP_DBG_CALL  |
 				                SLIRP_DBG_MISC  |
 				                SLIRP_DBG_ERROR |
 				                SLIRP_DBG_TFTP  |
 				                SLIRP_DBG_VERBOSE_CALL);
+#else
+			if (verbose)
+				Genode::warning("Unable to enable libslirp debugging (requires libslirp >= 4.9.0)");
+#endif
 
 			_slirp = slirp_new(&_config, &_callbacks, this);
 
@@ -285,7 +283,7 @@ class Libslirp::Context
 			while (valid()) {
 
 				uint32_t timeout { UINT32_MAX };
-				slirp_pollfds_fill_socket(_slirp, &timeout, Context::_add_poll, this);
+				slirp_pollfds_fill(_slirp, &timeout, Context::_add_poll, this);
 
 				/*
 				 * This would be the place to update timeout with the earliest

@@ -23,7 +23,11 @@
 #include <net/ipv4.h>
 
 /* local includes */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <libslirp_context.h>
+#pragma GCC diagnostic pop
 
 /* NIC driver includes */
 #include <drivers/nic/uplink_client_base.h>
