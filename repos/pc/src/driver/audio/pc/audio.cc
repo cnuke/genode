@@ -562,7 +562,7 @@ struct Audio
 	Signal_handler<Audio>  config_handler { env.ep(), *this,
 		&Audio::config_update };
 
-	bool const record_play = true;
+	bool const record_play = config.node().attribute_value("record_play", true);
 
 	bool mixer_update { false };
 	Device_mode speaker_mode = Device_mode::DEFAULT;
