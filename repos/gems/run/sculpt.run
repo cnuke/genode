@@ -368,7 +368,8 @@ foreach config $required_child_configs {
 	copy_config $from $to
 }
 
-set from [ingredient_path platform [board]]
+set platform_ingredient [single_ingredient platform [board]]
+set from [ingredient_path platform $platform_ingredient]
 set to   [model]/child/platform
 check_syntax $from
 copy_config $from $to
