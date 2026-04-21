@@ -141,6 +141,15 @@ proc ingredient_path { type ingredient } {
 
 	set rep_rel_path [file join sculpt $type $ingredient]
 
+	#
+	# Allow to override of generic board option, e.g. board-pc, with
+	# a specific one, e.g. board-t470p.
+	#
+	set specific_board [single_ingredient "board" ""]
+	if {[llength $specific_board] != 0} {
+		lappend paths {*}[gather_from_repositories "$rep_rel_path-$specific_board"]
+	}
+
 	lappend paths {*}[gather_from_repositories "$rep_rel_path-[board]"] \
 	              {*}[gather_from_repositories "$rep_rel_path"]
 
