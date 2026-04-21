@@ -20,7 +20,7 @@ of the driver on a loaded system.
  #define HDA_DSP_BASEFW_TIMEOUT_US       3000000
  #define HDA_DSP_INIT_TIMEOUT_US	500000
 -#define HDA_DSP_CTRL_RESET_TIMEOUT		100
-+#define HDA_DSP_CTRL_RESET_TIMEOUT		500
++#define HDA_DSP_CTRL_RESET_TIMEOUT		2000
  #define HDA_DSP_WAIT_TIMEOUT		500	/* 500 msec */
  #define HDA_DSP_REG_POLL_INTERVAL_US		500	/* 0.5 msec */
  #define HDA_DSP_REG_POLL_RETRY_COUNT		50
