@@ -455,6 +455,14 @@ void finish_rcuwait(struct rcuwait * w)
 }
 
 
+#include <linux/mm.h>
+
+bool folio_mark_dirty(struct folio * folio)
+{
+	lx_emul_trace_and_stop(__func__);
+}
+
+
 #include <linux/writeback.h>
 
 bool folio_redirty_for_writepage(struct writeback_control * wbc,struct folio * folio)
