@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2022-2026 Genode Labs GmbH
+ * Copyright (C) 2022-2025 Genode Labs GmbH
  *
  * This file is distributed under the terms of the GNU General Public License
  * version 2.
@@ -16,7 +16,6 @@
 #include <linux/backlight.h>
 #include <linux/fb.h> /* struct fb_info */
 #include <linux/sched/task.h>
-#include <linux/vmalloc.h>
 
 #include <drm/drm_client.h>
 #include <drm/drm_edid.h>
@@ -30,6 +29,8 @@
 #include "display/intel_fb_pin.h"
 
 #include "lx_emul.h"
+
+extern unsigned int intel_fb_min_alignment(const struct drm_framebuffer *fb);
 
 enum { MAX_BRIGHTNESS  = 100, INVALID_BRIGHTNESS   = MAX_BRIGHTNESS + 1 };
 enum { MAX_CONNECTORS  =  32, CONNECTOR_ID_MIRROR  = MAX_CONNECTORS - 1 };
@@ -45,7 +46,8 @@ static struct state {
 	struct drm_mode_create_dumb  fb_dumb;
 	struct drm_mode_fb_cmd2      fb_cmd;
 	struct drm_framebuffer     * fbs;
-	struct page               ** pages;
+	struct i915_vma            * vma;
+	unsigned long                vma_flags;
 	unsigned                     rotate;
 	bool                         flip;
 	uint8_t                      mode_id;
@@ -58,8 +60,8 @@ static struct state {
 static int user_register_fb(struct drm_client_dev   const * const dev,
                             struct fb_info                * const info,
                             struct drm_framebuffer        * const fb,
-                            struct drm_mode_fb_cmd2       * const fb_cmd,
-                            struct page                 *** const pages,
+                            struct i915_vma              ** vma,
+                            unsigned long                 * vma_flags,
                             unsigned width_mm, unsigned height_mm,
                             unsigned rotate, bool flip);
 
@@ -299,11 +301,7 @@ static void destroy_fb_and_capture(struct drm_client_dev       * const dev,
                                    struct drm_connector  const * const connector,
                                    struct state                * const state)
 {
-	struct fb_info                  info      = { };
-	struct drm_mode_fb_cmd2 * const dumb_fb   = &state->fb_cmd;
-	struct drm_mode_map_dumb  const data_mmap = { .handle = dumb_fb->handles[0] };
-	struct drm_gem_object   * const gem       = drm_gem_object_lookup(dev->file,
-	                                                                  data_mmap.handle);
+	struct fb_info   info   = {};
 
 	info.var.bits_per_pixel = 32;
 	info.node               = connector->index;
@@ -311,9 +309,12 @@ static void destroy_fb_and_capture(struct drm_client_dev       * const dev,
 
 	kernel_register_fb(&info, 0, 0, 0, false);
 
-	if (state->pages) {
-		drm_gem_put_pages(gem, state->pages, true, true);
-		state->pages = NULL;
+	if (state->vma) {
+		intel_fb_unpin_vma(state->vma,
+		                   state->vma_flags);
+
+		state->vma       = NULL;
+		state->vma_flags = 0;
 	}
 
 	state->enabled   = false;
@@ -715,8 +716,9 @@ static void reconfigure(struct drm_client_dev * const dev)
 			unsigned width_mm  = mode->width_mm  ? : connector->display_info.width_mm;
 			unsigned height_mm = mode->height_mm ? : connector->display_info.height_mm;
 
-			int err = user_register_fb(dev, &fb_info, state->fbs, &state->fb_cmd,
-			                           &state->pages, width_mm, height_mm,
+			int err = user_register_fb(dev, &fb_info, state->fbs,
+			                           &state->vma, &state->vma_flags,
+			                           width_mm, height_mm,
 			                           state->rotate, state->flip);
 
 			if (err == -ENOSPC) {
@@ -734,7 +736,7 @@ static void reconfigure(struct drm_client_dev * const dev)
 		struct state * state_mirror = &states[CONNECTOR_ID_MIRROR];
 
 		user_register_fb(dev, &mirror.info, state_mirror->fbs,
-		                 &state_mirror->fb_cmd, &state_mirror->pages,
+		                 &state_mirror->vma, &state_mirror->vma_flags,
 		                 mirror.width_mm, mirror.height_mm,
 		                 state_mirror->rotate, state_mirror->flip);
 	}
@@ -1241,53 +1243,93 @@ static int register_drm_client(struct drm_device * const dev)
 static int user_register_fb(struct drm_client_dev const * const dev,
                             struct fb_info              * const info,
                             struct drm_framebuffer      * const fb,
-                            struct drm_mode_fb_cmd2     * const dumb_fb,
-                            struct page               *** const pages,
+                            struct i915_vma            ** const vma,
+                            unsigned long               * const vma_flags,
                             unsigned                      const width_mm,
                             unsigned                      const height_mm,
                             unsigned                      const rotate,
                             bool                          const flip)
 {
-	pgprot_t      const prot   = { };
-	unsigned long const flags  = 0;
-	int                 result = -EINVAL;
+	intel_wakeref_t wakeref;
 
-	struct drm_mode_map_dumb const data_mmap = { .handle = dumb_fb->handles[0] };
+	int                        result   = -EINVAL;
+	struct i915_gtt_view const view     = { .type = I915_GTT_VIEW_NORMAL };
+	void   __iomem            *vaddr    = NULL;
+	struct drm_i915_private   *dev_priv = to_i915(dev->dev);
 
-	struct drm_gem_object * const gem = drm_gem_object_lookup(dev->file,
-	                                                          data_mmap.handle);
-	if (!info || !fb || !gem || !gem->filp || !pages) {
+	if (!info || !fb || !dev_priv || !vma || !vma_flags) {
 		printk("%s:%u error setting up info and fb\n", __func__, __LINE__);
-		return -EINVAL;
+		return -ENODEV;
 	}
 
-	*pages = drm_gem_get_pages(gem);
+	if (*vma) {
+		intel_fb_unpin_vma(*vma, *vma_flags);
 
-	if (IS_ERR(*pages)) {
-		result = PTR_ERR(*pages);
-		*pages = NULL;
+		*vma       = NULL;
+		*vma_flags = 0;
+	}
 
-		printk("%s drm_gem_get_pages failed\n", __func__);
+	wakeref = intel_runtime_pm_get(&dev_priv->runtime_pm);
+
+	/* Pin the GGTT vma for our access via info->screen_base.
+	 * This also validates that any existing fb inherited from the
+	 * BIOS is suitable for own access.
+	 */
+	unsigned min_alignment = intel_fb_min_alignment(fb);
+
+	*vma = intel_fb_pin_to_ggtt(fb, &view, min_alignment, 0, 0, false, vma_flags);
+
+	if (IS_ERR(*vma)) {
+		intel_runtime_pm_put(&dev_priv->runtime_pm, wakeref);
+
+		result = PTR_ERR(*vma);
+
+		printk("%s:%u error setting vma %d\n", __func__, __LINE__, result);
+
+		*vma = NULL;
+		*vma_flags = 0;
 
 		return result;
 	}
 
-	void * vaddr = vmap(*pages, gem->size >> PAGE_SHIFT, flags, prot);
+	if (!i915_vma_is_map_and_fenceable(*vma)) {
+		/* on Meteorlake ignore the check, since mappable_end is not set.  */
+		if (i915_vm_to_ggtt((*vma)->vm)->mappable_end) {
+			printk("%s: framebuffer not mappable in aperture -> destroying\n",
+			       (info && info->par) ? (char *)info->par : "unknown");
 
-	if (!vaddr) {
-		drm_gem_put_pages(gem, *pages, false, false);
-		*pages = NULL;
-		result = -EINVAL;
+			intel_fb_unpin_vma(*vma, *vma_flags);
 
-		printk("%s vmap failed\n", __func__);
+			*vma       = NULL;
+			*vma_flags = 0;
+
+			return -ENOSPC;
+		}
+	}
+
+	vaddr = i915_vma_pin_iomap(*vma);
+
+	if (IS_ERR(vaddr)) {
+		intel_runtime_pm_put(&dev_priv->runtime_pm, wakeref);
+
+		result = PTR_ERR(vaddr);
+		printk("%s:%u error pin iomap %d\n", __func__, __LINE__, result);
+
+		intel_fb_unpin_vma(*vma, *vma_flags);
+
+		*vma       = NULL;
+		*vma_flags = 0;
 
 		return result;
 	}
+
 	/* fill framebuffer info for kernel_register_fb */
 	info->screen_base        = vaddr;
-	info->screen_size        = gem->size;
+	info->screen_size        = (*vma)->size;
 	info->fix.line_length    = fb->pitches[0];
 	info->var.bits_per_pixel = drm_format_info_bpp(fb->format, 0);
+
+	intel_runtime_pm_put(&dev_priv->runtime_pm, wakeref);
 
 	kernel_register_fb(info, width_mm, height_mm, rotate, flip);
 
