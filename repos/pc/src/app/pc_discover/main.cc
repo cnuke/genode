@@ -60,17 +60,21 @@ void Pc_discover::Main::_handle_devices()
 	if (devices.type() == "empty")
 		return;
 
-	struct Have_driver { bool intel_gpu, intel_fb; } have_driver { };
+	struct Enabled_driver { bool intel_gpu, intel_fb; } enabled_driver { };
+
+	auto check_enabled = [&] (Node const &node) {
+		return node.attribute_value("enabled", true)
+		    || node.attribute_value("enabled", Value()) == "discover"; };
 
 	orig.for_each_sub_node("child", [&] (Node const &node) {
 		Value const name = node.attribute_value("name", Value());
-		if (name == "intel_gpu") have_driver.intel_gpu = true;
-		if (name == "intel_fb")  have_driver.intel_fb  = true;
+		if (name == "intel_gpu") enabled_driver.intel_gpu = check_enabled(node);
+		if (name == "intel_fb")  enabled_driver.intel_fb  = check_enabled(node);
 	});
 
 	auto const detected = Board_info::Detected::from_node(devices, platform);
 
-	bool const intel_fb_usable = have_driver.intel_fb && detected.intel_gfx;
+	bool const intel_fb_usable = enabled_driver.intel_fb && detected.intel_gfx;
 
 	log("detected ", detected);
 
@@ -101,8 +105,8 @@ void Pc_discover::Main::_handle_devices()
 
 	enable_or_remove_child("usb",       detected.usb);
 	enable_or_remove_child("intel_gpu", detected.intel_gfx);
-	enable_or_remove_child("intel_fb",  detected.intel_gfx &&  intel_fb_usable);
-	enable_or_remove_child("boot_fb",   detected.boot_fb   && !intel_fb_usable);
+	enable_or_remove_child("intel_fb",  detected.intel_gfx);
+	enable_or_remove_child("boot_fb",   detected.boot_fb && !intel_fb_usable);
 	enable_or_remove_child("vesa_fb",   detected.vga && !detected.boot_fb && !intel_fb_usable);
 	enable_or_remove_child("ps2",       detected.ps2);
 	enable_or_remove_child("ahci",      detected.ahci);
