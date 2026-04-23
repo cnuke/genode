@@ -4,11 +4,11 @@ system:   pc
 gpu:      intel
 
 # supplemental depot content added to the system image
-import: pkg/sculpt_drivers-pc
+import: pkg/sculpt_drivers-pc pkg/bsd_audio pkg/mixer
 
 # selection of option-menu entries
 option: download_debug_info black_hole trace_logger
-option: audio mixer system_clock acpi_support recall_fs touchpad
+option: system_clock acpi_support recall_fs touchpad
 option: log_view
 
 # selection of accepted depot-package providers
