@@ -28,11 +28,11 @@ config
   |   + if
   |     + has_value | input: leitzentrale_enabled | value: yes
   |     + then
-  |       + attribute initial_fade_in_steps | value: 100
-  |       + attribute fade_in_steps         | value: 20
-  |       + attribute alpha                 | value: 210
+  |       + attribute initial_fade_in_steps | value: 0
+  |       + attribute fade_in_steps         | value: 0
+  |       + attribute alpha                 | value: 255
   |     + else
-  |       + attribute fade_out_steps        | value: 30
+  |       + attribute fade_out_steps        | value: 0
   |       + attribute alpha                 | value: 0
   + route
     + service ROM | label: leitzentrale | + parent | label: leitzentrale_enabled
@@ -62,7 +62,7 @@ config
     + service Event
   + config | focus: rom | request_input: yes | request_framebuffer: yes
     + report | clicked: yes | touch: yes
-    + background | color: #272f45
+    + background | color: #101010
     + domain default | layer: 1 | content: client | label: no
                                   hover:   always | focus: click
     + default-policy | domain: default
