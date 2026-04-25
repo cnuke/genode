@@ -115,7 +115,8 @@ option
     + rom system | + child model    | label: system
     + report     | + child report
 
-+ child nvme | binary: nvme | ram: 72M | caps: 100 | priority: media | enabled: discover
++ child nvme | binary: nvme | ram: 72M | caps: 250 | priority: media | enabled: discover
+  + managed | max_caps: 500 | max_ram: 96M | disable: while_suspended
   + provides
     + block
   + config | max_hmb_size: 64M |  system: yes
@@ -148,8 +149,8 @@ option
     + report      | + child report
     + rm          | + parent
 
-+ child wifi | binary: wifi | ram: 24M | caps: 260 | enabled: no
-  + managed | disable: while_suspended
++ child wifi | binary: wifi | ram: 32M | caps: 260 | enabled: no
+  + managed | max_caps: 500 | max_ram: 48M | disable: while_suspended
   + config
   | + libc | stdout: /dev/log | stderr: /dev/null | rtc: /dev/rtc
   | + vfs
