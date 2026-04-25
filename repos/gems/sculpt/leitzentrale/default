@@ -204,7 +204,7 @@ config
   | + vfs
   |   + rom genode_logo.png
   |
-  | + fill  | color: #272f45
+  | + fill  | color: #101010
   | + image | png: genode_logo.png | alpha: 100
   |           anchor: bottom_right | xpos: -20 | ypos: -20
   + route
