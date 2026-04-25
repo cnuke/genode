@@ -70,6 +70,7 @@ struct Sculpt::Software_presets_widget : Widget<Frame>
 
 	void view(Scope<Frame> &s, Presets const &presets) const
 	{
+		s.attribute("style", "invisible");
 		s.sub_scope<Vbox>([&] (Scope<Frame, Vbox> &s) {
 			s.sub_scope<Min_ex>(35);
 			presets.for_each([&] (Presets::Info const &info) {
