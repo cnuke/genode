@@ -127,7 +127,7 @@ option
     + rom system | + child model    | label: system
     + report     | + child report
 
-+ child usb_hid | binary: usb_hid | ram: 11M | caps: 180 | priority: media | enabled: yes
++ child usb_hid | binary: usb_hid | ram: 11M | caps: 180 | priority: media | enabled: no
   .
   . Enabled/disabled by the sculpt manager according to the presence of
   . USB-HID devices.

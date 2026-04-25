@@ -309,6 +309,7 @@ struct Sculpt::Main : Input_event_handler,
 	};
 
 	bool _usb_storage_acquired = false;
+	bool _usb_hid_present      = false;
 	bool _usb_net_present      = false;
 
 	/**
@@ -453,16 +454,20 @@ struct Sculpt::Main : Input_event_handler,
 
 	void _handle_usb_devices(Node const &devices)
 	{
+		bool const orig_usb_hid_present = _usb_hid_present;
+
 		_usb_storage_acquired = false;
+		_usb_hid_present      = false;
 		_usb_net_present      = false;
 
-		static constexpr unsigned CLASS_STORAGE = 8;
+		static constexpr unsigned CLASS_HID = 3, CLASS_STORAGE = 8;
 
 		devices.for_each_sub_node("device", [&] (Node const &device) {
 			bool const acquired = device.attribute_value("acquired", false);
 			device.for_each_sub_node("config", [&] (Node const &config) {
 				config.for_each_sub_node("interface", [&] (Node const &interface) {
 					unsigned const class_id = interface.attribute_value("class", 0u);
+					_usb_hid_present      |= (class_id == CLASS_HID);
 					_usb_storage_acquired |= (class_id == CLASS_STORAGE) && acquired;
 				});
 			});
@@ -470,6 +475,11 @@ struct Sculpt::Main : Input_event_handler,
 			_usb_net_present |= vendor == 0x0b95; /* ASIX */
 			_usb_net_present |= vendor == 0x0bda; /* Realtek */
 		});
+
+		if (orig_usb_hid_present != _usb_hid_present)
+			_vfs.edit("/model/option/board", [&] (Hid_edit &edit) {
+				edit.adjust("option | + child usb_hid | : enabled", false,
+					[&] (unsigned) { return _usb_hid_present ? "yes" : "no"; }); });
 
 		/* no usb_net device found but driver is running - disconnect */
 		if (!_usb_net_present && _runtime_state.present_in_runtime("usb_net"))
@@ -522,6 +532,8 @@ struct Sculpt::Main : Input_event_handler,
 
 	void _handle_usb_config(Node const &config)
 	{
+		static constexpr unsigned CLASS_HID = 3;
+
 		_usb_config.generate([&] (Generator &g) {
 			config.for_each_attribute([&] (Node::Attribute const &a) {
 				if (a.name != "managed")
@@ -529,6 +541,12 @@ struct Sculpt::Main : Input_event_handler,
 
 			g.node("report", [&] {
 				g.attribute("devices", "yes"); });
+
+			g.node("policy", [&] {
+				g.attribute("label_prefix", "usb_hid");
+				g.attribute("generated", "yes");
+				g.node("device", [&] {
+					g.attribute("class", CLASS_HID); }); });
 
 			/* copy user-provided rules */
 			config.for_each_sub_node("policy", [&] (Node const &policy) {
