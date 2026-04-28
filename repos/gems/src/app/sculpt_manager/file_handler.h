@@ -151,6 +151,9 @@ struct Genode::File_handler
 					break;
 				}
 
+				if (!_file_size)
+					break;
+
 				size_t const buf_size = _buffer.convert<size_t>(
 					[&] (Allocation const &a) { return a.num_bytes; },
 					[&] (Alloc_error)         { return 0ul; });
