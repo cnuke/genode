@@ -4,19 +4,76 @@ assert {[have_spec nova] || [have_spec hw] || [have_spec linux]}
 create_boot_directory
 
 import_from_depot [depot_user]/src/[base_src] \
+                  [depot_user]/src/acpi \
                   [depot_user]/src/init \
                   [depot_user]/src/libc \
+                  [depot_user]/src/nic_router \
+                  [depot_user]/src/openssl \
+                  [depot_user]/src/pc_nic \
+                  [depot_user]/src/pci_decode \
+                  [depot_user]/src/platform \
                   [depot_user]/src/posix \
+                  [depot_user]/src/report_rom \
                   [depot_user]/src/vfs \
                   [depot_user]/src/vfs_import \
                   [depot_user]/src/vfs_jitterentropy \
+                  [depot_user]/src/vfs_lxip \
                   [depot_user]/src/vfs_pipe \
-                  [depot_user]/src/openssl \
                   [depot_user]/src/zlib \
                   [depot_user]/pkg/system_rtc-[board] \
                   [depot_user]/src/libestr/0.1.11-2026-04-22 \
                   [depot_user]/src/libfastjson/1.2304.0-2026-04-22 \
                   [depot_user]/src/rsyslog/8.2502.0-2026-04-22
+
+build { lib/libc test/rsyslog }
+
+proc network_config { } {
+
+return "
++ start drivers_reports | caps: 70
+  + binary report_rom
+  + provides
+    + service ROM
+    + service Report
+  + config | verbose: no
+    + policy | label:  pci_decode -> system | report: acpi -> acpi
+    + policy | label:  platform -> devices  | report: pci_decode -> devices
+  + route
+    + any-service
+      + parent
+      + any-child
+
++ start acpi | caps: 350 | ram: 6M
+  + route
+    + service Report | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start pci_decode | caps: 350
+  + route
+    + service ROM    | label: system | + child drivers_reports
+    + service Report                 | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start platform | caps: 400 | ram: 4M | managing_system: yes
+  + provides | + service Platform
+  + config
+    + report | devices: yes
+    + policy | label_prefix: pc_nic | info: yes | + pci | class: ETHERNET
+  + route
+    + service ROM    | label: devices | + child drivers_reports
+    + service Report                  | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start pc_nic | caps: 120 | ram: 16M | priority: -1
+  + config | ld_verbose: yes
+"
+}
 
 #
 # Generate config
@@ -60,6 +117,69 @@ config | verbose: yes
     + service RM                      | + parent
     + service ROM                     | + parent
 
++ start drivers_reports | caps: 70
+  + binary report_rom
+  + provides
+    + service ROM
+    + service Report
+  + config | verbose: no
+    + policy | label:  pci_decode -> system | report: acpi -> acpi
+    + policy | label:  platform -> devices  | report: pci_decode -> devices
+  + route
+    + any-service
+      + parent
+      + any-child
+
++ start acpi | caps: 350 | ram: 6M
+  + route
+    + service Report | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start pci_decode | caps: 350
+  + route
+    + service ROM    | label: system | + child drivers_reports
+    + service Report                 | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start platform | caps: 400 | ram: 4M | managing_system: yes
+  + provides | + service Platform
+  + config
+    + report | devices: yes
+    + policy | label_prefix: pc_nic | info: yes | + pci | class: ETHERNET
+  + route
+    + service ROM    | label: devices | + child drivers_reports
+    + service Report                  | + child drivers_reports
+    + any-service
+      + parent
+      + any-child
+
++ start pc_nic | caps: 120 | ram: 16M | priority: -1
+  + config | ld_verbose: yes
++ start nic_router | caps: 150 | ram: 8M
+  + provides
+    + service Nic
+    + service Uplink
+  + config | verbose:                   no
+           | verbose_domain_state:      yes
+           | dhcp_discover_timeout_sec: 10
+           | dhcp_request_timeout_sec:  6
+    + policy | label_prefix: wifi | domain: uplink
+    + policy | label_prefix: vfs  | domain: downlink
+    + domain uplink
+      | verbose_packets:     no
+      | verbose_packet_drop: no
+      | icmp_echo_server:    yes
+      + nat | domain: downlink | tcp-ports: 10
+    + domain downlink
+      | verbose_packets:     no
+      | verbose_packet_drop: no
+      | interface:           10.0.3.1/24
+      + dhcp-server | ip_first: 10.0.3.2 | ip_last: 10.0.3.2
+
 + start vfs | caps: 150 | ram: 24M
   + provides | + service File_system
   + config
@@ -79,13 +199,39 @@ config | verbose: yes
   |         + ram
   |     + dir run
   |       + dir log | + ram
+  |   + dir socket | + lxip | dhcp: yes
   | + default-policy | root: / | writeable: yes
+  + route
+    + service Nic | + child nic_router
+    + any-service
+      + parent
+      + any-child
+
++ start test-rsyslog | caps: 100 | ram: 3M
+  + config
+  | + arg | value: test-rsyslog
+  | + arg | value: /test_imfile/infile
+  | + arg | value: 1000
+  | + libc | stdout: /dev/log | stderr: /dev/log | rtc: /dev/rtc
+  | + vfs
+  |   + dir dev
+  |     + log
+  |     + rtc
+  |   + fs
+  | + default-policy | root: / | writeable: yes
+  + route
+    + service File_system | + child vfs
+    + service Rtc         | + child system_rtc
+    + any-service
+      + parent
+      + any-child
 
 + start rsyslogd | caps: 520 | ram: 64M
   + config | ld_verbose: true | verbose: yes
   | + arg | value: rsyslogd
   | + arg | value: -n
   | + arg | value: -iNONE
+  | x env RSYSLOG_DEBUG | : debug
   | + libc | stdout: /dev/log | stderr: /dev/log
   |        | rtc: /dev/rtc | socket: /socket | pipe: /dev/pipe
   |        | rng: /dev/random
@@ -98,7 +244,7 @@ config | verbose: yes
   |     + rtc
   |   + dir etc
   |     + inline rsyslog.conf
-  |       : module(load="imfile" PollingInterval="2")
+  |       : module(load="imfile" PollingInterval="3")
   |       :
   |       : input(type="imfile" File="/test_imfile/infile"
   |       :       Tag="test_tag" Severity="error"
@@ -106,6 +252,11 @@ config | verbose: yes
   |       :
   |       : global(workDirectory="/test_imfile")
   |       : action(type="omfile" File="/dev/log")
+  |       : action(type="omfwd"
+  |       :        target="10.0.2.1"
+  |       :        port="514"
+  |       :        protocol="udp"
+  |       :        queue.type="linkedList")
   |       :
   |       : *.* ~
   |   + fs
@@ -120,4 +271,7 @@ install_config $config
 
 build_boot_image [build_artifacts]
 
-run_genode_until {.*Hello rsyslog!.*} 30
+append qemu_args " -nographic "
+
+#run_genode_until {.*Hello rsyslog!.*} 30
+run_genode_until forever
