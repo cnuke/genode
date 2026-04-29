@@ -311,11 +311,10 @@ void Sandbox::Child::_apply_resource_downgrade(QUOTA &assigned, QUOTA const conf
 
 		QUOTA const transfer { min(avail - preserved.value, decrement.value) };
 
-		_child.with_pd([&] (Pd_session &pd) {
+		_with_pd([&] (Pd_session &pd) {
 			auto const OK = Pd_account::Transfer_result::OK;
 			if (pd.transfer_quota(ref_account_cap(), transfer) == OK)
-				assigned.value -= transfer.value;
-		}, [&] { });
+				assigned.value -= transfer.value; });
 	}
 
 	if (attempts == max_attempts)
@@ -328,7 +327,7 @@ void Sandbox::Child::apply_downgrade()
 	Ram_quota const configured_ram_quota = _configured_ram_quota();
 	Cap_quota const configured_cap_quota = _configured_cap_quota();
 
-	_child.with_pd([&] (Pd_session &pd) {
+	_with_pd([&] (Pd_session &pd) {
 		_apply_resource_downgrade(_resources.assigned_ram_quota,
 		                          configured_ram_quota, Ram_quota{16*1024},
 		                          [&] { return pd.avail_ram(); });
@@ -336,7 +335,7 @@ void Sandbox::Child::apply_downgrade()
 		_apply_resource_downgrade(_resources.assigned_cap_quota,
 		                          configured_cap_quota, Cap_quota{5},
 		                          [&] { return pd.avail_caps(); });
-	}, [&] { });
+	});
 
 	/*
 	 * If designated resource quota is lower than the child's consumed quota,
@@ -392,9 +391,8 @@ void Sandbox::Child::report_state(Generator &g, Report_detail const &detail) con
 					g.attribute("assigned", String<32> {
 						Number_of_bytes(_resources.assigned_ram_quota.value) });
 
-					if (_pd_alive())
-						_child.with_pd([&] (Pd_session const &pd) {
-							Ram_info::from_pd(pd).generate(g); }, [&] { });
+					_with_pd([&] (Pd_session const &pd) {
+						Ram_info::from_pd(pd).generate(g); });
 
 					if (_requested_resources.constructed() && _requested_resources->ram.value)
 						g.attribute("requested", String<32>(_requested_resources->ram));
@@ -406,9 +404,8 @@ void Sandbox::Child::report_state(Generator &g, Report_detail const &detail) con
 
 					g.attribute("assigned", String<32>(_resources.assigned_cap_quota));
 
-					if (_pd_alive())
-						_child.with_pd([&] (Pd_session const &pd) {
-							Cap_info::from_pd(pd).generate(g); }, [&] { });
+					_with_pd([&] (Pd_session const &pd) {
+						Cap_info::from_pd(pd).generate(g); });
 
 					if (_requested_resources.constructed() && _requested_resources->caps.value)
 						g.attribute("requested", String<32>(_requested_resources->caps));

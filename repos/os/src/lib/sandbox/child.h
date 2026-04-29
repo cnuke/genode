@@ -521,6 +521,12 @@ class Sandbox::Child : Child_policy, Routed_service::Wakeup
 			return !abandoned() && !restart_scheduled() && !_exited;
 		}
 
+		void _with_pd(auto const &fn) const
+		{
+			if (_pd_alive())
+				_child.with_pd(fn, [] { });
+		}
+
 		void _destroy_services();
 
 		struct Sampled_state
