@@ -84,7 +84,7 @@ void Device::Irq::mask()
 void Device::Irq::unmask(Platform::Device &dev)
 {
 	if (!session.constructed()) {
-		session.construct(dev, idx);
+		session.construct(dev, type, idx);
 		session->sigh_omit_initial_signal(handler);
 		session->ack();
 	}
@@ -100,8 +100,9 @@ void Device::Irq::unmask(Platform::Device &dev)
 }
 
 
-Device::Irq::Irq(Entrypoint &ep, unsigned idx, unsigned number)
+Device::Irq::Irq(Entrypoint &ep, Type type, unsigned idx, unsigned number)
 :
+	type{type},
 	idx{idx},
 	number(number),
 	handler(ep, *this, &Irq::_handle)
@@ -232,6 +233,49 @@ void Device::irq_ack(unsigned number)
 			return;
 		irq.ack();
 	});
+}
+
+
+unsigned Device::irq_msi_num_vec(bool msix)
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	unsigned num_vec = 0;
+	for_each_irq([&] (Irq &irq) {
+		if (msix && irq.type == Platform::Device::Irq::Type::TYPE_MSIX)
+			num_vec++;
+
+		if (!msix && irq.type == Platform::Device::Irq::Type::TYPE_MSI)
+			num_vec++;
+	});
+
+	return num_vec;
+}
+
+unsigned Device::irq_msi_base_number()
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	unsigned base_number = ~0U;
+
+	/*
+	 * The first MSI(X) number is by definition the base and
+	 * it is always the same as MSI and MSI-X are not used
+	 * concurrently.
+	 */
+	for_each_irq([&] (Irq &irq) {
+		if  (irq.type == Platform::Device::Irq::Type::TYPE_MSIX
+		  || irq.type == Platform::Device::Irq::Type::TYPE_MSI)
+			base_number = min(base_number, irq.number);
+	});
+
+	/* in case there is no MSI(X) */
+	if (base_number == ~0U)
+		return 0;
+
+	return base_number;
 }
 
 
@@ -390,8 +434,25 @@ Device::Device(Entrypoint           &ep,
 	});
 
 	i = 0;
+	/* configure IRQ accordingly */
 	node.for_each_sub_node("irq", [&] (Node const &node) {
-		_irqs.insert(new (heap) Irq(ep, i++, node.attribute_value("number", 0U)));
+
+		using Irq_type = String<8>;
+		Irq_type const irq_type =
+			node.attribute_value("type", Irq_type(""));
+
+		if (irq_type == "msi-x") {
+			unsigned const num_vec = node.attribute_value("num_vec", 0U);
+			for (unsigned j = 0; j < num_vec; j++)
+				_irqs.insert(new (heap) Irq(ep, Platform::Device::Irq::Type::TYPE_MSIX,
+				                            i++, node.attribute_value("number", 0U) + j));
+		} else if (irq_type == "msi") {
+			_irqs.insert(new (heap) Irq(ep, Platform::Device::Irq::Type::TYPE_MSI,
+			                            i++, node.attribute_value("number", 0U)));
+		} else {
+			_irqs.insert(new (heap) Irq(ep, Platform::Device::Irq::Type::TYPE_LEGACY,
+			                            i++, node.attribute_value("number", 0U)));
+		}
 	});
 
 	i = 0;
