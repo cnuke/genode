@@ -46,6 +46,11 @@ void lx_emul_pci_for_each_device(void * bus, lx_emul_add_device_callback_t fn);
 
 void lx_emul_pci_enable(const char * const name);
 
+unsigned lx_emul_pci_msi_num_vec(const char * const name, int msix);
+unsigned lx_emul_pci_msi_alloc(const char * const name, int msix);
+void     lx_emul_pci_msi_free(const char * const name, unsigned number);
+
+
 void * lx_emul_pci_root_bus(void);
 
 #ifdef __cplusplus

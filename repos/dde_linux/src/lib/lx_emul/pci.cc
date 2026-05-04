@@ -102,3 +102,36 @@ extern "C" void lx_emul_execute_pci_fixup(struct pci_dev *pci_dev)
 {
 	Lx_kit::env().pci_fixup_calls.execute(pci_dev);
 }
+
+
+extern "C" unsigned lx_emul_pci_msi_num_vec(char const * const name, int msix)
+{
+	unsigned num_vec = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			num_vec += d.msi_num_vec(!!msix);
+	});
+
+	return num_vec;
+}
+
+
+extern "C" unsigned lx_emul_pci_msi_alloc(char const * const name, int msix)
+{
+	unsigned msi = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			msi = d.msi_alloc(msix);
+	});
+
+	return msi;
+}
+
+
+extern "C" void lx_emul_pci_msi_free(char const * const name, unsigned number)
+{
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			d.msi_free(number);
+	});
+}

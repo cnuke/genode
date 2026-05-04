@@ -84,7 +84,11 @@ void Device::Irq::mask()
 void Device::Irq::unmask(Platform::Device &dev)
 {
 	if (!session.constructed()) {
-		session.construct(dev, idx);
+		if (type != Platform::Device::Irq::Type::IRQ)
+			session.construct(dev, type);
+		else
+			session.construct(dev, idx);
+
 		session->sigh_omit_initial_signal(handler);
 		session->ack();
 	}
@@ -100,8 +104,9 @@ void Device::Irq::unmask(Platform::Device &dev)
 }
 
 
-Device::Irq::Irq(Entrypoint &ep, unsigned idx, unsigned number)
+Device::Irq::Irq(Entrypoint &ep, Type type, unsigned idx, unsigned number)
 :
+	type{type},
 	idx{idx},
 	number(number),
 	handler(ep, *this, &Irq::_handle)
@@ -232,6 +237,67 @@ void Device::irq_ack(unsigned number)
 			return;
 		irq.ack();
 	});
+}
+
+
+unsigned Device::msi_num_vec(bool msix)
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	return msix ? _num_msix : _num_msi;
+}
+
+
+unsigned Device::msi_alloc(bool msix)
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	if (!_msi_allocator.constructed())
+		return 0;
+
+	unsigned msi_number = 0;
+	_msi_allocator->alloc([&] (Entrypoint &ep, Heap &heap, unsigned number) {
+
+		/*
+		 * Skip preallocated IRQs and adapt to MSIX as there we support multiple
+		 * vectors while MSI is capped at one.
+		 */
+		unsigned const device_unique_number =
+			(MSI_OFFSET + _device_index.value * MAX_MSIX) + number;
+
+		_irqs.insert(new (heap) Irq(ep, msix ? Platform::Device::Irq::Type::MSIX
+		                                     : Platform::Device::Irq::Type::MSI,
+		                            0, device_unique_number));
+		msi_number = device_unique_number;
+	});
+
+	return msi_number;
+}
+
+
+void Device::msi_free(unsigned device_unique_number)
+{
+	Irq *irq_ptr = nullptr;
+	for_each_irq([&] (Irq &irq) {
+		if (irq.number != device_unique_number || irq_ptr)
+			return;
+
+		if (irq_ptr == nullptr)
+			irq_ptr = &irq;
+	});
+
+	if (!irq_ptr)
+		return;
+
+	_irqs.remove(irq_ptr);
+
+	unsigned const number =
+		device_unique_number - (MSI_OFFSET + _device_index.value * MAX_MSIX);
+
+	_msi_allocator->free(number, [&] (Heap &heap) {
+		Genode::destroy(heap, irq_ptr); });
 }
 
 
@@ -366,11 +432,13 @@ void Device::enable()
 Device::Device(Entrypoint           &ep,
                Platform::Connection &plat,
                Node           const &node,
-               Heap                 &heap)
+               Heap                 &heap,
+               Index                 index)
 :
 	_platform(plat),
 	_name(node.attribute_value("name", Device::Name())),
-	_type{node.attribute_value("type", Device::Name())}
+	_type{node.attribute_value("type", Device::Name())},
+	_device_index(index)
 {
 	unsigned i = 0;
 	node.for_each_sub_node("io_mem", [&] (Node const &node) {
@@ -391,8 +459,20 @@ Device::Device(Entrypoint           &ep,
 
 	i = 0;
 	node.for_each_sub_node("irq", [&] (Node const &node) {
-		_irqs.insert(new (heap) Irq(ep, i++, node.attribute_value("number", 0U)));
+		_irqs.insert(new (heap) Irq(ep, Platform::Device::Irq::Type::IRQ,
+		                            i++, node.attribute_value("number", 0U)));
 	});
+
+	/*
+	 * Query MSI(-X) information and limit to an reasonable
+	 * amount for now. We do not expect using multiple vectors
+	 * on a regular basis.
+	 */
+	_num_msix = min(MAX_MSIX, node.attribute_value("msi_x", 0u));
+	_num_msi  = min(MAX_MSI,  node.attribute_value("msi",   0u));
+
+	if (_num_msi || _num_msix)
+		_msi_allocator.construct(ep, heap);
 
 	i = 0;
 	node.for_each_sub_node("clock", [&] (Node const &node) {
@@ -438,8 +518,9 @@ Device_list::Device_list(Entrypoint           &ep,
 			} else {
 				_platform.sigh(Signal_context_capability());
 				handler.destruct();
+				unsigned device_index = 0;
 				node.for_each_sub_node("device", [&] (Node const &node) {
-					insert(new (heap) Device(ep, _platform, node, heap));
+					insert(new (heap) Device(ep, _platform, node, heap, { device_index++ }));
 				});
 				initialized = true;
 			}

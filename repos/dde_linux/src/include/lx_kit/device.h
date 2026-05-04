@@ -23,6 +23,7 @@
 #include <platform_session/device.h>
 #include <pci/types.h>
 #include <util/list.h>
+#include <util/bit_allocator.h>
 
 
 namespace Lx_kit {
@@ -64,9 +65,11 @@ class Lx_kit::Device : List<Device>::Element
 		struct Irq : List<Irq>::Element
 		{
 			using Index = Platform::Device::Irq::Index;
+			using Type  = Platform::Device::Irq::Type;
 
 			enum State { IDLE, PENDING, MASKED, MASKED_PENDING };
 
+			Type                   type;
 			Index                  idx;
 			unsigned               number;
 			Io_signal_handler<Irq> handler;
@@ -74,7 +77,7 @@ class Lx_kit::Device : List<Device>::Element
 
 			Constructible<Platform::Device::Irq> session {};
 
-			Irq(Entrypoint &ep, unsigned idx, unsigned number);
+			Irq(Entrypoint &ep, Type type, unsigned idx, unsigned number);
 
 			void _handle();
 			void mask();
@@ -120,12 +123,17 @@ class Lx_kit::Device : List<Device>::Element
 			Pci::device_t sub_d_id;
 		};
 
+		struct Index
+		{
+			unsigned value;
+		};
+
 	private:
 
 		friend class Device_list;
 		friend class List<Device>;
 
-		Device(Entrypoint &, Platform::Connection &, Node const &, Heap &);
+		Device(Entrypoint &, Platform::Connection &, Node const &, Heap &, Index);
 
 		Platform::Connection           &_platform;
 		Name                      const _name;
@@ -137,6 +145,44 @@ class Lx_kit::Device : List<Device>::Element
 		Constructible<Pci_config>       _pci_config {};
 		Constructible<Platform::Device> _pdev       {};
 
+		Index _device_index = { 0 };
+
+		unsigned _num_msi  = 0;
+		unsigned _num_msix = 0;
+
+		struct Msi_allocator
+		{
+			Entrypoint &_ep;
+			Heap       &_heap;
+
+			static constexpr unsigned MAX_NUM = 64u;
+			using Number_allocator = Bit_allocator<MAX_NUM>;
+			Number_allocator _num_alloc { };
+
+			Msi_allocator(Entrypoint &ep, Heap &heap)
+			: _ep(ep), _heap(heap) { }
+
+			void alloc(auto const fn)
+			{
+				unsigned const number =
+					_num_alloc.alloc().convert<unsigned>(
+						[&] (addr_t n) { return unsigned(n); },
+						[] (Number_allocator::Error) {
+							return unsigned(MAX_NUM + 1); });
+
+				if (number < MAX_NUM + 1)
+					fn(_ep, _heap, number);
+			}
+
+			void free(unsigned number, auto const fn)
+			{
+				fn(_heap);
+				_num_alloc.free(number);
+			}
+		};
+
+		Constructible<Msi_allocator> _msi_allocator {};
+
 		template <typename FN>
 		void _for_each_clock(FN const &fn) {
 			for (Clock * c = _clocks.first(); c; c = c->next()) fn(*c); }
@@ -144,7 +190,7 @@ class Lx_kit::Device : List<Device>::Element
 	protected:
 
 		Device(Platform::Connection &plat,
-		       Name                 name)
+		       Name                  name)
 		:
 		  _platform(plat), _name(name), _type("")
 		{ }
@@ -180,6 +226,14 @@ class Lx_kit::Device : List<Device>::Element
 		bool   irq_unmask(unsigned irq);
 		void   irq_mask(unsigned irq);
 		void   irq_ack(unsigned irq);
+
+		static const unsigned MSI_OFFSET = 256u;
+		static const unsigned MAX_MSIX   = 8u;
+		static const unsigned MAX_MSI    = 1u;
+
+		unsigned msi_num_vec(bool msix);
+		unsigned msi_alloc(bool msix);
+		void     msi_free(unsigned);
 
 		virtual int pending_irq();
 

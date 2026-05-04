@@ -543,7 +543,15 @@ void ___migrate_enable(void)
 	lx_emul_trace(__func__);
 }
 
+
 void pci_enable_acs(struct pci_dev *dev)
+{
+	lx_emul_trace(__func__);
+}
+
+
+extern void unregister_irq_proc(unsigned int irq,struct irq_desc * desc);
+void unregister_irq_proc(unsigned int irq,struct irq_desc * desc)
 {
 	lx_emul_trace(__func__);
 }
