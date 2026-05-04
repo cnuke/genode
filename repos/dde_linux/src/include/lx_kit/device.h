@@ -64,9 +64,11 @@ class Lx_kit::Device : List<Device>::Element
 		struct Irq : List<Irq>::Element
 		{
 			using Index = Platform::Device::Irq::Index;
+			using Type  = Platform::Device::Irq::Type;
 
 			enum State { IDLE, PENDING, MASKED, MASKED_PENDING };
 
+			Type                   type;
 			Index                  idx;
 			unsigned               number;
 			Io_signal_handler<Irq> handler;
@@ -74,7 +76,7 @@ class Lx_kit::Device : List<Device>::Element
 
 			Constructible<Platform::Device::Irq> session {};
 
-			Irq(Entrypoint &ep, unsigned idx, unsigned number);
+			Irq(Entrypoint &ep, Type type, unsigned idx, unsigned number);
 
 			void _handle();
 			void mask();
@@ -180,6 +182,9 @@ class Lx_kit::Device : List<Device>::Element
 		bool   irq_unmask(unsigned irq);
 		void   irq_mask(unsigned irq);
 		void   irq_ack(unsigned irq);
+
+		unsigned irq_msi_num_vec(bool msix);
+		unsigned irq_msi_base_number();
 
 		virtual int pending_irq();
 

@@ -102,3 +102,27 @@ extern "C" void lx_emul_execute_pci_fixup(struct pci_dev *pci_dev)
 {
 	Lx_kit::env().pci_fixup_calls.execute(pci_dev);
 }
+
+
+extern "C" unsigned lx_emul_pci_msi_num_vec(char const * const name, int msix)
+{
+	unsigned num_vec = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			num_vec += d.irq_msi_num_vec(!!msix);
+	});
+
+	return num_vec;
+}
+
+
+extern "C" unsigned lx_emul_pci_msi_base_number(char const * const name)
+{
+	unsigned base_number = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			base_number = d.irq_msi_base_number();
+	});
+
+	return base_number;
+}
