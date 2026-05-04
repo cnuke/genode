@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-enum { SWAPPER_PID, KIRQ_PID, FIRST_PID };
+enum { SWAPPER_PID, KIRQ_PID, KMSI_PID, FIRST_PID };
 
 struct task_struct;
 

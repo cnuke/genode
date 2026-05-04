@@ -102,3 +102,74 @@ extern "C" void lx_emul_execute_pci_fixup(struct pci_dev *pci_dev)
 {
 	Lx_kit::env().pci_fixup_calls.execute(pci_dev);
 }
+
+
+extern "C" unsigned lx_emul_pci_msi_num_vec(char const * const name, int msix)
+{
+	unsigned num_vec = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			num_vec += d.msi_num_vec(!!msix);
+	});
+
+	return num_vec;
+}
+
+
+extern "C" unsigned lx_emul_pci_msi_alloc(char const * const name, int msix)
+{
+	unsigned handle = 0;
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name && !handle)
+			handle = d.msi_alloc(msix);
+	});
+
+	Genode::error(__func__, ":", __LINE__, ": handle: ", handle);
+	return handle;
+}
+
+
+extern "C" void lx_emul_pci_msi_free(char const * const name, unsigned handle)
+{
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+		if (d.name() == name)
+			d.msi_free({ handle });
+	});
+}
+
+
+extern "C" void lx_emul_pci_msi_mask(unsigned handle)
+{
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+			d.for_each_msi([&] (Lx_kit::Device::Msi &msi) {
+				if (msi.handle.value == handle)
+					msi.mask();
+			});
+	});
+}
+
+
+extern "C" void lx_emul_pci_msi_unmask(unsigned handle)
+{
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+			d.for_each_msi([&] (Lx_kit::Device::Msi &msi) {
+				if (msi.handle.value == handle)
+					msi.unmask();
+			});
+	});
+}
+
+
+extern "C" unsigned lx_emul_pci_msi_pending(void)
+{
+	unsigned pending = 0;
+
+	Lx_kit::env().devices.for_each([&] (Lx_kit::Device &d) {
+			d.for_each_msi([&] (Lx_kit::Device::Msi &msi) {
+				if (pending == 0)
+					pending = msi.pending();
+			});
+	});
+
+	return pending;
+}

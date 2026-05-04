@@ -82,6 +82,29 @@ class Lx_kit::Device : List<Device>::Element
 			void ack();
 		};
 
+		struct Msi : List<Msi>::Element
+		{
+			using Handle = Platform::Device::Msi_handle;
+
+			enum State { IDLE, PENDING, MASKED, MASKED_PENDING };
+
+			Handle handle;
+			State  state;
+
+			Io_signal_handler<Msi> handler;
+
+			void _handle();
+
+			Msi(Entrypoint &ep);
+
+			Handle alloc(Platform::Device &pdev, bool msix);
+			void   free(Platform::Device &pdev, Handle handle);
+
+			void mask();
+			void unmask();
+			bool pending();
+		};
+
 		struct Io_port : List<Io_port>::Element
 		{
 			using Index = Platform::Device::Io_port_range::Index;
@@ -133,6 +156,9 @@ class Lx_kit::Device : List<Device>::Element
 		List<Io_mem>                    _io_mems    {};
 		List<Io_port>                   _io_ports   {};
 		List<Irq>                       _irqs       {};
+		List<Msi>                       _msis       {};
+		unsigned                        _num_msi    { 0u };
+		unsigned                        _num_msix   { 0u };
 		List<Clock>                     _clocks     {};
 		Constructible<Pci_config>       _pci_config {};
 		Constructible<Platform::Device> _pdev       {};
@@ -169,6 +195,10 @@ class Lx_kit::Device : List<Device>::Element
 			for (Irq * i = _irqs.first(); i; i = i->next()) fn(*i); }
 
 		template <typename FN>
+		void for_each_msi(FN const &fn) {
+			for (Msi * i = _msis.first(); i; i = i->next()) fn(*i); }
+
+		template <typename FN>
 		void for_pci_config(FN const &fn) {
 			if (_pci_config.constructed()) fn(*_pci_config); }
 
@@ -182,6 +212,10 @@ class Lx_kit::Device : List<Device>::Element
 		void   irq_ack(unsigned irq);
 
 		virtual int pending_irq();
+
+		unsigned msi_num_vec(bool msix);
+		unsigned msi_alloc(bool msix);
+		void     msi_free(unsigned handle);
 
 		bool   read_config(unsigned reg, unsigned len, unsigned *val);
 		bool   write_config(unsigned reg, unsigned len, unsigned  val);

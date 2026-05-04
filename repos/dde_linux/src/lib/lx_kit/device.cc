@@ -108,6 +108,92 @@ Device::Irq::Irq(Entrypoint &ep, unsigned idx, unsigned number)
 { }
 
 
+/*****************
+ ** Device::Msi **
+ *****************/
+
+void Device::Msi::_handle()
+{
+	switch (state) {
+	case IDLE:           state = PENDING;        break;
+	case PENDING:        state = PENDING;        break;
+	case MASKED:         state = MASKED_PENDING; break;
+	case MASKED_PENDING: state = MASKED_PENDING; break;
+	}
+
+	env().scheduler.unblock_irq_handler();
+	env().scheduler.schedule();
+}
+
+
+void Device::Msi::mask()
+{
+	switch (state) {
+	case IDLE:           state = MASKED;         break;
+	case MASKED:         state = MASKED;         break;
+	case PENDING:        state = MASKED_PENDING; break;
+	case MASKED_PENDING: state = MASKED_PENDING; break;
+	}
+}
+
+
+void Device::Msi::unmask()
+{
+	switch (state) {
+	case IDLE:           state = IDLE;    break;
+	case MASKED:         state = IDLE;    break;
+	case PENDING:        state = PENDING; break;
+	case MASKED_PENDING: state = PENDING; break;
+	}
+
+	env().scheduler.unblock_irq_handler();
+}
+
+
+Device::Msi::Msi(Entrypoint &ep)
+:
+	handle{ { 0u } },
+	state{MASKED},
+	handler{ep, *this, &Msi::_handle}
+{ }
+
+
+Device::Msi::Handle Device::Msi::alloc(Platform::Device &pdev, bool msix)
+{
+	Platform::Device::Msi_handle msi_handle = { 0u };
+
+	pdev.msi_alloc(handler, msix).with_result(
+		[&] (Platform::Device::Msi_handle h) { msi_handle = h; },
+		[&] (Genode::Alloc_error err) { error("could not setup ", msix ? "MSIX": "MSI", ": error: ", (unsigned)err); }
+	);
+
+	msi_handle.value += 1024;
+
+	handle = { msi_handle.value };
+	return handle;
+}
+
+
+void Device::Msi::free(Platform::Device &pdev, Handle h)
+{
+	pdev.msi_free({ h.value });
+	handle = { 0 };
+}
+
+
+bool Device::Msi::pending()
+{
+	switch (state) {
+	case IDLE:           return false;
+	case MASKED:         return false;
+	case PENDING:        return true;
+	case MASKED_PENDING: return true;
+	}
+
+	return false;
+}
+
+
 /************
  ** Device **
  ************/
@@ -232,6 +318,60 @@ void Device::irq_ack(unsigned number)
 			return;
 		irq.ack();
 	});
+}
+
+
+unsigned Device::msi_num_vec(bool msix)
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	return msix ? _num_msix : _num_msi;
+}
+
+unsigned Device::msi_alloc(bool msix)
+{
+	if (!_pdev.constructed())
+		return 0;
+
+	Msi *msi = nullptr;
+	for_each_msi([&] (Msi &m) {
+
+		if (msi)
+			return;
+
+		if (m.handle.value == 0)
+			msi = &m;
+	});
+
+	if (!msi)
+		return 0;
+
+	Msi::Handle const handle = msi->alloc(*_pdev, msix);
+
+	return handle.value;
+}
+
+
+void Device::msi_free(unsigned value)
+{
+	if (!_pdev.constructed())
+		return;
+
+	Msi *msi = nullptr;
+	for_each_msi([&] (Msi &m) {
+
+		if (msi)
+			return;
+
+		if (m.handle.value == 0)
+			msi = &m;
+	});
+
+	if (!msi)
+		return;
+
+	msi->free(*_pdev, { value });
 }
 
 
@@ -393,6 +533,12 @@ Device::Device(Entrypoint           &ep,
 	node.for_each_sub_node("irq", [&] (Node const &node) {
 		_irqs.insert(new (heap) Irq(ep, i++, node.attribute_value("number", 0U)));
 	});
+
+	/* MSI and MSIX cover the same range */
+	_num_msix = node.attribute_value("msix", 0u);
+	_num_msi  = node.attribute_value("msi", 0u);
+	for (unsigned i = 0; i < max(_num_msix, _num_msi); i++)
+		_msis.insert(new (heap) Msi(ep));
 
 	i = 0;
 	node.for_each_sub_node("clock", [&] (Node const &node) {

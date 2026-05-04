@@ -17,6 +17,7 @@
 #include <lx_emul/irq.h>
 #include <lx_emul/init.h>
 #include <lx_emul/task.h>
+#include <lx_emul/pci.h>
 
 #include <lx_emul/initcall_order.h>
 
@@ -67,6 +68,12 @@ extern "C" void lx_emul_start_kernel(void * dtb)
 	new (env().heap) Task(lx_emul_irq_task_function, nullptr,
 	                      lx_emul_irq_task_struct, KIRQ_PID, "kirqd",
 	                      env().scheduler, Task::IRQ_HANDLER);
+
+	if (!dtb)
+		new (env().heap) Task(lx_emul_msi_task_function, nullptr,
+		                      lx_emul_msi_task_struct, KMSI_PID, "kmsi",
+		                      env().scheduler, Task::IRQ_HANDLER);
+
 
 	env().scheduler.schedule();
 }
