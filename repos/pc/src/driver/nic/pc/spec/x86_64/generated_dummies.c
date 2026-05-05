@@ -1088,13 +1088,6 @@ struct callback_head * task_work_cancel_func(struct task_struct * task,task_work
 }
 
 
-extern void unregister_handler_proc(unsigned int irq,struct irqaction * action);
-void unregister_handler_proc(unsigned int irq,struct irqaction * action)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern void update_group_capacity(struct sched_domain * sd,int cpu);
 void update_group_capacity(struct sched_domain * sd,int cpu)
 {
