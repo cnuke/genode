@@ -437,13 +437,6 @@ int pci_bus_write_config_byte(struct pci_bus *bus, unsigned int devfn,
 }
 
 
-int pci_enable_msi(struct pci_dev *dev)
-{
-	lx_emul_trace(__func__);
-	return -ENOSYS;
-}
-
-
 void pci_disable_msi(struct pci_dev *dev)
 {
 	lx_emul_trace(__func__);
