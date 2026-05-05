@@ -10,9 +10,9 @@ after investigating ACPI and PCI(*) information. The devices ROM name can be
 defined by setting the "devices_rom" attribute in the config of the
 platform driver:
 
-! <config devices_rom="my_devices">
-!   ...
-! </config>
+! config | devices_rom: my_devices
+! ...
+! -
 
 If the attribute isn't set, the platform driver asks for a ROM called
 "devices" by default.
@@ -37,15 +37,14 @@ Policy usage
 
 A policy may contain several nodes describing several devices.
 
-!<start name="platform" managing_system="yes" ram="8M">
+! start platform | managing_system: yes | ram: 8M
+! + config
+!   ...
+!   + policy | label_prefix: usb_host
+!     + device ehci
+!     + device uhci
 ! ...
-! <config>
-!  <policy label_prefix="usb_host">
-!   <device name="ehci"/>
-!   <device name="uhci"/>
-!  </policy>
-! </config>
-! ...
+! -
 
 The managing_system attribute is evaluated by init. If set to "yes", it
 permits a component, the platform driver, to restrict the allocation of memory to
@@ -65,19 +64,17 @@ PCI devices are named according to their bus-device-function triple as
 hexadecimal BB:DD.F (see example below). Thus, dedicated devices can easily
 be selected by name in policies.
 
-! <device name="00:03.0" type="pci"...>
+! + device 00:03.0 | type: pci ...
+! -
 
 Policies for PCI devices do not necessarily need to state the name of
 the device, but can either state a class of devices, or a vendor/device
 pair of identifiers inside a pci sub-node:
 
-! <config>
-! <policy label="usb_host -> ">
-!   <pci class="USB"/>
-! </policy>
-! <policy label="nvme -> ">
-!   <pci vendor_id="0x1987" device_id="0x5007"/>
-! </policy>
+! + policy | label: usb_host ->
+!   + pci | class: USB
+! + policy | label: nvme ->
+! + pci | vendor_id: 0x1987 | device_id: 0x5007
 
 The following class names are supported which correspond to the
 specified PCI base class (B), sub class (S) and programming interface
@@ -103,10 +100,10 @@ The configuration of the platform driver supports different levels of reports.
 By default the platform driver does not report anything. But when adding a
 report node:
 
-! <config>
-!  <report devices="yes" config="yes"/>
+! + config
+!   + report | devices: yes | config: yes
 !   ...
-! </config>
+! -
 
 it is possible to enable either a devices and/or config report. The first will
 open up a Report session to dynamically report all accessible devices, and its
