@@ -121,7 +121,7 @@ void Driver::Device::release(Device_owner &dev_owner)
 }
 
 
-void Driver::Device::generate(Generator &g, bool info) const
+void Driver::Device::generate(Generator &g) const
 {
 	g.node("device", [&] () {
 		g.attribute("name", name());
@@ -131,8 +131,6 @@ void Driver::Device::generate(Generator &g, bool info) const
 			g.node("io_mem", [&] () {
 				if (io_mem.bar.valid())
 					g.attribute("pci_bar", io_mem.bar.number);
-				if (!info)
-					return;
 				g.attribute("phys_addr", String<16>(Hex(io_mem.range.start)));
 				g.attribute("size",      String<16>(Hex(io_mem.range.size)));
 				if (io_mem.write_combined)
@@ -141,8 +139,6 @@ void Driver::Device::generate(Generator &g, bool info) const
 		});
 		_irq_list.for_each([&] (Irq const &irq) {
 			g.node("irq", [&] () {
-				if (!info)
-					return;
 				g.attribute("number", irq.number);
 				if (irq.shared) g.attribute("shared", true);
 			});
@@ -151,8 +147,6 @@ void Driver::Device::generate(Generator &g, bool info) const
 			g.node("io_port_range", [&] () {
 				if (iop.bar.valid())
 					g.attribute("pci_bar", iop.bar.number);
-				if (!info)
-					return;
 				g.attribute("phys_addr", String<16>(Hex(iop.range.addr)));
 				g.attribute("size",      String<16>(Hex(iop.range.size)));
 			});
@@ -553,7 +547,7 @@ void Driver::Device_model::device_status_changed()
 void Driver::Device_model::report_devices(Generator &g) const
 {
 	for_each([&] (Device const &device) {
-		device.generate(g, true); });
+		device.generate(g); });
 }
 
 

@@ -93,9 +93,8 @@ bool Pd::matches(Device const &dev) const
 };
 
 
-void Pd::update_policy(bool info, Policy_version version)
+void Pd::update_policy(Policy_version version)
 {
-	_info = info;
 	_version = version;
 	_sessions.for_each([&] (auto &session) {
 		session.update_policy(); });
@@ -123,7 +122,6 @@ Pd::Pd(Env                          &env,
        Device_model                 &devices,
        Dictionary                   &dictionary,
        Session::Label const         &label,
-       bool                          info,
        Policy_version                version)
 :
 	Dictionary::Element(dictionary, label),
@@ -131,7 +129,6 @@ Pd::Pd(Env                          &env,
 	_config(config),
 	_devices(devices),
 	_label(label),
-	_info(info),
 	_version(version),
 	_domain(_create_domain())
 {

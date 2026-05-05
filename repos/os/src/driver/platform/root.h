@@ -85,8 +85,7 @@ void Driver::Root<SESSION>::update_policy()
 	_pds.for_each([&] (auto &pd) {
 		with_matching_policy(pd.label(), _config.node(),
 			[&] (auto const &policy) {
-				pd.update_policy(policy.attribute_value("info", false),
-				                 policy.attribute_value("version", Version()));
+				pd.update_policy(policy.attribute_value("version", Version()));
 			},
 			[&] {
 				error("No matching policy for '", pd.label().string(),
@@ -121,11 +120,10 @@ Driver::Root<SESSION>::_create_session(const char *args)
 
 	auto no_pd_found = [&] (Node const &policy) -> Create_result {
 
-		bool    info    = policy.attribute_value("info", false);
 		Version version = policy.attribute_value("version", Version());
 
 		return _pd_alloc.create(_env, _config, _devices, _pds, label,
-		                        info, version).template convert<Create_result>(
+		                        version).template convert<Create_result>(
 			[&] (auto &a) {
 				a.deallocate = false;
 				return Root_component<SESSION>::_alloc_obj(_env, a.obj,

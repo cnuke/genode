@@ -82,7 +82,7 @@ void Session_component::generate(Generator &g)
 		g.attribute("version", _pd._version);
 
 	_devices.for_each([&] (Device const &dev) {
-		if (_pd.matches(dev)) dev.generate(g, _pd._info); });
+		if (_pd.matches(dev)) dev.generate(g); });
 }
 
 

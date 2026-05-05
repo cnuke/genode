@@ -40,7 +40,7 @@ A policy may contain several nodes describing several devices.
 !<start name="platform" managing_system="yes" ram="8M">
 ! ...
 ! <config>
-!  <policy label_prefix="usb_host" info="yes">
+!  <policy label_prefix="usb_host">
 !   <device name="ehci"/>
 !   <device name="uhci"/>
 !  </policy>
@@ -57,11 +57,6 @@ physical to virtual identical mappings of DMA memory for the device PD
 (required when IOMMU is used) must be below the kernel memory boundary (3G).
 On some systems, e.g., base-hw kernel on certain ARM platforms, it allows the
 platform driver to call system management firmware via kernel syscalls.
-
-The 'info' attribute in a policy node describe, whether the client's devices
-ROM will contain detailed information about physical resources of the devices
-of its virtual bus. This is only useful, when using ported legacy drivers, which
-operate with global names of physical resources.
 
 Policy for PCI devices
 ----------------------
