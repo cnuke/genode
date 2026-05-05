@@ -420,7 +420,7 @@ class Driver::Device : private List_model<Device>::Element
 			});
 		}
 
-		void generate(Generator &, bool) const;
+		void generate(Generator &) const;
 
 		void update(Allocator &, Node const &);
 

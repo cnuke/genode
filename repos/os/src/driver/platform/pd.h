@@ -60,8 +60,6 @@ class Driver::Pd
 
 		Session::Label _label;
 
-		bool _info;
-
 		Policy_version _version;
 
 		Dma_address_allocator _dma_address_alloc {};
@@ -89,7 +87,6 @@ class Driver::Pd
 		   Device_model                 &devices,
 		   Dictionary                   &dictionary,
 		   Session::Label const         &label,
-		   bool                          info,
 		   Policy_version                version);
 
 		~Pd();
@@ -98,7 +95,7 @@ class Driver::Pd
 
 		bool matches(Device const &) const;
 
-		void update_policy(bool info, Policy_version version);
+		void update_policy(Policy_version version);
 
 		void with_io_mmu_domain(auto const &fn) { fn(_domain); }
 
