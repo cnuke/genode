@@ -223,14 +223,6 @@ int pci_request_selected_regions_exclusive(struct pci_dev *dev, int, const char 
 
 #include <linux/pci.h>
 
-int pci_enable_msi(struct pci_dev *dev)
-{
-	lx_emul_trace(__func__);
-	return -ENOSYS;
-}
-
-#include <linux/pci.h>
-
 void pci_restore_state(struct pci_dev *dev)
 {
 	lx_emul_trace(__func__);
@@ -249,21 +241,6 @@ int pci_save_state(struct pci_dev *dev)
 void pci_disable_device(struct pci_dev *dev)
 {
 	lx_emul_trace(__func__);
-}
-
-#include <linux/pci.h>
-
-void pci_disable_msi(struct pci_dev *dev)
-{
-	lx_emul_trace(__func__);
-}
-
-#include <linux/pci.h>
-
-int pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries, int minvec, int maxvec)
-{
-	lx_emul_trace(__func__);
-	return -ENOSYS;
 }
 
 #include <linux/pci.h>
@@ -415,4 +392,11 @@ DEFINE_MUTEX(rps_default_mask_mutex);
 int __rtnl_register_many(const struct rtnl_msg_handler *handlers, int n)
 {
 	return 0;
+}
+
+
+extern void unregister_handler_proc(unsigned int irq,struct irqaction * action);
+void unregister_handler_proc(unsigned int irq,struct irqaction * action)
+{
+	lx_emul_trace(__func__);
 }
