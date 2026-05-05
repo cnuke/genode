@@ -2159,13 +2159,6 @@ int unregister_acpi_bus_type(struct acpi_bus_type * type)
 }
 
 
-extern void unregister_irq_proc(unsigned int irq,struct irq_desc * desc);
-void unregister_irq_proc(unsigned int irq,struct irq_desc * desc)
-{
-	lx_emul_trace_and_stop(__func__);
-}
-
-
 extern void update_group_capacity(struct sched_domain * sd,int cpu);
 void update_group_capacity(struct sched_domain * sd,int cpu)
 {
