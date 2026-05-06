@@ -725,8 +725,7 @@ struct Nvme::Io_queue : Noncopyable
  * Controller
  */
 class Nvme::Controller : Platform::Device,
-                         Platform::Device::Mmio<0x1010>,
-                         Platform::Device::Irq
+                         Platform::Device::Mmio<0x1010>
 {
 	using Mmio = Genode::Mmio<SIZE>;
 
@@ -938,6 +937,8 @@ class Nvme::Controller : Platform::Device,
 	Platform::Connection &_platform;
 	Dma::Connection      &_dma;
 	Mmio::Delayer        &_delayer;
+
+	Constructible<Platform::Device::Irq> _irq { };
 
 	/*
 	 * There is a completion and submission queue for
@@ -1563,10 +1564,38 @@ class Nvme::Controller : Platform::Device,
 	:
 		Platform::Device(platform),
 		Platform::Device::Mmio<SIZE>((Platform::Device&)*this),
-		Platform::Device::Irq((Platform::Device&)*this),
 		_env(env), _platform(platform), _dma(dma), _delayer(delayer)
 	{
-		sigh(irq_sigh);
+		bool device_found = false;
+		_platform.with_node([&] (Node const &devnodes) {
+			devnodes.with_optional_sub_node("device", [&] (Node const &devnode) {
+
+				/*
+				 * Only consider one device in case the wild-card rule
+				 * presents more.
+				*/
+				if (device_found)
+					return;
+
+				bool msix = false;
+				bool msi  = false;
+				devnode.for_each_sub_node("irq",
+					[&] (Node const &irqnode) {
+						using Irq_type = String<8>;
+						Irq_type const irq_type = irqnode.attribute_value("type", Irq_type(""));
+						msix |= irq_type == "msi-x";
+						msi  |= irq_type == "msi";
+					});
+
+				_irq.construct((Platform::Device&)*this,
+				               msix ? Platform::Device::Irq::Type::TYPE_MSIX
+				                    : msi ? Platform::Device::Irq::Type::TYPE_MSI
+				                          : Platform::Device::Irq::Type::TYPE_LEGACY,
+				               Platform::Device::Irq::Index { 0 });
+				_irq->sigh(irq_sigh);
+				device_found = true;
+			});
+		});
 	}
 
 	/**
@@ -1605,7 +1634,7 @@ class Nvme::Controller : Platform::Device,
 	/**
 	 * Acknowledge interrupt
 	 */
-	void ack_irq() { Platform::Device::Irq::ack(); }
+	void ack_irq() { _irq->ack(); }
 
 	/*
 	 * Identify NVM system
