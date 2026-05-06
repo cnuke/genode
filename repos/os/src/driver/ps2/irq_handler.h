@@ -48,7 +48,7 @@ class Irq_handler
 		            Platform::Device      &device,
 		            unsigned               idx)
 		:
-			_irq(device, {idx}),
+			_irq(device, Platform::Device::Irq::Type::TYPE_LEGACY, {idx}),
 			_handler(ep, *this, &Irq_handler::_handle),
 			_input_driver(input_driver),
 			_event_session(event_session)
