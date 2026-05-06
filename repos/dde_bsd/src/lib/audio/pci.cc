@@ -52,13 +52,53 @@ class Pci_driver
 
 		struct Device
 		{
+			static Platform::Device::Irq::Type irq_type(Platform::Connection         &p,
+			                                            Platform::Device::Name const &n)
+			{
+				using namespace Genode;
+
+				Platform::Device::Irq::Type t =
+					Platform::Device::Irq::Type::TYPE_LEGACY;
+
+				p.with_node([&] (Node const &devnodes) {
+					devnodes.with_optional_sub_node("device", [&] (Node const &devnode) {
+
+						Platform::Device::Name const devname =
+							devnode.attribute_value("name", Platform::Device::Name());
+
+						if (!(devname == n))
+							return;
+
+						bool msix = false;
+						bool msi  = false;
+						devnode.for_each_sub_node("irq",
+							[&] (Node const &irqnode) {
+								using Irq_type = String<8>;
+								Irq_type const irq_type =
+									irqnode.attribute_value("type", Irq_type(""));
+								msix |= irq_type == "msi-x";
+								msi  |= irq_type == "msi";
+							});
+
+						t = msix ? Platform::Device::Irq::Type::TYPE_MSIX
+						         : msi ? Platform::Device::Irq::Type::TYPE_MSI
+						               : Platform::Device::Irq::Type::TYPE_LEGACY;
+					});
+				});
+
+				return t;
+			}
+
 			Platform::Device          dev;
 			Platform::Device::Irq     irq;
 			Platform::Device::Mmio<0> mmio;
 
 			Device(Platform::Connection &pci,
 			       Platform::Device::Name const &name)
-			: dev { pci, name }, irq { dev }, mmio { dev }
+			:
+				dev  { pci, name },
+				irq  { dev, irq_type(pci, name), Platform::Device::Irq::Index { 0 } },
+				mmio { dev }
 			{ }
 		};
 
