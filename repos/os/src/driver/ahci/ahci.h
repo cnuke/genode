@@ -239,11 +239,48 @@ struct Ahci::Resources
 
 		using Device = Platform::Device;
 
+		static Platform::Device::Irq::Type irq_type(Platform::Connection &p)
+		{
+			using namespace Genode;
+
+			Platform::Device::Irq::Type t =
+				Platform::Device::Irq::Type::TYPE_LEGACY;
+
+			bool device_found = false;
+			p.with_node([&] (Node const &devnodes) {
+				devnodes.with_optional_sub_node("device", [&] (Node const &devnode) {
+
+					/* only handle the first HBA found */
+					if (device_found)
+						return;
+
+					bool msix = false;
+					bool msi  = false;
+					devnode.for_each_sub_node("irq",
+						[&] (Node const &irqnode) {
+							using Irq_type = String<8>;
+							Irq_type const irq_type =
+								irqnode.attribute_value("type", Irq_type(""));
+							msix |= irq_type == "msi-x";
+							msi  |= irq_type == "msi";
+						});
+
+					t = msix ? Platform::Device::Irq::Type::TYPE_MSIX
+					         : msi ? Platform::Device::Irq::Type::TYPE_MSI
+					               : Platform::Device::Irq::Type::TYPE_LEGACY;
+					device_found = true;
+				});
+			});
+
+			return t;
+		}
+
 		Platform::Connection              _platform;
 		Dma::Connection                   _dma;
 		Signal_context_capability const   _irq_cap;
 		Reconstructible<Device>           _device { _platform };
-		Reconstructible<Device::Irq>      _irq    { *_device };
+		Device::Irq::Type         const   _irq_type { irq_type(_platform) };
+		Reconstructible<Device::Irq>      _irq    { *_device, _irq_type, Device::Irq::Index { 0 } };
 		Reconstructible<Hba_mmio>         _mmio   { *_device, _mmio_index(_platform) };
 		Hba                               _hba    { *this };
 
@@ -287,6 +324,7 @@ struct Ahci::Resources
 				_irq->sigh(_irq_cap);
 		}
 
+
 	public:
 
 		Resources(Env &env, Signal_context_capability const &irq_cap)
@@ -309,7 +347,7 @@ struct Ahci::Resources
 		void acquire_device()
 		{
 			_device.construct(_platform);
-			_irq   .construct(*_device);
+			_irq   .construct(*_device, _irq_type, Device::Irq::Index { 0 });
 			_mmio  .construct(*_device, _mmio_index(_platform));
 
 			_hba.reinit();
