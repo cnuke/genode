@@ -130,10 +130,34 @@ unsigned long _copy_to_user(void __user * to,const void * from,unsigned long n)
 
 #include <linux/pci.h>
 
+struct msix_entry *_msix_entries;
+
 int pci_alloc_irq_vectors(struct pci_dev * dev, unsigned int min_vecs,
                           unsigned int max_vecs,unsigned int flags)
 {
+	int nvecs = -ENOSPC;
+
+	if (flags & PCI_IRQ_MSIX) {
+		/* XXX for the moment just wipe any existing entries */
+		kfree(_msix_entries);
+		_msix_entries = kmalloc_array(max_vecs, sizeof(struct msix_entry),
+		                              GFP_KERNEL);
+		if (!_msix_entries)
+			return -ENOMEM;
+
+		nvecs = pci_enable_msix_range(dev, _msix_entries, min_vecs, max_vecs);
+	}
+	if (nvecs > 0)
+		return nvecs;
+
+	if (flags & PCI_IRQ_MSI)
+		nvecs = pci_enable_msi(dev);
+	/* 0 is good and 1 vec supported */
+	if (nvecs == 0)
+		return 1;
+
 	if ((flags & PCI_IRQ_INTX) && min_vecs == 1 && dev->irq)
 		return 1;
+
 	return -ENOSPC;
 }
