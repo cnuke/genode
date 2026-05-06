@@ -148,7 +148,7 @@ class Platform::Device_component : public Rpc_object<Device_interface,
 			_env.ep().rpc_ep().dissolve(&_irq);
 		}
 
-		Irq_session_capability irq(unsigned)
+		Irq_session_capability irq(Irq_session::Type, unsigned)
 		{
 			return _irq.cap();
 		}
@@ -378,9 +378,55 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		Env                                        &_env;
 		Signal_context_capability const             _irq_cap;
 
+		static Platform::Device::Irq::Type irq_type(Platform::Connection &p)
+		{
+			using namespace Genode;
+
+			Platform::Device::Irq::Type t =
+				Platform::Device::Irq::Type::TYPE_LEGACY;
+
+			p.with_node([&] (Node const &devnodes) {
+				devnodes.with_optional_sub_node("device", [&] (Node const &dev) {
+
+					bool vga_found = false;
+					dev.for_each_sub_node("pci-config", [&] (Node const &cfg) {
+
+						if (cfg.attribute_value("vendor_id", 0) != 0x8086)
+							return;
+
+						if (cfg.attribute_value("class", 0) != 0x30000)
+							return;
+
+						vga_found = true;
+					});
+
+					if (!vga_found)
+						return;
+
+					bool msix = false;
+					bool msi  = false;
+					dev.for_each_sub_node("irq",
+						[&] (Node const &irqnode) {
+							using Irq_type = String<8>;
+							Irq_type const irq_type =
+								irqnode.attribute_value("type", Irq_type(""));
+							msix |= irq_type == "msi-x";
+							msi  |= irq_type == "msi";
+						});
+
+					t = msix ? Platform::Device::Irq::Type::TYPE_MSIX
+					         : msi ? Platform::Device::Irq::Type::TYPE_MSI
+					               : Platform::Device::Irq::Type::TYPE_LEGACY;
+				});
+			});
+
+			return t;
+		}
+
 		Platform::Connection                        _platform  { _env           };
 		Reconstructible<Platform::Device>           _device    { _platform      };
-		Reconstructible<Platform::Device::Irq>      _irq       { *_device       };
+		Reconstructible<Platform::Device::Irq>      _irq       { *_device,
+			irq_type(_platform), Platform::Device::Irq::Index { 0 } };
 		Reconstructible<Igd::Mmio>                  _mmio      { *_device, _env };
 		Constructible<Platform::Device::Mmio<0> >   _gmadr     { };
 		Constructible<Attached_dataspace>           _gmadr_mem { };
@@ -642,7 +688,8 @@ class Platform::Resources : Noncopyable, public Hw_ready_state
 		{
 			_device.construct(_platform);
 
-			_irq.construct(*_device);
+			_irq.construct(*_device, irq_type(_platform),
+			               Platform::Device::Irq::Index { 0 });
 			_irq->sigh(_irq_cap);
 
 			_mmio.construct(*_device, _env);
