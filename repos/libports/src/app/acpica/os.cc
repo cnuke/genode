@@ -175,7 +175,8 @@ struct Acpica::Main
 
 	Platform::Connection  platform { env };
 	Platform::Device      device   { platform, "acpi" };
-	Platform::Device::Irq irq      { device, { 0 } };
+	Platform::Device::Irq irq      { device, Platform::Device::Irq::Type::TYPE_LEGACY,
+	                                 { 0 } };
 
 	Signal_handler<Acpica::Main>  sci_irq;
 
