@@ -163,6 +163,16 @@ class Driver::Device_component : public Rpc_object<Platform::Device_interface,
 		Constructible<Io_mmu>               _io_mmu {};
 		Constructible<Pci_config>           _pci_config {};
 
+		struct Enforce_irq_type
+		{
+			Irq_session::Type type;
+			bool              enforced;
+		};
+
+		Enforce_irq_type _enforce_irq_type {
+			.type     = Irq_session::Type::TYPE_LEGACY,
+			.enforced = false };
+
 		void _release_resources();
 
 		template <typename SESSION>

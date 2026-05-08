@@ -200,6 +200,15 @@ Genode::Irq_session_capability Device_component::irq(Irq_session::Type type, uns
 {
 	Irq_session_capability cap;
 
+	/*
+	 * Mixed types per device are not supported and once select the driver
+	 * has to stick with it until device is closed and openend again.
+	 */
+	if (_enforce_irq_type.enforced && _enforce_irq_type.type != type) {
+		error("requested irq type does not match already used one");
+		return cap;
+	}
+
 	try {
 		_irq_registry.for_each([&] (Irq &irq)
 		{
@@ -210,6 +219,8 @@ Genode::Irq_session_capability Device_component::irq(Irq_session::Type type, uns
 				return;
 
 			cap = irq.map(*this);
+
+			_enforce_irq_type = { .type = type, .enforced = true };
 		});
 	} catch (Service_denied) { error("irq could not be setup ", _device_name); }
 
@@ -290,7 +301,6 @@ Device_component::Device_component(Registry<Device_component> &registry,
 	 */
 
 	try {
-		log("device: ", device.name(), " irq");
 		device.for_each_irq([&] (unsigned              idx,
 		                         unsigned              nr,
 		                         Irq_session::Type     type,
@@ -302,7 +312,6 @@ Device_component::Device_component(Registry<Device_component> &registry,
 			_with_reserved_quota_for_session<Irq_session>(session, [&] {
 				if (type == Irq_session::TYPE_MSIX)
 					for (unsigned i = 0; i < num_vec; i++) {
-						log("device: ", device.name(), "number: ", nr, " msix vec[", i, "]");
 						new (session.heap())
 							Irq(_irq_registry, i, nr, type, polarity, mode, false);
 					}
