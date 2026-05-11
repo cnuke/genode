@@ -130,6 +130,10 @@ int pci_alloc_irq_vectors_affinity(struct pci_dev *dev, unsigned int min_vecs,
                                    unsigned int max_vecs, unsigned int flags,
                                    struct irq_affinity *aff_desc)
 {
+	if (flags & PCI_IRQ_MSI)
+		if (!pci_enable_msi(dev))
+			return 1;
+
 	/* check for legacy IRQ */
 	if ((flags & PCI_IRQ_INTX) && min_vecs == 1 && dev->irq)
 		return 1;
