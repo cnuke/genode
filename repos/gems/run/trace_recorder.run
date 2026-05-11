@@ -48,98 +48,92 @@ import_from_depot \
 	[depot_user]/src/dynamic_rom
 
 install_config {
-	<config verbose="yes">
-		<parent-provides>
-			<service name="ROM"/>
-			<service name="LOG"/>
-			<service name="RM"/>
-			<service name="CPU"/>
-			<service name="PD"/>
-			<service name="IRQ"/>
-			<service name="TRACE"/>
-		</parent-provides>
+config | verbose: yes
++ parent-provides
+  + service ROM
+  + service LOG
+  + service RM
+  + service CPU
+  + service PD
+  + service IRQ
+  + service TRACE
 
-		<default-route>
-			<service name="File_system"> <child name="vfs"/> </service>
-			<any-service> <parent/> <any-child/> </any-service>
-		</default-route>
-		<default caps="100" ram="1M"/>
++ default-route
+  + service File_system | + child vfs
+  + any-service
+    + parent
+    + any-child
 
-		<start name="timer">
-			<provides><service name="Timer"/></provides>
-		</start>
++ default | caps: 100 | ram: 1M
 
-		<start name="linux_rtc" ld="no">
-			<provides> <service name="Rtc"/> </provides>
-		</start>
++ start timer
+  + provides | + service Timer
 
-		<start name="lx_fs" ld="no" ram="4M">
-			<provides> <service name="File_system"/> </provides>
-			<config>
-				<default-policy root="/fs" writeable="yes"/>
-			</config>
-		</start>
++ start linux_rtc | ld: no
+  + provides |  + service Rtc
 
-		<start name="nic_router">
-			<provides>
-				<service name="Nic"/>
-				<service name="Uplink"/>
-			</provides>
-			<config icmp_echo_server="yes" trace_packets="yes">
-				<default-policy domain="default"/>
++ start lx_fs | ld: no | ram: 4M
+  + provides | + service File_system
+  + config
+    + default-policy | root: /fs | writeable: yes
 
-				<domain name="default" interface="10.0.4.1/24">
-					<dhcp-server ip_first="10.0.4.2" ip_last="10.0.4.10"/>
-				</domain>
-			</config>
-		</start>
++ start nic_router
+  + provides
+  | + service Nic
+  | + service Uplink
+  + config | icmp_echo_server: yes | trace_packets: yes
+    + default-policy | domain: default
+    + domain default | interface: 10.0.4.1/24
+      + dhcp-server
+                    ip_first: 10.0.4.2
+                    ip_last:  10.0.4.10
 
-		<start name="ping" ram="10M">
-			<config dst_ip="10.0.4.1" period_sec="1" count="10" verbose="yes"/>
-		</start>
++ start ping | ram: 10M
+  + config
+           dst_ip:     10.0.4.1
+           period_sec: 1
+           count:      10
+           verbose:    yes
 
-		<!-- using dynamic_rom to delay enabling of trace_recorder -->
-		<start name="dynamic_rom">
-			<provides><service name="ROM"/></provides>
-			<config>
-				<rom name="config">
-					<inline>
-						<config/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<config period_ms="3000" enable="yes">
-							<vfs> <fs/> </vfs>
-							<policy label_suffix="nic_router" thread="ep" policy="ctf0_pcapng">
-								<pcapng/>
-								<ctf/>
-							</policy>
-							<policy label_suffix="ping" thread="ep" policy="ctf0">
-								<ctf/>
-							</policy>
-						</config>
-					</inline>
-					<sleep milliseconds="2000"/>
-					<inline>
-						<config/>
-					</inline>
-					<sleep milliseconds="10000"/>
-				</rom>
-			</config>
-		</start>
++ start dynamic_rom
+  .
+  . using dynamic_rom to delay enabling of trace_recorder
+  .
+  + provides | + service ROM
+  + config
+    + rom config
+      + inline | + config
+      + sleep  | milliseconds: 1000
+      + inline
+      | + config | period_ms: 3000 | enable: yes
+      |   + vfs
+      |   | + fs
+      |   + policy
+      |   | |      label_suffix: nic_router
+      |   | |      thread:       ep
+      |   | |      policy:       ctf0_pcapng
+      |   | + pcapng
+      |   | + ctf
+      |   + policy | label_suffix: ping | thread: ep | policy: ctf0
+      |     + ctf
+      + sleep  | milliseconds: 2000
+      + inline | + config
+      + sleep  | milliseconds: 10000
 
-		<start name="trace_recorder" caps="200" ram="16M">
-			<route>
-				<service name="File_system"> <child name="lx_fs"/> </service>
-				<service name="ROM" label="config"> <child name="dynamic_rom"/> </service>
-				<!-- serve config ROM has platform_info merely to satisfy the ROM request -->
-				<service name="ROM" label="platform_info"> <parent label="config"/> </service>
-				<service name="TRACE"> <parent label=""/> </service>
-				<any-service> <parent/> <any-child/> </any-service>
-			</route>
-		</start>
-
-	</config>
++ start trace_recorder | caps: 200 | ram: 16M
+  + route
+    + service TRACE               | + parent | label:
+    + service File_system         | + child lx_fs
+    + service ROM | label: config | + child dynamic_rom
+    + service ROM | label: platform_info
+    | .
+    | . serve config ROM has platform_info merely to satisfy the ROM request
+    | .
+    | + parent | label: config
+    + any-service
+      + parent
+      + any-child
+-
 }
 
 exec rm -rf bin/fs

@@ -33,123 +33,93 @@ import_from_depot \
 	[depot_user]/src/dynamic_rom
 
 install_config {
-	<config verbose="yes">
-		<parent-provides>
-			<service name="ROM"/>
-			<service name="LOG"/>
-			<service name="RM"/>
-			<service name="CPU"/>
-			<service name="PD"/>
-			<service name="IRQ"/>
-			<service name="TRACE"/>
-		</parent-provides>
+config | verbose: yes
++ parent-provides
+  + service ROM
+  + service LOG
+  + service RM
+  + service CPU
+  + service PD
+  + service IRQ
+  + service TRACE
 
-		<default-route>
-			<service name="File_system"> <child name="vfs"/> </service>
-			<any-service> <parent/> <any-child/> </any-service>
-		</default-route>
-		<default caps="100" ram="1M"/>
++ default-route
+  + service File_system
+  | + child vfs
+  + any-service
+    + parent
+    + any-child
 
-		<start name="timer">
-			<provides><service name="Timer"/></provides>
-		</start>
++ default | caps: 100 | ram: 1M
 
-		<start name="dynamic_rom">
-			<provides><service name="ROM"/></provides>
-			<config>
-				<rom name="test">
-					<inline>
-						<foo/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<bar/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<baz/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<foo/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<bar/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<foo/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<bar/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<foo/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<bar/>
-					</inline>
-					<sleep milliseconds="1000"/>
-					<inline>
-						<end/>
-					</inline>
-					<sleep milliseconds="1000"/>
-				</rom>
-			</config>
-		</start>
++ start timer
+  + provides | + service Timer
 
-		<start name="rom_logger">
-			<config rom="test"/>
-			<route>
-				<service name="ROM" label="test"> <child name="dynamic_rom"/> </service>
-				<any-service> <parent/> </any-service>
-			</route>
-		</start>
++ start dynamic_rom
+  + provides | + service ROM
+  + config
+    + rom test
+      + inline | + foo
+      + sleep  | milliseconds: 1000
+      + inline | + bar
+      + sleep  | milliseconds: 1000
+      + inline | + baz
+      + sleep  | milliseconds: 1000
+      + inline | + foo
+      + sleep  | milliseconds: 1000
+      + inline | + bar
+      + sleep  | milliseconds: 1000
+      + inline | + foo
+      + sleep  | milliseconds: 1000
+      + inline | + bar
+      + sleep  | milliseconds: 1000
+      + inline | + foo
+      + sleep  | milliseconds: 1000
+      + inline | + bar
+      + sleep  | milliseconds: 1000
+      + inline | + end
+      + sleep  | milliseconds: 1000
 
-		<start name="dummy_rtc">
-			<provides> <service name="Rtc"/> </provides>
-		</start>
++ start rom_logger
+  + config | rom: test
+  + route
+    + service ROM | label: test
+    | + child dynamic_rom
+    + any-service
+      + parent
 
-		<start name="lx_fs" ld="no" ram="4M">
-			<provides> <service name="File_system"/> </provides>
-			<config>
-				<default-policy root="/fs" writeable="yes"/>
-			</config>
-		</start>
++ start dummy_rtc
+  + provides | + service Rtc
 
-		<start name="report_rom">
-			<provides>
-				<service name="Report"/>
-				<service name="ROM"/>
-			</provides>
-			<config verbose="yes">
-			</config>
-		</start>
++ start lx_fs | ld: no | ram: 4M
+  + provides | + service File_system
+  + config
+    + default-policy | root: /fs | writeable: yes
 
-		<start name="trace_recorder" caps="200" ram="16M">
-			<config period_ms="5000" enable="yes">
-				<vfs> <fs/> </vfs>
-				<policy label_suffix="dynamic_rom" thread="dynamic_rom" policy="ctf0">
-					<ctf/>
-				</policy>
-				<policy label_suffix="rom_logger"  policy="ctf0">
-					<ctf/>
-				</policy>
-			</config>
-			<route>
-				<service name="File_system"> <child name="lx_fs"/> </service>
-				<service name="TRACE"> <parent label=""/> </service>
-				<!-- serve config ROM has platform_info merely to satisfy the ROM request -->
-				<service name="ROM" label="platform_info"> <parent label="config"/> </service>
-				<any-service> <parent/> <any-child/> </any-service>
-			</route>
-		</start>
++ start report_rom
+  + provides
+  | + service Report
+  | + service ROM
+  + config | verbose: yes
 
-	</config>
++ start trace_recorder | caps: 200 | ram: 16M
+  + config | period_ms: 5000 | enable: yes
+  | + vfs
+  | | + fs
+  | + policy | label_suffix: dynamic_rom | thread: dynamic_rom | policy: ctf0
+  | | + ctf
+  | + policy | label_suffix: rom_logger | policy: ctf0
+  |   + ctf
+  + route
+    + service File_system | + child lx_fs
+    + service TRACE       | + parent | label:
+    + service ROM   | label: platform_info
+    | . serve config ROM as platform_info merely to satisfy the ROM request
+    | + parent | label: config
+    + any-service
+      + parent
+      + any-child
+-
 }
 
 exec rm -rf bin/fs
@@ -161,7 +131,7 @@ append qemu_args " -nographic "
 
 run_genode_until {Enabled ctf writer for init -> rom_logger -> ep} 20
 set spawn_id [output_spawn_id]
-run_genode_until {<end/>} 60 $spawn_id
+run_genode_until {end} 60 $spawn_id
 
 # trace file has non-zero size
 exec test -s bin/fs/0-0-0\ 0\:0\:0/init/rom_logger/ep
