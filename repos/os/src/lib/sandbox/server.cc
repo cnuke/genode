@@ -371,14 +371,14 @@ void Sandbox::Server::_handle_upgrade_session_request(Node const &request,
 		if (session.service().initiate_request(session).failed())
 			warning("failed to initiate server-upgrade request: ", session);
 		session.service().wakeup();
-	});
+	}, [&] { warning("upgrade session - unknown id"); });
 }
 
 
 void Sandbox::Server::_handle_close_session_request(Node const &, Parent::Client::Id id)
 {
 	_client_id_space.apply<Session_state>(id, [&] (Session_state &session) {
-		close_session(session); });
+		close_session(session); }, [&] { warning("session close - unknown id"); });
 }
 
 
