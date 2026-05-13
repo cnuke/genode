@@ -74,11 +74,11 @@ config | verbose: no
   + provides
     + service Report
     + service ROM
-  + config
+  + config | verbose: yes
     + policy | label: pci_decode -> system | report: acpi -> acpi
     + policy | label: platform -> devices  | report: pci_decode -> devices
 
-+ start acpi | caps: 350 | ram: 4M
++ start acpi | caps: 350 | ram: 6M
   + route
     + service Report | + child report_rom
     + service IO_MEM | + parent
