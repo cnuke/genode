@@ -204,6 +204,12 @@ class Platform::Device::Irq : Noncopyable
 				return;
 			}
 
+			if (_msi_handle.constructed()) {
+				error("cannot replace signal-handler for ",
+				      (_type == Type::MSIX) ? "MSI-X" : "MSI");
+				return;
+			}
+
 			_device._msi_alloc(sigh, _type == Type::MSIX).with_result(
 				[&] (Msi_handle handle) {
 					_msi_handle.construct(handle);
