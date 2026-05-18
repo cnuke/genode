@@ -164,7 +164,7 @@ option
     + rm          | + parent
 
 + child wifi | binary: wifi | ram: 24M | caps: 260 | enabled: no
-  + managed | disable: while_suspended
+  + managed | max_ram: 32M | max_caps: 350 | disable: while_suspended
   + config
   | + libc | stdout: /dev/log | stderr: /dev/null | rtc: /dev/rtc
   | + vfs
