@@ -98,6 +98,8 @@ int pci_enable_msi(struct pci_dev *dev)
 	 */
 	dev->irq = msi;
 
+	dev->msi_enabled = 1;
+
 	return 0;
 }
 
@@ -153,6 +155,8 @@ int pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries,
 		irq_set_chip_and_handler(entries[i].vector, &dde_irqchip_data_chip,
 		                         handle_edge_irq);
 	}
+
+	dev->msix_enabled = 1;
 
 	return vec;
 }
