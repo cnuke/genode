@@ -163,8 +163,8 @@ option
     + report      | + child report
     + rm          | + parent
 
-+ child wifi | binary: wifi | ram: 24M | caps: 260 | enabled: no
-  + managed | max_ram: 32M | max_caps: 350 | disable: while_suspended
++ child wifi | binary: wifi | ram: 32M | caps: 350 | enabled: no
+  + managed | max_ram: 40M | max_caps: 400 | disable: while_suspended
   + config
   | + libc | stdout: /dev/log | stderr: /dev/null | rtc: /dev/rtc
   | + vfs
