@@ -227,21 +227,88 @@ int pci_alloc_irq_vectors_affinity(struct pci_dev *dev, unsigned int min_vecs,
                                    unsigned int max_vecs, unsigned int flags,
                                    struct irq_affinity *aff_desc)
 {
-	if ((flags & PCI_IRQ_INTX) && min_vecs == 1 && dev->irq)
-		return 1;
-	return -ENOSPC;
+	return pci_alloc_irq_vectors(dev, min_vecs, max_vecs, flags);
 }
 
 
-int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
-                          unsigned int max_vecs, unsigned int flags)
+struct pci_dev_msix_table_entry
 {
-	return pci_alloc_irq_vectors_affinity(dev, min_vecs, max_vecs, flags, NULL);
+	struct list_head node;
+
+	struct pci_dev    *dev;
+	struct msix_entry *table;
+};
+
+
+static LIST_HEAD(pci_dev_msix_table_entry_list);
+
+
+static struct pci_dev_msix_table_entry *
+lookup_entry(struct pci_dev *dev, struct list_head *head)
+{
+	struct pci_dev_msix_table_entry *entry = NULL;
+	struct pci_dev_msix_table_entry *pos;
+
+	list_for_each_entry(pos, &pci_dev_msix_table_entry_list, node) {
+		if (pos->dev == dev)
+			entry = pos;
+	}
+	return entry;
+}
+
+
+int pci_alloc_irq_vectors(struct pci_dev * dev, unsigned int min_vecs,
+                          unsigned int max_vecs,unsigned int flags)
+{
+	int nvecs = -ENOSPC;
+
+	if (flags & PCI_IRQ_MSIX) {
+
+		/* lookup or create table for pci_dev */
+		struct pci_dev_msix_table_entry *entry =
+			lookup_entry(dev, &pci_dev_msix_table_entry_list);
+		if (!entry) {
+			entry = kzalloc(sizeof(*entry), GFP_KERNEL);
+			if (!entry)
+				return -ENOMEM;
+
+			entry->dev = dev;
+			list_add(&entry->node, &pci_dev_msix_table_entry_list);
+		}
+
+		/* for the moment just wipe any existing entries */
+		kfree(entry->table);
+		entry->table = kmalloc_array(max_vecs, sizeof(struct msix_entry),
+		                             GFP_KERNEL);
+		if (!entry->table)
+			return -ENOMEM;
+
+		nvecs = pci_enable_msix_range(dev, entry->table, min_vecs, max_vecs);
+	}
+	if (nvecs > 0)
+		return nvecs;
+
+	if (flags & PCI_IRQ_MSI)
+		nvecs = pci_enable_msi(dev);
+	/* 0 is good and 1 vec supported */
+	if (nvecs == 0)
+		return 1;
+
+	if ((flags & PCI_IRQ_INTX) && min_vecs == 1 && dev->irq)
+		return 1;
+
+	return -ENOSPC;
 }
 
 
 int pci_irq_vector(struct pci_dev *dev, unsigned int nr)
 {
+	if (dev->msix_enabled) {
+		struct pci_dev_msix_table_entry *entry =
+			lookup_entry(dev, &pci_dev_msix_table_entry_list);
+		return entry ? entry->table[nr].vector : -EINVAL;
+	}
+
 	if (WARN_ON_ONCE(nr > 0))
 		return -EINVAL;
 	return dev->irq;
